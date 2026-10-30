@@ -27,3 +27,7 @@
 - The contrast gate now also checks each theme's gradient stops. It caught Seoul's #c2185b accent at 4.52:1 on the lavender stop, so the accent is now #a8134f.
 - A saved theme or font the page no longer offers falls back to Basalt and Serif.
 - Checks: verify.mjs passes; in the browser, 9 themes × 6 fonts show no overflow at 320 px and the lowest text contrast is 4.84:1.
+
+## ITER-003 · 2026-10-30 · Page at 90% scale
+- Joona: the page read too zoomed in, so it should be 90% of its old size. Done with `html { zoom: .9 }` in timeline.css, which scales text, spacing and layout together.
+- Side effect caught in testing: the 32 px Built on / Led to chips rendered at 28.8 px, under the 32 px touch-target rule. Their min-height is now 36 px (32.4 px rendered). All 119 tap targets measure ≥ 32.4 px at 320 px, and 9 themes × 6 fonts show no overflow.

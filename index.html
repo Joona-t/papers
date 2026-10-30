@@ -475,6 +475,8 @@ footer { border-top: 1px solid var(--line); }
 }
 
 /* ---- Papers: timeline layout (loads after style.css) ---- */
+/* Joona 2026-10-30: the page read too large; 90% of the Qwen guide's scale, everything together */
+html { zoom: .9; }   /* tap targets below are sized so they stay ≥ 32px after the zoom */
 /* the theme menu holds 14 themes: cap it to the window and let it scroll */
 #themeMenu { min-width: 272px; max-width: calc(100vw - 32px); max-height: calc(100vh - 110px); max-height: calc(100dvh - 110px); overflow-y: auto; overscroll-behavior: contain; }
 #themeMenu button { white-space: nowrap; }
@@ -512,7 +514,7 @@ main .entry p.entry-finding { margin: 0 0 12px; color: var(--ink-soft); }
 /* Built on / Led to / Also read: sit above the card-wide link so they stay clickable */
 .entry-rel { position: relative; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; font-family: var(--ui); font-size: 12.5px; }
 .rel-label { font-size: 10.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
-.entry-rel a { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 11px; border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink-soft); text-decoration: none; }
+.entry-rel a { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 4px 11px; border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink-soft); text-decoration: none; }
 .entry-rel a:hover { border-color: var(--accent); color: var(--accent); }
 .rel-year { color: var(--muted); font-variant-numeric: tabular-nums; }
 
