@@ -1,0 +1,58 @@
+
+/* ---- Papers: timeline layout (loads after style.css) ---- */
+/* the theme menu holds 14 themes: cap it to the window and let it scroll */
+#themeMenu { min-width: 272px; max-width: calc(100vw - 32px); max-height: calc(100vh - 110px); max-height: calc(100dvh - 110px); overflow-y: auto; overscroll-behavior: contain; }
+#themeMenu button { white-space: nowrap; }
+#themeMenu .kr-name { margin-left: auto; padding-left: 10px; font-size: 12px; color: var(--muted); word-break: keep-all; }
+#themeMenu button[aria-checked="true"]:has(.kr-name)::after { margin-left: 8px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.plaque-cap { font-family: var(--ui); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 0 0 18px; position: relative; z-index: 1; }
+.plaque-cap a { color: var(--accent); }
+
+main section.field { padding-bottom: 24px; }
+.field-intro { max-width: 620px; }
+
+.timeline { position: relative; margin: 30px 0 0; }
+.timeline::before { content: ""; position: absolute; left: 80px; top: 8px; bottom: 8px; width: 1px; background: var(--line-strong); }
+.entry { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 0 36px; position: relative; margin: 0 0 18px; scroll-margin-top: 24px; }
+.entry::before { content: ""; position: absolute; left: 75px; top: 25px; width: 11px; height: 11px; border-radius: 50%; background: var(--paper); border: 2px solid var(--accent); box-sizing: border-box; }
+.entry:target::before, .entry:hover::before { background: var(--accent); }
+.entry-year { font-family: var(--display); font-size: 20px; line-height: 1; color: var(--accent); text-align: right; padding-top: 22px; font-variant-numeric: tabular-nums; }
+
+.entry-card { position: relative; border: 1px solid var(--line); background: color-mix(in srgb, var(--paper-deep) 60%, transparent); padding: 18px 22px 16px; transition: border-color .2s ease, background-color .2s ease; }
+.entry-card:hover, .entry-card:focus-within, .entry:target .entry-card { border-color: var(--accent); background: var(--paper-deep); }
+.entry-label { font-family: var(--ui); font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.entry-kind { border: 1px solid var(--accent); color: var(--accent); padding: 2px 7px; letter-spacing: .1em; }
+main .entry h3 { margin: 0 0 10px; font-size: 22px; line-height: 1.25; }
+:root[data-font="dyslexic"] main .entry h3 { font-size: 19px; }
+.entry h3 a.entry-link { color: var(--ink); text-decoration: none; }
+.entry h3 a.entry-link::after { content: ""; position: absolute; inset: 0; }   /* whole card opens the paper */
+.entry h3 a.entry-link:hover, .entry-card:hover h3 a.entry-link { color: var(--accent); }
+.entry h3 a.entry-link:focus-visible { outline: none; }
+.entry h3 a.entry-link:focus-visible::after { outline: 2px solid var(--accent); outline-offset: 3px; }
+main .entry p.entry-finding { margin: 0 0 12px; color: var(--ink-soft); }
+.entry-meta { font-family: var(--ui); font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.entry-src { color: var(--accent); white-space: nowrap; }
+
+/* Built on / Led to / Also read: sit above the card-wide link so they stay clickable */
+.entry-rel { position: relative; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; font-family: var(--ui); font-size: 12.5px; }
+.rel-label { font-size: 10.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
+.entry-rel a { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 11px; border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink-soft); text-decoration: none; }
+.entry-rel a:hover { border-color: var(--accent); color: var(--accent); }
+.rel-year { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* phones: the line moves to the left edge, the year sits above its card */
+@media (max-width: 640px) {
+  .timeline::before { left: 5px; }
+  .entry { grid-template-columns: minmax(0, 1fr); padding-left: 24px; }
+  .entry::before { left: 0; top: 2px; }
+  .entry-year { text-align: left; padding: 0 0 8px; font-size: 18px; }
+  .entry-card { padding: 16px 16px 14px; }
+  main .entry h3 { font-size: 20px; }
+}
+/* the folded contents list stays short: fields only */
+.toc-mobile .toc-group > ol { display: none !important; }
+@media print {
+  .entry-rel { display: none; }
+  .entry-card { break-inside: avoid; }
+}
