@@ -32,8 +32,12 @@
   var savedTheme = Persist.get('papers-theme');
   // Basalt (lovespark.love's look) is the default since 2026-10-27; its Serif setting reads in
   // Cinzel. Saved choices win, so returning readers keep their theme and font.
-  apply('theme', savedTheme === 'candy' ? 'bubblegum' : (savedTheme || 'basalt'));
-  apply('font', Persist.get('papers-font') || 'serif');
+  if(savedTheme === 'candy') savedTheme = 'bubblegum';
+  // a saved theme this page no longer offers (e.g. the 2026-10-30 cursor-pack themes) falls back to Basalt
+  if(!savedTheme || !menu.querySelector('button[data-theme="' + savedTheme + '"]')) savedTheme = 'basalt';
+  apply('theme', savedTheme);
+  var savedFont = Persist.get('papers-font');
+  apply('font', savedFont && menu.querySelector('button[data-font="' + savedFont + '"]') ? savedFont : 'serif');
 
   /* ---- Copy buttons on code blocks ---- */
   document.querySelectorAll('.code').forEach(function(block){

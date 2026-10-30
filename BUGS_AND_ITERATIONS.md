@@ -20,3 +20,10 @@
 
 ## Note · storage keys
 - Theme and font are saved under `papers-*`, not the Qwen guide's `qft-*`. Both pages share the lovespark.love origin, and the Qwen guide has no Korean themes to restore.
+
+## ITER-002 · 2026-10-30 · Korean themes are the Retro Cursor popup themes, plus their fonts
+- Joona: he wanted the Korean themes for changing the look, not the cursor packs. The nine cursor-pack palettes are gone, replaced by the four Korean popup themes: Seoul Y2K 서울, Gingham Sticker 깅엄, Holo Mochi 모찌 and Neon Usagi 네온, with their backgrounds and card styles. Gingham's pattern stays off the reading area (a top band and the footer), following the popup's rule that text never sits on a pattern.
+- Added the extension's reading fonts: Lexend and Comfortaa (variable, one file each) and Atkinson Hyperlegible, inlined as woff2.
+- The contrast gate now also checks each theme's gradient stops. It caught Seoul's #c2185b accent at 4.52:1 on the lavender stop, so the accent is now #a8134f.
+- A saved theme or font the page no longer offers falls back to Basalt and Serif.
+- Checks: verify.mjs passes; in the browser, 9 themes × 6 fonts show no overflow at 320 px and the lowest text contrast is 4.84:1.
