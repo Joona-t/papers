@@ -140,6 +140,31 @@ def entry(p, by_id, built_on):
         </div>
       </article>"""
 
+GROUP_NAMES = {"papers": "Finding new papers"}
+
+def resource(r, num=None):
+    n = f'<span class="res-num" aria-hidden="true">{num}</span>' if num else ""
+    return (f'<li class="res{" res--path" if num else ""}">{n}<div class="res-body">'
+            f'<div class="entry-label">{esc(r["kind"])} · {esc(r["by"])}</div>'
+            f'<h4><a class="res-link" href="{esc(r["url"])}" target="_blank" rel="noopener">{esc(r["title"])}<span class="sr-only"> (opens in a new tab)</span></a></h4>'
+            f'<p>{esc(r["why"])}</p></div></li>')
+
+def resources_html(data):
+    res = data["resources"]; by_id = {r["id"]: r for r in res["items"]}
+    names = {f["id"]: f["name"] for f in data["fields"]} | GROUP_NAMES
+    path = "".join(resource(by_id[i], k + 1) for k, i in enumerate(res["path"]))
+    groups = ""
+    for gid, name in names.items():
+        items = [r for r in res["items"] if r["field"] == gid]
+        if items: groups += f'<h3>{esc(name)}</h3><ul class="res-list">{"".join(resource(r) for r in items)}</ul>'
+    return f"""<section class="field" id="learn">
+      <p class="kicker"><span class="rule"></span>Further reading &amp; learning · {len(res["items"])} free resources</p>
+      <h2>Learn it, free, best first</h2>
+      <p class="field-intro">Everything here is free to read or watch, with no account, sign-in or application. Start with the six in order: each one assumes the one before it, going from intuition to building things yourself, then to a textbook, then to practice with real models. After that, pick by field.</p>
+      <ol class="res-path">{path}</ol>
+      {groups}
+    </section>"""
+
 def build():
     data = json.loads((ROOT / "data/papers.json").read_text(encoding="utf-8"))
     papers = data["papers"]
@@ -162,8 +187,8 @@ def build():
         links = "".join(f'<li><a href="#{p["id"]}">{p["year"]} · {esc(p["short"])}</a></li>' for p in items)
         toc.append(f'<li class="toc-group"><a class="toc-head" href="#{f["id"]}"><span class="toc-num" aria-hidden="true">{ROMAN[k]}</span>'
                    f'<span class="toc-title"><small>{span}</small>{esc(f["name"])}</span></a><ol>{links}</ol></li>')
-    toc_items = f'<a class="toc-start" href="#start">How to use this archive</a><ol class="toc-parts">{"".join(toc)}</ol>'
-    nav = "".join(f'<a href="#{f["id"]}">{esc(f["nav"])}</a>' for f in data["fields"])
+    toc_items = f'<a class="toc-start" href="#start">How to use this archive</a><ol class="toc-parts">{"".join(toc)}</ol><a class="toc-start toc-learn" href="#learn">Further reading &amp; learning</a>'
+    nav = "".join(f'<a href="#{f["id"]}">{esc(f["nav"])}</a>' for f in data["fields"]) + '<a href="#learn">Learn</a>'
     years = sorted(p["year"] for p in papers)
     count = f'{len(papers)} papers · {len(data["fields"])} fields · {years[0]} to {years[-1]}'
     mascot = (T / "mascot.datauri").read_text(encoding="utf-8").strip()
@@ -174,7 +199,7 @@ def build():
     korean = "".join(f'<button type="button" role="menuitemradio" aria-checked="false" data-theme="kr-{k}"><span class="swatch" style="background:linear-gradient(135deg,{t["paper"]} 50%,{t["swatch"]} 50%)"></span>{n}<span class="kr-name" lang="ko">{ko}</span></button>' for k, n, ko, t in KOREAN)
     fonts = "".join(f'<button type="button" role="menuitemradio" aria-checked="false" data-font="{k}"><span class="fontpreview" style="{st}" aria-hidden="true">Aa</span>{n}</button>' for k, n, st in FONTS)
     passes = "".join(f"<li><h3>{esc(t)}</h3><p>{esc(d)}</p></li>" for t, d in PASSES)
-    field_links = "".join(f'<a class="text-link" href="#{f["id"]}">{ROMAN[k]} · {esc(f["nav"])} →</a>' for k, f in enumerate(data["fields"]))
+    field_links = "".join(f'<a class="text-link" href="#{f["id"]}">{ROMAN[k]} · {esc(f["nav"])} →</a>' for k, f in enumerate(data["fields"])) + '<a class="text-link" href="#learn">Free resources →</a>'
     return f"""<!doctype html>
 <html lang="en" data-theme="basalt" data-font="serif">
 <head>
@@ -225,7 +250,7 @@ def build():
     </div>
   </div>
   <figure class="plaque" aria-labelledby="plaque-cap">
-    <figcaption id="plaque-cap" class="plaque-cap">Three passes, from <a href="https://doi.org/10.1145/1273445.1273458" target="_blank" rel="noopener">Keshav, “How to Read a Paper”</a></figcaption>
+    <figcaption id="plaque-cap" class="plaque-cap">Three passes, from S. Keshav, “How to Read a Paper” (2007)</figcaption>
     <ol>{passes}</ol>
   </figure>
 </section>
@@ -241,6 +266,7 @@ def build():
       <p>The one-line findings are summaries, not quotes, so the paper is always the authority. Every title and link was checked against its source in {esc(data["checked"])}. Incident reports are marked as such: they are not peer-reviewed papers.</p>
     </section>
     {"".join(fields)}
+    {resources_html(data)}
   </main>
 </div>
 

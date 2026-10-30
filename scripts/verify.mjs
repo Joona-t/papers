@@ -38,12 +38,31 @@ for (const p of data.papers) {
   ok(html.includes(`href="${p.url.replace(/&/g, '&amp;')}"`), `${p.id}: paper link missing`);
 }
 const years = [...html.matchAll(/<section class="field" id="([^"]+)">([\s\S]*?)<\/section>/g)].map(m => [m[1], [...m[2].matchAll(/class="entry-year">(\d+)</g)].map(y => +y[1])]);
+const fieldSet = new Set(data.fields.map(f => f.id));
+years.splice(0, years.length, ...years.filter(([f]) => fieldSet.has(f)));
 ok(years.length === data.fields.length, 'field sections');
 for (const [f, ys] of years) ok(ys.every((y, i) => i === 0 || ys[i - 1] <= y), `${f}: timeline not in year order`);
 const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]);
 ok(ids.length === new Set(ids).size, 'duplicate ids');
 for (const [, id] of html.matchAll(/href="#([^"]+)"/g)) ok(ids.includes(id), `missing anchor #${id}`);
 for (const m of html.matchAll(/<a [^>]*target="_blank"[^>]*>/g)) ok(/rel="noopener"/.test(m[0]), `target=_blank without noopener: ${m[0]}`);
+
+// 3b. further reading: unique ids, https, rendered once, the path points at real items
+const res = data.resources, resIds = new Set(res.items.map(r => r.id));
+ok(resIds.size === res.items.length, 'duplicate resource id');
+for (const id of res.path) ok(resIds.has(id), `path -> unknown resource ${id}`);
+const groups = new Set([...fieldSet, 'start', 'papers']);
+for (const r of res.items) {
+  ok(groups.has(r.field), `${r.id}: unknown group ${r.field}`);
+  ok(/^https:\/\//.test(r.url), `${r.id}: url must be https`);
+  for (const k of ['title', 'by', 'kind', 'why']) ok(r[k] && r[k].trim(), `${r.id}: missing ${k}`);
+  ok(html.split(`href="${r.url.replace(/&/g, '&amp;')}"`).length === 2, `${r.id}: not rendered exactly once`);
+}
+
+// 3c. Joona 2026-10-30: only open, free links that need no sign-in. Publisher and course hosts that show
+//     paywalls or sign-in walls are refused outright; link an author's, lab's or arXiv copy instead.
+const WALLED = /\b(doi\.org|dl\.acm\.org|nature\.com|science\.org|ieeexplore\.ieee\.org|psycnet\.apa\.org|doi\.apa\.org|direct\.mit\.edu|sciencedirect\.com|link\.springer\.com|onlinelibrary\.wiley\.com|researchgate\.net|academia\.edu|scribd\.com|medium\.com|coursera\.org|udemy\.com|linkedin\.com)\b/i;
+for (const [, href] of html.matchAll(/href="(https?:[^"]+)"/g)) ok(!WALLED.test(href), `walled or sign-in host linked: ${href}`);
 
 // 4. no network: no external scripts, styles or images; no network APIs in the script
 const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];

@@ -4,6 +4,10 @@ A small archive of the AI research papers worth reading, laid out as **timelines
 
 Each entry gives the year, the paper's **main finding in one line**, and its title, which opens the full paper (usually its free arXiv page). **Built on** and **Led to** link each paper to the ones before and after it, so you can follow an idea from where it started to the technique that improved on or replaced it: LSTM → attention → the transformer, RLHF → DPO → GRPO → DeepSeek-R1, abliteration → its follow-ups and defences.
 
+A **Further reading & learning** section ends the page: 28 free resources, with six to take in order first (3Blue1Brown → Karpathy's Zero to Hero → fast.ai → *Understanding Deep Learning* → the Hugging Face LLM course → *The Illustrated Transformer*), then the rest grouped by field.
+
+**Every link is open, free and needs no sign-in.** Papers link to arXiv, the proceedings, or an author's or lab's own PDF, never a publisher page with a paywall or login. `verify.mjs` refuses known walled hosts (doi.org, ACM, Nature, IEEE, APA, MIT Press, Springer, Coursera and others).
+
 Read it at **[lovespark.love/papers](https://lovespark.love/papers/)**, or open `index.html` in any browser. It's one self-contained file: fonts and the mascot are inlined, it makes no network requests, and nothing leaves your machine except the papers you choose to open.
 
 ## Editing

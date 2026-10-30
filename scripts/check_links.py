@@ -13,12 +13,12 @@ UA = {"User-Agent": "lovespark-papers-linkcheck/1.0 (+https://lovespark.love/pap
 def norm(t):
     return re.sub(r"[^a-z0-9]+", " ", t.replace("$\\pi_0$", "π0").lower().replace("π", "pi")).strip()
 
-def get(url, method="GET", tries=4):
+def get(url, method="GET", tries=4, limit=None):
     for n in range(tries):
         try:
             req = urllib.request.Request(url, headers=UA, method=method)
             with urllib.request.urlopen(req, timeout=30) as r:
-                return r.status, r.read() if method == "GET" else b""
+                return r.status, r.read(limit) if limit else r.read()   # limit: big PDFs only need to start arriving
         except urllib.error.HTTPError as e:
             if e.code != 429 or n == tries - 1: raise
             time.sleep(15 * (n + 1))   # arXiv asks for backoff on 429
@@ -40,6 +40,7 @@ for aid in arxiv:
 
 others = [(p["id"], p["url"]) for p in papers if "arxiv.org/abs/" not in p["url"]]
 others += [(p["id"], a["url"]) for p in papers for a in p.get("also", [])]
+others += [(r["id"], r["url"]) for r in DATA["resources"]["items"]]
 class NoFollow(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *a): return None
 for pid, url in others:
@@ -50,7 +51,7 @@ for pid, url in others:
                 if not 300 <= e.code < 400: raise
                 status = f"{e.code} -> {e.headers['Location']}"
         else:
-            status, _ = get(url)
+            status, _ = get(url, limit=4096)
         print(f"ok   {status} {pid}  {url}")
     except Exception as e:   # doi.org publishers sometimes refuse bots; report, don't hide
         fails += 1; print(f"FAIL {pid}  {url}  ({e})")

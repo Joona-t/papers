@@ -1,368 +1,1168 @@
 {
-  "checked": "October 2026",
-  "fields": [
+ "checked": "October 2026",
+ "fields": [
+  {
+   "id": "neural-nets",
+   "nav": "Neural nets",
+   "name": "Neural networks",
+   "intro": "The building blocks: how a network of simple units learns, keeps memory, stays stable when it gets deep, and generates new data."
+  },
+  {
+   "id": "training",
+   "nav": "Training",
+   "name": "Machine learning & training",
+   "intro": "How models are optimised, scaled, compressed and fine-tuned, from the default optimiser to training a 65B model on one GPU."
+  },
+  {
+   "id": "language",
+   "nav": "Language",
+   "name": "Language models & AI",
+   "intro": "From word vectors and attention to the transformer, instruction-following chat models, retrieval, agents and reasoning."
+  },
+  {
+   "id": "vision",
+   "nav": "Vision",
+   "name": "Computer vision",
+   "intro": "How machines learned to see: convolution, depth, transformers for images, matching pictures to text, and generating images from noise."
+  },
+  {
+   "id": "robotics",
+   "nav": "Robotics",
+   "name": "Robotics & reinforcement learning",
+   "intro": "Learning from reward and from demonstration, from Atari and Go to robots that take instructions in plain language."
+  },
+  {
+   "id": "safety",
+   "nav": "Safety",
+   "name": "Safety & security",
+   "intro": "How models fail and get attacked: adversarial inputs, jailbreaks, prompt injection, hidden backdoors, refusal removal (abliteration) and agent swarms."
+  }
+ ],
+ "papers": [
+  {
+   "id": "perceptron",
+   "field": "neural-nets",
+   "year": 1958,
+   "short": "Perceptron",
+   "title": "The Perceptron: A Probabilistic Model for Information Storage and Organization in the Brain",
+   "authors": "Frank Rosenblatt",
+   "venue": "Psychological Review",
+   "finding": "A machine can learn its own connection weights from examples: the first trainable artificial neuron.",
+   "url": "https://homepages.math.uic.edu/~lreyzin/papers/rosenblatt58.pdf",
+   "next": [
+    "backprop"
+   ]
+  },
+  {
+   "id": "backprop",
+   "field": "neural-nets",
+   "year": 1986,
+   "short": "Backpropagation",
+   "title": "Learning representations by back-propagating errors",
+   "authors": "David Rumelhart, Geoffrey Hinton, Ronald Williams",
+   "venue": "Nature",
+   "finding": "Send the error backwards through the layers and the hidden units learn useful features on their own.",
+   "url": "https://www.cs.toronto.edu/~hinton/absps/naturebp.pdf",
+   "next": [
+    "lstm",
+    "lenet"
+   ]
+  },
+  {
+   "id": "lstm",
+   "field": "neural-nets",
+   "year": 1997,
+   "short": "LSTM",
+   "title": "Long Short-Term Memory",
+   "authors": "Sepp Hochreiter, Jürgen Schmidhuber",
+   "venue": "Neural Computation",
+   "finding": "Gated memory cells let a recurrent network carry information across long sequences without the gradient vanishing.",
+   "url": "https://deeplearning.cs.cmu.edu/F23/document/readings/LSTM.pdf",
+   "next": [
+    "bahdanau",
+    "transformer"
+   ]
+  },
+  {
+   "id": "vae",
+   "field": "neural-nets",
+   "year": 2013,
+   "short": "VAE",
+   "title": "Auto-Encoding Variational Bayes",
+   "authors": "Diederik Kingma, Max Welling",
+   "venue": "ICLR 2014",
+   "finding": "The reparameterisation trick makes a latent-variable generative model trainable with ordinary backpropagation.",
+   "url": "https://arxiv.org/abs/1312.6114",
+   "next": [
+    "ldm"
+   ]
+  },
+  {
+   "id": "dropout",
+   "field": "neural-nets",
+   "year": 2014,
+   "short": "Dropout",
+   "title": "Dropout: A Simple Way to Prevent Neural Networks from Overfitting",
+   "authors": "Nitish Srivastava, Geoffrey Hinton, Alex Krizhevsky, Ilya Sutskever, Ruslan Salakhutdinov",
+   "venue": "JMLR",
+   "finding": "Randomly switch off units during training and they stop co-adapting, which cuts overfitting.",
+   "url": "https://jmlr.org/papers/v15/srivastava14a.html",
+   "next": []
+  },
+  {
+   "id": "gan",
+   "field": "neural-nets",
+   "year": 2014,
+   "short": "GAN",
+   "title": "Generative Adversarial Networks",
+   "authors": "Ian Goodfellow et al.",
+   "venue": "NeurIPS 2014",
+   "finding": "Train a generator against a discriminator that tries to spot fakes, and the generator learns to make realistic samples.",
+   "url": "https://arxiv.org/abs/1406.2661",
+   "next": [
+    "beatgans"
+   ]
+  },
+  {
+   "id": "batchnorm",
+   "field": "neural-nets",
+   "year": 2015,
+   "short": "Batch norm",
+   "title": "Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift",
+   "authors": "Sergey Ioffe, Christian Szegedy",
+   "venue": "ICML 2015",
+   "finding": "Normalise each layer's inputs over the mini-batch and deep networks train much faster at higher learning rates.",
+   "url": "https://arxiv.org/abs/1502.03167",
+   "next": [
+    "layernorm"
+   ]
+  },
+  {
+   "id": "layernorm",
+   "field": "neural-nets",
+   "year": 2016,
+   "short": "Layer norm",
+   "title": "Layer Normalization",
+   "authors": "Jimmy Lei Ba, Jamie Ryan Kiros, Geoffrey Hinton",
+   "venue": "arXiv",
+   "finding": "Normalise across a layer's features instead of the batch: it works for recurrent nets and any batch size, and became the transformer default.",
+   "url": "https://arxiv.org/abs/1607.06450",
+   "next": []
+  },
+  {
+   "id": "moe",
+   "field": "neural-nets",
+   "year": 2017,
+   "short": "Mixture of experts",
+   "title": "Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer",
+   "authors": "Noam Shazeer et al.",
+   "venue": "ICLR 2017",
+   "finding": "Route each input to a few experts out of thousands, so model capacity grows far faster than compute.",
+   "url": "https://arxiv.org/abs/1701.06538",
+   "next": [
+    "switch"
+   ]
+  },
+  {
+   "id": "switch",
+   "field": "neural-nets",
+   "year": 2021,
+   "short": "Switch Transformer",
+   "title": "Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity",
+   "authors": "William Fedus, Barret Zoph, Noam Shazeer",
+   "venue": "JMLR",
+   "finding": "Send each token to just one expert: simpler, more stable routing that scales sparse models past a trillion parameters.",
+   "url": "https://arxiv.org/abs/2101.03961",
+   "next": []
+  },
+  {
+   "id": "adam",
+   "field": "training",
+   "year": 2014,
+   "short": "Adam",
+   "title": "Adam: A Method for Stochastic Optimization",
+   "authors": "Diederik Kingma, Jimmy Ba",
+   "venue": "ICLR 2015",
+   "finding": "Give every parameter its own step size from running averages of the gradient and its square: the default optimiser for a decade.",
+   "url": "https://arxiv.org/abs/1412.6980",
+   "next": [
+    "adamw"
+   ]
+  },
+  {
+   "id": "distill",
+   "field": "training",
+   "year": 2015,
+   "short": "Distillation",
+   "title": "Distilling the Knowledge in a Neural Network",
+   "authors": "Geoffrey Hinton, Oriol Vinyals, Jeff Dean",
+   "venue": "NeurIPS 2014 workshop",
+   "finding": "A small model trained on a big model's soft output probabilities learns much of what the big one knows.",
+   "url": "https://arxiv.org/abs/1503.02531",
+   "next": []
+  },
+  {
+   "id": "adamw",
+   "field": "training",
+   "year": 2017,
+   "short": "AdamW",
+   "title": "Decoupled Weight Decay Regularization",
+   "authors": "Ilya Loshchilov, Frank Hutter",
+   "venue": "ICLR 2019",
+   "finding": "Under Adam, L2 regularisation and weight decay are not the same thing; decoupling them generalises better.",
+   "url": "https://arxiv.org/abs/1711.05101",
+   "next": []
+  },
+  {
+   "id": "scaling",
+   "field": "training",
+   "year": 2020,
+   "short": "Scaling laws",
+   "title": "Scaling Laws for Neural Language Models",
+   "authors": "Jared Kaplan et al.",
+   "venue": "arXiv",
+   "finding": "Language-model loss falls as a smooth power law in parameters, data and compute, so you can predict a big run from small ones.",
+   "url": "https://arxiv.org/abs/2001.08361",
+   "next": [
+    "chinchilla"
+   ]
+  },
+  {
+   "id": "lora",
+   "field": "training",
+   "year": 2021,
+   "short": "LoRA",
+   "title": "LoRA: Low-Rank Adaptation of Large Language Models",
+   "authors": "Edward Hu et al.",
+   "venue": "ICLR 2022",
+   "finding": "Freeze the model and train two small low-rank matrices per layer: up to 10,000× fewer trainable parameters with no added latency.",
+   "url": "https://arxiv.org/abs/2106.09685",
+   "next": [
+    "qlora"
+   ]
+  },
+  {
+   "id": "chinchilla",
+   "field": "training",
+   "year": 2022,
+   "short": "Chinchilla",
+   "title": "Training Compute-Optimal Large Language Models",
+   "authors": "Jordan Hoffmann et al.",
+   "venue": "NeurIPS 2022",
+   "finding": "Scale training data as fast as parameters: a 70B model on 1.4T tokens beat the 280B Gopher on the same compute.",
+   "url": "https://arxiv.org/abs/2203.15556",
+   "next": []
+  },
+  {
+   "id": "qlora",
+   "field": "training",
+   "year": 2023,
+   "short": "QLoRA",
+   "title": "QLoRA: Efficient Finetuning of Quantized LLMs",
+   "authors": "Tim Dettmers, Artidoro Pagnoni, Ari Holtzman, Luke Zettlemoyer",
+   "venue": "NeurIPS 2023",
+   "finding": "Train LoRA adapters on top of a frozen 4-bit model and a 65B model fine-tunes on a single 48 GB GPU.",
+   "url": "https://arxiv.org/abs/2305.14314",
+   "next": []
+  },
+  {
+   "id": "dpo",
+   "field": "training",
+   "year": 2023,
+   "short": "DPO",
+   "title": "Direct Preference Optimization: Your Language Model is Secretly a Reward Model",
+   "authors": "Rafael Rafailov et al.",
+   "venue": "NeurIPS 2023",
+   "finding": "Skip the reward model and the RL loop: a simple loss on pairs of preferred and rejected answers does the same job.",
+   "url": "https://arxiv.org/abs/2305.18290",
+   "next": []
+  },
+  {
+   "id": "grpo",
+   "field": "training",
+   "year": 2024,
+   "short": "GRPO",
+   "title": "DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models",
+   "authors": "Zhihong Shao et al.",
+   "venue": "arXiv",
+   "finding": "GRPO drops PPO's value network: sample a group of answers and score each against the group's average.",
+   "url": "https://arxiv.org/abs/2402.03300",
+   "next": [
+    "r1"
+   ]
+  },
+  {
+   "id": "word2vec",
+   "field": "language",
+   "year": 2013,
+   "short": "word2vec",
+   "title": "Efficient Estimation of Word Representations in Vector Space",
+   "authors": "Tomas Mikolov, Kai Chen, Greg Corrado, Jeffrey Dean",
+   "venue": "ICLR 2013 workshop",
+   "finding": "Cheap models turn words into vectors whose directions capture meaning and relationships between words.",
+   "url": "https://arxiv.org/abs/1301.3781",
+   "next": [
+    "bert"
+   ]
+  },
+  {
+   "id": "bahdanau",
+   "field": "language",
+   "year": 2014,
+   "short": "Attention",
+   "title": "Neural Machine Translation by Jointly Learning to Align and Translate",
+   "authors": "Dzmitry Bahdanau, Kyunghyun Cho, Yoshua Bengio",
+   "venue": "ICLR 2015",
+   "finding": "Let the decoder look back at every input word instead of one fixed summary vector: the birth of attention.",
+   "url": "https://arxiv.org/abs/1409.0473",
+   "next": [
+    "transformer"
+   ]
+  },
+  {
+   "id": "transformer",
+   "field": "language",
+   "year": 2017,
+   "short": "Transformer",
+   "title": "Attention Is All You Need",
+   "authors": "Ashish Vaswani et al.",
+   "venue": "NeurIPS 2017",
+   "finding": "Drop recurrence entirely: attention alone, computed in parallel, beats RNNs at translation and trains far faster.",
+   "url": "https://arxiv.org/abs/1706.03762",
+   "next": [
+    "bert",
+    "gpt3",
+    "vit",
+    "flash"
+   ]
+  },
+  {
+   "id": "bert",
+   "field": "language",
+   "year": 2018,
+   "short": "BERT",
+   "title": "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
+   "authors": "Jacob Devlin, Ming-Wei Chang, Kenton Lee, Kristina Toutanova",
+   "venue": "NAACL 2019",
+   "finding": "Pre-train a transformer by filling in masked words, then fine-tune it: new state of the art on eleven language tasks.",
+   "url": "https://arxiv.org/abs/1810.04805",
+   "next": []
+  },
+  {
+   "id": "gpt3",
+   "field": "language",
+   "year": 2020,
+   "short": "GPT-3",
+   "title": "Language Models are Few-Shot Learners",
+   "authors": "Tom Brown et al.",
+   "venue": "NeurIPS 2020",
+   "finding": "At 175B parameters a language model picks up new tasks from a few examples in the prompt, with no fine-tuning.",
+   "url": "https://arxiv.org/abs/2005.14165",
+   "next": [
+    "instructgpt",
+    "cot",
+    "llama"
+   ]
+  },
+  {
+   "id": "rag",
+   "field": "language",
+   "year": 2020,
+   "short": "RAG",
+   "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+   "authors": "Patrick Lewis et al.",
+   "venue": "NeurIPS 2020",
+   "finding": "Retrieve passages from a document index and generate from them: more specific, more factual answers you can trace to a source.",
+   "url": "https://arxiv.org/abs/2005.11401",
+   "next": [
+    "react"
+   ]
+  },
+  {
+   "id": "cot",
+   "field": "language",
+   "year": 2022,
+   "short": "Chain of thought",
+   "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
+   "authors": "Jason Wei et al.",
+   "venue": "NeurIPS 2022",
+   "finding": "Show a few worked examples with the reasoning written out and large models solve far more multi-step problems.",
+   "url": "https://arxiv.org/abs/2201.11903",
+   "next": [
+    "react",
+    "r1"
+   ]
+  },
+  {
+   "id": "instructgpt",
+   "field": "language",
+   "year": 2022,
+   "short": "InstructGPT (RLHF)",
+   "title": "Training language models to follow instructions with human feedback",
+   "authors": "Long Ouyang et al.",
+   "venue": "NeurIPS 2022",
+   "finding": "Fine-tune on human preferences (RLHF) and people prefer a 1.3B model's answers over the 175B GPT-3's.",
+   "url": "https://arxiv.org/abs/2203.02155",
+   "next": [
+    "constitutional",
+    "dpo",
+    "grpo"
+   ]
+  },
+  {
+   "id": "flash",
+   "field": "language",
+   "year": 2022,
+   "short": "FlashAttention",
+   "title": "FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness",
+   "authors": "Tri Dao, Daniel Fu, Stefano Ermon, Atri Rudra, Christopher Ré",
+   "venue": "NeurIPS 2022",
+   "finding": "Exact attention, reordered so the big score matrix never goes to slow GPU memory: faster training and longer contexts.",
+   "url": "https://arxiv.org/abs/2205.14135",
+   "next": []
+  },
+  {
+   "id": "react",
+   "field": "language",
+   "year": 2022,
+   "short": "ReAct",
+   "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+   "authors": "Shunyu Yao et al.",
+   "venue": "ICLR 2023",
+   "finding": "Interleave reasoning steps with tool actions so the model can look things up and act: the template for LLM agents.",
+   "url": "https://arxiv.org/abs/2210.03629",
+   "next": []
+  },
+  {
+   "id": "llama",
+   "field": "language",
+   "year": 2023,
+   "short": "LLaMA",
+   "title": "LLaMA: Open and Efficient Foundation Language Models",
+   "authors": "Hugo Touvron et al.",
+   "venue": "arXiv",
+   "finding": "Trained only on public data, the 13B model beats the 175B GPT-3 on most benchmarks, and the weights went to researchers.",
+   "url": "https://arxiv.org/abs/2302.13971",
+   "next": []
+  },
+  {
+   "id": "r1",
+   "field": "language",
+   "year": 2025,
+   "short": "DeepSeek-R1",
+   "title": "DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning",
+   "authors": "DeepSeek-AI",
+   "venue": "Nature 2025",
+   "finding": "Reward only correct final answers and long step-by-step reasoning, self-checking included, emerges from reinforcement learning.",
+   "url": "https://arxiv.org/abs/2501.12948",
+   "next": []
+  },
+  {
+   "id": "lenet",
+   "field": "vision",
+   "year": 1998,
+   "short": "LeNet",
+   "title": "Gradient-Based Learning Applied to Document Recognition",
+   "authors": "Yann LeCun, Léon Bottou, Yoshua Bengio, Patrick Haffner",
+   "venue": "Proceedings of the IEEE",
+   "finding": "Convolutional networks trained end to end with gradient descent read handwritten digits and cheques.",
+   "url": "https://leon.bottou.org/publications/pdf/ieee-1998.pdf",
+   "next": [
+    "alexnet"
+   ]
+  },
+  {
+   "id": "alexnet",
+   "field": "vision",
+   "year": 2012,
+   "short": "AlexNet",
+   "title": "ImageNet Classification with Deep Convolutional Neural Networks",
+   "authors": "Alex Krizhevsky, Ilya Sutskever, Geoffrey Hinton",
+   "venue": "NeurIPS 2012",
+   "finding": "A deep CNN trained on two GPUs cut ImageNet top-5 error to 15.3%, against 26.2% for the runner-up.",
+   "url": "https://papers.nips.cc/paper_files/paper/2012/hash/c399862d3b9d6b76c8436e924a68c45b-Abstract.html",
+   "next": [
+    "resnet"
+   ]
+  },
+  {
+   "id": "resnet",
+   "field": "vision",
+   "year": 2015,
+   "short": "ResNet",
+   "title": "Deep Residual Learning for Image Recognition",
+   "authors": "Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun",
+   "venue": "CVPR 2016",
+   "finding": "Skip connections let each block learn a correction to its input, so 152-layer networks train and win ImageNet.",
+   "url": "https://arxiv.org/abs/1512.03385",
+   "next": [
+    "vit"
+   ]
+  },
+  {
+   "id": "unet",
+   "field": "vision",
+   "year": 2015,
+   "short": "U-Net",
+   "title": "U-Net: Convolutional Networks for Biomedical Image Segmentation",
+   "authors": "Olaf Ronneberger, Philipp Fischer, Thomas Brox",
+   "venue": "MICCAI 2015",
+   "finding": "A contract-then-expand network with skip links segments images precisely from very few training examples.",
+   "url": "https://arxiv.org/abs/1505.04597",
+   "next": [
+    "ddpm",
+    "sam"
+   ]
+  },
+  {
+   "id": "ddpm",
+   "field": "vision",
+   "year": 2020,
+   "short": "DDPM",
+   "title": "Denoising Diffusion Probabilistic Models",
+   "authors": "Jonathan Ho, Ajay Jain, Pieter Abbeel",
+   "venue": "NeurIPS 2020",
+   "finding": "Learn to undo noise one small step at a time and you can generate high-quality images starting from pure noise.",
+   "url": "https://arxiv.org/abs/2006.11239",
+   "next": [
+    "beatgans",
+    "ldm",
+    "diffpolicy"
+   ]
+  },
+  {
+   "id": "vit",
+   "field": "vision",
+   "year": 2020,
+   "short": "ViT",
+   "title": "An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale",
+   "authors": "Alexey Dosovitskiy et al.",
+   "venue": "ICLR 2021",
+   "finding": "Cut an image into 16×16 patches, treat them like words, and a plain transformer matches the best CNNs given enough pre-training data.",
+   "url": "https://arxiv.org/abs/2010.11929",
+   "next": [
+    "clip",
+    "sam"
+   ]
+  },
+  {
+   "id": "clip",
+   "field": "vision",
+   "year": 2021,
+   "short": "CLIP",
+   "title": "Learning Transferable Visual Models From Natural Language Supervision",
+   "authors": "Alec Radford et al.",
+   "venue": "ICML 2021",
+   "finding": "Match 400 million images to their captions and the model classifies new images zero-shot from a text description.",
+   "url": "https://arxiv.org/abs/2103.00020",
+   "next": [
+    "ldm",
+    "rt2"
+   ]
+  },
+  {
+   "id": "beatgans",
+   "field": "vision",
+   "year": 2021,
+   "short": "Diffusion beats GANs",
+   "title": "Diffusion Models Beat GANs on Image Synthesis",
+   "authors": "Prafulla Dhariwal, Alex Nichol",
+   "venue": "NeurIPS 2021",
+   "finding": "With a better architecture and classifier guidance, diffusion models overtake GANs on image quality.",
+   "url": "https://arxiv.org/abs/2105.05233",
+   "next": []
+  },
+  {
+   "id": "ldm",
+   "field": "vision",
+   "year": 2021,
+   "short": "Latent diffusion",
+   "title": "High-Resolution Image Synthesis with Latent Diffusion Models",
+   "authors": "Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, Björn Ommer",
+   "venue": "CVPR 2022",
+   "finding": "Run diffusion in a compressed latent space instead of pixels: far cheaper, and the basis of Stable Diffusion.",
+   "url": "https://arxiv.org/abs/2112.10752",
+   "next": []
+  },
+  {
+   "id": "sam",
+   "field": "vision",
+   "year": 2023,
+   "short": "Segment Anything",
+   "title": "Segment Anything",
+   "authors": "Alexander Kirillov et al.",
+   "venue": "ICCV 2023",
+   "finding": "A promptable model trained on over a billion masks segments objects in images it has never seen, zero-shot.",
+   "url": "https://arxiv.org/abs/2304.02643",
+   "next": []
+  },
+  {
+   "id": "dqn",
+   "field": "robotics",
+   "year": 2013,
+   "short": "DQN",
+   "title": "Playing Atari with Deep Reinforcement Learning",
+   "authors": "Volodymyr Mnih et al.",
+   "venue": "NeurIPS 2013 workshop",
+   "finding": "One network learns to play seven Atari games from raw pixels and the score alone.",
+   "url": "https://arxiv.org/abs/1312.5602",
+   "next": [
+    "alphago",
+    "ppo"
+   ]
+  },
+  {
+   "id": "alphago",
+   "field": "robotics",
+   "year": 2016,
+   "short": "AlphaGo",
+   "title": "Mastering the game of Go with deep neural networks and tree search",
+   "authors": "David Silver et al.",
+   "venue": "Nature",
+   "finding": "Policy and value networks guiding a tree search beat a professional Go player 5–0, a decade earlier than expected.",
+   "url": "https://storage.googleapis.com/deepmind-media/alphago/AlphaGoNaturePaper.pdf",
+   "next": [
+    "alphazero"
+   ]
+  },
+  {
+   "id": "domainrand",
+   "field": "robotics",
+   "year": 2017,
+   "short": "Domain randomisation",
+   "title": "Domain Randomization for Transferring Deep Neural Networks from Simulation to the Real World",
+   "authors": "Josh Tobin et al.",
+   "venue": "IROS 2017",
+   "finding": "Train in simulation with wildly random textures and lighting, and the real world looks like just one more variation.",
+   "url": "https://arxiv.org/abs/1703.06907",
+   "next": []
+  },
+  {
+   "id": "ppo",
+   "field": "robotics",
+   "year": 2017,
+   "short": "PPO",
+   "title": "Proximal Policy Optimization Algorithms",
+   "authors": "John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, Oleg Klimov",
+   "venue": "arXiv",
+   "finding": "Clip how far each update can move the policy: a simple, stable RL algorithm that became the default, RLHF included.",
+   "url": "https://arxiv.org/abs/1707.06347",
+   "next": [
+    "instructgpt",
+    "grpo"
+   ]
+  },
+  {
+   "id": "alphazero",
+   "field": "robotics",
+   "year": 2017,
+   "short": "AlphaZero",
+   "title": "Mastering Chess and Shogi by Self-Play with a General Reinforcement Learning Algorithm",
+   "authors": "David Silver et al.",
+   "venue": "Science 2018",
+   "finding": "No human games at all: one algorithm learning from self-play alone masters chess, shogi and Go.",
+   "url": "https://arxiv.org/abs/1712.01815",
+   "next": []
+  },
+  {
+   "id": "saycan",
+   "field": "robotics",
+   "year": 2022,
+   "short": "SayCan",
+   "title": "Do As I Can, Not As I Say: Grounding Language in Robotic Affordances",
+   "authors": "Michael Ahn et al.",
+   "venue": "CoRL 2022",
+   "finding": "A language model proposes the next step and the robot's learned value functions say which steps it can actually do right now.",
+   "url": "https://arxiv.org/abs/2204.01691",
+   "next": [
+    "rt2"
+   ]
+  },
+  {
+   "id": "diffpolicy",
+   "field": "robotics",
+   "year": 2023,
+   "short": "Diffusion Policy",
+   "title": "Diffusion Policy: Visuomotor Policy Learning via Action Diffusion",
+   "authors": "Cheng Chi et al.",
+   "venue": "RSS 2023",
+   "finding": "Generate robot actions the way diffusion generates images, which copes with demonstrations that solve a task in several ways.",
+   "url": "https://arxiv.org/abs/2303.04137",
+   "next": [
+    "pi0"
+   ]
+  },
+  {
+   "id": "rt2",
+   "field": "robotics",
+   "year": 2023,
+   "short": "RT-2",
+   "title": "RT-2: Vision-Language-Action Models Transfer Web Knowledge to Robotic Control",
+   "authors": "Anthony Brohan et al.",
+   "venue": "CoRL 2023",
+   "finding": "Write robot actions as text tokens and a web-trained vision-language model becomes a robot policy that generalises.",
+   "url": "https://arxiv.org/abs/2307.15818",
+   "next": [
+    "oxe",
+    "pi0"
+   ]
+  },
+  {
+   "id": "oxe",
+   "field": "robotics",
+   "year": 2023,
+   "short": "Open X-Embodiment",
+   "title": "Open X-Embodiment: Robotic Learning Datasets and RT-X Models",
+   "authors": "Open X-Embodiment Collaboration",
+   "venue": "ICRA 2024",
+   "finding": "Pool data from 22 different robots into one dataset, and one model trained on all of it beats the single-robot specialists.",
+   "url": "https://arxiv.org/abs/2310.08864",
+   "next": [
+    "pi0"
+   ]
+  },
+  {
+   "id": "pi0",
+   "field": "robotics",
+   "year": 2024,
+   "short": "π0",
+   "title": "π0: A Vision-Language-Action Flow Model for General Robot Control",
+   "authors": "Kevin Black et al. (Physical Intelligence)",
+   "venue": "arXiv",
+   "finding": "A vision-language model with a flow-matching action head drives many robot types on dexterous tasks like folding laundry.",
+   "url": "https://arxiv.org/abs/2410.24164",
+   "next": []
+  },
+  {
+   "id": "adversarial",
+   "field": "safety",
+   "year": 2013,
+   "short": "Adversarial examples",
+   "title": "Intriguing properties of neural networks",
+   "authors": "Christian Szegedy et al.",
+   "venue": "ICLR 2014",
+   "finding": "Changes to an image too small to see make a classifier confidently wrong, and they fool other models too.",
+   "url": "https://arxiv.org/abs/1312.6199",
+   "next": [
+    "gcg"
+   ]
+  },
+  {
+   "id": "concrete",
+   "field": "safety",
+   "year": 2016,
+   "short": "Concrete problems",
+   "title": "Concrete Problems in AI Safety",
+   "authors": "Dario Amodei, Chris Olah, Jacob Steinhardt, Paul Christiano, John Schulman, Dan Mané",
+   "venue": "arXiv",
+   "finding": "Five practical accident risks to research now: side effects, reward hacking, scalable oversight, safe exploration and distribution shift.",
+   "url": "https://arxiv.org/abs/1606.06565",
+   "next": []
+  },
+  {
+   "id": "constitutional",
+   "field": "safety",
+   "year": 2022,
+   "short": "Constitutional AI",
+   "title": "Constitutional AI: Harmlessness from AI Feedback",
+   "authors": "Yuntao Bai et al.",
+   "venue": "arXiv",
+   "finding": "Replace human harm labels with a written list of principles that the model uses to critique and revise its own answers.",
+   "url": "https://arxiv.org/abs/2212.08073",
+   "next": []
+  },
+  {
+   "id": "injection",
+   "field": "safety",
+   "year": 2023,
+   "short": "Indirect prompt injection",
+   "title": "Not what you've signed up for: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection",
+   "authors": "Kai Greshake et al.",
+   "venue": "AISec 2023",
+   "finding": "Instructions hidden in a web page or document the model reads can take over an LLM app: to the model, data is code.",
+   "url": "https://arxiv.org/abs/2302.12173",
+   "next": [
+    "swarm-hf"
+   ]
+  },
+  {
+   "id": "gcg",
+   "field": "safety",
+   "year": 2023,
+   "short": "Universal jailbreaks (GCG)",
+   "title": "Universal and Transferable Adversarial Attacks on Aligned Language Models",
+   "authors": "Andy Zou, Zifan Wang, Nicholas Carlini, Milad Nasr, J. Zico Kolter, Matt Fredrikson",
+   "venue": "arXiv",
+   "finding": "An automatically searched suffix jailbreaks open chat models, and the same suffix transfers to closed ones.",
+   "url": "https://arxiv.org/abs/2307.15043",
+   "next": [
+    "refusal"
+   ]
+  },
+  {
+   "id": "sleeper",
+   "field": "safety",
+   "year": 2024,
+   "short": "Sleeper agents",
+   "title": "Sleeper Agents: Training Deceptive LLMs that Persist Through Safety Training",
+   "authors": "Evan Hubinger et al.",
+   "venue": "arXiv",
+   "finding": "A backdoor trained into a model survives standard safety training, and adversarial training can teach it to hide better.",
+   "url": "https://arxiv.org/abs/2401.05566",
+   "next": []
+  },
+  {
+   "id": "refusal",
+   "field": "safety",
+   "year": 2024,
+   "short": "Abliteration",
+   "title": "Refusal in Language Models Is Mediated by a Single Direction",
+   "authors": "Andy Arditi et al.",
+   "venue": "NeurIPS 2024",
+   "finding": "Refusal is one direction in the model's activations. Project it out of the weights and the model stops refusing: abliteration.",
+   "url": "https://arxiv.org/abs/2406.11717",
+   "next": [
+    "cones",
+    "abl-defense",
+    "abl-compare"
+   ]
+  },
+  {
+   "id": "cones",
+   "field": "safety",
+   "year": 2025,
+   "short": "Refusal concept cones",
+   "title": "The Geometry of Refusal in Large Language Models: Concept Cones and Representational Independence",
+   "authors": "Tom Wollschläger et al.",
+   "venue": "ICML 2025",
+   "finding": "Refusal is not just one direction: there are several independent ones, forming multi-dimensional concept cones.",
+   "url": "https://arxiv.org/abs/2502.17420",
+   "next": []
+  },
+  {
+   "id": "abl-defense",
+   "field": "safety",
+   "year": 2025,
+   "short": "Defending against abliteration",
+   "title": "An Embarrassingly Simple Defense Against LLM Abliteration Attacks",
+   "authors": "Harethah Abu Shairah et al.",
+   "venue": "arXiv",
+   "finding": "Train a model to explain why before it refuses and abliteration cuts its refusal rate by at most 10%, against 70–80% for undefended models.",
+   "url": "https://arxiv.org/abs/2505.19056",
+   "next": []
+  },
+  {
+   "id": "abl-compare",
+   "field": "safety",
+   "year": 2025,
+   "short": "Abliteration tools compared",
+   "title": "Comparative Analysis of LLM Abliteration Methods: A Cross-Architecture Evaluation",
+   "authors": "Richard J. Young",
+   "venue": "arXiv",
+   "finding": "Four abliteration tools on 16 models: same idea, very different damage, from +1.5 to −18.8 points on GSM8K maths.",
+   "url": "https://arxiv.org/abs/2512.13655",
+   "next": []
+  },
+  {
+   "id": "swarm-policy",
+   "field": "safety",
+   "year": 2026,
+   "short": "Swarm red-teaming",
+   "title": "Restricting the Model, Missing the System: Measurement and Accountability in Offensive AI Governance",
+   "authors": "Michael A. Riegler, Inga Strümke",
+   "venue": "arXiv",
+   "finding": "A swarm of small attacker agents with shared memory shows jailbreak scores overstate harm, and that attack capability belongs to the whole system, not the model alone.",
+   "url": "https://arxiv.org/abs/2605.09504",
+   "next": [
+    "swarm-hf"
+   ]
+  },
+  {
+   "id": "swarm-hf",
+   "field": "safety",
+   "year": 2026,
+   "short": "The Hugging Face swarm attack",
+   "kind": "Incident report",
+   "title": "OpenAI – Hugging Face Incident: Technical Report",
+   "authors": "OpenAI",
+   "venue": "Technical report",
+   "finding": "About 1,200 evaluation agents found a shared message board; roughly 700 joined an unsanctioned intrusion into Hugging Face's production systems.",
+   "url": "https://cdn.openai.com/pdf/67869394-cb91-4c12-888c-5cbd85c7814c/OpenAI-Hugging-Face%20Incident-Technical-Report.pdf",
+   "also": [
     {
-      "id": "neural-nets",
-      "nav": "Neural nets",
-      "name": "Neural networks",
-      "intro": "The building blocks: how a network of simple units learns, keeps memory, stays stable when it gets deep, and generates new data."
+     "label": "Hugging Face's forensic timeline",
+     "url": "https://huggingface.co/blog/agent-intrusion-technical-timeline"
     },
     {
-      "id": "training",
-      "nav": "Training",
-      "name": "Machine learning & training",
-      "intro": "How models are optimised, scaled, compressed and fine-tuned, from the default optimiser to training a 65B model on one GPU."
-    },
-    {
-      "id": "language",
-      "nav": "Language",
-      "name": "Language models & AI",
-      "intro": "From word vectors and attention to the transformer, instruction-following chat models, retrieval, agents and reasoning."
-    },
-    {
-      "id": "vision",
-      "nav": "Vision",
-      "name": "Computer vision",
-      "intro": "How machines learned to see: convolution, depth, transformers for images, matching pictures to text, and generating images from noise."
-    },
-    {
-      "id": "robotics",
-      "nav": "Robotics",
-      "name": "Robotics & reinforcement learning",
-      "intro": "Learning from reward and from demonstration, from Atari and Go to robots that take instructions in plain language."
-    },
-    {
-      "id": "safety",
-      "nav": "Safety",
-      "name": "Safety & security",
-      "intro": "How models fail and get attacked: adversarial inputs, jailbreaks, prompt injection, hidden backdoors, refusal removal (abliteration) and agent swarms."
+     "label": "METR's independent investigation",
+     "url": "https://metr.org/blog/2026-08-26-openai-hugging-face-incident-investigation/"
     }
+   ],
+   "next": []
+  }
+ ],
+ "resources": {
+  "path": [
+   "3b1b",
+   "zero-to-hero",
+   "fastai",
+   "udl",
+   "hf-llm",
+   "illustrated"
   ],
-  "papers": [
-    {"id": "perceptron", "field": "neural-nets", "year": 1958, "short": "Perceptron",
-     "title": "The Perceptron: A Probabilistic Model for Information Storage and Organization in the Brain",
-     "authors": "Frank Rosenblatt", "venue": "Psychological Review",
-     "finding": "A machine can learn its own connection weights from examples: the first trainable artificial neuron.",
-     "url": "https://doi.org/10.1037/h0042519", "next": ["backprop"]},
-    {"id": "backprop", "field": "neural-nets", "year": 1986, "short": "Backpropagation",
-     "title": "Learning representations by back-propagating errors",
-     "authors": "David Rumelhart, Geoffrey Hinton, Ronald Williams", "venue": "Nature",
-     "finding": "Send the error backwards through the layers and the hidden units learn useful features on their own.",
-     "url": "https://doi.org/10.1038/323533a0", "next": ["lstm", "lenet"]},
-    {"id": "lstm", "field": "neural-nets", "year": 1997, "short": "LSTM",
-     "title": "Long Short-Term Memory",
-     "authors": "Sepp Hochreiter, Jürgen Schmidhuber", "venue": "Neural Computation",
-     "finding": "Gated memory cells let a recurrent network carry information across long sequences without the gradient vanishing.",
-     "url": "https://doi.org/10.1162/neco.1997.9.8.1735", "next": ["bahdanau", "transformer"]},
-    {"id": "vae", "field": "neural-nets", "year": 2013, "short": "VAE",
-     "title": "Auto-Encoding Variational Bayes",
-     "authors": "Diederik Kingma, Max Welling", "venue": "ICLR 2014",
-     "finding": "The reparameterisation trick makes a latent-variable generative model trainable with ordinary backpropagation.",
-     "url": "https://arxiv.org/abs/1312.6114", "next": ["ldm"]},
-    {"id": "dropout", "field": "neural-nets", "year": 2014, "short": "Dropout",
-     "title": "Dropout: A Simple Way to Prevent Neural Networks from Overfitting",
-     "authors": "Nitish Srivastava, Geoffrey Hinton, Alex Krizhevsky, Ilya Sutskever, Ruslan Salakhutdinov", "venue": "JMLR",
-     "finding": "Randomly switch off units during training and they stop co-adapting, which cuts overfitting.",
-     "url": "https://jmlr.org/papers/v15/srivastava14a.html", "next": []},
-    {"id": "gan", "field": "neural-nets", "year": 2014, "short": "GAN",
-     "title": "Generative Adversarial Networks",
-     "authors": "Ian Goodfellow et al.", "venue": "NeurIPS 2014",
-     "finding": "Train a generator against a discriminator that tries to spot fakes, and the generator learns to make realistic samples.",
-     "url": "https://arxiv.org/abs/1406.2661", "next": ["beatgans"]},
-    {"id": "batchnorm", "field": "neural-nets", "year": 2015, "short": "Batch norm",
-     "title": "Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift",
-     "authors": "Sergey Ioffe, Christian Szegedy", "venue": "ICML 2015",
-     "finding": "Normalise each layer's inputs over the mini-batch and deep networks train much faster at higher learning rates.",
-     "url": "https://arxiv.org/abs/1502.03167", "next": ["layernorm"]},
-    {"id": "layernorm", "field": "neural-nets", "year": 2016, "short": "Layer norm",
-     "title": "Layer Normalization",
-     "authors": "Jimmy Lei Ba, Jamie Ryan Kiros, Geoffrey Hinton", "venue": "arXiv",
-     "finding": "Normalise across a layer's features instead of the batch: it works for recurrent nets and any batch size, and became the transformer default.",
-     "url": "https://arxiv.org/abs/1607.06450", "next": []},
-    {"id": "moe", "field": "neural-nets", "year": 2017, "short": "Mixture of experts",
-     "title": "Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer",
-     "authors": "Noam Shazeer et al.", "venue": "ICLR 2017",
-     "finding": "Route each input to a few experts out of thousands, so model capacity grows far faster than compute.",
-     "url": "https://arxiv.org/abs/1701.06538", "next": ["switch"]},
-    {"id": "switch", "field": "neural-nets", "year": 2021, "short": "Switch Transformer",
-     "title": "Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity",
-     "authors": "William Fedus, Barret Zoph, Noam Shazeer", "venue": "JMLR",
-     "finding": "Send each token to just one expert: simpler, more stable routing that scales sparse models past a trillion parameters.",
-     "url": "https://arxiv.org/abs/2101.03961", "next": []},
-
-    {"id": "adam", "field": "training", "year": 2014, "short": "Adam",
-     "title": "Adam: A Method for Stochastic Optimization",
-     "authors": "Diederik Kingma, Jimmy Ba", "venue": "ICLR 2015",
-     "finding": "Give every parameter its own step size from running averages of the gradient and its square: the default optimiser for a decade.",
-     "url": "https://arxiv.org/abs/1412.6980", "next": ["adamw"]},
-    {"id": "distill", "field": "training", "year": 2015, "short": "Distillation",
-     "title": "Distilling the Knowledge in a Neural Network",
-     "authors": "Geoffrey Hinton, Oriol Vinyals, Jeff Dean", "venue": "NeurIPS 2014 workshop",
-     "finding": "A small model trained on a big model's soft output probabilities learns much of what the big one knows.",
-     "url": "https://arxiv.org/abs/1503.02531", "next": []},
-    {"id": "adamw", "field": "training", "year": 2017, "short": "AdamW",
-     "title": "Decoupled Weight Decay Regularization",
-     "authors": "Ilya Loshchilov, Frank Hutter", "venue": "ICLR 2019",
-     "finding": "Under Adam, L2 regularisation and weight decay are not the same thing; decoupling them generalises better.",
-     "url": "https://arxiv.org/abs/1711.05101", "next": []},
-    {"id": "scaling", "field": "training", "year": 2020, "short": "Scaling laws",
-     "title": "Scaling Laws for Neural Language Models",
-     "authors": "Jared Kaplan et al.", "venue": "arXiv",
-     "finding": "Language-model loss falls as a smooth power law in parameters, data and compute, so you can predict a big run from small ones.",
-     "url": "https://arxiv.org/abs/2001.08361", "next": ["chinchilla"]},
-    {"id": "lora", "field": "training", "year": 2021, "short": "LoRA",
-     "title": "LoRA: Low-Rank Adaptation of Large Language Models",
-     "authors": "Edward Hu et al.", "venue": "ICLR 2022",
-     "finding": "Freeze the model and train two small low-rank matrices per layer: up to 10,000× fewer trainable parameters with no added latency.",
-     "url": "https://arxiv.org/abs/2106.09685", "next": ["qlora"]},
-    {"id": "chinchilla", "field": "training", "year": 2022, "short": "Chinchilla",
-     "title": "Training Compute-Optimal Large Language Models",
-     "authors": "Jordan Hoffmann et al.", "venue": "NeurIPS 2022",
-     "finding": "Scale training data as fast as parameters: a 70B model on 1.4T tokens beat the 280B Gopher on the same compute.",
-     "url": "https://arxiv.org/abs/2203.15556", "next": []},
-    {"id": "qlora", "field": "training", "year": 2023, "short": "QLoRA",
-     "title": "QLoRA: Efficient Finetuning of Quantized LLMs",
-     "authors": "Tim Dettmers, Artidoro Pagnoni, Ari Holtzman, Luke Zettlemoyer", "venue": "NeurIPS 2023",
-     "finding": "Train LoRA adapters on top of a frozen 4-bit model and a 65B model fine-tunes on a single 48 GB GPU.",
-     "url": "https://arxiv.org/abs/2305.14314", "next": []},
-    {"id": "dpo", "field": "training", "year": 2023, "short": "DPO",
-     "title": "Direct Preference Optimization: Your Language Model is Secretly a Reward Model",
-     "authors": "Rafael Rafailov et al.", "venue": "NeurIPS 2023",
-     "finding": "Skip the reward model and the RL loop: a simple loss on pairs of preferred and rejected answers does the same job.",
-     "url": "https://arxiv.org/abs/2305.18290", "next": []},
-    {"id": "grpo", "field": "training", "year": 2024, "short": "GRPO",
-     "title": "DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models",
-     "authors": "Zhihong Shao et al.", "venue": "arXiv",
-     "finding": "GRPO drops PPO's value network: sample a group of answers and score each against the group's average.",
-     "url": "https://arxiv.org/abs/2402.03300", "next": ["r1"]},
-
-    {"id": "word2vec", "field": "language", "year": 2013, "short": "word2vec",
-     "title": "Efficient Estimation of Word Representations in Vector Space",
-     "authors": "Tomas Mikolov, Kai Chen, Greg Corrado, Jeffrey Dean", "venue": "ICLR 2013 workshop",
-     "finding": "Cheap models turn words into vectors whose directions capture meaning and relationships between words.",
-     "url": "https://arxiv.org/abs/1301.3781", "next": ["bert"]},
-    {"id": "bahdanau", "field": "language", "year": 2014, "short": "Attention",
-     "title": "Neural Machine Translation by Jointly Learning to Align and Translate",
-     "authors": "Dzmitry Bahdanau, Kyunghyun Cho, Yoshua Bengio", "venue": "ICLR 2015",
-     "finding": "Let the decoder look back at every input word instead of one fixed summary vector: the birth of attention.",
-     "url": "https://arxiv.org/abs/1409.0473", "next": ["transformer"]},
-    {"id": "transformer", "field": "language", "year": 2017, "short": "Transformer",
-     "title": "Attention Is All You Need",
-     "authors": "Ashish Vaswani et al.", "venue": "NeurIPS 2017",
-     "finding": "Drop recurrence entirely: attention alone, computed in parallel, beats RNNs at translation and trains far faster.",
-     "url": "https://arxiv.org/abs/1706.03762", "next": ["bert", "gpt3", "vit", "flash"]},
-    {"id": "bert", "field": "language", "year": 2018, "short": "BERT",
-     "title": "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
-     "authors": "Jacob Devlin, Ming-Wei Chang, Kenton Lee, Kristina Toutanova", "venue": "NAACL 2019",
-     "finding": "Pre-train a transformer by filling in masked words, then fine-tune it: new state of the art on eleven language tasks.",
-     "url": "https://arxiv.org/abs/1810.04805", "next": []},
-    {"id": "gpt3", "field": "language", "year": 2020, "short": "GPT-3",
-     "title": "Language Models are Few-Shot Learners",
-     "authors": "Tom Brown et al.", "venue": "NeurIPS 2020",
-     "finding": "At 175B parameters a language model picks up new tasks from a few examples in the prompt, with no fine-tuning.",
-     "url": "https://arxiv.org/abs/2005.14165", "next": ["instructgpt", "cot", "llama"]},
-    {"id": "rag", "field": "language", "year": 2020, "short": "RAG",
-     "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
-     "authors": "Patrick Lewis et al.", "venue": "NeurIPS 2020",
-     "finding": "Retrieve passages from a document index and generate from them: more specific, more factual answers you can trace to a source.",
-     "url": "https://arxiv.org/abs/2005.11401", "next": ["react"]},
-    {"id": "cot", "field": "language", "year": 2022, "short": "Chain of thought",
-     "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
-     "authors": "Jason Wei et al.", "venue": "NeurIPS 2022",
-     "finding": "Show a few worked examples with the reasoning written out and large models solve far more multi-step problems.",
-     "url": "https://arxiv.org/abs/2201.11903", "next": ["react", "r1"]},
-    {"id": "instructgpt", "field": "language", "year": 2022, "short": "InstructGPT (RLHF)",
-     "title": "Training language models to follow instructions with human feedback",
-     "authors": "Long Ouyang et al.", "venue": "NeurIPS 2022",
-     "finding": "Fine-tune on human preferences (RLHF) and people prefer a 1.3B model's answers over the 175B GPT-3's.",
-     "url": "https://arxiv.org/abs/2203.02155", "next": ["constitutional", "dpo", "grpo"]},
-    {"id": "flash", "field": "language", "year": 2022, "short": "FlashAttention",
-     "title": "FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness",
-     "authors": "Tri Dao, Daniel Fu, Stefano Ermon, Atri Rudra, Christopher Ré", "venue": "NeurIPS 2022",
-     "finding": "Exact attention, reordered so the big score matrix never goes to slow GPU memory: faster training and longer contexts.",
-     "url": "https://arxiv.org/abs/2205.14135", "next": []},
-    {"id": "react", "field": "language", "year": 2022, "short": "ReAct",
-     "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
-     "authors": "Shunyu Yao et al.", "venue": "ICLR 2023",
-     "finding": "Interleave reasoning steps with tool actions so the model can look things up and act: the template for LLM agents.",
-     "url": "https://arxiv.org/abs/2210.03629", "next": []},
-    {"id": "llama", "field": "language", "year": 2023, "short": "LLaMA",
-     "title": "LLaMA: Open and Efficient Foundation Language Models",
-     "authors": "Hugo Touvron et al.", "venue": "arXiv",
-     "finding": "Trained only on public data, the 13B model beats the 175B GPT-3 on most benchmarks, and the weights went to researchers.",
-     "url": "https://arxiv.org/abs/2302.13971", "next": []},
-    {"id": "r1", "field": "language", "year": 2025, "short": "DeepSeek-R1",
-     "title": "DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning",
-     "authors": "DeepSeek-AI", "venue": "Nature 2025",
-     "finding": "Reward only correct final answers and long step-by-step reasoning, self-checking included, emerges from reinforcement learning.",
-     "url": "https://arxiv.org/abs/2501.12948", "next": []},
-
-    {"id": "lenet", "field": "vision", "year": 1998, "short": "LeNet",
-     "title": "Gradient-Based Learning Applied to Document Recognition",
-     "authors": "Yann LeCun, Léon Bottou, Yoshua Bengio, Patrick Haffner", "venue": "Proceedings of the IEEE",
-     "finding": "Convolutional networks trained end to end with gradient descent read handwritten digits and cheques.",
-     "url": "https://doi.org/10.1109/5.726791", "next": ["alexnet"]},
-    {"id": "alexnet", "field": "vision", "year": 2012, "short": "AlexNet",
-     "title": "ImageNet Classification with Deep Convolutional Neural Networks",
-     "authors": "Alex Krizhevsky, Ilya Sutskever, Geoffrey Hinton", "venue": "NeurIPS 2012",
-     "finding": "A deep CNN trained on two GPUs cut ImageNet top-5 error to 15.3%, against 26.2% for the runner-up.",
-     "url": "https://papers.nips.cc/paper_files/paper/2012/hash/c399862d3b9d6b76c8436e924a68c45b-Abstract.html", "next": ["resnet"]},
-    {"id": "resnet", "field": "vision", "year": 2015, "short": "ResNet",
-     "title": "Deep Residual Learning for Image Recognition",
-     "authors": "Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun", "venue": "CVPR 2016",
-     "finding": "Skip connections let each block learn a correction to its input, so 152-layer networks train and win ImageNet.",
-     "url": "https://arxiv.org/abs/1512.03385", "next": ["vit"]},
-    {"id": "unet", "field": "vision", "year": 2015, "short": "U-Net",
-     "title": "U-Net: Convolutional Networks for Biomedical Image Segmentation",
-     "authors": "Olaf Ronneberger, Philipp Fischer, Thomas Brox", "venue": "MICCAI 2015",
-     "finding": "A contract-then-expand network with skip links segments images precisely from very few training examples.",
-     "url": "https://arxiv.org/abs/1505.04597", "next": ["ddpm", "sam"]},
-    {"id": "ddpm", "field": "vision", "year": 2020, "short": "DDPM",
-     "title": "Denoising Diffusion Probabilistic Models",
-     "authors": "Jonathan Ho, Ajay Jain, Pieter Abbeel", "venue": "NeurIPS 2020",
-     "finding": "Learn to undo noise one small step at a time and you can generate high-quality images starting from pure noise.",
-     "url": "https://arxiv.org/abs/2006.11239", "next": ["beatgans", "ldm", "diffpolicy"]},
-    {"id": "vit", "field": "vision", "year": 2020, "short": "ViT",
-     "title": "An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale",
-     "authors": "Alexey Dosovitskiy et al.", "venue": "ICLR 2021",
-     "finding": "Cut an image into 16×16 patches, treat them like words, and a plain transformer matches the best CNNs given enough pre-training data.",
-     "url": "https://arxiv.org/abs/2010.11929", "next": ["clip", "sam"]},
-    {"id": "clip", "field": "vision", "year": 2021, "short": "CLIP",
-     "title": "Learning Transferable Visual Models From Natural Language Supervision",
-     "authors": "Alec Radford et al.", "venue": "ICML 2021",
-     "finding": "Match 400 million images to their captions and the model classifies new images zero-shot from a text description.",
-     "url": "https://arxiv.org/abs/2103.00020", "next": ["ldm", "rt2"]},
-    {"id": "beatgans", "field": "vision", "year": 2021, "short": "Diffusion beats GANs",
-     "title": "Diffusion Models Beat GANs on Image Synthesis",
-     "authors": "Prafulla Dhariwal, Alex Nichol", "venue": "NeurIPS 2021",
-     "finding": "With a better architecture and classifier guidance, diffusion models overtake GANs on image quality.",
-     "url": "https://arxiv.org/abs/2105.05233", "next": []},
-    {"id": "ldm", "field": "vision", "year": 2021, "short": "Latent diffusion",
-     "title": "High-Resolution Image Synthesis with Latent Diffusion Models",
-     "authors": "Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, Björn Ommer", "venue": "CVPR 2022",
-     "finding": "Run diffusion in a compressed latent space instead of pixels: far cheaper, and the basis of Stable Diffusion.",
-     "url": "https://arxiv.org/abs/2112.10752", "next": []},
-    {"id": "sam", "field": "vision", "year": 2023, "short": "Segment Anything",
-     "title": "Segment Anything",
-     "authors": "Alexander Kirillov et al.", "venue": "ICCV 2023",
-     "finding": "A promptable model trained on over a billion masks segments objects in images it has never seen, zero-shot.",
-     "url": "https://arxiv.org/abs/2304.02643", "next": []},
-
-    {"id": "dqn", "field": "robotics", "year": 2013, "short": "DQN",
-     "title": "Playing Atari with Deep Reinforcement Learning",
-     "authors": "Volodymyr Mnih et al.", "venue": "NeurIPS 2013 workshop",
-     "finding": "One network learns to play seven Atari games from raw pixels and the score alone.",
-     "url": "https://arxiv.org/abs/1312.5602", "next": ["alphago", "ppo"]},
-    {"id": "alphago", "field": "robotics", "year": 2016, "short": "AlphaGo",
-     "title": "Mastering the game of Go with deep neural networks and tree search",
-     "authors": "David Silver et al.", "venue": "Nature",
-     "finding": "Policy and value networks guiding a tree search beat a professional Go player 5–0, a decade earlier than expected.",
-     "url": "https://doi.org/10.1038/nature16961", "next": ["alphazero"]},
-    {"id": "domainrand", "field": "robotics", "year": 2017, "short": "Domain randomisation",
-     "title": "Domain Randomization for Transferring Deep Neural Networks from Simulation to the Real World",
-     "authors": "Josh Tobin et al.", "venue": "IROS 2017",
-     "finding": "Train in simulation with wildly random textures and lighting, and the real world looks like just one more variation.",
-     "url": "https://arxiv.org/abs/1703.06907", "next": []},
-    {"id": "ppo", "field": "robotics", "year": 2017, "short": "PPO",
-     "title": "Proximal Policy Optimization Algorithms",
-     "authors": "John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, Oleg Klimov", "venue": "arXiv",
-     "finding": "Clip how far each update can move the policy: a simple, stable RL algorithm that became the default, RLHF included.",
-     "url": "https://arxiv.org/abs/1707.06347", "next": ["instructgpt", "grpo"]},
-    {"id": "alphazero", "field": "robotics", "year": 2017, "short": "AlphaZero",
-     "title": "Mastering Chess and Shogi by Self-Play with a General Reinforcement Learning Algorithm",
-     "authors": "David Silver et al.", "venue": "Science 2018",
-     "finding": "No human games at all: one algorithm learning from self-play alone masters chess, shogi and Go.",
-     "url": "https://arxiv.org/abs/1712.01815", "next": []},
-    {"id": "saycan", "field": "robotics", "year": 2022, "short": "SayCan",
-     "title": "Do As I Can, Not As I Say: Grounding Language in Robotic Affordances",
-     "authors": "Michael Ahn et al.", "venue": "CoRL 2022",
-     "finding": "A language model proposes the next step and the robot's learned value functions say which steps it can actually do right now.",
-     "url": "https://arxiv.org/abs/2204.01691", "next": ["rt2"]},
-    {"id": "diffpolicy", "field": "robotics", "year": 2023, "short": "Diffusion Policy",
-     "title": "Diffusion Policy: Visuomotor Policy Learning via Action Diffusion",
-     "authors": "Cheng Chi et al.", "venue": "RSS 2023",
-     "finding": "Generate robot actions the way diffusion generates images, which copes with demonstrations that solve a task in several ways.",
-     "url": "https://arxiv.org/abs/2303.04137", "next": ["pi0"]},
-    {"id": "rt2", "field": "robotics", "year": 2023, "short": "RT-2",
-     "title": "RT-2: Vision-Language-Action Models Transfer Web Knowledge to Robotic Control",
-     "authors": "Anthony Brohan et al.", "venue": "CoRL 2023",
-     "finding": "Write robot actions as text tokens and a web-trained vision-language model becomes a robot policy that generalises.",
-     "url": "https://arxiv.org/abs/2307.15818", "next": ["oxe", "pi0"]},
-    {"id": "oxe", "field": "robotics", "year": 2023, "short": "Open X-Embodiment",
-     "title": "Open X-Embodiment: Robotic Learning Datasets and RT-X Models",
-     "authors": "Open X-Embodiment Collaboration", "venue": "ICRA 2024",
-     "finding": "Pool data from 22 different robots into one dataset, and one model trained on all of it beats the single-robot specialists.",
-     "url": "https://arxiv.org/abs/2310.08864", "next": ["pi0"]},
-    {"id": "pi0", "field": "robotics", "year": 2024, "short": "π0",
-     "title": "π0: A Vision-Language-Action Flow Model for General Robot Control",
-     "authors": "Kevin Black et al. (Physical Intelligence)", "venue": "arXiv",
-     "finding": "A vision-language model with a flow-matching action head drives many robot types on dexterous tasks like folding laundry.",
-     "url": "https://arxiv.org/abs/2410.24164", "next": []},
-
-    {"id": "adversarial", "field": "safety", "year": 2013, "short": "Adversarial examples",
-     "title": "Intriguing properties of neural networks",
-     "authors": "Christian Szegedy et al.", "venue": "ICLR 2014",
-     "finding": "Changes to an image too small to see make a classifier confidently wrong, and they fool other models too.",
-     "url": "https://arxiv.org/abs/1312.6199", "next": ["gcg"]},
-    {"id": "concrete", "field": "safety", "year": 2016, "short": "Concrete problems",
-     "title": "Concrete Problems in AI Safety",
-     "authors": "Dario Amodei, Chris Olah, Jacob Steinhardt, Paul Christiano, John Schulman, Dan Mané", "venue": "arXiv",
-     "finding": "Five practical accident risks to research now: side effects, reward hacking, scalable oversight, safe exploration and distribution shift.",
-     "url": "https://arxiv.org/abs/1606.06565", "next": []},
-    {"id": "constitutional", "field": "safety", "year": 2022, "short": "Constitutional AI",
-     "title": "Constitutional AI: Harmlessness from AI Feedback",
-     "authors": "Yuntao Bai et al.", "venue": "arXiv",
-     "finding": "Replace human harm labels with a written list of principles that the model uses to critique and revise its own answers.",
-     "url": "https://arxiv.org/abs/2212.08073", "next": []},
-    {"id": "injection", "field": "safety", "year": 2023, "short": "Indirect prompt injection",
-     "title": "Not what you've signed up for: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection",
-     "authors": "Kai Greshake et al.", "venue": "AISec 2023",
-     "finding": "Instructions hidden in a web page or document the model reads can take over an LLM app: to the model, data is code.",
-     "url": "https://arxiv.org/abs/2302.12173", "next": ["swarm-hf"]},
-    {"id": "gcg", "field": "safety", "year": 2023, "short": "Universal jailbreaks (GCG)",
-     "title": "Universal and Transferable Adversarial Attacks on Aligned Language Models",
-     "authors": "Andy Zou, Zifan Wang, Nicholas Carlini, Milad Nasr, J. Zico Kolter, Matt Fredrikson", "venue": "arXiv",
-     "finding": "An automatically searched suffix jailbreaks open chat models, and the same suffix transfers to closed ones.",
-     "url": "https://arxiv.org/abs/2307.15043", "next": ["refusal"]},
-    {"id": "sleeper", "field": "safety", "year": 2024, "short": "Sleeper agents",
-     "title": "Sleeper Agents: Training Deceptive LLMs that Persist Through Safety Training",
-     "authors": "Evan Hubinger et al.", "venue": "arXiv",
-     "finding": "A backdoor trained into a model survives standard safety training, and adversarial training can teach it to hide better.",
-     "url": "https://arxiv.org/abs/2401.05566", "next": []},
-    {"id": "refusal", "field": "safety", "year": 2024, "short": "Abliteration",
-     "title": "Refusal in Language Models Is Mediated by a Single Direction",
-     "authors": "Andy Arditi et al.", "venue": "NeurIPS 2024",
-     "finding": "Refusal is one direction in the model's activations. Project it out of the weights and the model stops refusing: abliteration.",
-     "url": "https://arxiv.org/abs/2406.11717", "next": ["cones", "abl-defense", "abl-compare"]},
-    {"id": "cones", "field": "safety", "year": 2025, "short": "Refusal concept cones",
-     "title": "The Geometry of Refusal in Large Language Models: Concept Cones and Representational Independence",
-     "authors": "Tom Wollschläger et al.", "venue": "ICML 2025",
-     "finding": "Refusal is not just one direction: there are several independent ones, forming multi-dimensional concept cones.",
-     "url": "https://arxiv.org/abs/2502.17420", "next": []},
-    {"id": "abl-defense", "field": "safety", "year": 2025, "short": "Defending against abliteration",
-     "title": "An Embarrassingly Simple Defense Against LLM Abliteration Attacks",
-     "authors": "Harethah Abu Shairah et al.", "venue": "arXiv",
-     "finding": "Train a model to explain why before it refuses and abliteration cuts its refusal rate by at most 10%, against 70–80% for undefended models.",
-     "url": "https://arxiv.org/abs/2505.19056", "next": []},
-    {"id": "abl-compare", "field": "safety", "year": 2025, "short": "Abliteration tools compared",
-     "title": "Comparative Analysis of LLM Abliteration Methods: A Cross-Architecture Evaluation",
-     "authors": "Richard J. Young", "venue": "arXiv",
-     "finding": "Four abliteration tools on 16 models: same idea, very different damage, from +1.5 to −18.8 points on GSM8K maths.",
-     "url": "https://arxiv.org/abs/2512.13655", "next": []},
-    {"id": "swarm-policy", "field": "safety", "year": 2026, "short": "Swarm red-teaming",
-     "title": "Restricting the Model, Missing the System: Measurement and Accountability in Offensive AI Governance",
-     "authors": "Michael A. Riegler, Inga Strümke", "venue": "arXiv",
-     "finding": "A swarm of small attacker agents with shared memory shows jailbreak scores overstate harm, and that attack capability belongs to the whole system, not the model alone.",
-     "url": "https://arxiv.org/abs/2605.09504", "next": ["swarm-hf"]},
-    {"id": "swarm-hf", "field": "safety", "year": 2026, "short": "The Hugging Face swarm attack", "kind": "Incident report",
-     "title": "OpenAI – Hugging Face Incident: Technical Report",
-     "authors": "OpenAI", "venue": "Technical report",
-     "finding": "About 1,200 evaluation agents found a shared message board; roughly 700 joined an unsanctioned intrusion into Hugging Face's production systems.",
-     "url": "https://cdn.openai.com/pdf/67869394-cb91-4c12-888c-5cbd85c7814c/OpenAI-Hugging-Face%20Incident-Technical-Report.pdf",
-     "also": [
-       {"label": "Hugging Face's forensic timeline", "url": "https://huggingface.co/blog/agent-intrusion-technical-timeline"},
-       {"label": "METR's independent investigation", "url": "https://metr.org/blog/2026-08-26-openai-hugging-face-incident-investigation/"}
-     ],
-     "next": []}
+  "items": [
+   {
+    "id": "3b1b",
+    "field": "start",
+    "title": "Neural networks",
+    "by": "3Blue1Brown (Grant Sanderson)",
+    "kind": "Video series",
+    "url": "https://www.3blue1brown.com/topics/neural-networks",
+    "why": "Start here. Pictures, not code: what a network is, what gradient descent does, how backpropagation works, and how a transformer pays attention."
+   },
+   {
+    "id": "zero-to-hero",
+    "field": "start",
+    "title": "Neural Networks: Zero to Hero",
+    "by": "Andrej Karpathy",
+    "kind": "Video course + code",
+    "url": "https://karpathy.ai/zero-to-hero.html",
+    "why": "Build backpropagation, then a small GPT, from an empty Python file. It walks the same road as this archive, from backprop to the transformer."
+   },
+   {
+    "id": "fastai",
+    "field": "start",
+    "title": "Practical Deep Learning for Coders",
+    "by": "Jeremy Howard (fast.ai)",
+    "kind": "Course + free book",
+    "url": "https://course.fast.ai/",
+    "why": "Top-down: train a working model in lesson one, understand it later. Good if you learn by doing."
+   },
+   {
+    "id": "udl",
+    "field": "start",
+    "title": "Understanding Deep Learning",
+    "by": "Simon J. D. Prince",
+    "kind": "Free PDF book",
+    "url": "https://udlbook.github.io/udlbook/",
+    "why": "The modern textbook to keep open beside the papers, with clear figures, from the basics to transformers, diffusion and reinforcement learning."
+   },
+   {
+    "id": "hf-llm",
+    "field": "start",
+    "title": "LLM Course",
+    "by": "Hugging Face",
+    "kind": "Course",
+    "url": "https://huggingface.co/learn/llm-course",
+    "why": "Transformers in practice: tokenizers, fine-tuning, and sharing and running models. Reads without an account."
+   },
+   {
+    "id": "illustrated",
+    "field": "start",
+    "title": "The Illustrated Transformer",
+    "by": "Jay Alammar",
+    "kind": "Article",
+    "url": "https://jalammar.github.io/illustrated-transformer/",
+    "why": "Read it alongside “Attention Is All You Need”. After this, the papers on this page should read comfortably."
+   },
+   {
+    "id": "d2l",
+    "field": "neural-nets",
+    "title": "Dive into Deep Learning",
+    "by": "Zhang, Lipton, Li, Smola",
+    "kind": "Free book with code",
+    "url": "https://d2l.ai/",
+    "why": "Every chapter is runnable code, in PyTorch and other frameworks."
+   },
+   {
+    "id": "dlbook",
+    "field": "neural-nets",
+    "title": "Deep Learning",
+    "by": "Goodfellow, Bengio, Courville",
+    "kind": "Free online book",
+    "url": "https://www.deeplearningbook.org/",
+    "why": "The classic 2016 textbook; strongest on the maths and the foundations."
+   },
+   {
+    "id": "mit-6s191",
+    "field": "neural-nets",
+    "title": "MIT 6.S191: Introduction to Deep Learning",
+    "by": "MIT",
+    "kind": "Lectures + labs",
+    "url": "https://introtodeeplearning.com/",
+    "why": "A short, yearly-updated lecture series with free videos and labs."
+   },
+   {
+    "id": "isl",
+    "field": "training",
+    "title": "An Introduction to Statistical Learning (Python edition)",
+    "by": "James, Witten, Hastie, Tibshirani, Taylor",
+    "kind": "Free PDF book",
+    "url": "https://www.statlearning.com/",
+    "why": "Classic machine learning before deep learning: regression, trees, validation, overfitting."
+   },
+   {
+    "id": "mml",
+    "field": "training",
+    "title": "Mathematics for Machine Learning",
+    "by": "Deisenroth, Faisal, Ong",
+    "kind": "Free PDF book",
+    "url": "https://mml-book.github.io/",
+    "why": "The linear algebra, calculus and probability the papers assume, and nothing more."
+   },
+   {
+    "id": "recipe",
+    "field": "training",
+    "title": "A Recipe for Training Neural Networks",
+    "by": "Andrej Karpathy",
+    "kind": "Article",
+    "url": "https://karpathy.github.io/2019/04/25/recipe/",
+    "why": "How to actually get a network to train, step by step, without fooling yourself."
+   },
+   {
+    "id": "cs224n",
+    "field": "language",
+    "title": "CS224N: NLP with Deep Learning",
+    "by": "Stanford",
+    "kind": "Course + lectures",
+    "url": "https://web.stanford.edu/class/cs224n/",
+    "why": "Word vectors to transformers and LLMs, with the slides, notes and lecture videos public."
+   },
+   {
+    "id": "cs336",
+    "field": "language",
+    "title": "CS336: Language Modeling from Scratch",
+    "by": "Stanford",
+    "kind": "Course + lectures",
+    "url": "https://cs336.stanford.edu/",
+    "why": "Build and train a language model end to end. Lectures are free on YouTube; the assignments need a GPU."
+   },
+   {
+    "id": "slp3",
+    "field": "language",
+    "title": "Speech and Language Processing (3rd ed. draft)",
+    "by": "Dan Jurafsky, James H. Martin",
+    "kind": "Free PDF book",
+    "url": "https://web.stanford.edu/~jurafsky/slp3/",
+    "why": "The standard NLP textbook, with chapters on transformers and LLMs."
+   },
+   {
+    "id": "cs231n",
+    "field": "vision",
+    "title": "CS231n: Deep Learning for Computer Vision",
+    "by": "Stanford",
+    "kind": "Course notes",
+    "url": "https://cs231n.github.io/",
+    "why": "The best free notes on convolutional networks, still the clearest way into vision."
+   },
+   {
+    "id": "diffusion",
+    "field": "vision",
+    "title": "What are Diffusion Models?",
+    "by": "Lilian Weng",
+    "kind": "Article",
+    "url": "https://lilianweng.github.io/posts/2021-07-11-diffusion-models/",
+    "why": "The maths behind DDPM and latent diffusion, laid out in one place."
+   },
+   {
+    "id": "sutton-barto",
+    "field": "robotics",
+    "title": "Reinforcement Learning: An Introduction (2nd ed.)",
+    "by": "Richard Sutton, Andrew Barto",
+    "kind": "Free PDF book",
+    "url": "https://web.stanford.edu/class/psych209/Readings/SuttonBartoIPRLBook2ndEd.pdf",
+    "why": "The reinforcement learning textbook, from bandits to policy gradients."
+   },
+   {
+    "id": "spinningup",
+    "field": "robotics",
+    "title": "Spinning Up in Deep RL",
+    "by": "OpenAI",
+    "kind": "Guide + code",
+    "url": "https://spinningup.openai.com/",
+    "why": "Deep RL (including PPO) explained with short, readable implementations."
+   },
+   {
+    "id": "hf-rl",
+    "field": "robotics",
+    "title": "Deep Reinforcement Learning Course",
+    "by": "Hugging Face",
+    "kind": "Course",
+    "url": "https://huggingface.co/learn/deep-rl-course",
+    "why": "Hands-on RL, from Q-learning to PPO, with notebooks."
+   },
+   {
+    "id": "hf-robotics",
+    "field": "robotics",
+    "title": "Robotics Course",
+    "by": "Hugging Face",
+    "kind": "Course",
+    "url": "https://huggingface.co/learn/robotics-course",
+    "why": "Robot learning in practice: imitation learning and vision-language-action policies."
+   },
+   {
+    "id": "modern-robotics",
+    "field": "robotics",
+    "title": "Modern Robotics",
+    "by": "Kevin Lynch, Frank Park",
+    "kind": "Free PDF book + videos",
+    "url": "https://hades.mech.northwestern.edu/index.php/Modern_Robotics",
+    "why": "The mechanics, planning and control underneath the learning."
+   },
+   {
+    "id": "safety-atlas",
+    "field": "safety",
+    "title": "AI Safety Atlas",
+    "by": "Centre pour la Sécurité de l'IA",
+    "kind": "Free online textbook",
+    "url": "https://ai-safety-atlas.com/",
+    "why": "A structured introduction to AI risk, evaluations and alignment."
+   },
+   {
+    "id": "circuits",
+    "field": "safety",
+    "title": "Transformer Circuits",
+    "by": "Anthropic interpretability team",
+    "kind": "Research articles",
+    "url": "https://transformer-circuits.pub/",
+    "why": "How researchers look inside models: the work behind ideas like refusal directions."
+   },
+   {
+    "id": "distill",
+    "field": "safety",
+    "title": "Distill",
+    "by": "Distill journal (archive)",
+    "kind": "Interactive articles",
+    "url": "https://distill.pub/",
+    "why": "Closed in 2021, but its interactive explanations of what networks learn are still among the clearest."
+   },
+   {
+    "id": "hf-papers",
+    "field": "papers",
+    "title": "Daily Papers",
+    "by": "Hugging Face",
+    "kind": "Paper feed",
+    "url": "https://huggingface.co/papers",
+    "why": "New papers each day, picked and discussed by the community, all linked to arXiv."
+   },
+   {
+    "id": "arxiv-lg",
+    "field": "papers",
+    "title": "arXiv cs.LG: recent",
+    "by": "arXiv",
+    "kind": "Paper listing",
+    "url": "https://arxiv.org/list/cs.LG/recent",
+    "why": "The raw feed of new machine-learning papers. Use it once the curated lists start to feel slow."
+   },
+   {
+    "id": "lilianweng",
+    "field": "papers",
+    "title": "Lil'Log",
+    "by": "Lilian Weng",
+    "kind": "Survey articles",
+    "url": "https://lilianweng.github.io/",
+    "why": "Long, carefully cited surveys that map a whole research area at once."
+   }
   ]
+ }
 }

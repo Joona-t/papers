@@ -43,6 +43,24 @@ main .entry p.entry-finding { margin: 0 0 12px; color: var(--ink-soft); }
 .entry-rel a:hover { border-color: var(--accent); color: var(--accent); }
 .rel-year { color: var(--muted); font-variant-numeric: tabular-nums; }
 
+/* Further reading & learning */
+.res-path, .res-list { list-style: none; margin: 24px 0 8px; padding: 0; display: grid; gap: 14px; }
+.res-list { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+main .res { position: relative; display: flex; gap: 16px; margin: 0; border: 1px solid var(--line); background: color-mix(in srgb, var(--paper-deep) 60%, transparent); padding: 16px 18px; transition: border-color .2s ease; }
+.res:hover, .res:focus-within { border-color: var(--accent); }
+.res-num { flex: 0 0 34px; font-family: var(--display); font-size: 26px; line-height: 1; color: var(--accent); text-align: center; padding-top: 2px; }
+.res-body { min-width: 0; }
+main .res h4 { font-family: var(--display); font-weight: 400; font-size: 19px; line-height: 1.3; margin: 0 0 6px; }
+.res-link { color: var(--ink); text-decoration: none; }
+.res-link::after { content: ""; position: absolute; inset: 0; }
+.res-link:hover, .res:hover .res-link { color: var(--accent); }
+.res-link:focus-visible { outline: none; }
+.res-link:focus-visible::after { outline: 2px solid var(--accent); outline-offset: 3px; }
+main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-soft); }
+:root[data-theme="basalt"][data-font="serif"] main .res p { font-size: 17.5px; }
+#learn h3 { margin-top: 38px; }
+.toc-learn { margin-top: 14px; }
+
 /* phones: the line moves to the left edge, the year sits above its card */
 @media (max-width: 640px) {
   .timeline::before { left: 5px; }

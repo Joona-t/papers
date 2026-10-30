@@ -31,3 +31,14 @@
 ## ITER-003 · 2026-10-30 · Page at 90% scale
 - Joona: the page read too zoomed in, so it should be 90% of its old size. Done with `html { zoom: .9 }` in timeline.css, which scales text, spacing and layout together.
 - Side effect caught in testing: the 32 px Built on / Led to chips rendered at 28.8 px, under the 32 px touch-target rule. Their min-height is now 36 px (32.4 px rendered). All 119 tap targets measure ≥ 32.4 px at 320 px, and 9 themes × 6 fonts show no overflow.
+
+## BUG-004 · 2026-10-30 · Links that needed a sign-in or hit a paywall
+- Joona: the Keshav citation went to dl.acm.org, which shows Sign In / Upgrade. The rule now: only open, free links with no sign-in.
+- Root cause: five papers and the Keshav caption linked DOIs that resolve to publisher pages (APA, Nature ×2, MIT Press, IEEE, ACM). check_links.py only tested that links resolve, not that they are open.
+- Fix: open copies hosted by the authors, their labs or course pages: Rosenblatt (UIC), backprop (Hinton, Toronto), LSTM (CMU 11-785), LeNet (co-author Bottou), AlphaGo (DeepMind). The Keshav caption keeps the credit with no link.
+- Prevention: verify.mjs fails the build on any link to a walled host (doi.org, dl.acm.org, nature.com, science.org, IEEE Xplore, APA, direct.mit.edu, ScienceDirect, Springer, Wiley, ResearchGate, Academia, Scribd, Medium, Coursera, Udemy, LinkedIn). The regex was checked against a DOI (fires) and an author PDF (passes).
+
+## ITER-004 · 2026-10-30 · Further reading & learning
+- 28 free resources, with no account, sign-in or application needed (BlueDot and ARENA were left out because they need an application). Six come first, in order: 3Blue1Brown, Karpathy's Zero to Hero, fast.ai, Understanding Deep Learning, the Hugging Face LLM course, The Illustrated Transformer. The order follows prerequisites (intuition → building → textbook → practice). No study ranks these resources against each other.
+- check_links.py now also checks resources and reads only the first 4 KB of non-arXiv links (the full 4 MB Sutton & Barto PDF timed out at 30 s).
+- Checks: verify.mjs 1489 PASS; check_links 0 problems (55 arXiv titles matched, every PDF and resource returned 200); in the browser, 9 themes × 6 fonts show no overflow at 320 px, and the new section's lowest contrast is 5.63:1.
