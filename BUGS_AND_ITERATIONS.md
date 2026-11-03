@@ -42,3 +42,10 @@
 - 28 free resources, with no account, sign-in or application needed (BlueDot and ARENA were left out because they need an application). Six come first, in order: 3Blue1Brown, Karpathy's Zero to Hero, fast.ai, Understanding Deep Learning, the Hugging Face LLM course, The Illustrated Transformer. The order follows prerequisites (intuition → building → textbook → practice). No study ranks these resources against each other.
 - check_links.py now also checks resources and reads only the first 4 KB of non-arXiv links (the full 4 MB Sutton & Barto PDF timed out at 30 s).
 - Checks: verify.mjs 1489 PASS; check_links 0 problems (55 arXiv titles matched, every PDF and resource returned 200); in the browser, 9 themes × 6 fonts show no overflow at 320 px, and the new section's lowest contrast is 5.63:1.
+
+## ITER-005 · 2026-11-03 · Findings say when the modern form came later
+- Joona: the learning resources should be accurate. The perceptron entry implied the 1958 paper has the update rule taught today, w ← w + η(y − ŷ)x, but that form came later (Rosenblatt 1962 onwards).
+- Fifteen findings now name the later paper where the textbook version of an idea comes from, or where the paper's claim was later revised: perceptron, backprop, LSTM (forget gate, 2000), batch norm, layer norm (RMSNorm), Adam, scaling laws, transformer, chain of thought, DeepSeek-R1, DDPM, diffusion beats GANs, latent diffusion, DQN (target network, 2015) and PPO (TRPO).
+- Two lineage links removed: DQN → PPO (PPO comes from policy-gradient methods and TRPO, not DQN) and CLIP → latent diffusion (the LDM paper used its own text encoder; CLIP's came with Stable Diffusion, which the finding now says).
+- An independent fact-check against the papers verified every change and tightened five findings: perceptron (the 1958 paper reinforces active units, by forced or chance correct responses), backprop, DeepSeek-R1 (format reward, more stages), DQN (one network per game) and PPO (default policy-gradient method, not all of RL).
+- Checks: verify.mjs passes.

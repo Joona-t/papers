@@ -47,7 +47,7 @@
    "title": "The Perceptron: A Probabilistic Model for Information Storage and Organization in the Brain",
    "authors": "Frank Rosenblatt",
    "venue": "Psychological Review",
-   "finding": "A machine can learn its own connection weights from examples: the first trainable artificial neuron.",
+   "finding": "Active units are reinforced when the correct response is forced or happens to be given (and weakened when it is wrong), so the machine learns to classify patterns from examples. The error-correction rule taught today, w ← w + η(y − ŷ)x, is a later textbook form of the procedure in Rosenblatt's 1962 book.",
    "url": "https://homepages.math.uic.edu/~lreyzin/papers/rosenblatt58.pdf",
    "next": [
     "backprop"
@@ -61,7 +61,7 @@
    "title": "Learning representations by back-propagating errors",
    "authors": "David Rumelhart, Geoffrey Hinton, Ronald Williams",
    "venue": "Nature",
-   "finding": "Send the error backwards through the layers and the hidden units learn useful features on their own.",
+   "finding": "Send the error backwards through the layers and the hidden units learn useful features on their own. The core method had been described earlier (Linnainmaa 1970, Werbos 1974); this paper showed what it could learn.",
    "url": "https://www.cs.toronto.edu/~hinton/absps/naturebp.pdf",
    "next": [
     "lstm",
@@ -76,7 +76,7 @@
    "title": "Long Short-Term Memory",
    "authors": "Sepp Hochreiter, Jürgen Schmidhuber",
    "venue": "Neural Computation",
-   "finding": "Gated memory cells let a recurrent network carry information across long sequences without the gradient vanishing.",
+   "finding": "Gated memory cells let a recurrent network carry information across long sequences without the gradient vanishing. The forget gate that every modern LSTM has came later (Gers, Schmidhuber & Cummins, 2000).",
    "url": "https://deeplearning.cs.cmu.edu/F23/document/readings/LSTM.pdf",
    "next": [
     "bahdanau",
@@ -131,7 +131,7 @@
    "title": "Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift",
    "authors": "Sergey Ioffe, Christian Szegedy",
    "venue": "ICML 2015",
-   "finding": "Normalise each layer's inputs over the mini-batch and deep networks train much faster at higher learning rates.",
+   "finding": "Normalise each layer's inputs over the mini-batch and deep networks train much faster at higher learning rates. The paper's explanation, reducing \"internal covariate shift\", was later disputed (Santurkar et al., 2018).",
    "url": "https://arxiv.org/abs/1502.03167",
    "next": [
     "layernorm"
@@ -145,7 +145,7 @@
    "title": "Layer Normalization",
    "authors": "Jimmy Lei Ba, Jamie Ryan Kiros, Geoffrey Hinton",
    "venue": "arXiv",
-   "finding": "Normalise across a layer's features instead of the batch: it works for recurrent nets and any batch size, and became the transformer default.",
+   "finding": "Normalise across a layer's features instead of the batch: it works for recurrent nets and any batch size, and became the transformer default. Many recent LLMs use the simpler RMSNorm (Zhang & Sennrich, 2019) instead.",
    "url": "https://arxiv.org/abs/1607.06450",
    "next": []
   },
@@ -183,7 +183,7 @@
    "title": "Adam: A Method for Stochastic Optimization",
    "authors": "Diederik Kingma, Jimmy Ba",
    "venue": "ICLR 2015",
-   "finding": "Give every parameter its own step size from running averages of the gradient and its square: the default optimiser for a decade.",
+   "finding": "Give every parameter its own step size from running averages of the gradient and its square: the default optimiser for a decade, even though its convergence proof was later shown to be flawed (Reddi et al., 2018).",
    "url": "https://arxiv.org/abs/1412.6980",
    "next": [
     "adamw"
@@ -221,7 +221,7 @@
    "title": "Scaling Laws for Neural Language Models",
    "authors": "Jared Kaplan et al.",
    "venue": "arXiv",
-   "finding": "Language-model loss falls as a smooth power law in parameters, data and compute, so you can predict a big run from small ones.",
+   "finding": "Language-model loss falls as a smooth power law in parameters, data and compute, so you can predict a big run from small ones. Its advice to grow models faster than data was later revised by Chinchilla.",
    "url": "https://arxiv.org/abs/2001.08361",
    "next": [
     "chinchilla"
@@ -327,7 +327,7 @@
    "title": "Attention Is All You Need",
    "authors": "Ashish Vaswani et al.",
    "venue": "NeurIPS 2017",
-   "finding": "Drop recurrence entirely: attention alone, computed in parallel, beats RNNs at translation and trains far faster.",
+   "finding": "Drop recurrence entirely: attention alone, computed in parallel, beats RNNs at translation and trains far faster. Today's LLMs keep the core but usually swap in pre-norm, RMSNorm, rotary positions and gated feed-forward layers.",
    "url": "https://arxiv.org/abs/1706.03762",
    "next": [
     "bert",
@@ -386,7 +386,7 @@
    "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
    "authors": "Jason Wei et al.",
    "venue": "NeurIPS 2022",
-   "finding": "Show a few worked examples with the reasoning written out and large models solve far more multi-step problems.",
+   "finding": "Show a few worked examples with the reasoning written out and large models solve far more multi-step problems. Later the same year, just adding \"Let's think step by step\" was shown to help too (Kojima et al., 2022).",
    "url": "https://arxiv.org/abs/2201.11903",
    "next": [
     "react",
@@ -453,7 +453,7 @@
    "title": "DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning",
    "authors": "DeepSeek-AI",
    "venue": "Nature 2025",
-   "finding": "Reward only correct final answers and long step-by-step reasoning, self-checking included, emerges from reinforcement learning.",
+   "finding": "Reward just correct final answers (plus a format check) and long step-by-step reasoning, self-checking included, emerges from reinforcement learning alone (R1-Zero). R1 adds a small supervised warm-up and further training stages so the reasoning reads well.",
    "url": "https://arxiv.org/abs/2501.12948",
    "next": []
   },
@@ -522,7 +522,7 @@
    "title": "Denoising Diffusion Probabilistic Models",
    "authors": "Jonathan Ho, Ajay Jain, Pieter Abbeel",
    "venue": "NeurIPS 2020",
-   "finding": "Learn to undo noise one small step at a time and you can generate high-quality images starting from pure noise.",
+   "finding": "Learn to undo noise one small step at a time and you can generate high-quality images starting from pure noise. It made the 2015 idea of diffusion models (Sohl-Dickstein et al.) work well.",
    "url": "https://arxiv.org/abs/2006.11239",
    "next": [
     "beatgans",
@@ -556,7 +556,6 @@
    "finding": "Match 400 million images to their captions and the model classifies new images zero-shot from a text description.",
    "url": "https://arxiv.org/abs/2103.00020",
    "next": [
-    "ldm",
     "rt2"
    ]
   },
@@ -568,7 +567,7 @@
    "title": "Diffusion Models Beat GANs on Image Synthesis",
    "authors": "Prafulla Dhariwal, Alex Nichol",
    "venue": "NeurIPS 2021",
-   "finding": "With a better architecture and classifier guidance, diffusion models overtake GANs on image quality.",
+   "finding": "With a better architecture and classifier guidance, diffusion models overtake GANs on image quality. Classifier-free guidance (Ho & Salimans) soon made the separate classifier unnecessary.",
    "url": "https://arxiv.org/abs/2105.05233",
    "next": []
   },
@@ -580,7 +579,7 @@
    "title": "High-Resolution Image Synthesis with Latent Diffusion Models",
    "authors": "Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, Björn Ommer",
    "venue": "CVPR 2022",
-   "finding": "Run diffusion in a compressed latent space instead of pixels: far cheaper, and the basis of Stable Diffusion.",
+   "finding": "Run diffusion in a compressed latent space instead of pixels: far cheaper, and the basis of Stable Diffusion, which added CLIP's text encoder for prompts.",
    "url": "https://arxiv.org/abs/2112.10752",
    "next": []
   },
@@ -604,11 +603,10 @@
    "title": "Playing Atari with Deep Reinforcement Learning",
    "authors": "Volodymyr Mnih et al.",
    "venue": "NeurIPS 2013 workshop",
-   "finding": "One network learns to play seven Atari games from raw pixels and the score alone.",
+   "finding": "The same network and settings, trained separately on each of seven Atari games, learn to play from raw pixels and the score alone. The target network and the 49-game result came in the 2015 Nature version.",
    "url": "https://arxiv.org/abs/1312.5602",
    "next": [
-    "alphago",
-    "ppo"
+    "alphago"
    ]
   },
   {
@@ -645,7 +643,7 @@
    "title": "Proximal Policy Optimization Algorithms",
    "authors": "John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, Oleg Klimov",
    "venue": "arXiv",
-   "finding": "Clip how far each update can move the policy: a simple, stable RL algorithm that became the default, RLHF included.",
+   "finding": "A simpler successor to TRPO: clip how far each update can move the policy. It is stable, and became the go-to policy-gradient method, RLHF included.",
    "url": "https://arxiv.org/abs/1707.06347",
    "next": [
     "instructgpt",
