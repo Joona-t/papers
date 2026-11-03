@@ -667,7 +667,7 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
         <div class="entry-card">
           <div class="entry-label">Perceptron</div>
           <h3><a class="entry-link" href="https://homepages.math.uic.edu/~lreyzin/papers/rosenblatt58.pdf" target="_blank" rel="noopener">The Perceptron: A Probabilistic Model for Information Storage and Organization in the Brain<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
-          <p class="entry-finding">A machine can learn its own connection weights from examples: the first trainable artificial neuron.</p>
+          <p class="entry-finding">Connections that were active when the machine answered correctly get reinforced, so it learns to classify patterns from examples. The update rule taught today, w ← w + η(y − ŷ)x, is a later textbook form, starting with Rosenblatt&#x27;s 1962 book.</p>
           <div class="entry-meta">Frank Rosenblatt · Psychological Review · <span class="entry-src">PDF <span aria-hidden="true">↗</span></span></div>
           <div class="entry-rel"><span class="rel-label">Led to</span><a href="#backprop">Backpropagation <span class="rel-year">1986</span></a></div>
         </div>
@@ -676,7 +676,7 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
         <div class="entry-card">
           <div class="entry-label">Backpropagation</div>
           <h3><a class="entry-link" href="https://www.cs.toronto.edu/~hinton/absps/naturebp.pdf" target="_blank" rel="noopener">Learning representations by back-propagating errors<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
-          <p class="entry-finding">Send the error backwards through the layers and the hidden units learn useful features on their own.</p>
+          <p class="entry-finding">Send the error backwards through the layers and the hidden units learn useful features on their own. The method itself was older (Linnainmaa 1970, Werbos 1974); this paper showed what it could learn.</p>
           <div class="entry-meta">David Rumelhart, Geoffrey Hinton, Ronald Williams · Nature · <span class="entry-src">PDF <span aria-hidden="true">↗</span></span></div>
           <div class="entry-rel"><span class="rel-label">Built on</span><a href="#perceptron">Perceptron <span class="rel-year">1958</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#lstm">LSTM <span class="rel-year">1997</span></a><a href="#lenet">LeNet <span class="rel-year">1998</span></a></div>
         </div>
@@ -685,7 +685,7 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
         <div class="entry-card">
           <div class="entry-label">LSTM</div>
           <h3><a class="entry-link" href="https://deeplearning.cs.cmu.edu/F23/document/readings/LSTM.pdf" target="_blank" rel="noopener">Long Short-Term Memory<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
-          <p class="entry-finding">Gated memory cells let a recurrent network carry information across long sequences without the gradient vanishing.</p>
+          <p class="entry-finding">Gated memory cells let a recurrent network carry information across long sequences without the gradient vanishing. The forget gate that every modern LSTM has came later (Gers, Schmidhuber &amp; Cummins, 2000).</p>
           <div class="entry-meta">Sepp Hochreiter, Jürgen Schmidhuber · Neural Computation · <span class="entry-src">PDF <span aria-hidden="true">↗</span></span></div>
           <div class="entry-rel"><span class="rel-label">Built on</span><a href="#backprop">Backpropagation <span class="rel-year">1986</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#bahdanau">Attention <span class="rel-year">2014</span></a><a href="#transformer">Transformer <span class="rel-year">2017</span></a></div>
         </div>
@@ -721,7 +721,7 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
         <div class="entry-card">
           <div class="entry-label">Batch norm</div>
           <h3><a class="entry-link" href="https://arxiv.org/abs/1502.03167" target="_blank" rel="noopener">Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
-          <p class="entry-finding">Normalise each layer&#x27;s inputs over the mini-batch and deep networks train much faster at higher learning rates.</p>
+          <p class="entry-finding">Normalise each layer&#x27;s inputs over the mini-batch and deep networks train much faster at higher learning rates. The paper&#x27;s explanation, reducing &quot;internal covariate shift&quot;, was later disputed (Santurkar et al., 2018).</p>
           <div class="entry-meta">Sergey Ioffe, Christian Szegedy · ICML 2015 · <span class="entry-src">arXiv 1502.03167 <span aria-hidden="true">↗</span></span></div>
           <div class="entry-rel"><span class="rel-label">Led to</span><a href="#layernorm">Layer norm <span class="rel-year">2016</span></a></div>
         </div>
@@ -730,7 +730,7 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
         <div class="entry-card">
           <div class="entry-label">Layer norm</div>
           <h3><a class="entry-link" href="https://arxiv.org/abs/1607.06450" target="_blank" rel="noopener">Layer Normalization<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
-          <p class="entry-finding">Normalise across a layer&#x27;s features instead of the batch: it works for recurrent nets and any batch size, and became the transformer default.</p>
+          <p class="entry-finding">Normalise across a layer&#x27;s features instead of the batch: it works for recurrent nets and any batch size, and became the transformer default. Many recent LLMs use the simpler RMSNorm (Zhang &amp; Sennrich, 2019) instead.</p>
           <div class="entry-meta">Jimmy Lei Ba, Jamie Ryan Kiros, Geoffrey Hinton · arXiv · <span class="entry-src">arXiv 1607.06450 <span aria-hidden="true">↗</span></span></div>
           <div class="entry-rel"><span class="rel-label">Built on</span><a href="#batchnorm">Batch norm <span class="rel-year">2015</span></a></div>
         </div>
@@ -764,7 +764,7 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
         <div class="entry-card">
           <div class="entry-label">Adam</div>
           <h3><a class="entry-link" href="https://arxiv.org/abs/1412.6980" target="_blank" rel="noopener">Adam: A Method for Stochastic Optimization<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
-          <p class="entry-finding">Give every parameter its own step size from running averages of the gradient and its square: the default optimiser for a decade.</p>
+          <p class="entry-finding">Give every parameter its own step size from running averages of the gradient and its square: the default optimiser for a decade, even though its convergence proof was later shown to be flawed (Reddi et al., 2018).</p>
           <div class="entry-meta">Diederik Kingma, Jimmy Ba · ICLR 2015 · <span class="entry-src">arXiv 1412.6980 <span aria-hidden="true">↗</span></span></div>
           <div class="entry-rel"><span class="rel-label">Led to</span><a href="#adamw">AdamW <span class="rel-year">2017</span></a></div>
         </div>
@@ -791,7 +791,7 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
         <div class="entry-card">
           <div class="entry-label">Scaling laws</div>
           <h3><a class="entry-link" href="https://arxiv.org/abs/2001.08361" target="_blank" rel="noopener">Scaling Laws for Neural Language Models<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
-          <p class="entry-finding">Language-model loss falls as a smooth power law in parameters, data and compute, so you can predict a big run from small ones.</p>
+          <p class="entry-finding">Language-model loss falls as a smooth power law in parameters, data and compute, so you can predict a big run from small ones. Its advice to grow models faster than data was later revised by Chinchilla.</p>
           <div class="entry-meta">Jared Kaplan et al. · arXiv · <span class="entry-src">arXiv 2001.08361 <span aria-hidden="true">↗</span></span></div>
           <div class="entry-rel"><span class="rel-label">Led to</span><a href="#chinchilla">Chinchilla <span class="rel-year">2022</span></a></div>
         </div>
@@ -870,7 +870,7 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
         <div class="entry-card">
           <div class="entry-label">Transformer</div>
           <h3><a class="entry-link" href="https://arxiv.org/abs/1706.03762" target="_blank" rel="noopener">Attention Is All You Need<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
-          <p class="entry-finding">Drop recurrence entirely: attention alone, computed in parallel, beats RNNs at translation and trains far faster.</p>
+          <p class="entry-finding">Drop recurrence entirely: attention alone, computed in parallel, beats RNNs at translation and trains far faster. Today&#x27;s LLMs keep the core but usually swap in pre-norm, RMSNorm, rotary positions and gated feed-forward layers.</p>
           <div class="entry-meta">Ashish Vaswani et al. · NeurIPS 2017 · <span class="entry-src">arXiv 1706.03762 <span aria-hidden="true">↗</span></span></div>
           <div class="entry-rel"><span class="rel-label">Built on</span><a href="#lstm">LSTM <span class="rel-year">1997</span></a><a href="#bahdanau">Attention <span class="rel-year">2014</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#bert">BERT <span class="rel-year">2018</span></a><a href="#gpt3">GPT-3 <span class="rel-year">2020</span></a><a href="#vit">ViT <span class="rel-year">2020</span></a><a href="#flash">FlashAttention <span class="rel-year">2022</span></a></div>
         </div>
@@ -906,7 +906,7 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
         <div class="entry-card">
           <div class="entry-label">Chain of thought</div>
           <h3><a class="entry-link" href="https://arxiv.org/abs/2201.11903" target="_blank" rel="noopener">Chain-of-Thought Prompting Elicits Reasoning in Large Language Models<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
-          <p class="entry-finding">Show a few worked examples with the reasoning written out and large models solve far more multi-step problems.</p>
+          <p class="entry-finding">Show a few worked examples with the reasoning written out and large models solve far more multi-step problems. Later the same year, just adding &quot;Let&#x27;s think step by step&quot; was shown to help too (Kojima et al., 2022).</p>
           <div class="entry-meta">Jason Wei et al. · NeurIPS 2022 · <span class="entry-src">arXiv 2201.11903 <span aria-hidden="true">↗</span></span></div>
           <div class="entry-rel"><span class="rel-label">Built on</span><a href="#gpt3">GPT-3 <span class="rel-year">2020</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#react">ReAct <span class="rel-year">2022</span></a><a href="#r1">DeepSeek-R1 <span class="rel-year">2025</span></a></div>
         </div>
@@ -951,7 +951,7 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
         <div class="entry-card">
           <div class="entry-label">DeepSeek-R1</div>
           <h3><a class="entry-link" href="https://arxiv.org/abs/2501.12948" target="_blank" rel="noopener">DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
-          <p class="entry-finding">Reward only correct final answers and long step-by-step reasoning, self-checking included, emerges from reinforcement learning.</p>
+          <p class="entry-finding">Reward only correct final answers and long step-by-step reasoning, self-checking included, emerges from reinforcement learning alone (R1-Zero). R1 adds a small supervised warm-up so the reasoning reads well.</p>
           <div class="entry-meta">DeepSeek-AI · Nature 2025 · <span class="entry-src">arXiv 2501.12948 <span aria-hidden="true">↗</span></span></div>
           <div class="entry-rel"><span class="rel-label">Built on</span><a href="#grpo">GRPO <span class="rel-year">2024</span></a><a href="#cot">Chain of thought <span class="rel-year">2022</span></a></div>
         </div>
@@ -1003,7 +1003,7 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
         <div class="entry-card">
           <div class="entry-label">DDPM</div>
           <h3><a class="entry-link" href="https://arxiv.org/abs/2006.11239" target="_blank" rel="noopener">Denoising Diffusion Probabilistic Models<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
-          <p class="entry-finding">Learn to undo noise one small step at a time and you can generate high-quality images starting from pure noise.</p>
+          <p class="entry-finding">Learn to undo noise one small step at a time and you can generate high-quality images starting from pure noise. It made the 2015 idea of diffusion models (Sohl-Dickstein et al.) work well.</p>
           <div class="entry-meta">Jonathan Ho, Ajay Jain, Pieter Abbeel · NeurIPS 2020 · <span class="entry-src">arXiv 2006.11239 <span aria-hidden="true">↗</span></span></div>
           <div class="entry-rel"><span class="rel-label">Built on</span><a href="#unet">U-Net <span class="rel-year">2015</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#beatgans">Diffusion beats GANs <span class="rel-year">2021</span></a><a href="#ldm">Latent diffusion <span class="rel-year">2021</span></a><a href="#diffpolicy">Diffusion Policy <span class="rel-year">2023</span></a></div>
         </div>
@@ -1023,14 +1023,14 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
           <h3><a class="entry-link" href="https://arxiv.org/abs/2103.00020" target="_blank" rel="noopener">Learning Transferable Visual Models From Natural Language Supervision<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
           <p class="entry-finding">Match 400 million images to their captions and the model classifies new images zero-shot from a text description.</p>
           <div class="entry-meta">Alec Radford et al. · ICML 2021 · <span class="entry-src">arXiv 2103.00020 <span aria-hidden="true">↗</span></span></div>
-          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#vit">ViT <span class="rel-year">2020</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#ldm">Latent diffusion <span class="rel-year">2021</span></a><a href="#rt2">RT-2 <span class="rel-year">2023</span></a></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#vit">ViT <span class="rel-year">2020</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#rt2">RT-2 <span class="rel-year">2023</span></a></div>
         </div>
       </article><article class="entry" id="beatgans">
         <div class="entry-year">2021</div>
         <div class="entry-card">
           <div class="entry-label">Diffusion beats GANs</div>
           <h3><a class="entry-link" href="https://arxiv.org/abs/2105.05233" target="_blank" rel="noopener">Diffusion Models Beat GANs on Image Synthesis<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
-          <p class="entry-finding">With a better architecture and classifier guidance, diffusion models overtake GANs on image quality.</p>
+          <p class="entry-finding">With a better architecture and classifier guidance, diffusion models overtake GANs on image quality. Classifier-free guidance (Ho &amp; Salimans) soon made the separate classifier unnecessary.</p>
           <div class="entry-meta">Prafulla Dhariwal, Alex Nichol · NeurIPS 2021 · <span class="entry-src">arXiv 2105.05233 <span aria-hidden="true">↗</span></span></div>
           <div class="entry-rel"><span class="rel-label">Built on</span><a href="#gan">GAN <span class="rel-year">2014</span></a><a href="#ddpm">DDPM <span class="rel-year">2020</span></a></div>
         </div>
@@ -1039,9 +1039,9 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
         <div class="entry-card">
           <div class="entry-label">Latent diffusion</div>
           <h3><a class="entry-link" href="https://arxiv.org/abs/2112.10752" target="_blank" rel="noopener">High-Resolution Image Synthesis with Latent Diffusion Models<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
-          <p class="entry-finding">Run diffusion in a compressed latent space instead of pixels: far cheaper, and the basis of Stable Diffusion.</p>
+          <p class="entry-finding">Run diffusion in a compressed latent space instead of pixels: far cheaper, and the basis of Stable Diffusion, which added CLIP&#x27;s text encoder for prompts.</p>
           <div class="entry-meta">Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, Björn Ommer · CVPR 2022 · <span class="entry-src">arXiv 2112.10752 <span aria-hidden="true">↗</span></span></div>
-          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#vae">VAE <span class="rel-year">2013</span></a><a href="#ddpm">DDPM <span class="rel-year">2020</span></a><a href="#clip">CLIP <span class="rel-year">2021</span></a></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#vae">VAE <span class="rel-year">2013</span></a><a href="#ddpm">DDPM <span class="rel-year">2020</span></a></div>
         </div>
       </article><article class="entry" id="sam">
         <div class="entry-year">2023</div>
@@ -1064,9 +1064,9 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
         <div class="entry-card">
           <div class="entry-label">DQN</div>
           <h3><a class="entry-link" href="https://arxiv.org/abs/1312.5602" target="_blank" rel="noopener">Playing Atari with Deep Reinforcement Learning<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
-          <p class="entry-finding">One network learns to play seven Atari games from raw pixels and the score alone.</p>
+          <p class="entry-finding">One network learns to play seven Atari games from raw pixels and the score alone. The target network and the 49-game result came in the 2015 Nature version.</p>
           <div class="entry-meta">Volodymyr Mnih et al. · NeurIPS 2013 workshop · <span class="entry-src">arXiv 1312.5602 <span aria-hidden="true">↗</span></span></div>
-          <div class="entry-rel"><span class="rel-label">Led to</span><a href="#alphago">AlphaGo <span class="rel-year">2016</span></a><a href="#ppo">PPO <span class="rel-year">2017</span></a></div>
+          <div class="entry-rel"><span class="rel-label">Led to</span><a href="#alphago">AlphaGo <span class="rel-year">2016</span></a></div>
         </div>
       </article><article class="entry" id="alphago">
         <div class="entry-year">2016</div>
@@ -1091,9 +1091,9 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
         <div class="entry-card">
           <div class="entry-label">PPO</div>
           <h3><a class="entry-link" href="https://arxiv.org/abs/1707.06347" target="_blank" rel="noopener">Proximal Policy Optimization Algorithms<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
-          <p class="entry-finding">Clip how far each update can move the policy: a simple, stable RL algorithm that became the default, RLHF included.</p>
+          <p class="entry-finding">A simpler successor to TRPO: clip how far each update can move the policy. It is stable, and became the default RL algorithm, RLHF included.</p>
           <div class="entry-meta">John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, Oleg Klimov · arXiv · <span class="entry-src">arXiv 1707.06347 <span aria-hidden="true">↗</span></span></div>
-          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#dqn">DQN <span class="rel-year">2013</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#instructgpt">InstructGPT (RLHF) <span class="rel-year">2022</span></a><a href="#grpo">GRPO <span class="rel-year">2024</span></a></div>
+          <div class="entry-rel"><span class="rel-label">Led to</span><a href="#instructgpt">InstructGPT (RLHF) <span class="rel-year">2022</span></a><a href="#grpo">GRPO <span class="rel-year">2024</span></a></div>
         </div>
       </article><article class="entry" id="alphazero">
         <div class="entry-year">2017</div>
