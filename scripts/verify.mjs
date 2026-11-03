@@ -29,6 +29,7 @@ for (const p of data.papers) {
     ok(byId.get(n).year >= p.year, `${p.id} (${p.year}) leads to an older paper ${n} (${byId.get(n).year})`);
     ok(n !== p.id, `${p.id} leads to itself`);
   }
+  if ('nofree' in p) ok(typeof p.nofree === 'string' && p.nofree.trim() && !/arxiv\.org/.test(p.url), `${p.id}: nofree needs an explainer name and a non-arXiv explainer url`);
   for (const a of p.also || []) ok(/^https:\/\//.test(a.url), `${p.id}: also url must be https`);
 }
 

@@ -123,9 +123,8 @@
    "authors": "Felix Gers, Jürgen Schmidhuber, Fred Cummins",
    "venue": "Neural Computation",
    "finding": "Add a forget gate so an LSTM can reset its own memory, and it handles long, unbroken input streams that the original LSTM could not: the LSTM used today.",
-   "url": "https://colah.github.io/posts/2015-08-Understanding-LSTMs/",
-   "next": [],
-   "nofree": "Chris Olah's blog"
+   "url": "https://sferics.idsia.ch/pub/juergen/FgGates-NC.pdf",
+   "next": []
   },
   {
    "id": "vae",
@@ -694,6 +693,20 @@
    ]
   },
   {
+   "id": "cfg",
+   "field": "vision",
+   "year": 2021,
+   "short": "Classifier-free guidance",
+   "title": "Classifier-Free Diffusion Guidance",
+   "authors": "Jonathan Ho, Tim Salimans",
+   "venue": "NeurIPS 2021 workshop",
+   "finding": "Train one diffusion model with and without its conditioning, then push each step away from the unconditioned guess: strong guidance with no separate classifier.",
+   "url": "https://arxiv.org/abs/2207.12598",
+   "next": [
+    "ldm"
+   ]
+  },
+  {
    "id": "ldm",
    "field": "vision",
    "year": 2021,
@@ -703,18 +716,6 @@
    "venue": "CVPR 2022",
    "finding": "Run diffusion in a compressed latent space instead of pixels: far cheaper, and the basis of Stable Diffusion, which added CLIP's text encoder for prompts.",
    "url": "https://arxiv.org/abs/2112.10752",
-   "next": []
-  },
-  {
-   "id": "cfg",
-   "field": "vision",
-   "year": 2022,
-   "short": "Classifier-free guidance",
-   "title": "Classifier-Free Diffusion Guidance",
-   "authors": "Jonathan Ho, Tim Salimans",
-   "venue": "NeurIPS 2021 workshop",
-   "finding": "Train one diffusion model with and without its conditioning, then push each step away from the unconditioned guess: strong guidance with no separate classifier.",
-   "url": "https://arxiv.org/abs/2207.12598",
    "next": []
   },
   {
@@ -779,7 +780,7 @@
    "title": "Human-level control through deep reinforcement learning",
    "authors": "Volodymyr Mnih et al.",
    "venue": "Nature",
-   "finding": "Add a slowly updated target network to DQN, and one architecture with one set of settings, trained separately on each game, scores over 75% of a professional tester's score on 29 of 49 Atari games.",
+   "finding": "Add a target network, a copy of the Q-network refreshed only every few thousand steps, and one architecture with one set of settings, trained separately on each game, reaches over 75% of a professional games tester's score (measured above random play) on 29 of 49 Atari games.",
    "url": "https://klab.tch.harvard.edu/academia/classes/Neuro230/ReadingAssignments/MnihEtAlHassibis15NatureControlDeepRL.pdf",
    "next": [
     "alphago"
