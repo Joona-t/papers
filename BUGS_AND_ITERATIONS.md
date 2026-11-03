@@ -57,3 +57,8 @@
 - Open copies used: Gers et al. (IDSIA, linked from Schmidhuber's publication page), McCulloch & Pitts (Bau lab reprint), Nature DQN (Harvard course reading), GPT-1 and GPT-2 (OpenAI's own PDFs).
 - Checks: verify.mjs passes (75 papers). In the browser there is no overflow at 320 px; the explainer labels are kept short because `.entry-src` doesn't wrap.
 - Independent review: Gers et al. does have a free copy on IDSIA's server, so it is linked directly and only *Perceptrons* is marked No free copy. The Nature DQN finding now says the target network is copied every few thousand steps (not "slowly updated") and that the 75% is measured above random play. Classifier-free guidance is dated 2021 (NeurIPS workshop) and now leads to Latent diffusion, which uses it. verify.mjs now checks every `nofree` entry has an explainer name.
+
+## ITER-007 · 2026-11-03 · Seoul Y2K is the default theme
+- Joona: new visitors should see the Seoul Y2K theme. The page's starting `data-theme` and base.js's fallback are now `kr-seoul`, replacing Basalt. A reader's saved theme still wins, and a saved theme the page no longer offers falls back to Seoul.
+- The mobile browser-bar colour (`theme-color`) now comes from Seoul's top gradient stop (#dff1ff), not Basalt's near-black (caught by an independent review).
+- Checks: verify.mjs passes. In Chromium, a fresh visitor gets kr-seoul (its menu item checked), a saved Basalt stays Basalt, and an unknown saved theme falls back to kr-seoul.
