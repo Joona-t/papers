@@ -197,6 +197,7 @@ def build():
     count = f'{len(papers)} papers · {len(data["fields"])} fields · {years[0]} to {years[-1]}'
     mascot = (T / "mascot.datauri").read_text(encoding="utf-8").strip()
     ankh = (T / "ankh.datauri").read_text(encoding="utf-8").strip()   # Basalt wordmark, as on lovespark.love
+    bar = next(t for k, n, ko, t in KOREAN if k == "seoul")["stops"][0]   # browser bar matches the default theme (Seoul Y2K)
     desc = f"A small archive of AI research papers worth reading, laid out as timelines by field: neural networks, training, language models, vision, robotics and safety. Each entry gives the main finding and links to the full paper. {count}."
     css = (T / "fonts.css").read_text(encoding="utf-8") + extra_fonts_css() + (T / "style.css").read_text(encoding="utf-8") + (T / "timeline.css").read_text(encoding="utf-8") + korean_css()
     themes = "".join(f'<button type="button" role="menuitemradio" aria-checked="false" data-theme="{k}"><span class="swatch" style="background:linear-gradient(135deg,{bg} 50%,{ac} 50%)"></span>{n}</button>' for k, n, bg, ac in THEMES)
@@ -214,7 +215,7 @@ def build():
 <meta property="og:title" content="Papers worth reading · a LoveSpark archive">
 <meta property="og:description" content="{esc(desc)}">
 <meta property="og:url" content="https://lovespark.love/papers/">
-<meta name="theme-color" content="#16171a">
+<meta name="theme-color" content="{bar}">
 <style>
 {css}</style>
 </head>

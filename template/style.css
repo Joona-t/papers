@@ -1,5 +1,5 @@
 /* Qwen fine-tuning guide — editorial layout modelled on the Raw Thought reader.
-   Flat paper, hairline rules, serif reading column. Five LoveSpark themes (Basalt default), three reading fonts.
+   Flat paper, hairline rules, serif reading column. Five LoveSpark themes plus four Korean ones (Seoul Y2K, kr-seoul, is the default), six reading fonts.
    No external fonts: Serif and Sans use system stacks; OpenDyslexic, Cinzel and DM Mono are inlined (fonts.css). */
 
 :root {

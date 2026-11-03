@@ -60,4 +60,5 @@
 
 ## ITER-007 · 2026-11-03 · Seoul Y2K is the default theme
 - Joona: new visitors should see the Seoul Y2K theme. The page's starting `data-theme` and base.js's fallback are now `kr-seoul`, replacing Basalt. A reader's saved theme still wins, and a saved theme the page no longer offers falls back to Seoul.
+- The mobile browser-bar colour (`theme-color`) now comes from Seoul's top gradient stop (#dff1ff), not Basalt's near-black (caught by an independent review).
 - Checks: verify.mjs passes. In Chromium, a fresh visitor gets kr-seoul (its menu item checked), a saved Basalt stays Basalt, and an unknown saved theme falls back to kr-seoul.
