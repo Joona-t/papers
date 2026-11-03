@@ -127,15 +127,19 @@ def rel_links(label, ids, by_id):
 
 def entry(p, by_id, built_on):
     kind = f'<span class="entry-kind">{esc(p["kind"])}</span>' if p.get("kind") else ""
+    nofree = p.get("nofree")   # no free, no-sign-in copy exists: the title opens a free explainer instead
+    if nofree: kind += '<span class="entry-kind">No free copy</span>'
+    sr = f" (opens {esc(nofree)} in a new tab; the full text has no free copy)" if nofree else " (opens the full paper in a new tab)"
+    src = f"Explainer: {esc(nofree)}" if nofree else esc(source_label(p["url"]))
     also = "".join(f'<a href="{esc(a["url"])}" target="_blank" rel="noopener">{esc(a["label"])} <span aria-hidden="true">↗</span></a>' for a in p.get("also", []))
     also = f'<div class="entry-rel entry-also"><span class="rel-label">Also read</span>{also}</div>' if also else ""
     return f"""<article class="entry" id="{p["id"]}">
         <div class="entry-year">{p["year"]}</div>
         <div class="entry-card">
           <div class="entry-label">{esc(p["short"])}{kind}</div>
-          <h3><a class="entry-link" href="{esc(p["url"])}" target="_blank" rel="noopener">{esc(p["title"])}<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
+          <h3><a class="entry-link" href="{esc(p["url"])}" target="_blank" rel="noopener">{esc(p["title"])}<span class="sr-only">{sr}</span></a></h3>
           <p class="entry-finding">{esc(p["finding"])}</p>
-          <div class="entry-meta">{esc(p["authors"])} · {esc(p["venue"])} · <span class="entry-src">{esc(source_label(p["url"]))} <span aria-hidden="true">↗</span></span></div>
+          <div class="entry-meta">{esc(p["authors"])} · {esc(p["venue"])} · <span class="entry-src">{src} <span aria-hidden="true">↗</span></span></div>
           {rel_links("Built on", built_on.get(p["id"], []), by_id)}{rel_links("Led to", p["next"], by_id)}{also}
         </div>
       </article>"""
@@ -263,7 +267,7 @@ def build():
       <p class="kicker"><span class="rule"></span>Start here</p>
       <h2>How to use this archive</h2>
       <p>Each field runs oldest to newest. Pick a field, read down the line, and open the papers whose finding surprises you. The <strong>title</strong> opens the full paper in a new tab, usually its free arXiv page. <strong>Built on</strong> and <strong>Led to</strong> jump to the papers before and after it, sometimes in another field: the transformer came out of translation work, and diffusion moved from images into robot control.</p>
-      <p>The one-line findings are summaries, not quotes, so the paper is always the authority. Every title and link was checked against its source in {esc(data["checked"])}. Incident reports are marked as such: they are not peer-reviewed papers.</p>
+      <p>The one-line findings are summaries, not quotes, so the paper is always the authority. Every title and link was checked against its source in {esc(data["checked"])}. Incident reports are marked as such: they are not peer-reviewed papers. A paper marked <strong>No free copy</strong> has no free version without a sign-in, so its title opens a free explainer instead.</p>
     </section>
     {"".join(fields)}
     {resources_html(data)}

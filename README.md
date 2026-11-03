@@ -20,7 +20,7 @@ node scripts/verify.mjs            # offline: build freshness, links point forwa
 python3 -I scripts/check_links.py  # online: every arXiv title matches arXiv, every other link resolves
 ```
 
-To add a paper, add an object to `papers` with `id`, `field`, `year`, `short`, `title`, `authors`, `venue`, `finding`, `url` and `next` (ids of later papers that built on or replaced it), then run all three. Findings are one-line summaries in our own words, never quotes. Incident reports carry `"kind": "Incident report"` so they are never mistaken for peer-reviewed work.
+To add a paper, add an object to `papers` with `id`, `field`, `year`, `short`, `title`, `authors`, `venue`, `finding`, `url` and `next` (ids of later papers that built on or replaced it), then run all three. Findings are one-line summaries in our own words, never quotes. Incident reports carry `"kind": "Incident report"` so they are never mistaken for peer-reviewed work. A paper with no free, no-sign-in copy carries `"nofree": "<explainer name>"`: it is labelled **No free copy** and its `url` points to a free explainer instead.
 
 ## Design and accessibility
 

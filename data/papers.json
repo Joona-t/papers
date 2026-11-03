@@ -40,6 +40,20 @@
  ],
  "papers": [
   {
+   "id": "mcculloch-pitts",
+   "field": "neural-nets",
+   "year": 1943,
+   "short": "Artificial neuron",
+   "title": "A Logical Calculus of the Ideas Immanent in Nervous Activity",
+   "authors": "Warren McCulloch, Walter Pitts",
+   "venue": "Bulletin of Mathematical Biophysics",
+   "finding": "Treat a neuron as a unit that either fires or doesn't once its inputs pass a threshold, and networks of them can compute any logical expression: the first artificial neuron, though it could not learn.",
+   "url": "https://papers.baulab.info/papers/McCullochPitts-1943.pdf",
+   "next": [
+    "perceptron"
+   ]
+  },
+  {
    "id": "perceptron",
    "field": "neural-nets",
    "year": 1958,
@@ -50,8 +64,24 @@
    "finding": "Active units are reinforced when the correct response is forced or happens to be given (and weakened when it is wrong), so the machine learns to classify patterns from examples. The error-correction rule taught today, w ← w + η(y − ŷ)x, is a later textbook form of the procedure in Rosenblatt's 1962 book.",
    "url": "https://homepages.math.uic.edu/~lreyzin/papers/rosenblatt58.pdf",
    "next": [
+    "perceptrons-book",
     "backprop"
    ]
+  },
+  {
+   "id": "perceptrons-book",
+   "field": "neural-nets",
+   "year": 1969,
+   "short": "Perceptrons (book)",
+   "title": "Perceptrons: An Introduction to Computational Geometry",
+   "authors": "Marvin Minsky, Seymour Papert",
+   "venue": "MIT Press (book)",
+   "finding": "Simple perceptrons, whose units each see only part of the input, provably can't compute global properties such as parity or whether a shape is connected. The book is often blamed for a slump in neural-network research, though how much it caused is debated.",
+   "url": "https://en.wikipedia.org/wiki/Perceptrons_(book)",
+   "next": [
+    "backprop"
+   ],
+   "nofree": "Wikipedia"
   },
   {
    "id": "backprop",
@@ -79,9 +109,23 @@
    "finding": "Gated memory cells let a recurrent network carry information across long sequences without the gradient vanishing. The forget gate that every modern LSTM has came later (Gers, Schmidhuber & Cummins, 2000).",
    "url": "https://deeplearning.cs.cmu.edu/F23/document/readings/LSTM.pdf",
    "next": [
+    "forget-gate",
     "bahdanau",
     "transformer"
    ]
+  },
+  {
+   "id": "forget-gate",
+   "field": "neural-nets",
+   "year": 2000,
+   "short": "Forget gate",
+   "title": "Learning to Forget: Continual Prediction with LSTM",
+   "authors": "Felix Gers, Jürgen Schmidhuber, Fred Cummins",
+   "venue": "Neural Computation",
+   "finding": "Add a forget gate so an LSTM can reset its own memory, and it handles long, unbroken input streams that the original LSTM could not: the LSTM used today.",
+   "url": "https://colah.github.io/posts/2015-08-Understanding-LSTMs/",
+   "next": [],
+   "nofree": "Chris Olah's blog"
   },
   {
    "id": "vae",
@@ -147,7 +191,9 @@
    "venue": "arXiv",
    "finding": "Normalise across a layer's features instead of the batch: it works for recurrent nets and any batch size, and became the transformer default. Many recent LLMs use the simpler RMSNorm (Zhang & Sennrich, 2019) instead.",
    "url": "https://arxiv.org/abs/1607.06450",
-   "next": []
+   "next": [
+    "rmsnorm"
+   ]
   },
   {
    "id": "moe",
@@ -161,6 +207,20 @@
    "url": "https://arxiv.org/abs/1701.06538",
    "next": [
     "switch"
+   ]
+  },
+  {
+   "id": "rmsnorm",
+   "field": "neural-nets",
+   "year": 2019,
+   "short": "RMSNorm",
+   "title": "Root Mean Square Layer Normalization",
+   "authors": "Biao Zhang, Rico Sennrich",
+   "venue": "NeurIPS 2019",
+   "finding": "Drop layer norm's mean-centring and only rescale by the root mean square: similar accuracy for less compute, and now standard in LLMs such as LLaMA.",
+   "url": "https://arxiv.org/abs/1910.07467",
+   "next": [
+    "llama"
    ]
   },
   {
@@ -330,10 +390,27 @@
    "finding": "Drop recurrence entirely: attention alone, computed in parallel, beats RNNs at translation and trains far faster. Today's LLMs keep the core but usually swap in pre-norm, RMSNorm, rotary positions and gated feed-forward layers.",
    "url": "https://arxiv.org/abs/1706.03762",
    "next": [
+    "gpt1",
     "bert",
     "gpt3",
     "vit",
-    "flash"
+    "flash",
+    "rope"
+   ]
+  },
+  {
+   "id": "gpt1",
+   "field": "language",
+   "year": 2018,
+   "short": "GPT-1",
+   "title": "Improving Language Understanding by Generative Pre-Training",
+   "authors": "Alec Radford, Karthik Narasimhan, Tim Salimans, Ilya Sutskever",
+   "venue": "OpenAI",
+   "finding": "Pre-train a transformer to predict the next word on thousands of unpublished books, then fine-tune it: new state of the art on 9 of 12 language tasks.",
+   "url": "https://cdn.openai.com/research-covers/language-unsupervised/language_understanding_paper.pdf",
+   "next": [
+    "bert",
+    "gpt2"
    ]
   },
   {
@@ -347,6 +424,20 @@
    "finding": "Pre-train a transformer by filling in masked words, then fine-tune it: new state of the art on eleven language tasks.",
    "url": "https://arxiv.org/abs/1810.04805",
    "next": []
+  },
+  {
+   "id": "gpt2",
+   "field": "language",
+   "year": 2019,
+   "short": "GPT-2",
+   "title": "Language Models are Unsupervised Multitask Learners",
+   "authors": "Alec Radford, Jeffrey Wu, Rewon Child, David Luan, Dario Amodei, Ilya Sutskever",
+   "venue": "OpenAI",
+   "finding": "A 1.5B-parameter model trained on 40 GB of web text sets the state of the art on 7 of 8 language-modelling benchmarks zero-shot, and starts doing tasks it was never trained for.",
+   "url": "https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf",
+   "next": [
+    "gpt3"
+   ]
   },
   {
    "id": "gpt3",
@@ -376,6 +467,20 @@
    "url": "https://arxiv.org/abs/2005.11401",
    "next": [
     "react"
+   ]
+  },
+  {
+   "id": "rope",
+   "field": "language",
+   "year": 2021,
+   "short": "RoPE",
+   "title": "RoFormer: Enhanced Transformer with Rotary Position Embedding",
+   "authors": "Jianlin Su et al.",
+   "venue": "arXiv",
+   "finding": "Encode position by rotating the query and key vectors, so attention depends on how far apart two tokens are: the position scheme most open LLMs now use.",
+   "url": "https://arxiv.org/abs/2104.09864",
+   "next": [
+    "llama"
    ]
   },
   {
@@ -515,6 +620,20 @@
    ]
   },
   {
+   "id": "diffusion2015",
+   "field": "vision",
+   "year": 2015,
+   "short": "Diffusion models",
+   "title": "Deep Unsupervised Learning using Nonequilibrium Thermodynamics",
+   "authors": "Jascha Sohl-Dickstein, Eric Weiss, Niru Maheswaranathan, Surya Ganguli",
+   "venue": "ICML 2015",
+   "finding": "Slowly destroy data with noise, then train a network to reverse each small step: the original diffusion model, borrowed from physics.",
+   "url": "https://arxiv.org/abs/1503.03585",
+   "next": [
+    "ddpm"
+   ]
+  },
+  {
    "id": "ddpm",
    "field": "vision",
    "year": 2020,
@@ -527,7 +646,8 @@
    "next": [
     "beatgans",
     "ldm",
-    "diffpolicy"
+    "diffpolicy",
+    "flowmatch"
    ]
   },
   {
@@ -569,7 +689,9 @@
    "venue": "NeurIPS 2021",
    "finding": "With a better architecture and classifier guidance, diffusion models overtake GANs on image quality. Classifier-free guidance (Ho & Salimans) soon made the separate classifier unnecessary.",
    "url": "https://arxiv.org/abs/2105.05233",
-   "next": []
+   "next": [
+    "cfg"
+   ]
   },
   {
    "id": "ldm",
@@ -582,6 +704,32 @@
    "finding": "Run diffusion in a compressed latent space instead of pixels: far cheaper, and the basis of Stable Diffusion, which added CLIP's text encoder for prompts.",
    "url": "https://arxiv.org/abs/2112.10752",
    "next": []
+  },
+  {
+   "id": "cfg",
+   "field": "vision",
+   "year": 2022,
+   "short": "Classifier-free guidance",
+   "title": "Classifier-Free Diffusion Guidance",
+   "authors": "Jonathan Ho, Tim Salimans",
+   "venue": "NeurIPS 2021 workshop",
+   "finding": "Train one diffusion model with and without its conditioning, then push each step away from the unconditioned guess: strong guidance with no separate classifier.",
+   "url": "https://arxiv.org/abs/2207.12598",
+   "next": []
+  },
+  {
+   "id": "flowmatch",
+   "field": "vision",
+   "year": 2022,
+   "short": "Flow matching",
+   "title": "Flow Matching for Generative Modeling",
+   "authors": "Yaron Lipman, Ricky T. Q. Chen, Heli Ben-Hamu, Maximilian Nickel, Matt Le",
+   "venue": "ICLR 2023",
+   "finding": "Train a network to predict the velocity that carries noise to data along simple paths: a simpler alternative to diffusion that samples in fewer steps.",
+   "url": "https://arxiv.org/abs/2210.02747",
+   "next": [
+    "pi0"
+   ]
   },
   {
    "id": "sam",
@@ -605,6 +753,34 @@
    "venue": "NeurIPS 2013 workshop",
    "finding": "The same network and settings, trained separately on each of seven Atari games, learn to play from raw pixels and the score alone. The target network and the 49-game result came in the 2015 Nature version.",
    "url": "https://arxiv.org/abs/1312.5602",
+   "next": [
+    "dqn-nature"
+   ]
+  },
+  {
+   "id": "trpo",
+   "field": "robotics",
+   "year": 2015,
+   "short": "TRPO",
+   "title": "Trust Region Policy Optimization",
+   "authors": "John Schulman, Sergey Levine, Philipp Moritz, Michael Jordan, Pieter Abbeel",
+   "venue": "ICML 2015",
+   "finding": "Keep each policy update inside a trust region, a limit on how far the new policy can drift from the old, and policy-gradient training improves steadily instead of collapsing.",
+   "url": "https://arxiv.org/abs/1502.05477",
+   "next": [
+    "ppo"
+   ]
+  },
+  {
+   "id": "dqn-nature",
+   "field": "robotics",
+   "year": 2015,
+   "short": "Nature DQN",
+   "title": "Human-level control through deep reinforcement learning",
+   "authors": "Volodymyr Mnih et al.",
+   "venue": "Nature",
+   "finding": "Add a slowly updated target network to DQN, and one architecture with one set of settings, trained separately on each game, scores over 75% of a professional tester's score on 29 of 49 Atari games.",
+   "url": "https://klab.tch.harvard.edu/academia/classes/Neuro230/ReadingAssignments/MnihEtAlHassibis15NatureControlDeepRL.pdf",
    "next": [
     "alphago"
    ]
