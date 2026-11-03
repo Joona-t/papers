@@ -205,7 +205,7 @@ def build():
     passes = "".join(f"<li><h3>{esc(t)}</h3><p>{esc(d)}</p></li>" for t, d in PASSES)
     field_links = "".join(f'<a class="text-link" href="#{f["id"]}">{ROMAN[k]} · {esc(f["nav"])} →</a>' for k, f in enumerate(data["fields"])) + '<a class="text-link" href="#learn">Free resources →</a>'
     return f"""<!doctype html>
-<html lang="en" data-theme="basalt" data-font="serif">
+<html lang="en" data-theme="kr-seoul" data-font="serif">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">

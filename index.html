@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="basalt" data-font="serif">
+<html lang="en" data-theme="kr-seoul" data-font="serif">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -1425,11 +1425,11 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
   document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && !menu.hidden){ openMenu(false); btn.focus(); } });
   // 'candy' was renamed 'bubblegum' on 2026-10-25; apply() re-saves the new name.
   var savedTheme = Persist.get('papers-theme');
-  // Basalt (lovespark.love's look) is the default since 2026-10-27; its Serif setting reads in
-  // Cinzel. Saved choices win, so returning readers keep their theme and font.
+  // Seoul Y2K is the default for new readers since 2026-11-03 (Basalt before that). Saved choices
+  // win, so returning readers keep their theme and font.
   if(savedTheme === 'candy') savedTheme = 'bubblegum';
-  // a saved theme this page no longer offers (e.g. the 2026-10-30 cursor-pack themes) falls back to Basalt
-  if(!savedTheme || !menu.querySelector('button[data-theme="' + savedTheme + '"]')) savedTheme = 'basalt';
+  // a saved theme this page no longer offers (e.g. the 2026-10-30 cursor-pack themes) falls back to the default
+  if(!savedTheme || !menu.querySelector('button[data-theme="' + savedTheme + '"]')) savedTheme = 'kr-seoul';
   apply('theme', savedTheme);
   var savedFont = Persist.get('papers-font');
   apply('font', savedFont && menu.querySelector('button[data-font="' + savedFont + '"]') ? savedFont : 'serif');
