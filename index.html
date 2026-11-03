@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Papers worth reading · a LoveSpark archive</title>
-<meta name="description" content="A small archive of AI research papers worth reading, laid out as timelines by field: neural networks, training, language models, vision, robotics and safety. Each entry gives the main finding and links to the full paper. 63 papers · 6 fields · 1958 to 2026.">
+<meta name="description" content="A small archive of AI research papers worth reading, laid out as timelines by field: neural networks, training, language models, vision, robotics and safety. Each entry gives the main finding and links to the full paper. 75 papers · 6 fields · 1943 to 2026.">
 <meta property="og:title" content="Papers worth reading · a LoveSpark archive">
-<meta property="og:description" content="A small archive of AI research papers worth reading, laid out as timelines by field: neural networks, training, language models, vision, robotics and safety. Each entry gives the main finding and links to the full paper. 63 papers · 6 fields · 1958 to 2026.">
+<meta property="og:description" content="A small archive of AI research papers worth reading, laid out as timelines by field: neural networks, training, language models, vision, robotics and safety. Each entry gives the main finding and links to the full paper. 75 papers · 6 fields · 1943 to 2026.">
 <meta property="og:url" content="https://lovespark.love/papers/">
 <meta name="theme-color" content="#16171a">
 <style>
@@ -634,7 +634,7 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
   <div class="hero-copy">
     <p class="eyebrow"><span class="rule"></span>A LoveSpark archive</p>
     <h1 id="hero-title">Papers worth<br>reading</h1>
-    <p class="hero-dates">63 papers · 6 fields · 1958 to 2026</p>
+    <p class="hero-dates">75 papers · 6 fields · 1943 to 2026</p>
     <p class="hero-description">The research behind modern AI, as timelines by field. Each entry gives the paper's main finding in one line; click it to open the full paper. When a later paper improved on or replaced an idea, the entry links forward to it, so you can follow a technique from where it started to what replaced it.</p>
     <div class="hero-actions">
       <a class="button" href="#start">Start reading <span aria-hidden="true">→</span></a>
@@ -648,28 +648,46 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
 </section>
 
 <div class="layout">
-  <nav class="toc" aria-label="Contents"><p class="eyebrow">Contents</p><a class="toc-start" href="#start">How to use this archive</a><ol class="toc-parts"><li class="toc-group"><a class="toc-head" href="#neural-nets"><span class="toc-num" aria-hidden="true">I</span><span class="toc-title"><small>1958–2021</small>Neural networks</span></a><ol><li><a href="#perceptron">1958 · Perceptron</a></li><li><a href="#backprop">1986 · Backpropagation</a></li><li><a href="#lstm">1997 · LSTM</a></li><li><a href="#vae">2013 · VAE</a></li><li><a href="#dropout">2014 · Dropout</a></li><li><a href="#gan">2014 · GAN</a></li><li><a href="#batchnorm">2015 · Batch norm</a></li><li><a href="#layernorm">2016 · Layer norm</a></li><li><a href="#moe">2017 · Mixture of experts</a></li><li><a href="#switch">2021 · Switch Transformer</a></li></ol></li><li class="toc-group"><a class="toc-head" href="#training"><span class="toc-num" aria-hidden="true">II</span><span class="toc-title"><small>2014–2024</small>Machine learning &amp; training</span></a><ol><li><a href="#adam">2014 · Adam</a></li><li><a href="#distill">2015 · Distillation</a></li><li><a href="#adamw">2017 · AdamW</a></li><li><a href="#scaling">2020 · Scaling laws</a></li><li><a href="#lora">2021 · LoRA</a></li><li><a href="#chinchilla">2022 · Chinchilla</a></li><li><a href="#qlora">2023 · QLoRA</a></li><li><a href="#dpo">2023 · DPO</a></li><li><a href="#grpo">2024 · GRPO</a></li></ol></li><li class="toc-group"><a class="toc-head" href="#language"><span class="toc-num" aria-hidden="true">III</span><span class="toc-title"><small>2013–2025</small>Language models &amp; AI</span></a><ol><li><a href="#word2vec">2013 · word2vec</a></li><li><a href="#bahdanau">2014 · Attention</a></li><li><a href="#transformer">2017 · Transformer</a></li><li><a href="#bert">2018 · BERT</a></li><li><a href="#gpt3">2020 · GPT-3</a></li><li><a href="#rag">2020 · RAG</a></li><li><a href="#cot">2022 · Chain of thought</a></li><li><a href="#instructgpt">2022 · InstructGPT (RLHF)</a></li><li><a href="#flash">2022 · FlashAttention</a></li><li><a href="#react">2022 · ReAct</a></li><li><a href="#llama">2023 · LLaMA</a></li><li><a href="#r1">2025 · DeepSeek-R1</a></li></ol></li><li class="toc-group"><a class="toc-head" href="#vision"><span class="toc-num" aria-hidden="true">IV</span><span class="toc-title"><small>1998–2023</small>Computer vision</span></a><ol><li><a href="#lenet">1998 · LeNet</a></li><li><a href="#alexnet">2012 · AlexNet</a></li><li><a href="#resnet">2015 · ResNet</a></li><li><a href="#unet">2015 · U-Net</a></li><li><a href="#ddpm">2020 · DDPM</a></li><li><a href="#vit">2020 · ViT</a></li><li><a href="#clip">2021 · CLIP</a></li><li><a href="#beatgans">2021 · Diffusion beats GANs</a></li><li><a href="#ldm">2021 · Latent diffusion</a></li><li><a href="#sam">2023 · Segment Anything</a></li></ol></li><li class="toc-group"><a class="toc-head" href="#robotics"><span class="toc-num" aria-hidden="true">V</span><span class="toc-title"><small>2013–2024</small>Robotics &amp; reinforcement learning</span></a><ol><li><a href="#dqn">2013 · DQN</a></li><li><a href="#alphago">2016 · AlphaGo</a></li><li><a href="#domainrand">2017 · Domain randomisation</a></li><li><a href="#ppo">2017 · PPO</a></li><li><a href="#alphazero">2017 · AlphaZero</a></li><li><a href="#saycan">2022 · SayCan</a></li><li><a href="#diffpolicy">2023 · Diffusion Policy</a></li><li><a href="#rt2">2023 · RT-2</a></li><li><a href="#oxe">2023 · Open X-Embodiment</a></li><li><a href="#pi0">2024 · π0</a></li></ol></li><li class="toc-group"><a class="toc-head" href="#safety"><span class="toc-num" aria-hidden="true">VI</span><span class="toc-title"><small>2013–2026</small>Safety &amp; security</span></a><ol><li><a href="#adversarial">2013 · Adversarial examples</a></li><li><a href="#concrete">2016 · Concrete problems</a></li><li><a href="#constitutional">2022 · Constitutional AI</a></li><li><a href="#injection">2023 · Indirect prompt injection</a></li><li><a href="#gcg">2023 · Universal jailbreaks (GCG)</a></li><li><a href="#sleeper">2024 · Sleeper agents</a></li><li><a href="#refusal">2024 · Abliteration</a></li><li><a href="#cones">2025 · Refusal concept cones</a></li><li><a href="#abl-defense">2025 · Defending against abliteration</a></li><li><a href="#abl-compare">2025 · Abliteration tools compared</a></li><li><a href="#swarm-policy">2026 · Swarm red-teaming</a></li><li><a href="#swarm-hf">2026 · The Hugging Face swarm attack</a></li></ol></li></ol><a class="toc-start toc-learn" href="#learn">Further reading &amp; learning</a></nav>
+  <nav class="toc" aria-label="Contents"><p class="eyebrow">Contents</p><a class="toc-start" href="#start">How to use this archive</a><ol class="toc-parts"><li class="toc-group"><a class="toc-head" href="#neural-nets"><span class="toc-num" aria-hidden="true">I</span><span class="toc-title"><small>1943–2021</small>Neural networks</span></a><ol><li><a href="#mcculloch-pitts">1943 · Artificial neuron</a></li><li><a href="#perceptron">1958 · Perceptron</a></li><li><a href="#perceptrons-book">1969 · Perceptrons (book)</a></li><li><a href="#backprop">1986 · Backpropagation</a></li><li><a href="#lstm">1997 · LSTM</a></li><li><a href="#forget-gate">2000 · Forget gate</a></li><li><a href="#vae">2013 · VAE</a></li><li><a href="#dropout">2014 · Dropout</a></li><li><a href="#gan">2014 · GAN</a></li><li><a href="#batchnorm">2015 · Batch norm</a></li><li><a href="#layernorm">2016 · Layer norm</a></li><li><a href="#moe">2017 · Mixture of experts</a></li><li><a href="#rmsnorm">2019 · RMSNorm</a></li><li><a href="#switch">2021 · Switch Transformer</a></li></ol></li><li class="toc-group"><a class="toc-head" href="#training"><span class="toc-num" aria-hidden="true">II</span><span class="toc-title"><small>2014–2024</small>Machine learning &amp; training</span></a><ol><li><a href="#adam">2014 · Adam</a></li><li><a href="#distill">2015 · Distillation</a></li><li><a href="#adamw">2017 · AdamW</a></li><li><a href="#scaling">2020 · Scaling laws</a></li><li><a href="#lora">2021 · LoRA</a></li><li><a href="#chinchilla">2022 · Chinchilla</a></li><li><a href="#qlora">2023 · QLoRA</a></li><li><a href="#dpo">2023 · DPO</a></li><li><a href="#grpo">2024 · GRPO</a></li></ol></li><li class="toc-group"><a class="toc-head" href="#language"><span class="toc-num" aria-hidden="true">III</span><span class="toc-title"><small>2013–2025</small>Language models &amp; AI</span></a><ol><li><a href="#word2vec">2013 · word2vec</a></li><li><a href="#bahdanau">2014 · Attention</a></li><li><a href="#transformer">2017 · Transformer</a></li><li><a href="#gpt1">2018 · GPT-1</a></li><li><a href="#bert">2018 · BERT</a></li><li><a href="#gpt2">2019 · GPT-2</a></li><li><a href="#gpt3">2020 · GPT-3</a></li><li><a href="#rag">2020 · RAG</a></li><li><a href="#rope">2021 · RoPE</a></li><li><a href="#cot">2022 · Chain of thought</a></li><li><a href="#instructgpt">2022 · InstructGPT (RLHF)</a></li><li><a href="#flash">2022 · FlashAttention</a></li><li><a href="#react">2022 · ReAct</a></li><li><a href="#llama">2023 · LLaMA</a></li><li><a href="#r1">2025 · DeepSeek-R1</a></li></ol></li><li class="toc-group"><a class="toc-head" href="#vision"><span class="toc-num" aria-hidden="true">IV</span><span class="toc-title"><small>1998–2023</small>Computer vision</span></a><ol><li><a href="#lenet">1998 · LeNet</a></li><li><a href="#alexnet">2012 · AlexNet</a></li><li><a href="#resnet">2015 · ResNet</a></li><li><a href="#unet">2015 · U-Net</a></li><li><a href="#diffusion2015">2015 · Diffusion models</a></li><li><a href="#ddpm">2020 · DDPM</a></li><li><a href="#vit">2020 · ViT</a></li><li><a href="#clip">2021 · CLIP</a></li><li><a href="#beatgans">2021 · Diffusion beats GANs</a></li><li><a href="#cfg">2021 · Classifier-free guidance</a></li><li><a href="#ldm">2021 · Latent diffusion</a></li><li><a href="#flowmatch">2022 · Flow matching</a></li><li><a href="#sam">2023 · Segment Anything</a></li></ol></li><li class="toc-group"><a class="toc-head" href="#robotics"><span class="toc-num" aria-hidden="true">V</span><span class="toc-title"><small>2013–2024</small>Robotics &amp; reinforcement learning</span></a><ol><li><a href="#dqn">2013 · DQN</a></li><li><a href="#trpo">2015 · TRPO</a></li><li><a href="#dqn-nature">2015 · Nature DQN</a></li><li><a href="#alphago">2016 · AlphaGo</a></li><li><a href="#domainrand">2017 · Domain randomisation</a></li><li><a href="#ppo">2017 · PPO</a></li><li><a href="#alphazero">2017 · AlphaZero</a></li><li><a href="#saycan">2022 · SayCan</a></li><li><a href="#diffpolicy">2023 · Diffusion Policy</a></li><li><a href="#rt2">2023 · RT-2</a></li><li><a href="#oxe">2023 · Open X-Embodiment</a></li><li><a href="#pi0">2024 · π0</a></li></ol></li><li class="toc-group"><a class="toc-head" href="#safety"><span class="toc-num" aria-hidden="true">VI</span><span class="toc-title"><small>2013–2026</small>Safety &amp; security</span></a><ol><li><a href="#adversarial">2013 · Adversarial examples</a></li><li><a href="#concrete">2016 · Concrete problems</a></li><li><a href="#constitutional">2022 · Constitutional AI</a></li><li><a href="#injection">2023 · Indirect prompt injection</a></li><li><a href="#gcg">2023 · Universal jailbreaks (GCG)</a></li><li><a href="#sleeper">2024 · Sleeper agents</a></li><li><a href="#refusal">2024 · Abliteration</a></li><li><a href="#cones">2025 · Refusal concept cones</a></li><li><a href="#abl-defense">2025 · Defending against abliteration</a></li><li><a href="#abl-compare">2025 · Abliteration tools compared</a></li><li><a href="#swarm-policy">2026 · Swarm red-teaming</a></li><li><a href="#swarm-hf">2026 · The Hugging Face swarm attack</a></li></ol></li></ol><a class="toc-start toc-learn" href="#learn">Further reading &amp; learning</a></nav>
   <main id="main">
-    <details class="toc-mobile"><summary>Contents</summary><a class="toc-start" href="#start">How to use this archive</a><ol class="toc-parts"><li class="toc-group"><a class="toc-head" href="#neural-nets"><span class="toc-num" aria-hidden="true">I</span><span class="toc-title"><small>1958–2021</small>Neural networks</span></a><ol><li><a href="#perceptron">1958 · Perceptron</a></li><li><a href="#backprop">1986 · Backpropagation</a></li><li><a href="#lstm">1997 · LSTM</a></li><li><a href="#vae">2013 · VAE</a></li><li><a href="#dropout">2014 · Dropout</a></li><li><a href="#gan">2014 · GAN</a></li><li><a href="#batchnorm">2015 · Batch norm</a></li><li><a href="#layernorm">2016 · Layer norm</a></li><li><a href="#moe">2017 · Mixture of experts</a></li><li><a href="#switch">2021 · Switch Transformer</a></li></ol></li><li class="toc-group"><a class="toc-head" href="#training"><span class="toc-num" aria-hidden="true">II</span><span class="toc-title"><small>2014–2024</small>Machine learning &amp; training</span></a><ol><li><a href="#adam">2014 · Adam</a></li><li><a href="#distill">2015 · Distillation</a></li><li><a href="#adamw">2017 · AdamW</a></li><li><a href="#scaling">2020 · Scaling laws</a></li><li><a href="#lora">2021 · LoRA</a></li><li><a href="#chinchilla">2022 · Chinchilla</a></li><li><a href="#qlora">2023 · QLoRA</a></li><li><a href="#dpo">2023 · DPO</a></li><li><a href="#grpo">2024 · GRPO</a></li></ol></li><li class="toc-group"><a class="toc-head" href="#language"><span class="toc-num" aria-hidden="true">III</span><span class="toc-title"><small>2013–2025</small>Language models &amp; AI</span></a><ol><li><a href="#word2vec">2013 · word2vec</a></li><li><a href="#bahdanau">2014 · Attention</a></li><li><a href="#transformer">2017 · Transformer</a></li><li><a href="#bert">2018 · BERT</a></li><li><a href="#gpt3">2020 · GPT-3</a></li><li><a href="#rag">2020 · RAG</a></li><li><a href="#cot">2022 · Chain of thought</a></li><li><a href="#instructgpt">2022 · InstructGPT (RLHF)</a></li><li><a href="#flash">2022 · FlashAttention</a></li><li><a href="#react">2022 · ReAct</a></li><li><a href="#llama">2023 · LLaMA</a></li><li><a href="#r1">2025 · DeepSeek-R1</a></li></ol></li><li class="toc-group"><a class="toc-head" href="#vision"><span class="toc-num" aria-hidden="true">IV</span><span class="toc-title"><small>1998–2023</small>Computer vision</span></a><ol><li><a href="#lenet">1998 · LeNet</a></li><li><a href="#alexnet">2012 · AlexNet</a></li><li><a href="#resnet">2015 · ResNet</a></li><li><a href="#unet">2015 · U-Net</a></li><li><a href="#ddpm">2020 · DDPM</a></li><li><a href="#vit">2020 · ViT</a></li><li><a href="#clip">2021 · CLIP</a></li><li><a href="#beatgans">2021 · Diffusion beats GANs</a></li><li><a href="#ldm">2021 · Latent diffusion</a></li><li><a href="#sam">2023 · Segment Anything</a></li></ol></li><li class="toc-group"><a class="toc-head" href="#robotics"><span class="toc-num" aria-hidden="true">V</span><span class="toc-title"><small>2013–2024</small>Robotics &amp; reinforcement learning</span></a><ol><li><a href="#dqn">2013 · DQN</a></li><li><a href="#alphago">2016 · AlphaGo</a></li><li><a href="#domainrand">2017 · Domain randomisation</a></li><li><a href="#ppo">2017 · PPO</a></li><li><a href="#alphazero">2017 · AlphaZero</a></li><li><a href="#saycan">2022 · SayCan</a></li><li><a href="#diffpolicy">2023 · Diffusion Policy</a></li><li><a href="#rt2">2023 · RT-2</a></li><li><a href="#oxe">2023 · Open X-Embodiment</a></li><li><a href="#pi0">2024 · π0</a></li></ol></li><li class="toc-group"><a class="toc-head" href="#safety"><span class="toc-num" aria-hidden="true">VI</span><span class="toc-title"><small>2013–2026</small>Safety &amp; security</span></a><ol><li><a href="#adversarial">2013 · Adversarial examples</a></li><li><a href="#concrete">2016 · Concrete problems</a></li><li><a href="#constitutional">2022 · Constitutional AI</a></li><li><a href="#injection">2023 · Indirect prompt injection</a></li><li><a href="#gcg">2023 · Universal jailbreaks (GCG)</a></li><li><a href="#sleeper">2024 · Sleeper agents</a></li><li><a href="#refusal">2024 · Abliteration</a></li><li><a href="#cones">2025 · Refusal concept cones</a></li><li><a href="#abl-defense">2025 · Defending against abliteration</a></li><li><a href="#abl-compare">2025 · Abliteration tools compared</a></li><li><a href="#swarm-policy">2026 · Swarm red-teaming</a></li><li><a href="#swarm-hf">2026 · The Hugging Face swarm attack</a></li></ol></li></ol><a class="toc-start toc-learn" href="#learn">Further reading &amp; learning</a></details>
+    <details class="toc-mobile"><summary>Contents</summary><a class="toc-start" href="#start">How to use this archive</a><ol class="toc-parts"><li class="toc-group"><a class="toc-head" href="#neural-nets"><span class="toc-num" aria-hidden="true">I</span><span class="toc-title"><small>1943–2021</small>Neural networks</span></a><ol><li><a href="#mcculloch-pitts">1943 · Artificial neuron</a></li><li><a href="#perceptron">1958 · Perceptron</a></li><li><a href="#perceptrons-book">1969 · Perceptrons (book)</a></li><li><a href="#backprop">1986 · Backpropagation</a></li><li><a href="#lstm">1997 · LSTM</a></li><li><a href="#forget-gate">2000 · Forget gate</a></li><li><a href="#vae">2013 · VAE</a></li><li><a href="#dropout">2014 · Dropout</a></li><li><a href="#gan">2014 · GAN</a></li><li><a href="#batchnorm">2015 · Batch norm</a></li><li><a href="#layernorm">2016 · Layer norm</a></li><li><a href="#moe">2017 · Mixture of experts</a></li><li><a href="#rmsnorm">2019 · RMSNorm</a></li><li><a href="#switch">2021 · Switch Transformer</a></li></ol></li><li class="toc-group"><a class="toc-head" href="#training"><span class="toc-num" aria-hidden="true">II</span><span class="toc-title"><small>2014–2024</small>Machine learning &amp; training</span></a><ol><li><a href="#adam">2014 · Adam</a></li><li><a href="#distill">2015 · Distillation</a></li><li><a href="#adamw">2017 · AdamW</a></li><li><a href="#scaling">2020 · Scaling laws</a></li><li><a href="#lora">2021 · LoRA</a></li><li><a href="#chinchilla">2022 · Chinchilla</a></li><li><a href="#qlora">2023 · QLoRA</a></li><li><a href="#dpo">2023 · DPO</a></li><li><a href="#grpo">2024 · GRPO</a></li></ol></li><li class="toc-group"><a class="toc-head" href="#language"><span class="toc-num" aria-hidden="true">III</span><span class="toc-title"><small>2013–2025</small>Language models &amp; AI</span></a><ol><li><a href="#word2vec">2013 · word2vec</a></li><li><a href="#bahdanau">2014 · Attention</a></li><li><a href="#transformer">2017 · Transformer</a></li><li><a href="#gpt1">2018 · GPT-1</a></li><li><a href="#bert">2018 · BERT</a></li><li><a href="#gpt2">2019 · GPT-2</a></li><li><a href="#gpt3">2020 · GPT-3</a></li><li><a href="#rag">2020 · RAG</a></li><li><a href="#rope">2021 · RoPE</a></li><li><a href="#cot">2022 · Chain of thought</a></li><li><a href="#instructgpt">2022 · InstructGPT (RLHF)</a></li><li><a href="#flash">2022 · FlashAttention</a></li><li><a href="#react">2022 · ReAct</a></li><li><a href="#llama">2023 · LLaMA</a></li><li><a href="#r1">2025 · DeepSeek-R1</a></li></ol></li><li class="toc-group"><a class="toc-head" href="#vision"><span class="toc-num" aria-hidden="true">IV</span><span class="toc-title"><small>1998–2023</small>Computer vision</span></a><ol><li><a href="#lenet">1998 · LeNet</a></li><li><a href="#alexnet">2012 · AlexNet</a></li><li><a href="#resnet">2015 · ResNet</a></li><li><a href="#unet">2015 · U-Net</a></li><li><a href="#diffusion2015">2015 · Diffusion models</a></li><li><a href="#ddpm">2020 · DDPM</a></li><li><a href="#vit">2020 · ViT</a></li><li><a href="#clip">2021 · CLIP</a></li><li><a href="#beatgans">2021 · Diffusion beats GANs</a></li><li><a href="#cfg">2021 · Classifier-free guidance</a></li><li><a href="#ldm">2021 · Latent diffusion</a></li><li><a href="#flowmatch">2022 · Flow matching</a></li><li><a href="#sam">2023 · Segment Anything</a></li></ol></li><li class="toc-group"><a class="toc-head" href="#robotics"><span class="toc-num" aria-hidden="true">V</span><span class="toc-title"><small>2013–2024</small>Robotics &amp; reinforcement learning</span></a><ol><li><a href="#dqn">2013 · DQN</a></li><li><a href="#trpo">2015 · TRPO</a></li><li><a href="#dqn-nature">2015 · Nature DQN</a></li><li><a href="#alphago">2016 · AlphaGo</a></li><li><a href="#domainrand">2017 · Domain randomisation</a></li><li><a href="#ppo">2017 · PPO</a></li><li><a href="#alphazero">2017 · AlphaZero</a></li><li><a href="#saycan">2022 · SayCan</a></li><li><a href="#diffpolicy">2023 · Diffusion Policy</a></li><li><a href="#rt2">2023 · RT-2</a></li><li><a href="#oxe">2023 · Open X-Embodiment</a></li><li><a href="#pi0">2024 · π0</a></li></ol></li><li class="toc-group"><a class="toc-head" href="#safety"><span class="toc-num" aria-hidden="true">VI</span><span class="toc-title"><small>2013–2026</small>Safety &amp; security</span></a><ol><li><a href="#adversarial">2013 · Adversarial examples</a></li><li><a href="#concrete">2016 · Concrete problems</a></li><li><a href="#constitutional">2022 · Constitutional AI</a></li><li><a href="#injection">2023 · Indirect prompt injection</a></li><li><a href="#gcg">2023 · Universal jailbreaks (GCG)</a></li><li><a href="#sleeper">2024 · Sleeper agents</a></li><li><a href="#refusal">2024 · Abliteration</a></li><li><a href="#cones">2025 · Refusal concept cones</a></li><li><a href="#abl-defense">2025 · Defending against abliteration</a></li><li><a href="#abl-compare">2025 · Abliteration tools compared</a></li><li><a href="#swarm-policy">2026 · Swarm red-teaming</a></li><li><a href="#swarm-hf">2026 · The Hugging Face swarm attack</a></li></ol></li></ol><a class="toc-start toc-learn" href="#learn">Further reading &amp; learning</a></details>
     <section id="start">
       <p class="kicker"><span class="rule"></span>Start here</p>
       <h2>How to use this archive</h2>
       <p>Each field runs oldest to newest. Pick a field, read down the line, and open the papers whose finding surprises you. The <strong>title</strong> opens the full paper in a new tab, usually its free arXiv page. <strong>Built on</strong> and <strong>Led to</strong> jump to the papers before and after it, sometimes in another field: the transformer came out of translation work, and diffusion moved from images into robot control.</p>
-      <p>The one-line findings are summaries, not quotes, so the paper is always the authority. Every title and link was checked against its source in October 2026. Incident reports are marked as such: they are not peer-reviewed papers.</p>
+      <p>The one-line findings are summaries, not quotes, so the paper is always the authority. Every title and link was checked against its source in October 2026. Incident reports are marked as such: they are not peer-reviewed papers. A paper marked <strong>No free copy</strong> has no free version without a sign-in, so its title opens a free explainer instead.</p>
     </section>
     <section class="field" id="neural-nets">
-      <p class="kicker"><span class="rule"></span>Field I · 1958–2021 · 10 papers</p>
+      <p class="kicker"><span class="rule"></span>Field I · 1943–2021 · 14 papers</p>
       <h2>Neural networks</h2>
       <p class="field-intro">The building blocks: how a network of simple units learns, keeps memory, stays stable when it gets deep, and generates new data.</p>
       <div class="timeline">
-      <article class="entry" id="perceptron">
+      <article class="entry" id="mcculloch-pitts">
+        <div class="entry-year">1943</div>
+        <div class="entry-card">
+          <div class="entry-label">Artificial neuron</div>
+          <h3><a class="entry-link" href="https://papers.baulab.info/papers/McCullochPitts-1943.pdf" target="_blank" rel="noopener">A Logical Calculus of the Ideas Immanent in Nervous Activity<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
+          <p class="entry-finding">Treat a neuron as a unit that either fires or doesn&#x27;t once its inputs pass a threshold, and networks of them can compute any logical expression: the first artificial neuron, though it could not learn.</p>
+          <div class="entry-meta">Warren McCulloch, Walter Pitts · Bulletin of Mathematical Biophysics · <span class="entry-src">PDF <span aria-hidden="true">↗</span></span></div>
+          <div class="entry-rel"><span class="rel-label">Led to</span><a href="#perceptron">Perceptron <span class="rel-year">1958</span></a></div>
+        </div>
+      </article><article class="entry" id="perceptron">
         <div class="entry-year">1958</div>
         <div class="entry-card">
           <div class="entry-label">Perceptron</div>
           <h3><a class="entry-link" href="https://homepages.math.uic.edu/~lreyzin/papers/rosenblatt58.pdf" target="_blank" rel="noopener">The Perceptron: A Probabilistic Model for Information Storage and Organization in the Brain<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
           <p class="entry-finding">Active units are reinforced when the correct response is forced or happens to be given (and weakened when it is wrong), so the machine learns to classify patterns from examples. The error-correction rule taught today, w ← w + η(y − ŷ)x, is a later textbook form of the procedure in Rosenblatt&#x27;s 1962 book.</p>
           <div class="entry-meta">Frank Rosenblatt · Psychological Review · <span class="entry-src">PDF <span aria-hidden="true">↗</span></span></div>
-          <div class="entry-rel"><span class="rel-label">Led to</span><a href="#backprop">Backpropagation <span class="rel-year">1986</span></a></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#mcculloch-pitts">Artificial neuron <span class="rel-year">1943</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#perceptrons-book">Perceptrons (book) <span class="rel-year">1969</span></a><a href="#backprop">Backpropagation <span class="rel-year">1986</span></a></div>
+        </div>
+      </article><article class="entry" id="perceptrons-book">
+        <div class="entry-year">1969</div>
+        <div class="entry-card">
+          <div class="entry-label">Perceptrons (book)<span class="entry-kind">No free copy</span></div>
+          <h3><a class="entry-link" href="https://en.wikipedia.org/wiki/Perceptrons_(book)" target="_blank" rel="noopener">Perceptrons: An Introduction to Computational Geometry<span class="sr-only"> (opens Wikipedia in a new tab; the full text has no free copy)</span></a></h3>
+          <p class="entry-finding">Simple perceptrons, whose units each see only part of the input, provably can&#x27;t compute global properties such as parity or whether a shape is connected. The book is often blamed for a slump in neural-network research, though how much it caused is debated.</p>
+          <div class="entry-meta">Marvin Minsky, Seymour Papert · MIT Press (book) · <span class="entry-src">Explainer: Wikipedia <span aria-hidden="true">↗</span></span></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#perceptron">Perceptron <span class="rel-year">1958</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#backprop">Backpropagation <span class="rel-year">1986</span></a></div>
         </div>
       </article><article class="entry" id="backprop">
         <div class="entry-year">1986</div>
@@ -678,7 +696,7 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
           <h3><a class="entry-link" href="https://www.cs.toronto.edu/~hinton/absps/naturebp.pdf" target="_blank" rel="noopener">Learning representations by back-propagating errors<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
           <p class="entry-finding">Send the error backwards through the layers and the hidden units learn useful features on their own. The core method had been described earlier (Linnainmaa 1970, Werbos 1974); this paper showed what it could learn.</p>
           <div class="entry-meta">David Rumelhart, Geoffrey Hinton, Ronald Williams · Nature · <span class="entry-src">PDF <span aria-hidden="true">↗</span></span></div>
-          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#perceptron">Perceptron <span class="rel-year">1958</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#lstm">LSTM <span class="rel-year">1997</span></a><a href="#lenet">LeNet <span class="rel-year">1998</span></a></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#perceptron">Perceptron <span class="rel-year">1958</span></a><a href="#perceptrons-book">Perceptrons (book) <span class="rel-year">1969</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#lstm">LSTM <span class="rel-year">1997</span></a><a href="#lenet">LeNet <span class="rel-year">1998</span></a></div>
         </div>
       </article><article class="entry" id="lstm">
         <div class="entry-year">1997</div>
@@ -687,7 +705,16 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
           <h3><a class="entry-link" href="https://deeplearning.cs.cmu.edu/F23/document/readings/LSTM.pdf" target="_blank" rel="noopener">Long Short-Term Memory<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
           <p class="entry-finding">Gated memory cells let a recurrent network carry information across long sequences without the gradient vanishing. The forget gate that every modern LSTM has came later (Gers, Schmidhuber &amp; Cummins, 2000).</p>
           <div class="entry-meta">Sepp Hochreiter, Jürgen Schmidhuber · Neural Computation · <span class="entry-src">PDF <span aria-hidden="true">↗</span></span></div>
-          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#backprop">Backpropagation <span class="rel-year">1986</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#bahdanau">Attention <span class="rel-year">2014</span></a><a href="#transformer">Transformer <span class="rel-year">2017</span></a></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#backprop">Backpropagation <span class="rel-year">1986</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#forget-gate">Forget gate <span class="rel-year">2000</span></a><a href="#bahdanau">Attention <span class="rel-year">2014</span></a><a href="#transformer">Transformer <span class="rel-year">2017</span></a></div>
+        </div>
+      </article><article class="entry" id="forget-gate">
+        <div class="entry-year">2000</div>
+        <div class="entry-card">
+          <div class="entry-label">Forget gate</div>
+          <h3><a class="entry-link" href="https://sferics.idsia.ch/pub/juergen/FgGates-NC.pdf" target="_blank" rel="noopener">Learning to Forget: Continual Prediction with LSTM<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
+          <p class="entry-finding">Add a forget gate so an LSTM can reset its own memory, and it handles long, unbroken input streams that the original LSTM could not: the LSTM used today.</p>
+          <div class="entry-meta">Felix Gers, Jürgen Schmidhuber, Fred Cummins · Neural Computation · <span class="entry-src">PDF <span aria-hidden="true">↗</span></span></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#lstm">LSTM <span class="rel-year">1997</span></a></div>
         </div>
       </article><article class="entry" id="vae">
         <div class="entry-year">2013</div>
@@ -732,7 +759,7 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
           <h3><a class="entry-link" href="https://arxiv.org/abs/1607.06450" target="_blank" rel="noopener">Layer Normalization<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
           <p class="entry-finding">Normalise across a layer&#x27;s features instead of the batch: it works for recurrent nets and any batch size, and became the transformer default. Many recent LLMs use the simpler RMSNorm (Zhang &amp; Sennrich, 2019) instead.</p>
           <div class="entry-meta">Jimmy Lei Ba, Jamie Ryan Kiros, Geoffrey Hinton · arXiv · <span class="entry-src">arXiv 1607.06450 <span aria-hidden="true">↗</span></span></div>
-          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#batchnorm">Batch norm <span class="rel-year">2015</span></a></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#batchnorm">Batch norm <span class="rel-year">2015</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#rmsnorm">RMSNorm <span class="rel-year">2019</span></a></div>
         </div>
       </article><article class="entry" id="moe">
         <div class="entry-year">2017</div>
@@ -742,6 +769,15 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
           <p class="entry-finding">Route each input to a few experts out of thousands, so model capacity grows far faster than compute.</p>
           <div class="entry-meta">Noam Shazeer et al. · ICLR 2017 · <span class="entry-src">arXiv 1701.06538 <span aria-hidden="true">↗</span></span></div>
           <div class="entry-rel"><span class="rel-label">Led to</span><a href="#switch">Switch Transformer <span class="rel-year">2021</span></a></div>
+        </div>
+      </article><article class="entry" id="rmsnorm">
+        <div class="entry-year">2019</div>
+        <div class="entry-card">
+          <div class="entry-label">RMSNorm</div>
+          <h3><a class="entry-link" href="https://arxiv.org/abs/1910.07467" target="_blank" rel="noopener">Root Mean Square Layer Normalization<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
+          <p class="entry-finding">Drop layer norm&#x27;s mean-centring and only rescale by the root mean square: similar accuracy for less compute, and now standard in LLMs such as LLaMA.</p>
+          <div class="entry-meta">Biao Zhang, Rico Sennrich · NeurIPS 2019 · <span class="entry-src">arXiv 1910.07467 <span aria-hidden="true">↗</span></span></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#layernorm">Layer norm <span class="rel-year">2016</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#llama">LLaMA <span class="rel-year">2023</span></a></div>
         </div>
       </article><article class="entry" id="switch">
         <div class="entry-year">2021</div>
@@ -843,7 +879,7 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
       </article>
       </div>
     </section><section class="field" id="language">
-      <p class="kicker"><span class="rule"></span>Field III · 2013–2025 · 12 papers</p>
+      <p class="kicker"><span class="rule"></span>Field III · 2013–2025 · 15 papers</p>
       <h2>Language models &amp; AI</h2>
       <p class="field-intro">From word vectors and attention to the transformer, instruction-following chat models, retrieval, agents and reasoning.</p>
       <div class="timeline">
@@ -872,7 +908,16 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
           <h3><a class="entry-link" href="https://arxiv.org/abs/1706.03762" target="_blank" rel="noopener">Attention Is All You Need<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
           <p class="entry-finding">Drop recurrence entirely: attention alone, computed in parallel, beats RNNs at translation and trains far faster. Today&#x27;s LLMs keep the core but usually swap in pre-norm, RMSNorm, rotary positions and gated feed-forward layers.</p>
           <div class="entry-meta">Ashish Vaswani et al. · NeurIPS 2017 · <span class="entry-src">arXiv 1706.03762 <span aria-hidden="true">↗</span></span></div>
-          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#lstm">LSTM <span class="rel-year">1997</span></a><a href="#bahdanau">Attention <span class="rel-year">2014</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#bert">BERT <span class="rel-year">2018</span></a><a href="#gpt3">GPT-3 <span class="rel-year">2020</span></a><a href="#vit">ViT <span class="rel-year">2020</span></a><a href="#flash">FlashAttention <span class="rel-year">2022</span></a></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#lstm">LSTM <span class="rel-year">1997</span></a><a href="#bahdanau">Attention <span class="rel-year">2014</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#gpt1">GPT-1 <span class="rel-year">2018</span></a><a href="#bert">BERT <span class="rel-year">2018</span></a><a href="#gpt3">GPT-3 <span class="rel-year">2020</span></a><a href="#vit">ViT <span class="rel-year">2020</span></a><a href="#flash">FlashAttention <span class="rel-year">2022</span></a><a href="#rope">RoPE <span class="rel-year">2021</span></a></div>
+        </div>
+      </article><article class="entry" id="gpt1">
+        <div class="entry-year">2018</div>
+        <div class="entry-card">
+          <div class="entry-label">GPT-1</div>
+          <h3><a class="entry-link" href="https://cdn.openai.com/research-covers/language-unsupervised/language_understanding_paper.pdf" target="_blank" rel="noopener">Improving Language Understanding by Generative Pre-Training<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
+          <p class="entry-finding">Pre-train a transformer to predict the next word on thousands of unpublished books, then fine-tune it: new state of the art on 9 of 12 language tasks.</p>
+          <div class="entry-meta">Alec Radford, Karthik Narasimhan, Tim Salimans, Ilya Sutskever · OpenAI · <span class="entry-src">PDF <span aria-hidden="true">↗</span></span></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#transformer">Transformer <span class="rel-year">2017</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#bert">BERT <span class="rel-year">2018</span></a><a href="#gpt2">GPT-2 <span class="rel-year">2019</span></a></div>
         </div>
       </article><article class="entry" id="bert">
         <div class="entry-year">2018</div>
@@ -881,7 +926,16 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
           <h3><a class="entry-link" href="https://arxiv.org/abs/1810.04805" target="_blank" rel="noopener">BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
           <p class="entry-finding">Pre-train a transformer by filling in masked words, then fine-tune it: new state of the art on eleven language tasks.</p>
           <div class="entry-meta">Jacob Devlin, Ming-Wei Chang, Kenton Lee, Kristina Toutanova · NAACL 2019 · <span class="entry-src">arXiv 1810.04805 <span aria-hidden="true">↗</span></span></div>
-          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#word2vec">word2vec <span class="rel-year">2013</span></a><a href="#transformer">Transformer <span class="rel-year">2017</span></a></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#word2vec">word2vec <span class="rel-year">2013</span></a><a href="#transformer">Transformer <span class="rel-year">2017</span></a><a href="#gpt1">GPT-1 <span class="rel-year">2018</span></a></div>
+        </div>
+      </article><article class="entry" id="gpt2">
+        <div class="entry-year">2019</div>
+        <div class="entry-card">
+          <div class="entry-label">GPT-2</div>
+          <h3><a class="entry-link" href="https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf" target="_blank" rel="noopener">Language Models are Unsupervised Multitask Learners<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
+          <p class="entry-finding">A 1.5B-parameter model trained on 40 GB of web text sets the state of the art on 7 of 8 language-modelling benchmarks zero-shot, and starts doing tasks it was never trained for.</p>
+          <div class="entry-meta">Alec Radford, Jeffrey Wu, Rewon Child, David Luan, Dario Amodei, Ilya Sutskever · OpenAI · <span class="entry-src">PDF <span aria-hidden="true">↗</span></span></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#gpt1">GPT-1 <span class="rel-year">2018</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#gpt3">GPT-3 <span class="rel-year">2020</span></a></div>
         </div>
       </article><article class="entry" id="gpt3">
         <div class="entry-year">2020</div>
@@ -890,7 +944,7 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
           <h3><a class="entry-link" href="https://arxiv.org/abs/2005.14165" target="_blank" rel="noopener">Language Models are Few-Shot Learners<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
           <p class="entry-finding">At 175B parameters a language model picks up new tasks from a few examples in the prompt, with no fine-tuning.</p>
           <div class="entry-meta">Tom Brown et al. · NeurIPS 2020 · <span class="entry-src">arXiv 2005.14165 <span aria-hidden="true">↗</span></span></div>
-          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#transformer">Transformer <span class="rel-year">2017</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#instructgpt">InstructGPT (RLHF) <span class="rel-year">2022</span></a><a href="#cot">Chain of thought <span class="rel-year">2022</span></a><a href="#llama">LLaMA <span class="rel-year">2023</span></a></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#transformer">Transformer <span class="rel-year">2017</span></a><a href="#gpt2">GPT-2 <span class="rel-year">2019</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#instructgpt">InstructGPT (RLHF) <span class="rel-year">2022</span></a><a href="#cot">Chain of thought <span class="rel-year">2022</span></a><a href="#llama">LLaMA <span class="rel-year">2023</span></a></div>
         </div>
       </article><article class="entry" id="rag">
         <div class="entry-year">2020</div>
@@ -900,6 +954,15 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
           <p class="entry-finding">Retrieve passages from a document index and generate from them: more specific, more factual answers you can trace to a source.</p>
           <div class="entry-meta">Patrick Lewis et al. · NeurIPS 2020 · <span class="entry-src">arXiv 2005.11401 <span aria-hidden="true">↗</span></span></div>
           <div class="entry-rel"><span class="rel-label">Led to</span><a href="#react">ReAct <span class="rel-year">2022</span></a></div>
+        </div>
+      </article><article class="entry" id="rope">
+        <div class="entry-year">2021</div>
+        <div class="entry-card">
+          <div class="entry-label">RoPE</div>
+          <h3><a class="entry-link" href="https://arxiv.org/abs/2104.09864" target="_blank" rel="noopener">RoFormer: Enhanced Transformer with Rotary Position Embedding<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
+          <p class="entry-finding">Encode position by rotating the query and key vectors, so attention depends on how far apart two tokens are: the position scheme most open LLMs now use.</p>
+          <div class="entry-meta">Jianlin Su et al. · arXiv · <span class="entry-src">arXiv 2104.09864 <span aria-hidden="true">↗</span></span></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#transformer">Transformer <span class="rel-year">2017</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#llama">LLaMA <span class="rel-year">2023</span></a></div>
         </div>
       </article><article class="entry" id="cot">
         <div class="entry-year">2022</div>
@@ -944,7 +1007,7 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
           <h3><a class="entry-link" href="https://arxiv.org/abs/2302.13971" target="_blank" rel="noopener">LLaMA: Open and Efficient Foundation Language Models<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
           <p class="entry-finding">Trained only on public data, the 13B model beats the 175B GPT-3 on most benchmarks, and the weights went to researchers.</p>
           <div class="entry-meta">Hugo Touvron et al. · arXiv · <span class="entry-src">arXiv 2302.13971 <span aria-hidden="true">↗</span></span></div>
-          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#gpt3">GPT-3 <span class="rel-year">2020</span></a></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#rmsnorm">RMSNorm <span class="rel-year">2019</span></a><a href="#gpt3">GPT-3 <span class="rel-year">2020</span></a><a href="#rope">RoPE <span class="rel-year">2021</span></a></div>
         </div>
       </article><article class="entry" id="r1">
         <div class="entry-year">2025</div>
@@ -958,7 +1021,7 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
       </article>
       </div>
     </section><section class="field" id="vision">
-      <p class="kicker"><span class="rule"></span>Field IV · 1998–2023 · 10 papers</p>
+      <p class="kicker"><span class="rule"></span>Field IV · 1998–2023 · 13 papers</p>
       <h2>Computer vision</h2>
       <p class="field-intro">How machines learned to see: convolution, depth, transformers for images, matching pictures to text, and generating images from noise.</p>
       <div class="timeline">
@@ -998,6 +1061,15 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
           <div class="entry-meta">Olaf Ronneberger, Philipp Fischer, Thomas Brox · MICCAI 2015 · <span class="entry-src">arXiv 1505.04597 <span aria-hidden="true">↗</span></span></div>
           <div class="entry-rel"><span class="rel-label">Led to</span><a href="#ddpm">DDPM <span class="rel-year">2020</span></a><a href="#sam">Segment Anything <span class="rel-year">2023</span></a></div>
         </div>
+      </article><article class="entry" id="diffusion2015">
+        <div class="entry-year">2015</div>
+        <div class="entry-card">
+          <div class="entry-label">Diffusion models</div>
+          <h3><a class="entry-link" href="https://arxiv.org/abs/1503.03585" target="_blank" rel="noopener">Deep Unsupervised Learning using Nonequilibrium Thermodynamics<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
+          <p class="entry-finding">Slowly destroy data with noise, then train a network to reverse each small step: the original diffusion model, borrowed from physics.</p>
+          <div class="entry-meta">Jascha Sohl-Dickstein, Eric Weiss, Niru Maheswaranathan, Surya Ganguli · ICML 2015 · <span class="entry-src">arXiv 1503.03585 <span aria-hidden="true">↗</span></span></div>
+          <div class="entry-rel"><span class="rel-label">Led to</span><a href="#ddpm">DDPM <span class="rel-year">2020</span></a></div>
+        </div>
       </article><article class="entry" id="ddpm">
         <div class="entry-year">2020</div>
         <div class="entry-card">
@@ -1005,7 +1077,7 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
           <h3><a class="entry-link" href="https://arxiv.org/abs/2006.11239" target="_blank" rel="noopener">Denoising Diffusion Probabilistic Models<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
           <p class="entry-finding">Learn to undo noise one small step at a time and you can generate high-quality images starting from pure noise. It made the 2015 idea of diffusion models (Sohl-Dickstein et al.) work well.</p>
           <div class="entry-meta">Jonathan Ho, Ajay Jain, Pieter Abbeel · NeurIPS 2020 · <span class="entry-src">arXiv 2006.11239 <span aria-hidden="true">↗</span></span></div>
-          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#unet">U-Net <span class="rel-year">2015</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#beatgans">Diffusion beats GANs <span class="rel-year">2021</span></a><a href="#ldm">Latent diffusion <span class="rel-year">2021</span></a><a href="#diffpolicy">Diffusion Policy <span class="rel-year">2023</span></a></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#unet">U-Net <span class="rel-year">2015</span></a><a href="#diffusion2015">Diffusion models <span class="rel-year">2015</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#beatgans">Diffusion beats GANs <span class="rel-year">2021</span></a><a href="#ldm">Latent diffusion <span class="rel-year">2021</span></a><a href="#diffpolicy">Diffusion Policy <span class="rel-year">2023</span></a><a href="#flowmatch">Flow matching <span class="rel-year">2022</span></a></div>
         </div>
       </article><article class="entry" id="vit">
         <div class="entry-year">2020</div>
@@ -1032,7 +1104,16 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
           <h3><a class="entry-link" href="https://arxiv.org/abs/2105.05233" target="_blank" rel="noopener">Diffusion Models Beat GANs on Image Synthesis<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
           <p class="entry-finding">With a better architecture and classifier guidance, diffusion models overtake GANs on image quality. Classifier-free guidance (Ho &amp; Salimans) soon made the separate classifier unnecessary.</p>
           <div class="entry-meta">Prafulla Dhariwal, Alex Nichol · NeurIPS 2021 · <span class="entry-src">arXiv 2105.05233 <span aria-hidden="true">↗</span></span></div>
-          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#gan">GAN <span class="rel-year">2014</span></a><a href="#ddpm">DDPM <span class="rel-year">2020</span></a></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#gan">GAN <span class="rel-year">2014</span></a><a href="#ddpm">DDPM <span class="rel-year">2020</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#cfg">Classifier-free guidance <span class="rel-year">2021</span></a></div>
+        </div>
+      </article><article class="entry" id="cfg">
+        <div class="entry-year">2021</div>
+        <div class="entry-card">
+          <div class="entry-label">Classifier-free guidance</div>
+          <h3><a class="entry-link" href="https://arxiv.org/abs/2207.12598" target="_blank" rel="noopener">Classifier-Free Diffusion Guidance<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
+          <p class="entry-finding">Train one diffusion model with and without its conditioning, then push each step away from the unconditioned guess: strong guidance with no separate classifier.</p>
+          <div class="entry-meta">Jonathan Ho, Tim Salimans · NeurIPS 2021 workshop · <span class="entry-src">arXiv 2207.12598 <span aria-hidden="true">↗</span></span></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#beatgans">Diffusion beats GANs <span class="rel-year">2021</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#ldm">Latent diffusion <span class="rel-year">2021</span></a></div>
         </div>
       </article><article class="entry" id="ldm">
         <div class="entry-year">2021</div>
@@ -1041,7 +1122,16 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
           <h3><a class="entry-link" href="https://arxiv.org/abs/2112.10752" target="_blank" rel="noopener">High-Resolution Image Synthesis with Latent Diffusion Models<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
           <p class="entry-finding">Run diffusion in a compressed latent space instead of pixels: far cheaper, and the basis of Stable Diffusion, which added CLIP&#x27;s text encoder for prompts.</p>
           <div class="entry-meta">Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, Björn Ommer · CVPR 2022 · <span class="entry-src">arXiv 2112.10752 <span aria-hidden="true">↗</span></span></div>
-          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#vae">VAE <span class="rel-year">2013</span></a><a href="#ddpm">DDPM <span class="rel-year">2020</span></a></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#vae">VAE <span class="rel-year">2013</span></a><a href="#ddpm">DDPM <span class="rel-year">2020</span></a><a href="#cfg">Classifier-free guidance <span class="rel-year">2021</span></a></div>
+        </div>
+      </article><article class="entry" id="flowmatch">
+        <div class="entry-year">2022</div>
+        <div class="entry-card">
+          <div class="entry-label">Flow matching</div>
+          <h3><a class="entry-link" href="https://arxiv.org/abs/2210.02747" target="_blank" rel="noopener">Flow Matching for Generative Modeling<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
+          <p class="entry-finding">Train a network to predict the velocity that carries noise to data along simple paths: a simpler alternative to diffusion that samples in fewer steps.</p>
+          <div class="entry-meta">Yaron Lipman, Ricky T. Q. Chen, Heli Ben-Hamu, Maximilian Nickel, Matt Le · ICLR 2023 · <span class="entry-src">arXiv 2210.02747 <span aria-hidden="true">↗</span></span></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#ddpm">DDPM <span class="rel-year">2020</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#pi0">π0 <span class="rel-year">2024</span></a></div>
         </div>
       </article><article class="entry" id="sam">
         <div class="entry-year">2023</div>
@@ -1055,7 +1145,7 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
       </article>
       </div>
     </section><section class="field" id="robotics">
-      <p class="kicker"><span class="rule"></span>Field V · 2013–2024 · 10 papers</p>
+      <p class="kicker"><span class="rule"></span>Field V · 2013–2024 · 12 papers</p>
       <h2>Robotics &amp; reinforcement learning</h2>
       <p class="field-intro">Learning from reward and from demonstration, from Atari and Go to robots that take instructions in plain language.</p>
       <div class="timeline">
@@ -1066,7 +1156,25 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
           <h3><a class="entry-link" href="https://arxiv.org/abs/1312.5602" target="_blank" rel="noopener">Playing Atari with Deep Reinforcement Learning<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
           <p class="entry-finding">The same network and settings, trained separately on each of seven Atari games, learn to play from raw pixels and the score alone. The target network and the 49-game result came in the 2015 Nature version.</p>
           <div class="entry-meta">Volodymyr Mnih et al. · NeurIPS 2013 workshop · <span class="entry-src">arXiv 1312.5602 <span aria-hidden="true">↗</span></span></div>
-          <div class="entry-rel"><span class="rel-label">Led to</span><a href="#alphago">AlphaGo <span class="rel-year">2016</span></a></div>
+          <div class="entry-rel"><span class="rel-label">Led to</span><a href="#dqn-nature">Nature DQN <span class="rel-year">2015</span></a></div>
+        </div>
+      </article><article class="entry" id="trpo">
+        <div class="entry-year">2015</div>
+        <div class="entry-card">
+          <div class="entry-label">TRPO</div>
+          <h3><a class="entry-link" href="https://arxiv.org/abs/1502.05477" target="_blank" rel="noopener">Trust Region Policy Optimization<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
+          <p class="entry-finding">Keep each policy update inside a trust region, a limit on how far the new policy can drift from the old, and policy-gradient training improves steadily instead of collapsing.</p>
+          <div class="entry-meta">John Schulman, Sergey Levine, Philipp Moritz, Michael Jordan, Pieter Abbeel · ICML 2015 · <span class="entry-src">arXiv 1502.05477 <span aria-hidden="true">↗</span></span></div>
+          <div class="entry-rel"><span class="rel-label">Led to</span><a href="#ppo">PPO <span class="rel-year">2017</span></a></div>
+        </div>
+      </article><article class="entry" id="dqn-nature">
+        <div class="entry-year">2015</div>
+        <div class="entry-card">
+          <div class="entry-label">Nature DQN</div>
+          <h3><a class="entry-link" href="https://klab.tch.harvard.edu/academia/classes/Neuro230/ReadingAssignments/MnihEtAlHassibis15NatureControlDeepRL.pdf" target="_blank" rel="noopener">Human-level control through deep reinforcement learning<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
+          <p class="entry-finding">Add a target network, a copy of the Q-network refreshed only every few thousand steps, and one architecture with one set of settings, trained separately on each game, reaches over 75% of a professional games tester&#x27;s score (measured above random play) on 29 of 49 Atari games.</p>
+          <div class="entry-meta">Volodymyr Mnih et al. · Nature · <span class="entry-src">PDF <span aria-hidden="true">↗</span></span></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#dqn">DQN <span class="rel-year">2013</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#alphago">AlphaGo <span class="rel-year">2016</span></a></div>
         </div>
       </article><article class="entry" id="alphago">
         <div class="entry-year">2016</div>
@@ -1075,7 +1183,7 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
           <h3><a class="entry-link" href="https://storage.googleapis.com/deepmind-media/alphago/AlphaGoNaturePaper.pdf" target="_blank" rel="noopener">Mastering the game of Go with deep neural networks and tree search<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
           <p class="entry-finding">Policy and value networks guiding a tree search beat a professional Go player 5–0, a decade earlier than expected.</p>
           <div class="entry-meta">David Silver et al. · Nature · <span class="entry-src">PDF <span aria-hidden="true">↗</span></span></div>
-          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#dqn">DQN <span class="rel-year">2013</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#alphazero">AlphaZero <span class="rel-year">2017</span></a></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#dqn-nature">Nature DQN <span class="rel-year">2015</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#alphazero">AlphaZero <span class="rel-year">2017</span></a></div>
         </div>
       </article><article class="entry" id="domainrand">
         <div class="entry-year">2017</div>
@@ -1093,7 +1201,7 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
           <h3><a class="entry-link" href="https://arxiv.org/abs/1707.06347" target="_blank" rel="noopener">Proximal Policy Optimization Algorithms<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
           <p class="entry-finding">A simpler successor to TRPO: clip how far each update can move the policy. It is stable, and became the go-to policy-gradient method, RLHF included.</p>
           <div class="entry-meta">John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, Oleg Klimov · arXiv · <span class="entry-src">arXiv 1707.06347 <span aria-hidden="true">↗</span></span></div>
-          <div class="entry-rel"><span class="rel-label">Led to</span><a href="#instructgpt">InstructGPT (RLHF) <span class="rel-year">2022</span></a><a href="#grpo">GRPO <span class="rel-year">2024</span></a></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#trpo">TRPO <span class="rel-year">2015</span></a></div><div class="entry-rel"><span class="rel-label">Led to</span><a href="#instructgpt">InstructGPT (RLHF) <span class="rel-year">2022</span></a><a href="#grpo">GRPO <span class="rel-year">2024</span></a></div>
         </div>
       </article><article class="entry" id="alphazero">
         <div class="entry-year">2017</div>
@@ -1147,7 +1255,7 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
           <h3><a class="entry-link" href="https://arxiv.org/abs/2410.24164" target="_blank" rel="noopener">π0: A Vision-Language-Action Flow Model for General Robot Control<span class="sr-only"> (opens the full paper in a new tab)</span></a></h3>
           <p class="entry-finding">A vision-language model with a flow-matching action head drives many robot types on dexterous tasks like folding laundry.</p>
           <div class="entry-meta">Kevin Black et al. (Physical Intelligence) · arXiv · <span class="entry-src">arXiv 2410.24164 <span aria-hidden="true">↗</span></span></div>
-          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#diffpolicy">Diffusion Policy <span class="rel-year">2023</span></a><a href="#rt2">RT-2 <span class="rel-year">2023</span></a><a href="#oxe">Open X-Embodiment <span class="rel-year">2023</span></a></div>
+          <div class="entry-rel"><span class="rel-label">Built on</span><a href="#flowmatch">Flow matching <span class="rel-year">2022</span></a><a href="#diffpolicy">Diffusion Policy <span class="rel-year">2023</span></a><a href="#rt2">RT-2 <span class="rel-year">2023</span></a><a href="#oxe">Open X-Embodiment <span class="rel-year">2023</span></a></div>
         </div>
       </article>
       </div>

@@ -49,3 +49,11 @@
 - Two lineage links removed: DQN → PPO (PPO comes from policy-gradient methods and TRPO, not DQN) and CLIP → latent diffusion (the LDM paper used its own text encoder; CLIP's came with Stable Diffusion, which the finding now says).
 - An independent fact-check against the papers verified every change and tightened five findings: perceptron (the 1958 paper reinforces active units, by forced or chance correct responses), backprop, DeepSeek-R1 (format reward, more stages), DQN (one network per game) and PPO (default policy-gradient method, not all of RL).
 - Checks: verify.mjs passes.
+
+## ITER-006 · 2026-11-03 · Twelve missing papers, and a label for papers with no free copy
+- Joona: add the papers that fill the gaps the accuracy pass found (ITER-005). For papers with no free copy, look for a legal open copy first. If there is none, keep the entry and say so plainly.
+- Added: McCulloch & Pitts 1943, Minsky & Papert *Perceptrons* 1969, Gers et al. 2000 (forget gate), RMSNorm 2019, GPT-1 2018, GPT-2 2019, RoPE 2021, Sohl-Dickstein et al. 2015 (diffusion), classifier-free guidance, flow matching, TRPO 2015 and Nature DQN 2015. The archive goes from 63 to 75 papers.
+- New `nofree` field: the entry gets a **No free copy** badge, its title opens a free explainer (Wikipedia for *Perceptrons*), and the screen-reader text says so. *Perceptrons* is an in-print book with no official free copy.
+- Open copies used: Gers et al. (IDSIA, linked from Schmidhuber's publication page), McCulloch & Pitts (Bau lab reprint), Nature DQN (Harvard course reading), GPT-1 and GPT-2 (OpenAI's own PDFs).
+- Checks: verify.mjs passes (75 papers). In the browser there is no overflow at 320 px; the explainer labels are kept short because `.entry-src` doesn't wrap.
+- Independent review: Gers et al. does have a free copy on IDSIA's server, so it is linked directly and only *Perceptrons* is marked No free copy. The Nature DQN finding now says the target network is copied every few thousand steps (not "slowly updated") and that the 75% is measured above random play. Classifier-free guidance is dated 2021 (NeurIPS workshop) and now leads to Latent diffusion, which uses it. verify.mjs now checks every `nofree` entry has an explainer name.
