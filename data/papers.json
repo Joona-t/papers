@@ -47,7 +47,7 @@
    "title": "The Perceptron: A Probabilistic Model for Information Storage and Organization in the Brain",
    "authors": "Frank Rosenblatt",
    "venue": "Psychological Review",
-   "finding": "Connections that were active when the machine answered correctly get reinforced, so it learns to classify patterns from examples. The update rule taught today, w ← w + η(y − ŷ)x, is a later textbook form, starting with Rosenblatt's 1962 book.",
+   "finding": "Active units are reinforced when the correct response is forced or happens to be given (and weakened when it is wrong), so the machine learns to classify patterns from examples. The error-correction rule taught today, w ← w + η(y − ŷ)x, is a later textbook form of the procedure in Rosenblatt's 1962 book.",
    "url": "https://homepages.math.uic.edu/~lreyzin/papers/rosenblatt58.pdf",
    "next": [
     "backprop"
@@ -61,7 +61,7 @@
    "title": "Learning representations by back-propagating errors",
    "authors": "David Rumelhart, Geoffrey Hinton, Ronald Williams",
    "venue": "Nature",
-   "finding": "Send the error backwards through the layers and the hidden units learn useful features on their own. The method itself was older (Linnainmaa 1970, Werbos 1974); this paper showed what it could learn.",
+   "finding": "Send the error backwards through the layers and the hidden units learn useful features on their own. The core method had been described earlier (Linnainmaa 1970, Werbos 1974); this paper showed what it could learn.",
    "url": "https://www.cs.toronto.edu/~hinton/absps/naturebp.pdf",
    "next": [
     "lstm",
@@ -453,7 +453,7 @@
    "title": "DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning",
    "authors": "DeepSeek-AI",
    "venue": "Nature 2025",
-   "finding": "Reward only correct final answers and long step-by-step reasoning, self-checking included, emerges from reinforcement learning alone (R1-Zero). R1 adds a small supervised warm-up so the reasoning reads well.",
+   "finding": "Reward just correct final answers (plus a format check) and long step-by-step reasoning, self-checking included, emerges from reinforcement learning alone (R1-Zero). R1 adds a small supervised warm-up and further training stages so the reasoning reads well.",
    "url": "https://arxiv.org/abs/2501.12948",
    "next": []
   },
@@ -603,7 +603,7 @@
    "title": "Playing Atari with Deep Reinforcement Learning",
    "authors": "Volodymyr Mnih et al.",
    "venue": "NeurIPS 2013 workshop",
-   "finding": "One network learns to play seven Atari games from raw pixels and the score alone. The target network and the 49-game result came in the 2015 Nature version.",
+   "finding": "The same network and settings, trained separately on each of seven Atari games, learn to play from raw pixels and the score alone. The target network and the 49-game result came in the 2015 Nature version.",
    "url": "https://arxiv.org/abs/1312.5602",
    "next": [
     "alphago"
@@ -643,7 +643,7 @@
    "title": "Proximal Policy Optimization Algorithms",
    "authors": "John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, Oleg Klimov",
    "venue": "arXiv",
-   "finding": "A simpler successor to TRPO: clip how far each update can move the policy. It is stable, and became the default RL algorithm, RLHF included.",
+   "finding": "A simpler successor to TRPO: clip how far each update can move the policy. It is stable, and became the go-to policy-gradient method, RLHF included.",
    "url": "https://arxiv.org/abs/1707.06347",
    "next": [
     "instructgpt",

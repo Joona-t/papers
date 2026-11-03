@@ -47,4 +47,5 @@
 - Joona: the learning resources should be accurate. The perceptron entry implied the 1958 paper has the update rule taught today, w ← w + η(y − ŷ)x, but that form came later (Rosenblatt 1962 onwards).
 - Fifteen findings now name the later paper where the textbook version of an idea comes from, or where the paper's claim was later revised: perceptron, backprop, LSTM (forget gate, 2000), batch norm, layer norm (RMSNorm), Adam, scaling laws, transformer, chain of thought, DeepSeek-R1, DDPM, diffusion beats GANs, latent diffusion, DQN (target network, 2015) and PPO (TRPO).
 - Two lineage links removed: DQN → PPO (PPO comes from policy-gradient methods and TRPO, not DQN) and CLIP → latent diffusion (the LDM paper used its own text encoder; CLIP's came with Stable Diffusion, which the finding now says).
+- An independent fact-check against the papers verified every change and tightened five findings: perceptron (the 1958 paper reinforces active units, by forced or chance correct responses), backprop, DeepSeek-R1 (format reward, more stages), DQN (one network per game) and PPO (default policy-gradient method, not all of RL).
 - Checks: verify.mjs passes.
