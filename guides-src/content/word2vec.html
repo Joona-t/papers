@@ -1,0 +1,349 @@
+<!--LEDE-->
+Can a computer learn what words mean just by reading a lot of text, cheaply enough to read billions of words in a day? Mikolov and colleagues strip neural language models down to almost nothing and show that the word vectors they learn line up so neatly that "Paris minus France plus Italy" lands near "Rome".
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>A computer can represent each word as a list of a few hundred numbers, a point in a high-dimensional space, so that words used in similar ways end up close together.</p>
+  <p>Earlier neural networks learned such lists, but slowly, because they did a lot of expensive work on every word they read.</p>
+  <p>This paper throws away the expensive middle layer and trains two very simple models: one guesses a word from its neighbours (CBOW), the other guesses the neighbours from a word (skip-gram).</p>
+  <p>These cheap models are fast: CBOW read 1.6 billion words in under a day (skip-gram took about two), and their vectors capture relationships: the step from "man" to "woman" is roughly the same as the step from "king" to "queen".</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1</p>
+  <h2>Words as points on a map</h2>
+  <div class="prose">
+    <p>To a computer, a word is just a string of letters. "Cat" and "kitten" look no more related than "cat" and "carburettor". The simplest fix, giving each word its own ID number, keeps that blindness: every word is equally different from every other.</p>
+    <p>A better idea is to give each word a <strong>vector</strong>: a list of numbers, say 300 of them, which you can think of as coordinates of a point in a space with 300 directions. If similar words get nearby points, then a system that has learned something about "cat" automatically knows a little about "kitten". These are called <strong>word vectors</strong> or <strong>word embeddings</strong>.</p>
+    <p>Where do the numbers come from? From an old observation in linguistics: you can tell a lot about a word from the company it keeps. Words that appear in similar sentences ("I fed the ___", "the ___ purred") probably mean similar things. So the computer reads huge amounts of text and adjusts each word's numbers until words that share contexts share neighbourhoods.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A supermarket. Nobody gives the shop a definition of "pasta", but it ends up shelved near rice and sauces because people buy them together. Its location tells you what kind of thing it is.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>A word vector places each word as a point in space, learned from which words it appears near, so that similar words sit close together.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why are plain word ID numbers a poor representation?</dt>
+    <dd>They carry no notion of similarity: word 412 and word 413 are no more alike than word 412 and word 9,000, so nothing learned about one word transfers to another.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §3 · Fig. 1</p>
+  <h2>Two very simple guessing games</h2>
+  <div class="prose">
+    <p>The networks people used before this paper to learn word vectors were full <strong>language models</strong>: they read the previous few words and tried to predict the next one, passing everything through a large "hidden layer" of artificial neurons. That hidden layer was where most of the computing time went.</p>
+    <p>Mikolov and colleagues ask: what if we only care about the word vectors, not about building a good predictor? Then the hidden layer can go. They propose two stripped-down games.</p>
+    <ul>
+      <li><strong>CBOW</strong> ("continuous bag of words"): take the words around a gap, average their vectors, and guess the missing middle word. "Bag of words" means the order of the neighbours is ignored.</li>
+      <li><strong>Skip-gram</strong>: the reverse. Take one word and guess each of the words around it.</li>
+    </ul>
+    <p>Each time a guess is wrong, the vectors involved are nudged slightly so the right answer becomes more likely next time. Over billions of guesses, words that appear in similar company get similar vectors. Below, step a skip-gram window along a sentence and watch which training examples it produces.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Window C <input type="range" id="sg-c" min="1" max="5" step="1" value="3"><output id="sg-c-o">3</output></label><button class="btn" id="sg-next">Next word</button><button class="btn" id="sg-run">Run through sentence</button></div>
+    <div class="svgbox wide"><svg id="sg" viewBox="0 0 640 230" role="img" aria-label="A skip-gram window sliding along a sentence, producing word pairs"></svg></div>
+    <p class="readout" id="sg-r"></p>
+    <figcaption>The amber word is the input; the blue words inside the window are the ones it must guess. As in the paper (§3.2), the window size for each word is drawn at random between 1 and C, so close neighbours are used more often than distant ones. The small bars underneath show that chance for each distance: a word k places away is used with probability (C − k + 1) / C.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>CBOW guesses a word from its neighbours; skip-gram guesses the neighbours from a word. Both drop the costly hidden layer of earlier models.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>In skip-gram with a window of 2 on each side, how many guesses does one word in the middle of a sentence produce?</dt>
+    <dd>Four: two words to the left and two to the right, each a separate guess.</dd>
+    <dt>Why would anyone want to give up the hidden layer?</dt>
+    <dd>It was the main computing cost. Without it, training is fast enough to read billions of words, and more data improves the vectors more than the hidden layer did.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §4.1 · Table 1</p>
+  <h2>Meaning as directions you can add</h2>
+  <div class="prose">
+    <p>The surprising part is not just that similar words cluster. The <em>direction</em> from one word to another seems to carry meaning. The arrow from "France" to "Paris" points roughly the same way as the arrow from "Italy" to "Rome": it is a "capital of" direction. So you can do arithmetic: start at Paris, subtract France, add Italy, and look up which word is nearest to where you land.</p>
+    <p>The authors turn this into a test. They built about 8,900 "semantic" questions (capitals, currencies, family relations) and about 10,700 "syntactic" ones (big to biggest, walk to walked, mouse to mice). A question counts as correct only if the nearest word is exactly the expected one. The words in the question itself are not allowed as answers, a detail that matters more than it looks.</p>
+    <p>Try it on a toy map below. The positions are hand-placed to illustrate the idea in two dimensions; real word vectors have hundreds.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" data-an="0">man → woman, king → ?</button><button class="btn" data-an="1">France → Paris, Italy → ?</button><button class="btn" data-an="2">big → bigger, small → ?</button><button class="btn" data-an="3">boy → girl, prince → ?</button><label><input type="checkbox" id="an-ex" checked> Exclude question words</label></div>
+    <div class="svgbox"><svg id="an" viewBox="0 0 600 300" role="img" aria-label="A toy two-dimensional word map with vector arithmetic"></svg></div>
+    <p class="readout" id="an-r"></p>
+    <figcaption>"A is to B as C is to ?" is answered by B − A + C (the dashed arrows copy the A→B step onto C). The ring marks where the arithmetic lands; the nearest word is the answer. Click any three words in order to make your own question. Untick the box to see how often the nearest word would simply be one of the question words, which is why the paper excludes them.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>Giving directions on a city grid. "From the station, two blocks north is the library." If the same "two blocks north" from the town hall lands at the court house, then "two blocks north" means something consistent, like "the civic building behind it".</div>
+  <p class="takeaway"><span class="label">Takeaway</span>In good word vectors, consistent relationships become consistent directions, so analogies can be solved by adding and subtracting vectors.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Write the arithmetic for "walking is to walked as swimming is to ?".</dt>
+    <dd>vector(walked) − vector(walking) + vector(swimming), then find the nearest word, hoping for "swam".</dd>
+    <dt>Why are the question words excluded from the answers?</dt>
+    <dd>The arithmetic often lands closest to one of the words you started with (especially C), so without the rule many questions would be "answered" with an input word.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §4.2–4.4 · Tables 2–6</p>
+  <h2>Cheap models plus lots of text win</h2>
+  <div class="prose">
+    <p>The big result is a trade. The simple models are a little less clever per word read, but they are so much cheaper that they can read far more, and reading more helps a lot. In the paper's tests, accuracy on the analogy questions keeps rising when the vectors get bigger and the training text gets longer, as long as both grow together (Table 2).</p>
+    <p>Trained on 783 million words with 300 numbers per word, skip-gram answered about 53% of the analogy questions exactly right. Older publicly available word vectors scored between 2% and 25% on the same test (Table 4). On a cluster of computers, using a Google News collection of about 6 billion words, the best skip-gram reached about 66% while training in roughly 2.5 days (Table 6). CBOW processed 1.6 billion words in under a day; skip-gram took about two days.</p>
+    <p>The two models also differ in character: skip-gram was much better on meaning-type questions (capitals, family), CBOW a bit better on grammar-type questions (plurals, tenses), and CBOW trains faster.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Simple models that can read billions of words beat clever models that can only read millions.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is "53% correct" more impressive than it sounds?</dt>
+    <dd>Only an exact match counts, among a vocabulary of many thousands of words; near-synonyms or slight variants count as wrong.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §6–7 · What came next</p>
+  <h2>From fixed vectors to words in context</h2>
+  <div class="prose">
+    <p>Months later the same team published a follow-up that made skip-gram faster and better still, with a trick called <strong>negative sampling</strong> (instead of scoring every word in the vocabulary, compare the right neighbour against a handful of random ones) and by skipping some very common words like "the". They released the program as <strong>word2vec</strong>, and it became one of the most used tools in language processing.</p>
+    <p>Word2vec's vectors have a basic limitation: each word gets exactly one point, whatever it means in context. "Bank" in "river bank" and "bank account" share one vector. Later models such as <a href="bert.html">BERT</a> solved this by computing a fresh vector for each word every time it appears, based on the whole sentence. The idea of learning meaning from neighbouring words survives in them; the single fixed vector per word does not.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>The "king − man + woman = queen" magic is partly an artefact of the test. Later researchers showed that without the rule excluding the question words, the nearest vector is often just one of the inputs, and that the analogies are less reliable than the famous examples suggest. Word vectors also absorb social biases from their training text (the same arithmetic produces stereotypes).</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Word2vec made good word vectors cheap and popular; modern models keep the idea of learning from context but give each word a different vector in each sentence.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What can a single vector per word not capture?</dt>
+    <dd>Different meanings of the same word in different contexts, like "bank" (river) versus "bank" (money).</dd>
+  </dl></details>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Two novel log-linear architectures (CBOW and continuous skip-gram) for computing continuous vector representations of words from very large data sets. Quality is measured on a word-similarity task and compared with the previously best neural-network techniques: accuracy improves substantially at much lower computational cost; high-quality vectors are learned from a 1.6-billion-word data set in less than a day, and give state-of-the-art performance on a new test set of syntactic and semantic word similarities. Workshop track, ICLR 2013 (arXiv 1301.3781, Jan 2013; v3 Sep 2013).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2 · Eqs. 1–3</p>
+  <h2>Where the cost of neural language models goes</h2>
+  <div class="prose"><p>The paper frames everything as training complexity, proportional to</p></div>
+  <div class="eq"><var>O</var> = <var>E</var> × <var>T</var> × <var>Q</var> <span class="n">(1)</span></div>
+  <div class="prose"><p>with <var>E</var> epochs (3–50 typical), <var>T</var> training words (up to 10<sup>9</sup>) and <var>Q</var> the per-word cost of the architecture. For a feed-forward NNLM (Bengio et al., 2003) with <var>N</var> context words, projection size <var>D</var>, hidden size <var>H</var> and vocabulary <var>V</var>:</p></div>
+  <div class="eq"><var>Q</var><sub>NNLM</sub> = <var>N</var>×<var>D</var> + <var>N</var>×<var>D</var>×<var>H</var> + <var>H</var>×<var>V</var> <span class="n">(2)</span></div>
+  <div class="eq"><var>Q</var><sub>RNNLM</sub> = <var>H</var>×<var>H</var> + <var>H</var>×<var>V</var> <span class="n">(3)</span></div>
+  <div class="prose">
+    <p>The <var>H</var>×<var>V</var> output term dominates naively, but with a <strong>hierarchical softmax</strong> it becomes <var>H</var>×log<sub>2</sub>(<var>V</var>). The paper builds the hierarchy as a Huffman tree over word frequencies, so frequent words get short codes; it states that this needs about log<sub>2</sub>(unigram perplexity(<var>V</var>)) outputs and gives roughly a 2× speed-up for a one-million-word vocabulary over a balanced tree. Once the output is cheap, the remaining bottleneck is the non-linear hidden layer: <var>N</var>×<var>D</var>×<var>H</var> for the NNLM, <var>H</var>×<var>H</var> for the RNNLM.</p>
+    <p>Training used DistBelief (§2.3): asynchronous mini-batch gradient descent with Adagrad across many model replicas sharing a central parameter server.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3 · Eqs. 4–5 · Fig. 1</p>
+  <h2>The two log-linear architectures</h2>
+  <div class="prose">
+    <p><strong>CBOW (§3.1).</strong> Remove the non-linear hidden layer and share the projection layer across all context positions, so context vectors are averaged into one projection (order is lost, hence "bag of words"). With four history and four future words as input, a log-linear classifier predicts the middle word:</p>
+  </div>
+  <div class="eq"><var>Q</var><sub>CBOW</sub> = <var>N</var>×<var>D</var> + <var>D</var>×log<sub>2</sub>(<var>V</var>) <span class="n">(4)</span></div>
+  <div class="prose">
+    <p><strong>Continuous skip-gram (§3.2).</strong> Each current word is the input to a log-linear classifier that predicts words within a range before and after it. For each training word a number <var>R</var> is sampled uniformly in ⟨1; <var>C</var>⟩ and the <var>R</var> previous and <var>R</var> following words are used as labels, giving 2<var>R</var> classifications; distant words are thereby sampled less often. With <var>C</var> = 10 in the experiments:</p>
+  </div>
+  <div class="eq"><var>Q</var><sub>SG</sub> = <var>C</var> × (<var>D</var> + <var>D</var>×log<sub>2</sub>(<var>V</var>)) <span class="n">(5)</span></div>
+  <div class="prose"><p>The 2013 paper specifies these models only at this level; the objective it optimises is the usual softmax log-likelihood of the target word given the input, computed through the hierarchical softmax. The explicit skip-gram objective, (1/<var>T</var>) Σ<sub><var>t</var></sub> Σ<sub>−<var>c</var>≤<var>j</var>≤<var>c</var>, <var>j</var>≠0</sub> log <var>p</var>(<var>w</var><sub><var>t</var>+<var>j</var></sub> | <var>w<sub>t</sub></var>) with <var>p</var>(<var>w<sub>O</sub></var> | <var>w<sub>I</sub></var>) = exp(<var>v′</var><sub><var>w<sub>O</sub></var></sub><sup>⊤</sup><var>v</var><sub><var>w<sub>I</sub></var></sub>) / Σ<sub><var>w</var></sub> exp(<var>v′</var><sub><var>w</var></sub><sup>⊤</sup><var>v</var><sub><var>w<sub>I</sub></var></sub>), is written out in the companion paper (Mikolov et al., NeurIPS 2013). Compare the per-word costs for typical settings below.</p></div>
+  <figure class="live">
+    <div class="ctl">
+      <label>log<sub>10</sub> V <input type="range" id="cx-v" min="4" max="7" step="0.1" value="6" data-fmt="1"><output id="cx-v-o">6.0</output></label>
+      <label>D <input type="range" id="cx-d" min="50" max="1000" step="50" value="300"><output id="cx-d-o">300</output></label>
+      <label>H <input type="range" id="cx-h" min="100" max="1000" step="50" value="500"><output id="cx-h-o">500</output></label>
+      <label><input type="checkbox" id="cx-hs" checked> Hierarchical softmax</label>
+    </div>
+    <div class="svgbox"><svg id="cx" viewBox="0 0 600 240" role="img" aria-label="Per-word training cost Q for four architectures, log scale"></svg></div>
+    <p class="readout" id="cx-r"></p>
+    <figcaption>Eqs. 2–5 evaluated live with N = 10 context words (NNLM, CBOW) and C = 10 (skip-gram); log scale. For the RNNLM the word dimensionality equals H. Unticking the box replaces log<sub>2</sub>V with V in every output term, which is what made earlier models so slow. Note the CBOW and skip-gram bars do not depend on H at all.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>With hierarchical softmax, what dominates Q for the NNLM and why do the new models avoid it?</dt>
+    <dd>The N×D×H projection-to-hidden term. CBOW and skip-gram have no hidden layer; the projection feeds the (hierarchical) output directly.</dd>
+    <dt>Why is skip-gram roughly C times costlier per word than CBOW?</dt>
+    <dd>It makes up to 2R separate output predictions per input word (on average about C), whereas CBOW makes one prediction from the averaged context.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §4.1 · Table 1</p>
+  <h2>The Semantic-Syntactic Word Relationship test</h2>
+  <div class="prose">
+    <p>The test set contains 8,869 semantic and 10,675 syntactic questions in 5 and 9 categories (Table 1), built by listing word pairs by hand and combining pairs into questions; only single-token words are used. Examples: Athens–Greece / Oslo–Norway (common capitals), Angola–kwanza / Iran–rial (currency), brother–sister / grandson–granddaughter (man–woman), great–greater / tough–tougher (comparative), mouse–mice / dollar–dollars (plural nouns).</p>
+    <p>A question "<var>a</var> : <var>b</var> :: <var>c</var> : ?" is answered by computing <var>X</var> = vec(<var>b</var>) − vec(<var>a</var>) + vec(<var>c</var>) and returning the word with highest cosine similarity to <var>X</var>, excluding the question words. Only exact matches count; the paper notes that synonyms are therefore counted as mistakes and that 100% is likely unreachable.</p>
+    <p>The figure below trains a real skip-gram on a tiny synthetic corpus in your browser, so you can see distributional similarity emerge from nothing but co-occurrence.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="tr-go" aria-pressed="false">Train</button><button class="btn" id="tr-reset">Reset</button><label>Probe <select id="tr-w"></select></label></div>
+    <div class="svgbox"><svg id="tr" viewBox="0 0 600 300" role="img" aria-label="Skip-gram word vectors projected to two dimensions as training proceeds"></svg></div>
+    <p class="readout" id="tr-r"></p>
+    <figcaption>A 21-word synthetic vocabulary (sentences like "the queen rules the land", "the dog eats meat"), skip-gram with D = 8, window 2 and full softmax (exact, since V is tiny; the paper uses hierarchical softmax), plain SGD. Points are the input vectors projected onto their top two principal components and recoloured by the category used to generate the corpus (the model never sees categories). The readout lists the probe word's nearest neighbours by cosine similarity. Illustrative, not the paper's data.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §4.2–4.5 · Tables 2–7</p>
+  <h2>Results</h2>
+  <div class="prose"><p><strong>Scaling data and dimensionality (Table 2).</strong> CBOW on a 30k-word vocabulary subset: with 50 dimensions, accuracy saturates near 23% even at 783M words; with 600 dimensions it climbs from 24.0% (24M words) to 50.4% (783M). Both must grow together.</p>
+  <p><strong>Architecture comparison (Table 3)</strong>, 640-dimensional vectors trained on the same 320M words (82K vocabulary):</p></div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Model</th><th>Semantic %</th><th>Syntactic %</th><th>MSR relatedness %</th></tr></thead>
+    <tbody>
+      <tr><td>RNNLM</td><td class="num">9</td><td class="num">36</td><td class="num">35</td></tr>
+      <tr><td>NNLM</td><td class="num">23</td><td class="num">53</td><td class="num">47</td></tr>
+      <tr><td>CBOW</td><td class="num">24</td><td class="num">64</td><td class="num">61</td></tr>
+      <tr><td>Skip-gram</td><td class="num">55</td><td class="num">59</td><td class="num">56</td></tr>
+    </tbody></table></div>
+  <div class="prose"><p><strong>Against public vectors (Table 4).</strong> Collobert–Weston (50-d, 660M words) 11.0% total; Turian 1.8–2.1%; Mnih 5.8–8.8%; Mikolov RNNLM (640-d) 24.6%; Huang 12.3%. CBOW (300-d, 783M words) 36.1%; skip-gram 53.3%.</p>
+  <p><strong>Epochs versus data (Table 5).</strong> One epoch on twice the data matches or beats three epochs: 1-epoch skip-gram on 1.6B words reaches 53.8% in 2 days, versus 53.3% for 3 epochs on 783M words in 3 days. 1-epoch CBOW on 783M words takes 0.3 days.</p></div>
+  <div class="tablebox"><table>
+    <thead><tr><th>DistBelief, Google News 6B (Table 6)</th><th>Dim</th><th>Sem.</th><th>Syn.</th><th>Total</th><th>Days × CPU cores</th></tr></thead>
+    <tbody>
+      <tr><td>NNLM</td><td class="num">100</td><td class="num">34.2</td><td class="num">64.5</td><td class="num">50.8</td><td class="num">14 × 180</td></tr>
+      <tr><td>CBOW</td><td class="num">1000</td><td class="num">57.3</td><td class="num">68.9</td><td class="num">63.7</td><td class="num">2 × 140</td></tr>
+      <tr><td>Skip-gram</td><td class="num">1000</td><td class="num">66.1</td><td class="num">65.1</td><td class="num">65.6</td><td class="num">2.5 × 125</td></tr>
+    </tbody></table></div>
+  <div class="prose"><p><strong>Microsoft Sentence Completion (§4.5, Table 7).</strong> 1,040 sentences with one missing word and five choices. Skip-gram alone scores 48.0% (below the 49% of LSA similarity), but combined with RNNLMs it reaches 58.9%, a new state of the art over 55.4% for RNNLMs alone.</p>
+  <p><strong>Learned relationships (§5, Table 8)</strong> from a 300-d skip-gram on 783M words include France–Paris → Italy: Rome, Japan: Tokyo; big–bigger → cold: colder, quick: quicker; Sarkozy–France → Merkel: Germany. The table also shows misses (big–bigger → small: larger), and the authors estimate exact-match accuracy on this set at about 60%.</p></div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What does Table 2 say about choosing vector size?</dt>
+    <dd>Beyond some point, adding dimensions or data alone gives diminishing returns; accuracy improves most when dimensionality and training data are increased together.</dd>
+    <dt>Why does Table 3 hold dimensionality and data fixed?</dt>
+    <dd>To compare architectures fairly: differences then reflect the model, not the compute budget. Skip-gram's semantic advantage (55 vs 24) is the striking result.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · Limitations and lineage</p>
+  <h2>What held up and what did not</h2>
+  <div class="prose"><ul>
+    <li><strong>Companion paper.</strong> Mikolov, Sutskever, Chen, Corrado &amp; Dean (NeurIPS 2013), "Distributed Representations of Words and Phrases and their Compositionality", added <strong>negative sampling</strong> (a simplified noise-contrastive objective, log σ(<var>v′</var><sub><var>w<sub>O</sub></var></sub><sup>⊤</sup><var>v</var><sub><var>w<sub>I</sub></var></sub>) + Σ<sub><var>k</var></sub> log σ(−<var>v′</var><sub><var>w<sub>k</sub></var></sub><sup>⊤</sup><var>v</var><sub><var>w<sub>I</sub></var></sub>)), subsampling of frequent words and phrase vectors. SGNS (skip-gram with negative sampling) is what "word2vec" usually means today.</li>
+    <li><strong>What it computes.</strong> Levy &amp; Goldberg (2014) showed SGNS implicitly factorises a shifted pointwise mutual information matrix, linking it to classical count-based distributional semantics. GloVe (Pennington et al., 2014) fits co-occurrence statistics directly; fastText (Bojanowski et al., 2017) adds subword n-grams, addressing the paper's own note that the models have no access to morphology.</li>
+    <li><strong>Analogy evaluation.</strong> The exclusion of question words is load-bearing: later analyses (e.g. Linzen 2016; Nissim, van Noord &amp; van der Goot 2020) showed that without it the nearest vector is very often <var>c</var> or <var>b</var>, and that offsets reflect similarity more than clean relational structure. Treat "king − man + woman ≈ queen" (which the paper attributes to earlier RNNLM work, ref. [20]) as an illustration, not a law.</li>
+    <li><strong>Bias.</strong> Bolukbasi et al. (2016) showed the same arithmetic yields occupational gender stereotypes learned from the corpus.</li>
+    <li><strong>Static vectors.</strong> One vector per type cannot represent polysemy. Contextual models (ELMo 2018, <a href="gpt1.html">GPT</a>, <a href="bert.html">BERT</a>) replaced fixed embeddings with representations computed from the whole sentence; their input embedding layers are the direct descendants of this paper's projection matrix.</li>
+  </ul></div>
+  <div class="later"><span class="label">Where it led</span>Pretrained word vectors became the standard first layer of NLP models from 2013 to about 2018, before pre-trained transformers (<a href="gpt1.html">GPT-1</a>, <a href="bert.html">BERT</a>) made the whole network, not just the embedding table, the thing you pre-train.</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Word vector</dt><dd>A dense real-valued representation of a word; also embedding or distributed representation.</dd>
+    <dt>NNLM</dt><dd>Feed-forward neural network language model (Bengio et al., 2003).</dd>
+    <dt>RNNLM</dt><dd>Recurrent neural network language model.</dd>
+    <dt>Projection layer</dt><dd>A shared lookup table mapping each word to its D-dimensional vector.</dd>
+    <dt>Log-linear</dt><dd>A model whose log-probabilities are linear in its parameters given the inputs; here, no hidden non-linearity.</dd>
+    <dt>CBOW</dt><dd>Continuous bag-of-words: predict the centre word from the average of context vectors.</dd>
+    <dt>Skip-gram</dt><dd>Predict each context word from the centre word.</dd>
+    <dt>Hierarchical softmax</dt><dd>Factorises the output distribution along a binary (here Huffman) tree, costing about log<sub>2</sub>V per prediction.</dd>
+    <dt>Negative sampling</dt><dd>From the companion paper: train the true pair against k sampled "noise" words instead of a full softmax.</dd>
+    <dt>DistBelief</dt><dd>Google's distributed training framework with asynchronous SGD and a parameter server.</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+(function(){ // skip-gram window
+  var svg=$('#sg'), words='paris is the capital and largest city of france'.split(' '), C=3, pos=0, R=1, r=rng(11), total=0, timer=null;
+  function pick(){ R=1+Math.floor(r()*C); }
+  function draw(){ clear(svg); var n=words.length, w=640/n;
+    var pairs=[];
+    words.forEach(function(wd,i){ var d=Math.abs(i-pos), inside=i!==pos && d<=R; if (inside) pairs.push(wd);
+      var X=i*w+3; S('rect',{x:X,y:40,width:w-6,height:40,'class':i===pos?'box-fire':(inside?'box-wire':'box')},svg);
+      S('text',{x:X+(w-6)/2,y:65,'class':i===pos?'t mid':(inside?'t-wire mid':'t-s mid')},svg,wd);
+      if (i!==pos && d<=C){ var p=(C-d+1)/C; S('rect',{x:X+(w-6)/2-10,y:130-p*36,width:20,height:p*36,'class':'f-wire','fill-opacity':0.55},svg); S('text',{x:X+(w-6)/2,y:146,'class':'t-s mid'},svg,Math.round(p*100)+'%'); }
+      if (i!==pos) S('text',{x:X+(w-6)/2,y:30,'class':'t-s mid'},svg,(i<pos?'−':'+')+d);
+    });
+    S('text',{x:4,y:92,'class':'t-s'},svg,'chance each neighbour is used (over many passes):');
+    S('text',{x:4,y:178,'class':'t-h'},svg,'Training pairs from this word (R = '+R+'):');
+    var x=4; pairs.forEach(function(p){ var lbl='('+words[pos]+' → '+p+')'; var wd=lbl.length*7.2+10; if (x+wd>640){ x=4; } S('text',{x:x,y:205,'class':'t-wire'},svg,lbl); x+=wd; });
+    $('#sg-r').innerHTML='Centre word <b>'+words[pos]+'</b>, sampled window R = <b>'+R+'</b>, '+pairs.length+' guesses. Total pairs so far: <b>'+total+'</b>.';
+  }
+  function next(){ pos=(pos+1)%words.length; pick(); total+=words.filter(function(_,i){return i!==pos&&Math.abs(i-pos)<=R;}).length; draw(); }
+  bindRange('sg-c',function(v){ C=v; pick(); draw(); });
+  $('#sg-next').onclick=next;
+  $('#sg-run').onclick=function(){ if (timer){ clearInterval(timer); timer=null; this.textContent='Run through sentence'; return; } var b=this, k=0; b.textContent='Stop'; timer=setInterval(function(){ next(); if (++k>=words.length){ clearInterval(timer); timer=null; b.textContent='Run through sentence'; } },450); };
+  total=words.filter(function(_,i){return i!==pos&&Math.abs(i-pos)<=R;}).length; draw();
+})();
+(function(){ // analogy toy map
+  var svg=$('#an'), W={man:[-3,-1.6],woman:[-1,-1.4],king:[-3.1,1.6],queen:[-1.2,1.5],boy:[-3.4,-2.9],girl:[-1.5,-2.8],prince:[-3.3,0.5],princess:[-1.0,0.6],
+    France:[1.0,-2.2],Paris:[1.3,0.6],Italy:[2.6,-2.0],Rome:[2.5,0.9],Japan:[4.1,-2.4],Tokyo:[4.3,0.4],
+    big:[0.6,2.6],bigger:[1.9,2.9],small:[2.7,2.3],smaller:[3.9,2.7],large:[0.4,1.9]};
+  var pre=[['man','woman','king'],['France','Paris','Italy'],['big','bigger','small'],['boy','girl','prince']], sel=['man','woman','king'], ex=true;
+  function X(v){ return 300+v[0]*58; } function Y(v){ return 155-v[1]*40; }
+  function draw(){ clear(svg); var a=W[sel[0]], b=sel[1]?W[sel[1]]:null, c=sel[2]?W[sel[2]]:null, res=null, best=null, bestAll=null;
+    S('line',{x1:10,y1:155,x2:590,y2:155,'class':'grid'},svg); S('line',{x1:300,y1:10,x2:300,y2:290,'class':'grid'},svg);
+    if (a&&b&&c){ res=[b[0]-a[0]+c[0], b[1]-a[1]+c[1]];
+      var dist=function(v){ return Math.hypot(v[0]-res[0],v[1]-res[1]); };
+      Object.keys(W).forEach(function(k){ var d=dist(W[k]); if (!bestAll||d<bestAll[1]) bestAll=[k,d]; if (sel.indexOf(k)<0 && (!best||d<best[1])) best=[k,d]; });
+      S('line',{x1:X(a),y1:Y(a),x2:X(b),y2:Y(b),'class':'w-fire','marker-end':'url(#af)'},svg);
+      S('line',{x1:X(c),y1:Y(c),x2:X(res),y2:Y(res),'class':'w-dash','marker-end':'url(#ai)'},svg);
+      S('circle',{cx:X(res),cy:Y(res),r:13,'class':'w-fire'},svg); }
+    Object.keys(W).forEach(function(k){ var v=W[k], i=sel.indexOf(k), ans=(ex?best:bestAll);
+      var on=ans&&ans[0]===k;
+      var dot=S('circle',{cx:X(v),cy:Y(v),r:6,'class':(i>=0?'u-on':(on?'u-wire':'u'))+' clickable'},svg);
+      S('text',{x:X(v)+(i>=0?-4:9),y:Y(v)+(i>=0?-11:4),'class':(on?'t-wire':(i>=0?'t-fire':'t'))},svg,k+(i>=0?' ('+'ABC'[i]+')':''));
+      dot.addEventListener('click',function(){ if (sel.length>=3||!sel[0]) sel=[k]; else if (sel.indexOf(k)<0) sel.push(k); draw(); });
+    });
+    if (res){ var msg='"'+sel[0]+' is to '+sel[1]+' as '+sel[2]+' is to ?" → nearest allowed answer: <b>'+best[0]+'</b>.';
+      if (!ex) msg='Nearest word, inputs allowed: <b>'+bestAll[0]+'</b>'+(sel.indexOf(bestAll[0])>=0?' (a question word, so the question would be scored wrong).':'.');
+      else if (sel.indexOf(bestAll[0])>=0) msg+=' Without the exclusion rule the nearest would have been <b>'+bestAll[0]+'</b>, a question word.';
+      $('#an-r').innerHTML=msg; }
+    else $('#an-r').innerHTML='Picked '+sel.filter(Boolean).length+' of 3 words. Click '+(3-sel.filter(Boolean).length)+' more.';
+  }
+  $$('[data-an]').forEach(function(bt){ bt.onclick=function(){ sel=pre[+bt.dataset.an].slice(); draw(); }; });
+  $('#an-ex').addEventListener('change',function(){ ex=this.checked; draw(); });
+  draw();
+})();
+(function(){ // complexity
+  var svg=$('#cx'), lv=6, D=300, H=500, hs=true, N=10, C=10;
+  function draw(){ clear(svg); var V=Math.pow(10,lv), o=hs?Math.log2(V):V;
+    var rows=[['NNLM',N*D+N*D*H+H*o],['RNNLM',H*H+H*o],['CBOW',N*D+D*o],['Skip-gram',C*(D+D*o)]];
+    var lo=3, hi=13; function Xp(q){ return 110+(Math.log10(q)-lo)/(hi-lo)*470; }
+    for (var e=lo;e<=hi;e+=2){ S('line',{x1:Xp(Math.pow(10,e)),y1:20,x2:Xp(Math.pow(10,e)),y2:200,'class':'grid'},svg); S('text',{x:Xp(Math.pow(10,e)),y:218,'class':'t-s mid'},svg,'10^'+e); }
+    rows.forEach(function(r,i){ var y=30+i*44; S('text',{x:100,y:y+18,'class':'t end'},svg,r[0]); S('rect',{x:110,y:y,width:Math.max(2,Xp(r[1])-110),height:26,'class':i>=2?'f-fire':'f-wire','fill-opacity':0.8},svg);
+      S('text',{x:Math.min(Xp(r[1])+6,520),y:y+18,'class':'t-s'},svg,r[1].toExponential(2)); });
+    S('text',{x:345,y:236,'class':'t-s mid'},svg,'operations per training word, Q (log scale)');
+    $('#cx-r').innerHTML='V = '+Math.round(V).toLocaleString()+'. NNLM / skip-gram = <b>'+fmt(rows[0][1]/rows[3][1],1)+'×</b>; NNLM / CBOW = <b>'+fmt(rows[0][1]/rows[2][1],0)+'×</b>.'; }
+  bindRange('cx-v',function(v){lv=v;draw();}); bindRange('cx-d',function(v){D=v;draw();}); bindRange('cx-h',function(v){H=v;draw();});
+  $('#cx-hs').addEventListener('change',function(){ hs=this.checked; draw(); });
+})();
+(function(){ // tiny skip-gram trainer
+  var cats={royal:['king','queen','prince'],animal:['dog','cat','horse'],food:['bread','meat','fish'],place:['land','town','farm'],verb:['rules','eats','sees']};
+  var col={royal:'f-fire',animal:'f-wire',food:'f-ok',place:'f-inh',verb:'f-muted'};
+  var vocab=['the','a'], catOf={the:'other',a:'other'}; Object.keys(cats).forEach(function(c){ cats[c].forEach(function(w){ vocab.push(w); catOf[w]=c; }); });
+  ['and','big','old','near'].forEach(function(w){ vocab.push(w); catOf[w]='other'; });
+  var idx={}; vocab.forEach(function(w,i){ idx[w]=i; }); var V=vocab.length, D=8;
+  var cr=rng(3), corpus=[]; function p(a){ return a[Math.floor(cr()*a.length)]; }
+  for (var s=0;s<400;s++){ var t=cr(), sent;
+    if (t<0.3) sent=['the',p(cats.royal),'rules','the',p(['land','town'])];
+    else if (t<0.6) sent=['the',p(cats.animal),'eats',p(['the','a']),p(cats.food)];
+    else if (t<0.8) sent=[p(['the','a']),p(['big','old']),p(cats.animal),'sees','the',p(cats.royal)];
+    else sent=['the',p(cats.royal),'and','the',p(cats.royal),'sees',p(['a','the']),p(['farm','town','land']),'near','the',p(['farm','town'])];
+    sent.forEach(function(w){ corpus.push(idx[w]); }); }
+  var Win, Wout, steps, pos, timer=null, svg=$('#tr'), sel=$('#tr-w');
+  vocab.forEach(function(w){ if (catOf[w]!=='other'||w==='big'){ var o=document.createElement('option'); o.value=w; o.textContent=w; sel.appendChild(o);} }); sel.value='king';
+  function init(){ var r=rng(9); Win=[];Wout=[]; for (var i=0;i<V;i++){ var a=[],b=[]; for (var d=0;d<D;d++){ a.push((r()-.5)*0.5); b.push(0);} Win.push(a); Wout.push(b);} steps=0; pos=0; }
+  function trainPair(i,o,lr){ var h=Win[i], sc=new Array(V), m=-1e9; for (var w=0;w<V;w++){ var s=0; for (var d=0;d<D;d++) s+=Wout[w][d]*h[d]; sc[w]=s; if (s>m) m=s; }
+    var Z=0; for (w=0;w<V;w++){ sc[w]=Math.exp(sc[w]-m); Z+=sc[w]; } var gh=new Array(D).fill(0), loss=-Math.log(sc[o]/Z);
+    for (w=0;w<V;w++){ var g=sc[w]/Z-(w===o?1:0); for (d=0;d<D;d++){ gh[d]+=g*Wout[w][d]; Wout[w][d]-=lr*g*h[d]; } }
+    for (d=0;d<D;d++) h[d]-=lr*gh[d]; return loss; }
+  var lastLoss=0;
+  function epochChunk(n){ var L=0,c=0; for (var k=0;k<n;k++){ var i=corpus[pos]; for (var j=-2;j<=2;j++){ if (!j) continue; var q=pos+j; if (q<0||q>=corpus.length) continue; L+=trainPair(i,corpus[q],0.05); c++; } pos=(pos+1)%corpus.length; steps++; } lastLoss=L/Math.max(c,1); }
+  function cos(a,b){ var s=0,na=0,nb=0; for (var d=0;d<D;d++){ s+=a[d]*b[d]; na+=a[d]*a[d]; nb+=b[d]*b[d]; } return s/Math.sqrt(na*nb+1e-12); }
+  function pca(){ var mu=new Array(D).fill(0); Win.forEach(function(v){ for (var d=0;d<D;d++) mu[d]+=v[d]/V; });
+    var X=Win.map(function(v){ return v.map(function(x,d){ return x-mu[d]; }); }), Cm=[]; for (var a=0;a<D;a++){ Cm.push([]); for (var b=0;b<D;b++){ var s=0; X.forEach(function(x){ s+=x[a]*x[b]; }); Cm[a].push(s); } }
+    function pow(excl){ var v=[]; for (var d=0;d<D;d++) v.push(1+d*0.37); for (var it=0;it<60;it++){ var u=Cm.map(function(row){ return row.reduce(function(s,c,j){ return s+c*v[j]; },0); });
+      if (excl){ var dp=u.reduce(function(s,x,j){return s+x*excl[j];},0); u=u.map(function(x,j){return x-dp*excl[j];}); } var n=Math.sqrt(u.reduce(function(s,x){return s+x*x;},0))||1; v=u.map(function(x){return x/n;}); } return v; }
+    var e1=pow(null), e2=pow(e1); return X.map(function(x){ return [x.reduce(function(s,c,j){return s+c*e1[j];},0), x.reduce(function(s,c,j){return s+c*e2[j];},0)]; }); }
+  function draw(){ clear(svg); var P=pca(), mx=1e-6, my=1e-6; P.forEach(function(p){ mx=Math.max(mx,Math.abs(p[0])); my=Math.max(my,Math.abs(p[1])); });
+    S('rect',{x:20,y:12,width:440,height:276,'class':'area'},svg);
+    vocab.forEach(function(w,i){ var x=240+P[i][0]/mx*200, y=150-P[i][1]/my*120, c=catOf[w];
+      S('circle',{cx:x,cy:y,r:w===sel.value?7:5,'class':c==='other'?'f-rule':col[c]},svg); S('text',{x:x+8,y:y+4,'class':w===sel.value?'t-fire':'t-s'},svg,w); });
+    Object.keys(col).forEach(function(c,k){ S('circle',{cx:480,cy:40+k*22,r:5,'class':col[c]},svg); S('text',{x:492,y:44+k*22,'class':'t-s'},svg,c); });
+    S('circle',{cx:480,cy:150,r:5,'class':'f-rule'},svg); S('text',{x:492,y:154,'class':'t-s'},svg,'function word');
+    S('text',{x:480,y:200,'class':'t-s'},svg,'centre words seen:'); S('text',{x:480,y:218,'class':'t'},svg,steps.toLocaleString());
+    S('text',{x:480,y:244,'class':'t-s'},svg,'avg loss:'); S('text',{x:480,y:262,'class':'t'},svg,steps?fmt(lastLoss,3):'–');
+    var q=idx[sel.value], nb=vocab.map(function(w,i){ return [w,cos(Win[q],Win[i])]; }).filter(function(x){ return x[0]!==sel.value; }).sort(function(a,b){ return b[1]-a[1]; }).slice(0,4);
+    $('#tr-r').innerHTML='Nearest to <b>'+sel.value+'</b>: '+nb.map(function(x){ return x[0]+' ('+fmt(x[1],2)+')'; }).join(', ')+'.'; }
+  $('#tr-go').onclick=function(){ var b=this; if (timer){ clearInterval(timer); timer=null; b.textContent='Train'; b.setAttribute('aria-pressed','false'); return; }
+    b.textContent='Pause'; b.setAttribute('aria-pressed','true'); timer=setInterval(function(){ epochChunk(300); draw(); if (steps>=corpus.length*8){ clearInterval(timer); timer=null; b.textContent='Train'; b.setAttribute('aria-pressed','false'); } },60); };
+  $('#tr-reset').onclick=function(){ init(); draw(); };
+  sel.addEventListener('change',draw);
+  init(); epochChunk(0); draw();
+})();
+</script>

@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dropout (2014) study guide</title>
+<meta name="description" content="Big neural networks can memorise their training data, quirks and noise included, and then do badly on anything new. This paper&#x27;s remedy is almost absurdly simple: during training, switch off a random half of the hidden units for every example, so no unit can rely on particular partners, and at ">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Neural networks</b> · 2014</p>
+  <h1>Dropout: A Simple Way to Prevent Neural Networks from Overfitting</h1>
+  <p class="cite">Nitish Srivastava, Geoffrey Hinton, Alex Krizhevsky, Ilya Sutskever, Ruslan Salakhutdinov · JMLR</p>
+  <p class="lede">Big neural networks can memorise their training data, quirks and noise included, and then do badly on anything new. This paper's remedy is almost absurdly simple: during training, switch off a random half of the hidden units for every example, so no unit can rely on particular partners, and at test time use the whole network with its weights scaled down.</p>
+  <p class="paperlinks"><a href="https://jmlr.org/papers/v15/srivastava14a.html">Read the paper (free)</a> <a href="https://lovespark.love/papers-worth-reading/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, separate AI review (also by Claude), but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Large networks overfit: they learn the training examples so exactly, noise and all, that they generalise poorly to new ones.</p>
+  <p>Dropout fights this by randomly deleting units (and their connections) during training, a fresh random choice for every example, typically keeping each hidden unit with probability one half.</p>
+  <p>Each unit therefore has to be useful on its own, alongside whatever random set of other units happens to be present, instead of forming fragile partnerships that only work on the training data.</p>
+  <p>At test time nothing is dropped; each unit's outgoing weights are scaled by its keep probability, which approximates averaging the predictions of the enormous family of thinned networks seen in training. It improved results across vision, speech, text and biology benchmarks.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1</p>
+  <h2>Overfitting: learning the noise</h2>
+  <div class="prose">
+    <p>A neural network learns by adjusting its <strong>weights</strong> (connection strengths) to reduce its error on <strong>training</strong> examples. What we actually care about is its error on <strong>new</strong> examples it has never seen. When a network has many weights and few examples, it can drive the training error to nearly zero by fitting every random wobble in the data. That is <strong>overfitting</strong>: perfect on the homework, poor in the exam.</p>
+    <p>The usual cures at the time were stopping training early, penalising large weights, or averaging the predictions of many separately trained models. Averaging works very well, but training and running dozens of large networks was far too expensive.</p>
+    <p>Below, two identical small networks learn the same 16 noisy points. The blue one trains normally. The amber one uses dropout. Watch how the blue curve contorts itself to pass through every point while the amber one stays closer to the true pattern (dashed).</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn" id="of-run" aria-pressed="false">Train</button><button class="btn" id="of-reset">Reset</button>
+      <label>Keep probability <input type="range" id="of-p" min="0.3" max="1" step="0.05" value="0.5" data-fmt="2"><output id="of-p-o">0.50</output></label>
+    </div>
+    <div class="svgbox"><svg id="of" viewBox="0 0 600 280" role="img" aria-label="Two network fits to noisy data, with and without dropout"></svg></div>
+    <p class="readout" id="of-r"></p>
+    <figcaption>Both networks have two hidden layers of 40 units and the same starting weights, trained with the same optimiser on the same 16 points (true curve: a sine wave; noise added). "New-data error" is the average squared distance from the true curve over the whole range. The keep probability applies to the amber network's hidden units; at 1.00 it is no longer using dropout. A scaled-down illustration of the paper's idea, not an experiment from it.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>A big network can fit its training data perfectly and still predict badly. Dropout trades a slightly worse fit on training data for a much better fit on new data.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is the blue network's training error lower but its new-data error higher?</dt>
+    <dd>It has bent itself to pass through the random noise in each training point, and the noise does not repeat in new data.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §1, §4 · Figs. 1, 3</p>
+  <h2>Switch units off at random</h2>
+  <div class="prose">
+    <p>Here is the whole method. Every time a training example goes through the network, flip a biased coin for each unit: keep it with probability <var>p</var> (the paper suggests one half for hidden units, and higher, around 0.8, for input units), otherwise set its output to zero for this example. The dropped unit sends nothing forward and receives no blame on the backward pass. The next example gets a new set of coin flips.</p>
+    <p>Each pattern of coin flips gives a different <strong>thinned network</strong>. A network with <var>n</var> units that can be dropped has 2<sup><var>n</var></sup> possible thinned versions, all sharing the same weights. With a few thousand units that number is beyond astronomical, so almost every training step uses a thinned network that has never been used before.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn" id="th-go">Next training example</button>
+      <label>Keep probability <input type="range" id="th-p" min="0.1" max="1" step="0.05" value="0.5" data-fmt="2"><output id="th-p-o">0.50</output></label>
+    </div>
+    <div class="svgbox"><svg id="th" viewBox="0 0 600 260" role="img" aria-label="A small network with randomly dropped units"></svg></div>
+    <p class="readout" id="th-r"></p>
+    <figcaption>A network with 4 inputs, two hidden layers of 7 units and 2 outputs. Input units are kept with probability 0.8 (as the paper often uses), hidden units with the slider value; output units are never dropped. Greyed units and their connections are switched off for this example only.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>A football team that trains with a random half of its players missing each day. No one can lean on a favourite teammate always being there, so everyone learns to be useful in many combinations, and the full team on match day is more robust.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Dropout trains a different random thinned network on every example, all sharing one set of weights.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>With 10 droppable units, how many thinned networks are there?</dt>
+    <dd>2<sup>10</sup> = 1,024: each unit is either in or out.</dd>
+    <dt>Does a dropped unit's weight change on that training step?</dt>
+    <dd>Its outgoing weights get no update from that example, because the unit sent nothing forward and so carried none of the blame.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §2, §7.1–7.2 · Figs. 7–8</p>
+  <h2>Why it helps: breaking up co-adaptations</h2>
+  <div class="prose">
+    <p>The authors' explanation is that in an ordinary network, units can develop <strong>co-adaptations</strong>: one unit learns to fix up the mistakes of another, and the pair only works together, on these exact training examples. Such conspiracies fit the training data but break on new data. If any partner might vanish at any moment, a unit cannot rely on such fixes and must learn something useful by itself.</p>
+    <p>The paper motivates this with an analogy to sexual reproduction: genes are shuffled into new combinations each generation, so a gene that only works with a particular set of partners is less successful than one that works with many. The evidence is visual. On handwritten digits, features learned without dropout look like noise, while with dropout each unit clearly detects a stroke or edge (Fig. 7). Dropout also made the hidden activity <strong>sparser</strong>, with fewer units strongly active at once, without anyone asking for that (Fig. 8).</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Random absences stop units from forming fragile partnerships, which pushes each unit toward a feature that is useful on its own.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>In one sentence, what is a co-adaptation?</dt>
+    <dd>A set of units whose weights only make sense together, for example one unit correcting another's errors on the training set, so the arrangement does not generalise.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §1, §7.5 · Figs. 2, 11</p>
+  <h2>At test time: one network, scaled down</h2>
+  <div class="prose">
+    <p>After training we have one set of weights but a gigantic family of thinned networks. The ideal prediction would average them all, which is impossible. The paper's shortcut: use the full network, nothing dropped, but multiply each unit's outgoing weights by its keep probability <var>p</var>. That way, the signal a unit sends at test time matches what it sent <em>on average</em> during training, when it was present only a fraction <var>p</var> of the time.</p>
+    <p>Is the shortcut good? The authors checked on MNIST by actually sampling many thinned networks and averaging their outputs. After about 50 samples, the sampled average matched the scaled network, and more samples were only slightly better (Fig. 11). So one cheap pass gets most of the benefit of averaging a huge ensemble.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>Modern libraries use <strong>inverted dropout</strong>: they divide the kept units' outputs by <var>p</var> during training, so the test-time network needs no change at all. The two are mathematically equivalent for the expected signal. A later line of work (Gal &amp; Ghahramani, 2016) keeps dropout switched on at test time and uses the spread of many sampled predictions as a measure of the model's uncertainty.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Scaling weights by the keep probability turns the whole network into a cheap stand-in for the average of all the thinned networks.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>A unit outputs 2.0 and is kept with probability 0.5. What does the next layer receive from it, on average, during training?</dt>
+    <dd>1.0 (2.0 half the time, 0 the other half). Scaling the outgoing weight by 0.5 at test time reproduces that average.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §6, §11 · Tables 2–9</p>
+  <h2>Results, costs and legacy</h2>
+  <div class="prose">
+    <p>The paper tested dropout on digit recognition (MNIST), house-number photos (SVHN), small natural images (CIFAR-10 and -100), ImageNet, speech (TIMIT), news articles (Reuters) and a genetics task. It helped on every one. On MNIST, for example, a standard network made 1.60% errors, while dropout networks got to 0.95%, and 0.79% when combined with pretraining. The convolutional network that won the 2012 ImageNet competition, <a href="alexnet.html">AlexNet</a>, used dropout.</p>
+    <p>The price: training takes longer, typically two to three times as long, because each update is noisier. And on very large datasets, where overfitting is less of a risk, the gains shrink (the text-classification gain was small for this reason).</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span><a href="batchnorm.html">Batch normalisation</a> (2015) reported that it often made dropout unnecessary in convolutional networks. Dropout remains common in transformers (the original <a href="transformer.html">transformer</a> used a rate of 0.1), though very large language models trained on vast data often use little or none.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Dropout was a cheap, general regulariser that improved almost everything it touched in 2012–2014; it costs extra training time and matters less when data is plentiful.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Deep networks with many parameters are powerful but overfit, and combining the predictions of many large networks at test time is slow. Dropout randomly drops units, with their connections, during training, which prevents units from co-adapting too much. Training samples from an exponential number of thinned networks; at test time a single unthinned network with smaller weights approximates averaging their predictions. Dropout significantly reduces overfitting and gives major improvements over other regularisation methods, achieving state-of-the-art results on many benchmarks in vision, speech, document classification and computational biology. <em>JMLR</em> 15 (2014), 1929–1958; the method first appeared in Hinton et al., arXiv 2012.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §4 · Figs. 2–3</p>
+  <h2>The model</h2>
+  <div class="prose"><p>Layer <var>l</var> has outputs <var>y</var><sup>(<var>l</var>)</sup>. A standard feed-forward step is <var>z<sub>i</sub></var><sup>(<var>l</var>+1)</sup> = <var>w<sub>i</sub></var><sup>(<var>l</var>+1)</sup><var>y</var><sup>(<var>l</var>)</sup> + <var>b<sub>i</sub></var><sup>(<var>l</var>+1)</sup>, <var>y<sub>i</sub></var><sup>(<var>l</var>+1)</sup> = <var>f</var>(<var>z<sub>i</sub></var><sup>(<var>l</var>+1)</sup>). With dropout:</p></div>
+  <div class="eq"><var>r<sub>j</sub></var><sup>(<var>l</var>)</sup> ∼ Bernoulli(<var>p</var>), &nbsp; <var>ỹ</var><sup>(<var>l</var>)</sup> = <var>r</var><sup>(<var>l</var>)</sup> ∗ <var>y</var><sup>(<var>l</var>)</sup>, &nbsp; <var>z<sub>i</sub></var><sup>(<var>l</var>+1)</sup> = <var>w<sub>i</sub></var><sup>(<var>l</var>+1)</sup><var>ỹ</var><sup>(<var>l</var>)</sup> + <var>b<sub>i</sub></var><sup>(<var>l</var>+1)</sup>, &nbsp; <var>y<sub>i</sub></var><sup>(<var>l</var>+1)</sup> = <var>f</var>(<var>z<sub>i</sub></var><sup>(<var>l</var>+1)</sup>)</div>
+  <div class="eq"><var>W</var><sub>test</sub><sup>(<var>l</var>)</sup> = <var>p</var> <var>W</var><sup>(<var>l</var>)</sup></div>
+  <div class="prose">
+    <p>Here ∗ is the elementwise product and <var>p</var> is the <em>retention</em> probability (note: the paper's <var>p</var> is the probability of keeping a unit, whereas most libraries' "dropout rate" is 1 − <var>p</var>). A network with <var>n</var> droppable units defines 2<sup><var>n</var></sup> thinned networks with shared weights; each is trained very rarely, if ever, and weight sharing is what makes training them all feasible. Test-time scaling makes each unit's expected output under the training distribution equal its actual test output.</p>
+    <p>§3 frames dropout as a generalisation of denoising auto-encoders (noise on hidden units, not just inputs) and as an efficient form of model averaging; the authors report that retaining hidden units with p = 0.5 is close to optimal for many tasks, while input units should be retained with higher probability (typically 0.8).</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §5, Appendix A</p>
+  <h2>Training dropout networks</h2>
+  <div class="prose">
+    <p>Training is ordinary minibatch SGD: for each training case in a minibatch, sample a thinned network, forward- and back-propagate through it, and average the gradients over the minibatch (a dropped unit contributes zero gradient for its parameters). Pretrained networks (RBMs, auto-encoders) can be fine-tuned with dropout after scaling the pretrained weights by 1/<var>p</var>.</p>
+    <p>The paper found one regulariser particularly effective alongside dropout: <strong>max-norm</strong>, constraining each hidden unit's incoming weight vector to ‖<var>w</var>‖<sub>2</sub> ≤ <var>c</var>, projecting back onto the ball whenever an update leaves it. Max-norm makes it safe to use very large learning rates, since weights cannot blow up, and the noise from dropout lets the optimiser explore. Appendix A's practical guide:</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Setting</th><th>Recommendation (Appendix A)</th></tr></thead>
+    <tbody>
+      <tr><td>Network size</td><td>If <var>n</var> units are right without dropout, use at least <var>n</var>/<var>p</var> with dropout.</td></tr>
+      <tr><td>Learning rate</td><td>10–100 times the rate optimal for a standard net.</td></tr>
+      <tr><td>Momentum</td><td>0.95–0.99 (versus 0.9 typical without dropout).</td></tr>
+      <tr><td>Max-norm <var>c</var></td><td>Typically 3–4.</td></tr>
+      <tr><td>Retention <var>p</var></td><td>0.5–0.8 for hidden units; about 0.8 for real-valued inputs.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose"><p>On MNIST, a regulariser comparison (Table 9, a 784-1024-1024-2048-10 network) gives test errors of 1.62% (L2), 1.60% (L2 + L1), 1.55% (L2 + KL sparsity), 1.35% (max-norm), 1.25% (dropout + L2) and 1.05% (dropout + max-norm).</p></div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why recommend <var>n</var>/<var>p</var> units?</dt>
+    <dd>Only about <var>np</var> units are active at a time, so to keep the effective capacity of an <var>n</var>-unit network you need about <var>n</var>/<var>p</var> in total.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §6 · Tables 1–8</p>
+  <h2>Experimental results</h2>
+  <div class="tablebox"><table>
+    <thead><tr><th>Dataset (table)</th><th>Without dropout</th><th>With dropout</th></tr></thead>
+    <tbody>
+      <tr><td>MNIST, permutation-invariant (Table 2)</td><td class="num">1.60%</td><td class="num">1.35% (logistic, 3×1024) · 1.25% (ReLU) · 0.95% (ReLU + max-norm, 2×8192) · 0.79% (DBM-pretrained + dropout)</td></tr>
+      <tr><td>SVHN (Table 3)</td><td class="num">3.95%</td><td class="num">3.02% (FC layers only) · 2.55% (all layers)</td></tr>
+      <tr><td>CIFAR-10 (Table 4)</td><td class="num">15.60%</td><td class="num">14.32% (FC) · 12.61% (all layers)</td></tr>
+      <tr><td>CIFAR-100 (Table 4)</td><td class="num">43.48%</td><td class="num">41.26% (FC) · 37.20% (all layers)</td></tr>
+      <tr><td>ImageNet ILSVRC-2010 (Table 5)</td><td class="num">sparse coding 47.1% / 28.2%</td><td class="num">conv net + dropout 37.5% top-1 / 17.0% top-5</td></tr>
+      <tr><td>TIMIT phone error (Table 7)</td><td class="num">23.4% (6-layer) · 22.7% (DBN-pretrained, 4-layer)</td><td class="num">21.8% · 19.7%</td></tr>
+      <tr><td>Reuters-RCV1 (§6.3)</td><td class="num">31.05%</td><td class="num">29.62%</td></tr>
+      <tr><td>Alternative splicing, code quality in bits, higher is better (Table 8)</td><td class="num">440 (early stopping)</td><td class="num">567 (Bayesian NN: 623)</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>Two exceptions are worth reading closely. On Reuters the gain is small, which the authors attribute to the dataset being large enough that overfitting is mild. On alternative splicing, a small dataset, Bayesian neural networks beat dropout: dropout is an approximation to model averaging, and a proper Bayesian average can do better when it is affordable. In ILSVRC-2012, a dropout convolutional network won the competition (top-5 test error 16.4% for a five-model ensemble, Table 6).</p>
+  </div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §7 · Figs. 7–11</p>
+  <h2>Salient features: features, sparsity, rate, data size, averaging</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Features (§7.1, Fig. 7).</strong> A 256-unit ReLU auto-encoder on MNIST learns noisy, co-adapted filters without dropout and localised stroke detectors with <var>p</var> = 0.5.</li>
+      <li><strong>Sparsity (§7.2, Fig. 8).</strong> Mean hidden activation falls from roughly 2.0 to roughly 0.7, with far fewer strongly active units, without any sparsity penalty.</li>
+      <li><strong>Retention rate (§7.3, Fig. 9).</strong> With the architecture fixed, test error is flat for 0.4 ≤ <var>p</var> ≤ 0.8. Holding <var>pn</var> fixed instead (so the expected number of active units is constant) makes small <var>p</var> far less harmful.</li>
+      <li><strong>Data size (§7.4, Fig. 10).</strong> With 100 or 500 MNIST examples dropout does not help; gains are largest at intermediate sizes and shrink as data grows.</li>
+      <li><strong>Monte Carlo versus weight scaling (§7.5, Fig. 11).</strong> Averaging <var>k</var> sampled thinned networks matches the weight-scaled network at about <var>k</var> = 50; beyond that MC is only slightly better, within one standard deviation.</li>
+    </ul>
+    <p>The figure below repeats the §7.5 comparison on a random untrained toy network with dropout on its inputs and hidden layer. With a nonlinearity between the dropped layers, weight scaling is an approximation, so the scaled output and the true average over thinned networks differ slightly; the question is how many samples MC needs to beat it.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Retention <var>p</var> <input type="range" id="mc-p" min="0.2" max="1" step="0.05" value="0.5" data-fmt="2"><output id="mc-p-o">0.50</output></label>
+      <button class="btn" id="mc-new">New input</button><button class="btn" id="mc-re">Resample</button>
+    </div>
+    <div class="svgbox"><svg id="mc" viewBox="0 0 600 260" role="img" aria-label="Running Monte Carlo average of thinned-network outputs versus the weight-scaled output"></svg></div>
+    <p class="readout" id="mc-r"></p>
+    <figcaption>A 10-60-60-1 ReLU network with random weights and a sigmoid output; inputs are kept with probability 0.8, hidden units with <var>p</var>. Grey dots: outputs of individual thinned networks (first 200). Amber line: running average of <var>k</var> thinned networks. Blue line: the weight-scaled network (one pass). Dashed: the true average over thinned networks, estimated from 20,000 samples. Illustrative; the paper's Fig. 11 measures classification error on MNIST instead.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §9–10 · Table 10</p>
+  <h2>Marginalising dropout, and Gaussian dropout</h2>
+  <div class="prose"><p>For linear regression with inputs <var>X</var> ∈ ℝ<sup><var>N</var>×<var>D</var></sup> and input dropout mask <var>R</var> with entries ∼ Bernoulli(<var>p</var>), the expected loss has a closed form (§9.1):</p></div>
+  <div class="eq">E<sub><var>R</var></sub> ‖<var>y</var> − (<var>R</var> ∗ <var>X</var>)<var>w</var>‖² = ‖<var>y</var> − <var>p</var><var>X</var><var>w</var>‖² + <var>p</var>(1 − <var>p</var>) ‖Γ<var>w</var>‖², &nbsp; Γ = (diag(<var>X</var><sup>⊤</sup><var>X</var>))<sup>1/2</sup></div>
+  <div class="prose"><p>Substituting <var>w̃</var> = <var>p</var><var>w</var> gives ‖<var>y</var> − <var>X</var><var>w̃</var>‖² + ((1 − <var>p</var>)/<var>p</var>)‖Γ<var>w̃</var>‖²: ridge regression with a per-feature penalty scaled by that feature's magnitude, and strength (1 − <var>p</var>)/<var>p</var>. For logistic regression and deep nets no closed form exists; approximations (e.g. Wang &amp; Manning, 2013) weaken with depth (§9.2). Verify the identity numerically below.</p></div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Retention <var>p</var> <input type="range" id="rr-p" min="0.1" max="1" step="0.05" value="0.6" data-fmt="2"><output id="rr-p-o">0.60</output></label>
+      <button class="btn" id="rr-re">New masks</button>
+    </div>
+    <div class="svgbox"><svg id="rr" viewBox="0 0 600 220" role="img" aria-label="Monte Carlo dropout loss versus closed-form data term plus penalty"></svg></div>
+    <p class="readout" id="rr-r"></p>
+    <figcaption>A fixed random regression problem with 30 examples and 4 features of very different scales, and a fixed weight vector. Left bar: the dropout loss averaged over 5,000 random masks. Right bar: the closed form, split into the data term (blue) and the ridge-like penalty (amber). Lower <var>p</var> moves loss from the data term into the penalty; at <var>p</var> = 1 the penalty vanishes.</figcaption>
+  </figure>
+  <div class="prose"><p><strong>Gaussian dropout (§10).</strong> Multiplying activations by <var>r</var> ∼ 𝒩(1, σ²) with σ² = (1 − <var>p</var>)/<var>p</var> matches the mean and variance of scaled Bernoulli dropout and needs no test-time scaling. Table 10 reports it as at least as good: MNIST 0.95% vs 1.08% (Bernoulli), CIFAR-10 12.5% vs 12.6%.</p></div>
+</section>
+
+<section class="kp" id="t6">
+  <p class="eyebrow"><b>Section</b> · §11 and later work</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Training time.</strong> The conclusion notes a dropout net typically takes 2–3 times longer to train than a standard net of the same architecture, because gradients are noisier.</li>
+      <li><strong>Approximate averaging.</strong> Weight scaling is exact only for a single linear layer; for deep nets it is a heuristic, empirically good (§7.5). Bayesian averaging beat it on a small dataset (Table 8).</li>
+      <li><strong>Interaction with batch statistics.</strong> Dropout changes activation variance between training and test, which interacts badly with <a href="batchnorm.html">batch normalisation</a> placed after it; BatchNorm's authors also found dropout could be removed or reduced.</li>
+      <li><strong>Theory.</strong> The paper's explanation (co-adaptation, sexual reproduction) is intuitive rather than formal. Wager, Wang and Liang (2013) showed dropout acts as an adaptive, data-dependent L2 regulariser for generalised linear models; Gal and Ghahramani (2016) interpreted it as approximate variational inference in a Bayesian network (MC dropout).</li>
+    </ul>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>Variants include DropConnect (dropping weights instead of units, Wan et al., 2013), spatial dropout for convolutional feature maps, and stochastic depth (dropping whole residual blocks). In large-scale pretraining, where each example is seen roughly once, overfitting is less of a concern and dropout is often reduced or removed; for fine-tuning and smaller data it remains a default.</div>
+</section>
+
+<section class="kp" id="t7" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Retention <var>p</var></dt><dd>Probability a unit is kept (the paper's convention). Library "dropout rate" = 1 − <var>p</var>.</dd>
+    <dt>Thinned network</dt><dd>The sub-network of units that survived a given dropout sample.</dd>
+    <dt>Co-adaptation</dt><dd>Units whose usefulness depends on specific other units being present.</dd>
+    <dt>Weight scaling</dt><dd>Multiplying outgoing weights by <var>p</var> at test time to approximate the ensemble average.</dd>
+    <dt>Inverted dropout</dt><dd>Dividing kept activations by <var>p</var> during training instead, so test time is unchanged.</dd>
+    <dt>Max-norm</dt><dd>Constraint ‖<var>w</var>‖<sub>2</sub> ≤ <var>c</var> on each unit's incoming weights, enforced by projection.</dd>
+    <dt>MC averaging</dt><dd>Averaging predictions of <var>k</var> sampled thinned networks.</dd>
+    <dt>Gaussian dropout</dt><dd>Multiplicative 𝒩(1, (1 − <var>p</var>)/<var>p</var>) noise instead of Bernoulli masks.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p>This is the newest step on its timeline so far.</p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> (<a href="https://lovespark.love/papers-worth-reading/#dropout">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+function DNet(H, seed){ var r=rng(seed), i, j; this.H=H; this.t=0;
+  this.P={w1:[],b1:[],W2:[],b2:[],w3:[],b3:[0]};
+  for (i=0;i<H;i++){ this.P.w1.push(gauss(r)*2); this.P.b1.push(gauss(r)); this.P.b2.push(0); this.P.w3.push(gauss(r)/Math.sqrt(H)); }
+  for (i=0;i<H*H;i++) this.P.W2.push(gauss(r)*1.5/Math.sqrt(H));
+  this.M={}; this.V={}; for (var k in this.P){ this.M[k]=this.P[k].map(function(){return 0;}); this.V[k]=this.P[k].map(function(){return 0;}); } }
+DNet.prototype.fwd=function(x,p,r){ var H=this.H, P=this.P, h1=[], m1=[], h2=[], m2=[], i, j, o=P.b3[0];
+  for (i=0;i<H;i++){ h1.push(Math.tanh(P.w1[i]*x+P.b1[i])); m1.push(r?(r()<p?1:0):p); }
+  for (i=0;i<H;i++){ var s=P.b2[i]; for (j=0;j<H;j++) s+=P.W2[i*H+j]*h1[j]*m1[j]; h2.push(Math.tanh(s)); m2.push(r?(r()<p?1:0):p); }
+  for (j=0;j<H;j++) o+=P.w3[j]*h2[j]*m2[j]; return {h1:h1,h2:h2,m1:m1,m2:m2,o:o}; };
+DNet.prototype.train=function(D,p,r,lr){ var H=this.H, P=this.P, G={}, k, self=this, i, j;
+  for (k in P) G[k]=P[k].map(function(){return 0;});
+  D.forEach(function(d){ var f=self.fwd(d[0],p,r), go=2*(f.o-d[1])/D.length, g2=[], g1=[];
+    G.b3[0]+=go; for (j=0;j<H;j++){ G.w3[j]+=go*f.h2[j]*f.m2[j]; g2.push(go*P.w3[j]*f.m2[j]*(1-f.h2[j]*f.h2[j])); g1.push(0); }
+    for (i=0;i<H;i++){ G.b2[i]+=g2[i]; for (j=0;j<H;j++){ G.W2[i*H+j]+=g2[i]*f.h1[j]*f.m1[j]; g1[j]+=g2[i]*P.W2[i*H+j]*f.m1[j]; } }
+    for (j=0;j<H;j++){ var g=g1[j]*(1-f.h1[j]*f.h1[j]); G.w1[j]+=g*d[0]; G.b1[j]+=g; } });
+  this.t++; var t=this.t, c1=1-Math.pow(0.9,t), c2=1-Math.pow(0.999,t);
+  for (k in P){ var Pk=P[k], Gk=G[k], Mk=this.M[k], Vk=this.V[k]; for (i=0;i<Pk.length;i++){ Mk[i]=0.9*Mk[i]+0.1*Gk[i]; Vk[i]=0.999*Vk[i]+0.001*Gk[i]*Gk[i]; Pk[i]-=lr*(Mk[i]/c1)/(Math.sqrt(Vk[i]/c2)+1e-8); } } };
+(function(){ // overfitting race
+  var svg=$('#of'), D=[], dr=rng(4), A, B, rr, timer=null, p=0.5;
+  function tf(x){ return Math.sin(2.5*x); }
+  for (var i=0;i<16;i++){ var x=-1+2*i/15+0.04*gauss(dr); D.push([x,tf(x)+0.3*gauss(dr)]); }
+  function reset(){ A=new DNet(40,7); B=new DNet(40,7); rr=rng(3); draw(); }
+  function errs(n,pp){ var tr=0, te=0; D.forEach(function(d){ var e=n.fwd(d[0],pp,null).o-d[1]; tr+=e*e/D.length; }); for (var k=0;k<120;k++){ var x=-1+2*k/119, e=n.fwd(x,pp,null).o-tf(x); te+=e*e/120; } return [tr,te]; }
+  function X(x){ return 40+(x+1.1)/2.2*530; } function Y(y){ return 140-y*55; }
+  function draw(){ clear(svg); var d1='', d2='', d3='';
+    S('line',{x1:30,y1:Y(0),x2:580,y2:Y(0),'class':'grid'},svg);
+    for (var k=0;k<=150;k++){ var x=-1.1+2.2*k/150; d1+=(k?'L':'M')+X(x)+','+Y(tf(x)); d2+=(k?'L':'M')+X(x)+','+Y(Math.max(-2.3,Math.min(2.3,A.fwd(x,1,null).o))); d3+=(k?'L':'M')+X(x)+','+Y(Math.max(-2.3,Math.min(2.3,B.fwd(x,p,null).o))); }
+    S('path',{d:d1,'class':'w-dash'},svg); S('path',{d:d2,'class':'w','stroke-width':2.2},svg); S('path',{d:d3,'class':'w-fire'},svg);
+    D.forEach(function(d){ S('circle',{cx:X(d[0]),cy:Y(d[1]),r:4.5,'class':'u'},svg); });
+    S('line',{x1:40,y1:262,x2:60,y2:262,'class':'w','stroke-width':2.2},svg); S('text',{x:66,y:266,'class':'t-s'},svg,'no dropout');
+    S('line',{x1:170,y1:262,x2:190,y2:262,'class':'w-fire'},svg); S('text',{x:196,y:266,'class':'t-s'},svg,'dropout');
+    S('line',{x1:280,y1:262,x2:300,y2:262,'class':'w-dash'},svg); S('text',{x:306,y:266,'class':'t-s'},svg,'true curve');
+    var ea=errs(A,1), eb=errs(B,p);
+    $('#of-r').innerHTML='Steps: <b>'+A.t+'</b> · no dropout: training error <b>'+fmt(ea[0],3)+'</b>, new-data error <b>'+fmt(ea[1],3)+'</b> · dropout: training error <b>'+fmt(eb[0],3)+'</b>, new-data error <b>'+fmt(eb[1],3)+'</b>'; }
+  function stop(){ clearInterval(timer); timer=null; var b=$('#of-run'); b.textContent='Train'; b.setAttribute('aria-pressed','false'); }
+  $('#of-run').onclick=function(){ if (timer){ stop(); return; } this.textContent='Pause'; this.setAttribute('aria-pressed','true');
+    timer=setInterval(function(){ for (var k=0;k<15;k++){ A.train(D,1,null,0.01); B.train(D,p,p<1?rr:null,0.01); } draw(); if (A.t>=4500) stop(); },20); };
+  $('#of-reset').onclick=function(){ if (timer) stop(); reset(); };
+  bindRange('of-p',function(v){ p=v; if (A) draw(); });
+  reset();
+})();
+(function(){ // thinned network sampler
+  var svg=$('#th'), p=0.5, r=rng(21), L=[4,7,7,2], kp, count=0;
+  function sample(){ kp=L.map(function(n,l){ var a=[]; for (var i=0;i<n;i++) a.push(l===3?1:(r()<(l===0?0.8:p)?1:0)); return a; }); count++; draw(); }
+  function pos(l,i){ var n=L[l]; return [70+l*150, 130+(i-(n-1)/2)*30]; }
+  function draw(){ clear(svg); var on=0, total=0;
+    for (var l=0;l<3;l++) for (var i=0;i<L[l];i++) for (var j=0;j<L[l+1];j++){ var a=pos(l,i), b=pos(l+1,j), live=kp[l][i]&&kp[l+1][j];
+      S('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],'class':live?'w':'w-faint','opacity':live?0.8:0.12},svg); }
+    for (var l=0;l<4;l++) for (var i=0;i<L[l];i++){ var a=pos(l,i); S('circle',{cx:a[0],cy:a[1],r:10,'class':kp[l][i]?(l===3?'u-wire':'u-on'):'u-off'},svg); if (l<3){ total++; on+=kp[l][i]; } }
+    ['inputs','hidden 1','hidden 2','outputs'].forEach(function(t,l){ S('text',{x:70+l*150,y:250,'class':'t-s mid'},svg,t); });
+    $('#th-r').innerHTML='Example <b>'+count+'</b>: <b>'+on+'</b> of '+total+' droppable units kept. This network is one of 2<sup>'+total+'</sup> = <b>'+Math.pow(2,total).toLocaleString('en-GB')+'</b> possible thinned networks.'; }
+  bindRange('th-p',function(v){ p=v; if (kp) sample(); });
+  $('#th-go').onclick=sample; sample();
+})();
+(function(){ // MC averaging vs weight scaling
+  var svg=$('#mc'), p=0.5, seedW=8, seedX=1, seedS=1, H=60, I=10, W1, W2, w3;
+  function init(){ var r=rng(seedW); W1=[]; W2=[]; w3=[];
+    for (var i=0;i<H*I;i++) W1.push(gauss(r)*Math.sqrt(2/I)); for (var i=0;i<H*H;i++) W2.push(gauss(r)*Math.sqrt(2/H)); for (var i=0;i<H;i++) w3.push(gauss(r)*Math.sqrt(1/H)*1.5); }
+  function out(x,mi,m1,m2,scale){ var h1=[], h2=[], i, j, o=0;
+    for (i=0;i<H;i++){ var s=0; for (j=0;j<I;j++) s+=W1[i*I+j]*x[j]*(scale?0.8:mi[j]); h1.push(Math.max(0,s)); }
+    for (i=0;i<H;i++){ var s=0; for (j=0;j<H;j++) s+=W2[i*H+j]*h1[j]*(scale?p:m1[j]); h2.push(Math.max(0,s)); }
+    for (j=0;j<H;j++) o+=w3[j]*h2[j]*(scale?p:m2[j]); return sigmoid(o); }
+  function mask(r,n,q){ var a=[]; for (var i=0;i<n;i++) a.push(r()<q?1:0); return a; }
+  function draw(){ clear(svg); var rx=rng(seedX*7+3), x=[]; for (var j=0;j<I;j++) x.push(gauss(rx));
+    var ws=out(x,null,null,null,true), r=rng(seedS), K=200, vals=[], run=[], s=0;
+    for (var k=0;k<K;k++){ var v=out(x,mask(r,I,0.8),mask(r,H,p),mask(r,H,p),false); vals.push(v); s+=v; run.push(s/(k+1)); }
+    var r2=rng(seedS+999), tot=0; for (var k=0;k<20000;k++) tot+=out(x,mask(r2,I,0.8),mask(r2,H,p),mask(r2,H,p),false); var tru=tot/20000;
+    function Xk(k){ return 50+Math.log(k)/Math.log(K)*520; } function Y(v){ return 225-v*200; }
+    S('line',{x1:50,y1:225,x2:575,y2:225,'class':'axis'},svg); S('line',{x1:50,y1:20,x2:50,y2:225,'class':'axis'},svg);
+    [0,0.5,1].forEach(function(v){ S('text',{x:44,y:Y(v)+4,'class':'t-s end'},svg,v); });
+    [1,10,50,200].forEach(function(k){ S('line',{x1:Xk(k),y1:225,x2:Xk(k),y2:230,'class':'axis'},svg); S('text',{x:Xk(k),y:243,'class':'t-s mid'},svg,k); });
+    S('text',{x:575,y:257,'class':'t-s end'},svg,'number of thinned networks averaged, k (log scale)');
+    vals.forEach(function(v,k){ S('circle',{cx:Xk(k+1),cy:Y(v),r:2,'class':'f-muted','fill-opacity':0.5},svg); });
+    S('line',{x1:50,y1:Y(tru),x2:575,y2:Y(tru),'class':'w-dash'},svg);
+    S('line',{x1:50,y1:Y(ws),x2:575,y2:Y(ws),'class':'w','stroke-width':2},svg);
+    var d=''; run.forEach(function(v,k){ d+=(k?'L':'M')+Xk(k+1)+','+Y(v); }); S('path',{d:d,'class':'w-fire'},svg);
+    var e=function(k){ return Math.abs(run[k-1]-tru); };
+    $('#mc-r').innerHTML='Weight-scaled output <b>'+fmt(ws,3)+'</b> · true average <b>'+fmt(tru,3)+'</b> (gap '+fmt(Math.abs(ws-tru),3)+') · MC average error after k = 10: <b>'+fmt(e(10),3)+'</b>, k = 50: <b>'+fmt(e(50),3)+'</b>, k = 200: <b>'+fmt(e(200),3)+'</b>'; }
+  init();
+  bindRange('mc-p',function(v){ p=v; draw(); });
+  $('#mc-new').onclick=function(){ seedX++; draw(); }; $('#mc-re').onclick=function(){ seedS++; draw(); };
+})();
+(function(){ // ridge equivalence
+  var svg=$('#rr'), p=0.6, seed=1, N=30, Dm=4, X=[], y=[], w=[0.8,-0.5,0.3,1.2], sc=[0.3,1,2,0.6], r0=rng(77);
+  for (var n=0;n<N;n++){ var row=[]; for (var d=0;d<Dm;d++) row.push(gauss(r0)*sc[d]); X.push(row); y.push(row.reduce(function(s,v,d){return s+v*w[d];},0)*0.7+gauss(r0)*0.3); }
+  function draw(){ clear(svg); var r=rng(seed), K=5000, mc=0;
+    for (var k=0;k<K;k++){ var L=0; for (var n=0;n<N;n++){ var s=0; for (var d=0;d<Dm;d++) if (r()<p) s+=X[n][d]*w[d]; L+=Math.pow(y[n]-s,2); } mc+=L/K; }
+    var data=0, pen=0; for (var n=0;n<N;n++){ var s=0; for (var d=0;d<Dm;d++) s+=X[n][d]*w[d]; data+=Math.pow(y[n]-p*s,2); }
+    for (var d=0;d<Dm;d++){ var g2=0; for (var n=0;n<N;n++) g2+=X[n][d]*X[n][d]; pen+=p*(1-p)*g2*w[d]*w[d]; }
+    var top=Math.max(mc,data+pen)*1.15, H=170; function Y(v){ return 195-v/top*H; }
+    S('line',{x1:60,y1:195,x2:560,y2:195,'class':'axis'},svg);
+    S('rect',{x:140,y:Y(mc),width:120,height:195-Y(mc),'class':'f-muted','fill-opacity':0.6},svg); S('text',{x:200,y:Y(mc)-6,'class':'t mid'},svg,fmt(mc,2));
+    S('text',{x:200,y:212,'class':'t-s mid'},svg,'average over 5,000 masks');
+    S('rect',{x:340,y:Y(data),width:120,height:195-Y(data),'class':'f-wire','fill-opacity':0.75},svg);
+    S('rect',{x:340,y:Y(data+pen),width:120,height:Y(data)-Y(data+pen),'class':'f-fire'},svg);
+    S('text',{x:400,y:Y(data+pen)-6,'class':'t mid'},svg,fmt(data+pen,2)); S('text',{x:400,y:212,'class':'t-s mid'},svg,'closed form');
+    if (Y(data)-Y(data+pen)>16) S('text',{x:466,y:(Y(data)+Y(data+pen))/2+4,'class':'t-fire'},svg,'penalty');
+    if (195-Y(data)>16) S('text',{x:466,y:(195+Y(data))/2+4,'class':'t-wire'},svg,'data term');
+    $('#rr-r').innerHTML='Monte Carlo <b>'+fmt(mc,3)+'</b> vs closed form <b>'+fmt(data+pen,3)+'</b> = data term '+fmt(data,3)+' + penalty p(1 − p)‖Γw‖² = <b>'+fmt(pen,3)+'</b>'; }
+  bindRange('rr-p',function(v){ p=v; draw(); });
+  $('#rr-re').onclick=function(){ seed++; draw(); };
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Latent diffusion (2021) study guide</title>
+<meta name="description" content="Pixel-space diffusion models made excellent images but cost hundreds of GPU-days to train and minutes to sample. Rombach and colleagues split the job in two: an autoencoder first compresses images into a much smaller &quot;latent&quot; grid that keeps what the eye cares about, and the diffusion mode">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Computer vision</b> · 2021</p>
+  <h1>High-Resolution Image Synthesis with Latent Diffusion Models</h1>
+  <p class="cite">Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, Björn Ommer · CVPR 2022</p>
+  <p class="lede">Pixel-space diffusion models made excellent images but cost hundreds of GPU-days to train and minutes to sample. Rombach and colleagues split the job in two: an autoencoder first compresses images into a much smaller "latent" grid that keeps what the eye cares about, and the diffusion model then works only in that small space. Add cross-attention so the model can read text, and you have the design that became Stable Diffusion.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/2112.10752">Read the paper (free)</a> <a href="https://lovespark.love/papers-worth-reading/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, separate AI review (also by Claude), but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Diffusion models that work directly on pixels spend most of their effort on fine details the eye barely notices, which makes them very expensive.</p>
+  <p>So first train a separate compressor (an autoencoder) that shrinks an image to a small grid, say 8 times smaller in each direction, and can expand it back with the details intact.</p>
+  <p>Run the diffusion model on the small grid instead of the pixels; at the end, the decoder turns its output into a full-size image.</p>
+  <p>Feed in conditions such as text through "cross-attention", and a single design handles text-to-image, inpainting, super-resolution and more, at a fraction of the cost. Its public release as Stable Diffusion, with CLIP's text encoder, put it on millions of computers.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1 · Fig. 2</p>
+  <h2>Pixels are an expensive place to work</h2>
+  <div class="prose">
+    <p>A <a href="ddpm.html">diffusion model</a> makes an image by starting from random static and removing noise in many small steps, running a large neural network at every step. In the earlier designs, that network worked on every single pixel. A 512 × 512 colour image has 786,432 numbers, and the network must process all of them, hundreds of times per image.</p>
+    <p>The authors observe that most of those numbers encode fine texture: the exact grain of a carpet, the precise edge of a leaf. Those details matter for realism but carry little of the image's meaning. They describe learning as having two parts: <strong>perceptual compression</strong> (dropping detail the eye won't miss) and <strong>semantic compression</strong> (learning what the image is actually of). Pixel-space diffusion wastes enormous effort on the first.</p>
+    <p>The paper quotes the cost: the most powerful pixel diffusion models of the time needed 150 to 1,000 GPU-days to train, and generating 50,000 samples took about 5 days on a single high-end GPU.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>An architect sketches a building's layout on a small plan, not by placing every brick. The bricks are filled in later by a builder who knows how bricks go. Latent diffusion makes the diffusion model the architect and the decoder the builder.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Most of an image's numbers are fine detail. Diffusing over all of them is costly and mostly unnecessary.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §3.1, §4.1 · Figs. 6–7</p>
+  <h2>Compress first, then diffuse</h2>
+  <div class="prose">
+    <p>Step one is an <strong>autoencoder</strong>: an <em>encoder</em> network shrinks the image to a small grid of numbers (the <strong>latent</strong>), and a <em>decoder</em> rebuilds the image from it. It is trained so that the rebuilt image looks right to people, using a perceptual loss and a GAN-style critic that punishes blurry, fake-looking patches. It is trained once and then frozen.</p>
+    <p>Step two is ordinary diffusion, but on the latent grid. The model learns to generate latents; the decoder turns a generated latent into a picture.</p>
+    <p>How much to shrink? The paper tries downsampling factors <var>f</var> from 1 (no compression) to 32. Too little compression and diffusion stays slow to train; too much and the autoencoder loses detail, capping quality. Factors of 4 to 16 struck a good balance, with 4 and 8 best overall.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><span>Downsampling factor <var>f</var>:</span><button class="btn" data-f="1">1</button><button class="btn" data-f="2">2</button><button class="btn" data-f="4">4</button><button class="btn on" data-f="8" aria-pressed="true">8</button><button class="btn" data-f="16">16</button><button class="btn" data-f="32">32</button></div>
+    <div class="svgbox"><svg id="ds" viewBox="0 0 600 270" role="img" aria-label="A 512 by 512 image divided into latent cells, with the number of positions the diffusion model must handle"></svg></div>
+    <p class="readout" id="ds-r"></p>
+    <figcaption>Left: a 512 × 512 image; each square is one latent position (shown up to a 64 × 64 grid; finer grids are drawn shaded). The autoencoder stores a few numbers per position and its decoder recreates the detail inside each square. Right: grid positions the diffusion model must process, on a log scale, and the paper's verdict for that factor (§4.1, Figs. 6–7).</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>A learned compressor shrinks images by a factor of 4 to 16 per side; diffusion then works on that small grid, and a decoder restores the detail.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is the autoencoder trained with a GAN-style critic rather than just "match the pixels"?</dt>
+    <dd>Matching pixels on average produces blurry reconstructions. The critic and perceptual loss push the decoder to produce sharp, realistic texture, which is what makes strong compression acceptable.</dd>
+    <dt>What goes wrong with <var>f</var> = 32?</dt>
+    <dd>The compression is so strong that the autoencoder can no longer reconstruct the image faithfully, so even a perfect diffusion model would give limited quality.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §3.3 · Fig. 3</p>
+  <h2>Reading the prompt: cross-attention</h2>
+  <div class="prose">
+    <p>To control what gets generated, the model needs to read a condition: a text prompt, a class label, a sketch of where objects go. The paper turns the condition into a list of vectors (for text, one per word piece) using a separate encoder, then lets the denoising network look at them through <strong>cross-attention</strong>.</p>
+    <p>Cross-attention works like this: every position in the latent grid asks a question ("what should I be?"), every word offers an answer tag, and each position pays most attention to the words whose tags match its question. It then mixes in information from those words. Different parts of the image end up listening to different words.</p>
+    <p>Click a cell in the toy scene below to see which words it attends to.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><span>Prompt:</span><button class="btn on" id="ca-p0" aria-pressed="true">a red ball on green grass</button><button class="btn" id="ca-p1" aria-pressed="false">a blue sky over a red ball</button><label>Sharpness <input type="range" id="ca-k" min="0.5" max="4" step="0.5" value="2" data-fmt="1"><output id="ca-k-o">2.0</output></label></div>
+    <div class="svgbox"><svg id="ca" viewBox="0 0 600 260" role="img" aria-label="A 4 by 4 latent grid with attention weights from a selected cell to each prompt word"></svg></div>
+    <p class="readout" id="ca-r"></p>
+    <figcaption>Each latent cell has a hand-made "query" describing what kind of region it is (sky-like, ground-like, object-like); each word has a "key" of the same kind. Bars: softmax(query · key × sharpness) for the selected cell. Toy illustration of the mechanism; in the real model queries and keys are learned vectors of hundreds of dimensions, with many heads and layers.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Cross-attention lets each part of the image pull information from the words most relevant to it, which is how text steers the picture.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>In cross-attention, which side asks and which side answers?</dt>
+    <dd>The image (latent positions) asks, through queries; the condition (words) answers, through keys and values.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §4 · Tables 1–7</p>
+  <h2>One design, many jobs, much cheaper</h2>
+  <div class="prose">
+    <p>The same recipe, with different conditions, was tested on many tasks:</p>
+    <ul>
+      <li><strong>Unconditional faces</strong> (CelebA-HQ): a record quality score at the time (FID 5.11).</li>
+      <li><strong>ImageNet classes</strong>: better than the strongest pixel model from <a href="beatgans.html">Dhariwal and Nichol</a> (FID 3.60 vs 4.59) with about two-thirds of its parameters and, by the authors' account, much less training compute.</li>
+      <li><strong>Text-to-image</strong>: a 1.45-billion-parameter model trained on LAION-400M, close to the much larger GLIDE on COCO captions when using <a href="cfg.html">classifier-free guidance</a>.</li>
+      <li><strong>Super-resolution</strong>, <strong>inpainting</strong> (filling holes, a new best score on the Places dataset) and <strong>layout-to-image</strong>.</li>
+    </ul>
+    <p>Because the denoiser is convolutional, it can also be run on larger latent grids than it was trained on, producing images around a megapixel in size.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Diffusing in a compressed space matched or beat pixel models across tasks at a fraction of the cost.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §5 and legacy</p>
+  <h2>Limits, and Stable Diffusion</h2>
+  <div class="prose">
+    <p>The authors list two limits: sampling is still step-by-step and so slower than a GAN, and the autoencoder caps how precise the output can be, which matters for tasks needing exact pixels. They also discuss misuse risks such as easier creation of fake images and the reproduction of biases in training data.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>In August 2022 the authors' group, with Stability AI and Runway, released <strong>Stable Diffusion</strong>: a latent diffusion model with <var>f</var> = 8 and a 4-channel latent, trained on a subset of LAION-5B, that swapped the paper's own text transformer for OpenAI's frozen <a href="clip.html">CLIP</a> text encoder. Released with its weights, it could run on a consumer graphics card, and it became the base of a huge ecosystem of fine-tuned models and tools. Later versions kept the latent idea but changed the denoiser (larger U-Nets in SDXL, then transformers trained with <a href="flowmatch.html">flow matching</a> in Stable Diffusion 3).</div>
+  <p class="takeaway"><span class="label">Takeaway</span>"Compress, then diffuse" made high-quality text-to-image generation cheap enough to give away, and it remains the standard design.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Diffusion models achieve state-of-the-art synthesis by decomposing generation into sequential denoising, but operating in pixel space makes training cost hundreds of GPU-days and inference expensive. Training them in the latent space of powerful pretrained autoencoders reaches a near-optimal point between complexity reduction and detail preservation, greatly boosting visual fidelity per unit of compute. Cross-attention layers turn diffusion models into flexible generators for general conditioning inputs such as text or bounding boxes, and allow convolutional high-resolution synthesis. Latent diffusion models (LDMs) set new states of the art for image inpainting and class-conditional synthesis and are highly competitive on unconditional generation, text-to-image, and super-resolution, while needing far less compute than pixel-based diffusion models. CVPR 2022; arXiv:2112.10752.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §3.1 · Figs. 1–2</p>
+  <h2>Perceptual compression stage</h2>
+  <div class="prose">
+    <p>An encoder ℰ maps <var>x</var> ∈ ℝ<sup><var>H</var>×<var>W</var>×3</sup> to <var>z</var> = ℰ(<var>x</var>) ∈ ℝ<sup><var>h</var>×<var>w</var>×<var>c</var></sup>, and a decoder 𝒟 reconstructs <var>x̃</var> = 𝒟(ℰ(<var>x</var>)). The downsampling factor is <var>f</var> = <var>H</var>/<var>h</var> = <var>W</var>/<var>w</var> = 2<sup><var>m</var></sup>. Training combines a perceptual loss with a patch-based adversarial objective, keeping reconstructions on the image manifold and avoiding the blur of pure L1/L2 losses. To avoid high-variance latents, two regularisers are compared:</p>
+    <ul>
+      <li><strong>KL-reg.</strong> A slight KL penalty towards a standard normal on the latent, as in a <a href="vae.html">VAE</a> but with a very small weight.</li>
+      <li><strong>VQ-reg.</strong> A vector-quantisation layer absorbed into the decoder, a VQGAN-like model.</li>
+    </ul>
+    <p>Unlike earlier two-stage models (VQ-VAE-2, VQGAN + transformer), which flatten the latent into a 1-D sequence and therefore need aggressive compression for a tractable autoregressive prior, LDMs keep a 2-D latent and use a convolutional U-Net prior that exploits its spatial structure. So mild compression suffices, and reconstructions stay good. The autoencoder is trained once and reused across diffusion models and tasks.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3.2–3.3 · Eqs. 1–3 · Fig. 3</p>
+  <h2>Latent diffusion and cross-attention conditioning</h2>
+  <div class="eq"><var>L</var><sub>DM</sub> = E<sub><var>x</var>, ε~<span class="v">N</span>(0,1), <var>t</var></sub> [ ‖ε − ε<sub>θ</sub>(<var>x</var><sub><var>t</var></sub>, <var>t</var>)‖<sub>2</sub><sup>2</sup> ] <span class="n">(1)</span></div>
+  <div class="eq"><var>L</var><sub>LDM</sub> = E<sub>ℰ(<var>x</var>), ε~<span class="v">N</span>(0,1), <var>t</var></sub> [ ‖ε − ε<sub>θ</sub>(<var>z</var><sub><var>t</var></sub>, <var>t</var>)‖<sub>2</sub><sup>2</sup> ] <span class="n">(2)</span></div>
+  <div class="eq"><var>L</var><sub>LDM</sub> = E<sub>ℰ(<var>x</var>), <var>y</var>, ε~<span class="v">N</span>(0,1), <var>t</var></sub> [ ‖ε − ε<sub>θ</sub>(<var>z</var><sub><var>t</var></sub>, <var>t</var>, τ<sub>θ</sub>(<var>y</var>))‖<sub>2</sub><sup>2</sup> ] <span class="n">(3)</span></div>
+  <div class="prose">
+    <p>Eq. 2 is the <a href="ddpm.html">DDPM</a> <var>L</var><sub>simple</sub> applied to latents; ε<sub>θ</sub> is a time-conditional <a href="unet.html">U-Net</a>; samples are decoded with a single pass of 𝒟. For conditioning, a domain-specific encoder τ<sub>θ</sub> maps <var>y</var> to τ<sub>θ</sub>(<var>y</var>) ∈ ℝ<sup><var>M</var>×<var>d</var><sub>τ</sub></sup>, injected into intermediate U-Net layers by cross-attention:</p>
+  </div>
+  <div class="eq">Attention(<var>Q</var>, <var>K</var>, <var>V</var>) = softmax(<var>Q</var><var>K</var><sup>T</sup>/√<var>d</var>) · <var>V</var>,&nbsp;&nbsp; <var>Q</var> = <var>W</var><sub><var>Q</var></sub><sup>(<var>i</var>)</sup>·φ<sub><var>i</var></sub>(<var>z</var><sub><var>t</var></sub>),&nbsp; <var>K</var> = <var>W</var><sub><var>K</var></sub><sup>(<var>i</var>)</sup>·τ<sub>θ</sub>(<var>y</var>),&nbsp; <var>V</var> = <var>W</var><sub><var>V</var></sub><sup>(<var>i</var>)</sup>·τ<sub>θ</sub>(<var>y</var>)</div>
+  <div class="prose">
+    <p>φ<sub><var>i</var></sub>(<var>z</var><sub><var>t</var></sub>) is the flattened U-Net activation at layer <var>i</var>. τ<sub>θ</sub> and ε<sub>θ</sub> are optimised jointly through Eq. 3. For text, τ<sub>θ</sub> is a transformer over BERT-tokenised input (§4.3.1). Spatially aligned conditions (semantic maps, low-resolution images, masked images) are instead concatenated to <var>z</var><sub><var>t</var></sub> at the input. The <a href="transformer.html">attention</a> mechanism is the transformer's, with queries from the image and keys/values from the condition.</p>
+    <p>The calculator shows what moving to latent space buys at the U-Net's input, for an image of a given size.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Image side <input type="range" id="cc-H" min="256" max="1024" step="128" value="512"><output id="cc-H-o">512</output></label><label><var>f</var> <input type="range" id="cc-m" min="0" max="5" step="1" value="3"><output id="cc-m-o">8</output></label><label>Latent channels <var>c</var> <input type="range" id="cc-c" min="1" max="16" step="1" value="4"><output id="cc-c-o">4</output></label></div>
+    <div class="svgbox"><svg id="cc" viewBox="0 0 600 230" role="img" aria-label="Pixel versus latent sizes and the relative cost of convolution and self-attention"></svg></div>
+    <p class="readout" id="cc-r"></p>
+    <figcaption>The <var>f</var> slider steps through <var>f</var> = 2<sup><var>m</var></sup>. Bars (log scale): numbers per sample, spatial positions, and pairwise interactions for one full-resolution self-attention layer (positions squared). Convolution cost scales roughly with positions for a fixed width; attention with positions squared, which is why pixel-space models attend only at low resolutions. Arithmetic only: real wall-clock savings depend on the architecture (the paper reports per-task figures, e.g. a speed-up of at least 2.7× for inpainting, §4.5).</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §4.1–4.2 · Figs. 6–7 · Table 1</p>
+  <h2>Choosing <var>f</var>; unconditional results</h2>
+  <div class="prose">
+    <p>§4.1 trains class-conditional ImageNet LDMs with <var>f</var> ∈ {1, 2, 4, 8, 16, 32} (LDM-1 is pixel space), all on a single A100 with the same number of steps and parameters. Small <var>f</var> (LDM-1, 2) trains slowly; after 2M steps there is an FID gap of 38 between LDM-1 and LDM-8. Large <var>f</var> (LDM-32) stagnates at low fidelity after few steps, because the first stage compresses too much. "LDM-{4-16} strike a good balance"; for sample quality against sampling steps (Fig. 7), LDM-4 and LDM-8 offer the best conditions.</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Unconditional, 256² (Table 1)</th><th>Model</th><th>FID</th><th>Note</th></tr></thead>
+    <tbody>
+      <tr><td>CelebA-HQ</td><td>LDM-4 (500 DDIM steps)</td><td class="num">5.11</td><td>new state of the art</td></tr>
+      <tr><td>FFHQ</td><td>LDM-4 (200 steps)</td><td class="num">4.98</td><td></td></tr>
+      <tr><td>LSUN-Churches</td><td>LDM-8</td><td class="num">4.02</td><td></td></tr>
+      <tr><td>LSUN-Bedrooms</td><td>LDM-4</td><td class="num">2.95</td><td>ADM is better (1.90)</td></tr>
+    </tbody></table></div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §4.3–4.5 · Tables 2–7, 9</p>
+  <h2>Conditional results</h2>
+  <div class="tablebox"><table>
+    <thead><tr><th>Task</th><th>Model</th><th>Result</th><th>Comparison</th></tr></thead>
+    <tbody>
+      <tr><td>Text-to-image, MS-COCO 256² (Table 2)</td><td>LDM-KL-8-G, 1.45B params, LAION-400M, 250 DDIM steps, guidance <var>s</var> = 1.5</td><td class="num">FID 12.63</td><td>unguided 23.31; GLIDE (6B) 12.24</td></tr>
+      <tr><td>Class-conditional ImageNet 256² (Table 3)</td><td>LDM-4-G, 400M params</td><td class="num">FID 3.60, IS 247.67</td><td>ADM-G (608M) 4.59</td></tr>
+      <tr><td>4× super-resolution, ImageNet (Table 5)</td><td>LDM-4, 169M, 100 steps</td><td class="num">FID 2.8</td><td>SR3 (625M) 5.2; SR3 has higher IS</td></tr>
+      <tr><td>Inpainting, Places 512² (Table 7)</td><td>LDM-4 big, fine-tuned</td><td class="num">FID 1.50</td><td>LaMa 2.21</td></tr>
+      <tr><td>Layout-to-image, COCO (Table 9)</td><td>LDM-4 fine-tuned from OpenImages</td><td class="num">FID 40.91</td><td></td></tr>
+    </tbody></table></div>
+  <div class="prose">
+    <p>Against ADM on ImageNet, Against ADM-G on ImageNet, LDM-4-G uses about two-thirds of the parameters (400M vs 608M) and, per the authors, significantly less training compute (App. E.3.5). The paper's "half the parameters, 4× less compute" figure refers to LSUN-Bedrooms. For inpainting, latent models train and sample at least 2.7× faster than pixel models while improving FID by at least 1.6× (§4.5, Table 6). <strong>Convolutional sampling (§4.3.2).</strong> Models conditioned on spatially aligned inputs and trained at 256² generalise to larger latent grids, e.g. 512 × 1024 landscapes from semantic maps (Fig. 9), and the paper claims consistent images around 1024² px; the scale of the latent (KL-reg needs rescaling) affects how well this works.</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does LDM not beat ADM on LSUN-Bedrooms, but beat it on class-conditional ImageNet?</dt>
+    <dd>The paper does not give a single cause. One reading: unconditional bedrooms reward exact fine texture, which the autoencoder's reconstruction ceiling limits, while class-conditional ImageNet rewards semantic composition and benefits from guidance, where the latent model's compute savings let it train a strong prior.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §5 and lineage</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose"><ul>
+    <li><strong>Sequential sampling.</strong> Still slower than GANs.</li>
+    <li><strong>Reconstruction ceiling.</strong> When fine-grained pixel accuracy is needed, the first stage can be the bottleneck; the authors suspect their super-resolution models are somewhat limited by this.</li>
+    <li><strong>Societal impact.</strong> The paper discusses easier creation of manipulated images and disinformation, reproduction of data biases, and the possibility of revealing training data.</li>
+  </ul></div>
+  <div class="later"><span class="label">Later refinements</span><strong>Stable Diffusion</strong> (CompVis, Stability AI and Runway, 2022) is an LDM with <var>f</var> = 8, <var>c</var> = 4 (a 512² image becomes 64 × 64 × 4) whose text encoder τ is the frozen <a href="clip.html">CLIP</a> ViT-L/14 text transformer rather than a jointly trained one, trained on LAION-5B subsets with <a href="cfg.html">classifier-free guidance</a>. SDXL (2023) enlarged the U-Net and added a refiner. DiT (Peebles and Xie, 2022) replaced the U-Net with a transformer on latent patches; Stable Diffusion 3 (2024) combined latent DiT-style transformers with rectified-flow training, a form of <a href="flowmatch.html">flow matching</a>. The "train a tokenizer/autoencoder, then a generative prior in its latent space" pattern is now standard for images, video and audio.</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>ℰ, 𝒟</dt><dd>Encoder and decoder of the first-stage autoencoder.</dd>
+    <dt><var>f</var></dt><dd>Spatial downsampling factor <var>H</var>/<var>h</var>; LDM-<var>f</var> names the model.</dd>
+    <dt>KL-reg / VQ-reg</dt><dd>Latent regularisation by a small KL penalty, or by vector quantisation.</dd>
+    <dt>τ<sub>θ</sub></dt><dd>Condition encoder producing the keys and values for cross-attention.</dd>
+    <dt>Cross-attention</dt><dd>Attention whose queries come from one sequence (image latents) and keys/values from another (condition tokens).</dd>
+    <dt>Perceptual loss</dt><dd>Distance between deep-network features of two images, closer to human judgements than pixel distance.</dd>
+    <dt>-G suffix</dt><dd>Sampled with classifier-free guidance.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="vae.html">VAE (2013)</a>, <a href="ddpm.html">DDPM (2020)</a>, <a href="cfg.html">Classifier-free guidance (2021)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> (<a href="https://lovespark.love/papers-worth-reading/#ldm">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // downsampling factor
+  var svg=$('#ds'), f=8;
+  var verdict={1:'pixel space: very slow to train',2:'slow to train',4:'good balance (best with 8)',8:'good balance (best with 4)',16:'good balance, some detail lost',32:'too lossy: quality stagnates'};
+  function scene(x,y){ // procedural 512x512 picture, returns shade 0..1
+    var sky=y<260, d=Math.sqrt((x-300)*(x-300)+(y-300)*(y-300));
+    if (d<80) return 0.85-0.3*((x-300+y-300)/160);
+    if (Math.abs(x-120)<14&&y>180&&y<380) return 0.7;
+    if (Math.sqrt((x-120)*(x-120)+(y-170)*(y-170))<55) return 0.55+0.15*Math.sin(x/6)*Math.sin(y/7);
+    if (sky) return 0.12+0.1*(y/260)+(Math.sqrt((x-430)*(x-430)+(y-80)*(y-80))<34?0.6:0);
+    return 0.35+0.12*Math.sin(x*0.35)*Math.sin(y*0.5); }
+  function draw(){ clear(svg); var S0=228, x0=20, y0=12, n=512/f, cell=S0/n, step=Math.max(1,Math.round(n/64));
+    var g=Math.min(n,64), c=S0/g;
+    for (var i=0;i<g;i++) for (var j=0;j<g;j++){ var v=scene((i+0.5)*512/g,(j+0.5)*512/g); S('rect',{x:x0+i*c,y:y0+j*c,width:c+0.3,height:c+0.3,'class':'f-ink','fill-opacity':fmt(v,2)},svg); }
+    if (n<=64) for (var k=0;k<=n;k++){ S('line',{x1:x0+k*cell,y1:y0,x2:x0+k*cell,y2:y0+S0,'class':'grid','stroke-width':n>32?0.4:1},svg); S('line',{x1:x0,y1:y0+k*cell,x2:x0+S0,y2:y0+k*cell,'class':'grid','stroke-width':n>32?0.4:1},svg); }
+    S('rect',{x:x0,y:y0,width:S0,height:S0,'class':'w-ink'},svg);
+    S('text',{x:x0+S0/2,y:y0+S0+18,'class':'t-s mid'},svg,'latent grid '+n+' × '+n);
+    var X0=300, W=280; S('text',{x:X0,y:30,'class':'t-h'},svg,'Positions to denoise');
+    [1,2,4,8,16,32].forEach(function(ff,k){ var pos=Math.pow(512/ff,2), w=Math.log(pos)/Math.log(512*512)*W*0.6, y=50+k*30;
+      S('text',{x:X0,y:y+14,'class':ff===f?'t-fire':'t-s'},svg,'f='+ff); S('rect',{x:X0+42,y:y+2,width:w,height:16,'class':ff===f?'f-fire':'f-rule'},svg);
+      S('text',{x:X0+48+w,y:y+14,'class':ff===f?'t-fire':'t-s'},svg,pos.toLocaleString('en-GB')); });
+    S('text',{x:X0,y:252,'class':'t'},svg,'f = '+f+': '+verdict[f]);
+    $('#ds-r').innerHTML='<var>f</var> = <b>'+f+'</b>: a 512 × 512 image becomes a <b>'+n+' × '+n+'</b> grid, <b>'+(f*f)+'×</b> fewer positions than pixels.'; }
+  $$('#ds').length; $$('button[data-f]').forEach(function(b){ b.onclick=function(){ f=+b.dataset.f; $$('button[data-f]').forEach(function(o){ o.classList.toggle('on',o===b); o.setAttribute('aria-pressed',o===b); }); draw(); }; });
+  draw();
+})();
+(function(){ // cross-attention toy
+  var svg=$('#ca'), sel=[1,1], k=2, P=0;
+  var prompts=[[['a',[0.1,0.1,0.1]],['red',[0,0,1.2]],['ball',[0,0,1.5]],['on',[0.1,0.2,0.1]],['green',[0,1.2,0]],['grass',[0,1.5,0]]],
+               [['a',[0.1,0.1,0.1]],['blue',[1.2,0,0]],['sky',[1.5,0,0]],['over',[0.3,0.1,0.1]],['a',[0.1,0.1,0.1]],['red',[0,0,1.2]],['ball',[0,0,1.5]]]];
+  function q(i,j){ var sky=j===0?1:(j===1?0.5:0), grass=j>=2?1:0, ball=(i===1||i===2)&&(j===1||j===2)?1.2:0; if (ball){ sky*=0.2; grass*=0.2; } return [sky,grass,ball]; }
+  function draw(){ clear(svg); var toks=prompts[P], C=50, x0=20, y0=20;
+    for (var i=0;i<4;i++) for (var j=0;j<4;j++){ var v=q(i,j), cl=v[2]>0.5?'box-fire':(v[0]>0.4?'box-wire':'box-ok'); var r=S('rect',{x:x0+i*C,y:y0+j*C,width:C-4,height:C-4,'class':cl+' clickable',tabindex:0,role:'button','aria-label':'cell '+(i+1)+','+(j+1)},svg);
+      (function(i,j){ r.addEventListener('click',function(){ sel=[i,j]; draw(); }); r.addEventListener('keydown',function(e){ if (e.key==='Enter'||e.key===' '){ e.preventDefault(); sel=[i,j]; draw(); } }); })(i,j);
+      if (sel[0]===i&&sel[1]===j) S('rect',{x:x0+i*C-2,y:y0+j*C-2,width:C,height:C,'class':'w-ink','stroke-width':3},svg); }
+    S('text',{x:x0+98,y:y0+222,'class':'t-s mid'},svg,'latent grid (click a cell)');
+    var Q=q(sel[0],sel[1]), sc=toks.map(function(t){ return k*(Q[0]*t[1][0]+Q[1]*t[1][1]+Q[2]*t[1][2]); }), m=Math.max.apply(null,sc), e=sc.map(function(s){ return Math.exp(s-m); }), Z=e.reduce(function(a,b){return a+b;},0), A=e.map(function(v){ return v/Z; });
+    var X0=270; S('text',{x:X0,y:28,'class':'t-h'},svg,'Attention from the selected cell');
+    toks.forEach(function(t,n){ var y=46+n*27; S('text',{x:X0+60,y:y+14,'class':'t end'},svg,t[0]); S('rect',{x:X0+70,y:y+2,width:220,height:16,'class':'box'},svg); S('rect',{x:X0+70,y:y+2,width:220*A[n],height:16,'class':'f-fire'},svg); S('text',{x:X0+296,y:y+14,'class':'t-s'},svg,fmt(A[n]*100,0)+'%'); });
+    var best=A.indexOf(Math.max.apply(null,A)); var kind=Q[2]>0.5?'object-like':(Q[0]>0.4?'sky-like':'ground-like');
+    $('#ca-r').innerHTML='Selected cell is '+kind+'. It attends most to "<b>'+toks[best][0]+'</b>" ('+fmt(A[best]*100,0)+'%). '+(P===0&&Q[0]>0.4?'No word describes the sky here, so attention spreads out.':''); }
+  $('#ca-p0').onclick=function(){ P=0; this.classList.add('on'); this.setAttribute('aria-pressed','true'); $('#ca-p1').classList.remove('on'); $('#ca-p1').setAttribute('aria-pressed','false'); draw(); };
+  $('#ca-p1').onclick=function(){ P=1; this.classList.add('on'); this.setAttribute('aria-pressed','true'); $('#ca-p0').classList.remove('on'); $('#ca-p0').setAttribute('aria-pressed','false'); draw(); };
+  bindRange('ca-k',function(v){ k=v; draw(); });
+})();
+(function(){ // cost calculator
+  var svg=$('#cc'), H=512, m=3, c=4;
+  function big(n){ if (n>=1e12) return fmt(n/1e12,1)+' T'; if (n>=1e9) return fmt(n/1e9,1)+' B'; if (n>=1e6) return fmt(n/1e6,1)+' M'; if (n>=1e3) return fmt(n/1e3,1)+' k'; return String(n); }
+  function draw(){ clear(svg); var f=Math.pow(2,m), h=H/f, rows=[['numbers per sample',H*H*3,h*h*c],['spatial positions',H*H,h*h],['self-attention pairs',Math.pow(H*H,2),Math.pow(h*h,2)]];
+    var lmax=Math.log10(Math.pow(1024*1024,2));
+    S('text',{x:20,y:22,'class':'t-wire'},svg,'pixels '+H+' × '+H+' × 3'); S('text',{x:300,y:22,'class':'t-fire'},svg,'latent '+h+' × '+h+' × '+c+' (f = '+f+')');
+    rows.forEach(function(r,i){ var y=44+i*60; S('text',{x:20,y:y,'class':'t'},svg,r[0]);
+      [r[1],r[2]].forEach(function(v,j){ var w=Math.max(2,Math.log10(Math.max(v,1))/lmax*420); S('rect',{x:20,y:y+8+j*20,width:w,height:16,'class':j?'f-fire':'f-wire'},svg); S('text',{x:26+w,y:y+21+j*20,'class':j?'t-fire':'t-wire'},svg,big(v)); }); });
+    $('#cc-r').innerHTML='Compression of the representation: <b>'+fmt(H*H*3/(h*h*c),1)+'×</b> fewer numbers; <b>'+(f*f)+'×</b> fewer positions; <b>'+(f*f*f*f).toLocaleString('en-GB')+'×</b> fewer attention pairs at full latent resolution.'+(f===8&&c===4&&H===512?' This is Stable Diffusion’s setting: 512² × 3 to 64 × 64 × 4, a 48× smaller tensor.':''); }
+  bindRange('cc-H',function(v){ H=v; draw(); }); bindRange('cc-m',function(v){ m=v; $('#cc-m-o').textContent=Math.pow(2,v); draw(); }); bindRange('cc-c',function(v){ c=v; draw(); });
+})();
+</script>
+
+</body>
+</html>

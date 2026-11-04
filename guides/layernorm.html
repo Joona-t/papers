@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Layer norm (2016) study guide</title>
+<meta name="description" content="Batch normalisation made deep networks train much faster, but it depends on a batch of examples, which is awkward for recurrent networks, small batches and one-example-at-a-time use. Ba, Kiros and Hinton turn it sideways: normalise each example on its own, across all the units of a layer. It does th">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Neural networks</b> · 2016</p>
+  <h1>Layer Normalization</h1>
+  <p class="cite">Jimmy Lei Ba, Jamie Ryan Kiros, Geoffrey Hinton · arXiv</p>
+  <p class="lede">Batch normalisation made deep networks train much faster, but it depends on a batch of examples, which is awkward for recurrent networks, small batches and one-example-at-a-time use. Ba, Kiros and Hinton turn it sideways: normalise each example on its own, across all the units of a layer. It does the same thing in training and at test time, works with any batch size, and became the standard normaliser in transformers.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/1607.06450">Read the paper (free)</a> <a href="https://lovespark.love/papers-worth-reading/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, separate AI review (also by Claude), but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p><a href="batchnorm.html">Batch normalisation</a> standardises each unit using the average and spread of its values across a batch of examples, which ties every example to its batch-mates and needs separate statistics at test time.</p>
+  <p>Layer normalisation instead takes a single example, looks at all the units in one layer, and standardises them using <em>their</em> average and spread. Then, as in batch norm, each unit gets a learned scale and shift.</p>
+  <p>Because nothing depends on other examples, it works with a batch of one, behaves identically in training and testing, and slots naturally into recurrent networks, where it is applied afresh at every time step.</p>
+  <p>It sped up training of recurrent models on several language and generation tasks, though batch norm stayed better for convolutional image networks. A year later it became the default in <a href="transformer.html">transformers</a>; many recent language models use a simpler variant, <a href="rmsnorm.html">RMSNorm</a>.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1–2</p>
+  <h2>What was awkward about batch norm</h2>
+  <div class="prose">
+    <p>Batch normalisation takes one unit, collects its values across all the examples in a mini-batch, and rescales them to average 0 and spread 1. It made deep image networks train far faster. But because it relies on the batch, it has three awkward properties.</p>
+    <ul>
+      <li><strong>It needs reasonably large batches.</strong> With only a few examples, the batch average and spread are noisy estimates; with one example they are meaningless.</li>
+      <li><strong>Training and testing differ.</strong> At test time there may be just one example, so batch norm switches to stored averages, a second mode of operation.</li>
+      <li><strong>Recurrent networks are a poor fit.</strong> A recurrent network reads a sequence step by step, reusing the same weights at every step. Batch norm would need separate statistics for each time step, and test sequences may be longer than any seen in training.</li>
+    </ul>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Batch norm's reliance on other examples in the batch is what makes it hard to use with small batches, at test time, and in recurrent networks.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §3 · Eq. 3</p>
+  <h2>Turn it sideways: normalise across the layer</h2>
+  <div class="prose">
+    <p>Picture the numbers a layer produces for a batch as a table: one row per example, one column per unit. Batch norm standardises each <strong>column</strong> (one unit, many examples). Layer norm standardises each <strong>row</strong> (one example, all the units in the layer). Each example's numbers are shifted to average 0 and scaled to spread 1 using only that example's own values, then every unit applies its own learned scale and shift.</p>
+    <p>Switch between the two below and shrink the batch. Layer norm gives the same answer for an example however many others are in the batch; batch norm's answer changes, and at batch size 1 it collapses to zeros.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn" id="ax-bn" aria-pressed="false">Batch norm</button><button class="btn on" id="ax-ln" aria-pressed="true">Layer norm</button>
+      <label>Batch size <input type="range" id="ax-m" min="1" max="6" step="1" value="6"><output id="ax-m-o">6</output></label>
+    </div>
+    <div class="svgbox"><svg id="ax" viewBox="0 0 600 270" role="img" aria-label="A table of activations, examples by units, before and after normalisation"></svg></div>
+    <p class="readout" id="ax-r"></p>
+    <figcaption>Left: raw summed inputs of 6 units (columns) for up to 6 examples (rows); the outlined strip shows one group that is normalised together. Right: values after normalising (before the learned scale and shift). Amber is positive, blue negative; darker is larger. Watch the first row (example 1) on the right as you change the batch size.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>Batch norm grades on a curve across the class: your mark depends on who else sat the exam. Layer norm compares each student's scores across their own subjects: your profile of strengths and weaknesses, regardless of classmates.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Layer norm computes the average and spread over one example's units in a layer, so each example is normalised independently of all others.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>A layer's four units output 1, 3, 5, 7 for one example. What does layer norm give (before scale and shift)?</dt>
+    <dd>Mean 4, standard deviation √5 ≈ 2.24, so about −1.34, −0.45, 0.45, 1.34.</dd>
+    <dt>Does layer norm's output for an example depend on the batch size?</dt>
+    <dd>No. Only that example's own values enter the calculation.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §3.1 · Eq. 4</p>
+  <h2>A good fit for recurrent networks</h2>
+  <div class="prose">
+    <p>A recurrent network keeps a <strong>hidden state</strong>, a list of numbers it updates at every step of a sequence by mixing the previous state with the new input. If the mixing weights are a bit too large, the numbers grow step after step until the units saturate (stuck at their maximum); a bit too small, and the state fades away. Either way, learning suffers.</p>
+    <p>Layer norm fixes the scale at every single step: whatever the weights do, the summed inputs are re-centred and rescaled before the activation function. And because it uses only the current step's own numbers, it handles sequences of any length with no stored statistics.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Recurrent weight scale <input type="range" id="rn-w" min="0.2" max="4" step="0.1" value="2.5" data-fmt="1"><output id="rn-w-o">2.5</output></label>
+      <button class="btn" id="rn-new">New random network</button>
+    </div>
+    <div class="svgbox"><svg id="rn" viewBox="0 0 600 250" role="img" aria-label="Hidden-state size over time with and without layer normalisation"></svg></div>
+    <p class="readout" id="rn-r"></p>
+    <figcaption>A random recurrent network with 32 tanh units reads 60 steps of small random input. Top: the typical size (root mean square) of the hidden state at each step; blue without layer norm, amber with. Bottom: the share of units that are saturated (|value| &gt; 0.95, where tanh is flat and passes almost no gradient). Small weights make the plain network's state fade; large ones saturate it. With layer norm both curves barely move. Illustrative; untrained weights.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Normalising every time step keeps a recurrent network's hidden state in a healthy range, regardless of sequence length or weight scale.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does batch norm need per-time-step statistics in an RNN but layer norm does not?</dt>
+    <dd>The distribution of summed inputs changes over time steps, so batch statistics pooled across steps would be wrong. Layer norm computes fresh statistics from the current step's units for each example, so nothing needs storing.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §5.1, §6 · Table 1</p>
+  <h2>What it ignores, and how it performed</h2>
+  <div class="prose">
+    <p>A useful way to understand a normaliser is to ask which changes it cancels out. Layer norm ignores any change that scales <em>all</em> of a layer's incoming weights by the same factor, or that scales one input example up or down: either way, after normalising, the result is the same. Batch norm instead ignores changes applied to the whole dataset. Neither is better everywhere; they protect against different kinds of drift.</p>
+    <p>In experiments, layer norm made recurrent models train faster, and often end up better, on image-caption retrieval, question answering over news articles, learning sentence representations ("skip-thought" vectors), handwriting generation and digit-image generation. One honest exception: in convolutional image networks it helped over no normalisation, but batch norm was better. The authors suspect that units at the edges of an image see very different statistics from those in the middle, so pooling them together does not suit images.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>The <a href="transformer.html">transformer</a> (2017) used layer norm after every attention and feed-forward block, and later models moved it to the start of each block ("pre-norm"), which trains more stably. <a href="rmsnorm.html">RMSNorm</a> (2019) dropped the mean subtraction to save computation, and many recent language models, such as <a href="llama.html">LLaMA</a>, use it instead.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Layer norm helped recurrent and sequence models most, was weaker for convolutional image models, and went on to become the transformer's normaliser.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Training state-of-the-art deep networks is computationally expensive; normalising neuron activities reduces training time. Batch normalisation uses the distribution of a neuron's summed input over a mini-batch, which makes its effect depend on mini-batch size, and it is not obvious how to apply it to recurrent networks. This paper transposes batch normalisation into layer normalisation by computing the mean and variance used for normalisation from all summed inputs to the neurons in a layer on a single training case. Each neuron has its own adaptive bias and gain applied after normalisation and before the nonlinearity. Layer normalisation performs exactly the same computation at training and test time, and is straightforward to apply to recurrent networks by computing the statistics separately at each time step. It is very effective at stabilising hidden-state dynamics in recurrent networks and substantially reduces training time compared with previously published techniques. arXiv, July 2016.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2–3 · Eqs. 1–4</p>
+  <h2>Definitions</h2>
+  <div class="prose"><p>For layer <var>l</var> with incoming weights <var>W</var><sup><var>l</var></sup> and input <var>h</var><sup><var>l</var></sup>, summed inputs are <var>a</var><sup><var>l</var></sup> = <var>W</var><sup><var>l</var></sup><var>h</var><sup><var>l</var></sup> and <var>h</var><sup><var>l</var>+1</sup> = <var>f</var>(<var>a</var><sup><var>l</var></sup> + <var>b</var><sup><var>l</var></sup>) (Eq. 1). Batch norm rescales each summed input by statistics over the data distribution, <var>ā<sub>i</sub></var> = (<var>g<sub>i</sub></var>/σ<sub><var>i</var></sub>)(<var>a<sub>i</sub></var> − μ<sub><var>i</var></sub>), with μ<sub><var>i</var></sub>, σ<sub><var>i</var></sub> estimated per mini-batch (Eq. 2). Layer norm uses statistics over the <var>H</var> hidden units of the layer:</p></div>
+  <div class="eq">μ<sup><var>l</var></sup> = (1/<var>H</var>) Σ<sub><var>i</var>=1</sub><sup><var>H</var></sup> <var>a<sub>i</sub></var><sup><var>l</var></sup>, &nbsp;&nbsp; σ<sup><var>l</var></sup> = √( (1/<var>H</var>) Σ<sub><var>i</var>=1</sub><sup><var>H</var></sup> (<var>a<sub>i</sub></var><sup><var>l</var></sup> − μ<sup><var>l</var></sup>)<sup>2</sup> ) <span class="n">(3)</span></div>
+  <div class="prose"><p>All units in a layer share μ and σ, but each training case has its own. The normalised activation is <var>ā<sub>i</sub></var> = (<var>g<sub>i</sub></var>/σ)(<var>a<sub>i</sub></var> − μ), followed by the bias and nonlinearity. For a recurrent network with <var>a</var><sup><var>t</var></sup> = <var>W<sub>hh</sub></var><var>h</var><sup><var>t</var>−1</sup> + <var>W<sub>xh</sub></var><var>x</var><sup><var>t</var></sup>:</p></div>
+  <div class="eq"><var>h</var><sup><var>t</var></sup> = <var>f</var>[ (<var>g</var>/σ<sup><var>t</var></sup>) ⊙ (<var>a</var><sup><var>t</var></sup> − μ<sup><var>t</var></sup>) + <var>b</var> ], &nbsp; μ<sup><var>t</var></sup>, σ<sup><var>t</var></sup> from Eq. 3 applied to <var>a</var><sup><var>t</var></sup> <span class="n">(4)</span></div>
+  <div class="prose">
+    <p>Gains <var>g</var> and biases <var>b</var> are shared over time steps and initialised to 1 and 0 (§6). In code a small ε is added inside the square root for stability; the paper's equations omit it. The paper's central selling point: since there is no dependence on other cases, the computation is identical in training and inference, needs no running averages, and imposes no constraint on mini-batch size (it works with batch size 1, enabling pure online learning).</p>
+    <p>The paper explains the RNN motivation in terms of scale: in a standard RNN the average magnitude of summed inputs to the recurrent units tends to grow or shrink at every step, causing exploding or vanishing gradients; layer normalisation makes the network invariant to re-scaling all summed inputs in a layer, which gives much more stable hidden-to-hidden dynamics.</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>In a transformer, over which axis is LayerNorm computed for a tensor of shape (batch, sequence, features)?</dt>
+    <dd>Over the feature axis only, separately for every token of every sequence: each token vector is normalised on its own.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §5.1 · Table 1 · Eqs. 5–7</p>
+  <h2>Invariance analysis</h2>
+  <div class="prose">
+    <p>Batch norm, weight normalisation (Salimans &amp; Kingma, 2016: <var>ā<sub>i</sub></var> = (<var>g<sub>i</sub></var>/‖<var>w<sub>i</sub></var>‖) <var>w<sub>i</sub></var><sup>⊤</sup><var>x</var>) and layer norm can all be written as <var>h<sub>i</sub></var> = <var>f</var>((<var>g<sub>i</sub></var>/σ<sub><var>i</var></sub>)(<var>a<sub>i</sub></var> − μ<sub><var>i</var></sub>) + <var>b<sub>i</sub></var>) (Eq. 5) with different choices of μ and σ. Table 1 records which transformations leave the model's output unchanged.</p>
+    <p>Layer norm is invariant to scaling the whole weight matrix <var>W</var> → δ<var>W</var> and to re-centring it, <var>W</var> → <var>W</var> + 1γ<sup>⊤</sup>, which adds the same γ<sup>⊤</sup><var>x</var> to every unit's summed input (Eq. 6). It is invariant to scaling any single input case, <var>x</var> → δ<var>x</var> (Eq. 7). It is <em>not</em> invariant to scaling an individual unit's weight vector, since that changes the layer's shared statistics. Batch and weight norm are invariant to individual weight-vector scaling; batch norm is also invariant to re-scaling and re-centring the dataset, while layer norm is not invariant to re-centring it. The figure computes the table rather than quoting it.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="iv-run">Recompute with new random layer and data</button></div>
+    <div class="svgbox wide"><svg id="iv" viewBox="0 0 640 230" role="img" aria-label="Computed invariance table for batch norm, weight norm and layer norm"></svg></div>
+    <p class="readout" id="iv-r"></p>
+    <figcaption>A random 5-input, 6-unit layer applied to a batch of 8 random inputs. For each transformation, we compute the normalised summed inputs before and after and mark ✓ if they agree to 10<sup>−9</sup>. Transformations, left to right: <var>W</var> → 2.7<var>W</var>; <var>W</var> → <var>W</var> + 1γ<sup>⊤</sup>; one row of <var>W</var> scaled by 3; every input scaled by 0.4; a constant vector added to every input; only the first input scaled by 5. The result matches the paper's Table 1.</figcaption>
+  </figure>
+  <div class="prose"><p><strong>Geometry (§5.2).</strong> Using the Fisher information as a Riemannian metric (Eqs. 8–9) for normalised generalised linear models, the authors show that the curvature along a weight vector's direction scales inversely with its norm: as weights grow, the effective learning rate along them falls, an implicit early-stopping effect; and learning of the gain parameters depends only on the magnitude of the prediction error, which they argue makes it more robust to input scaling.</p></div>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §6 · Tables 2–3 · Figs. 1–6</p>
+  <h2>Experiments</h2>
+  <div class="tablebox"><table>
+    <thead><tr><th>Task (section)</th><th>Model</th><th>Result reported</th></tr></thead>
+    <tbody>
+      <tr><td>Image–sentence ranking, MS-COCO (§6.1, Table 2, Fig. 1)</td><td>Order embeddings with GRU</td><td>R@1 caption 46.6 → 48.5, image 37.8 → 38.9; reaches best validation model in 60% of the baseline's time.</td></tr>
+      <tr><td>Question answering, CNN corpus (§6.2, Fig. 2)</td><td>Attentive reader (LSTM)</td><td>Trains faster and converges to better validation error than both baseline and recurrent batch norm; insensitive to initial gain scale, unlike recurrent BN.</td></tr>
+      <tr><td>Skip-thought vectors, BookCorpus (§6.3, Table 3, Fig. 3)</td><td>GRU encoder–decoder</td><td>At 1M iterations, improves all seven evaluation numbers over the same model without LN (e.g. MR 77.3 → 79.5, SICK r 0.842 → 0.854); training about a month gives further gains on most of them.</td></tr>
+      <tr><td>DRAW, binarised MNIST (§6.4, Fig. 4)</td><td>Recurrent VAE with attention</td><td>Converges almost twice as fast; test NLL 82.36 → 82.09 nats after 200 epochs.</td></tr>
+      <tr><td>Handwriting generation, IAM-OnDB (§6.5, Fig. 5)</td><td>3-layer LSTM, mixture density output, batch size 8</td><td>Comparable final log-likelihood, much faster convergence; sequences average about 700 steps.</td></tr>
+      <tr><td>Permutation-invariant MNIST (§6.6, Fig. 6)</td><td>784-1000-1000-10 MLP</td><td>Robust to batch size (128 and 4) and faster than batch norm; LN applied to hidden layers only, not the softmax.</td></tr>
+      <tr><td>Convolutional networks (§6.7)</td><td>ConvNet</td><td>Faster than no normalisation, but batch normalisation outperforms it.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose"><p>The paper's explanation for the convolutional result: the assumption that all units in a layer make similar contributions holds well for fully connected layers but poorly for convolutional ones, where units whose receptive fields lie at the image boundary are rarely active and have very different statistics.</p></div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §7 and later work</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Pooling over heterogeneous units.</strong> All units share μ and σ, so one dominant unit or feature can distort the normalisation of the rest; this is the paper's own diagnosis for ConvNets (§6.7). Group Normalization (Wu &amp; He, 2018) normalises over groups of channels and spatial positions as a middle ground for vision.</li>
+      <li><strong>Cost.</strong> Two reductions (mean, then variance) per token per layer is non-trivial on accelerators. Zhang and Sennrich's <a href="rmsnorm.html">RMSNorm</a> (2019) argued the re-centring is unnecessary and kept only re-scaling by the root mean square, reporting 7%–64% speed-ups at similar quality.</li>
+      <li><strong>Placement in transformers.</strong> The original <a href="transformer.html">transformer</a> applies LN after each residual addition ("post-LN"). <a href="gpt2.html">GPT-2</a> moved it to the input of each sub-block, and Xiong et al. (2020) analysed why this "pre-LN" arrangement gives well-behaved gradients at initialisation and can train without learning-rate warm-up.</li>
+    </ul>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>The archive's one-line finding: <em>normalise across a layer's features instead of the batch: it works for recurrent nets and any batch size, and became the transformer default. Many recent LLMs use the simpler RMSNorm instead.</em> <a href="bert.html">BERT</a>, the GPT series and most transformers through about 2022 use LayerNorm; <a href="llama.html">LLaMA</a> and many later models use RMSNorm in the pre-norm position.</div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Which invariance does layer norm have that RMSNorm gives up?</dt>
+    <dd>Re-centring: adding the same amount to every summed input of an example (e.g. <var>W</var> → <var>W</var> + 1γ<sup>⊤</sup>). RMSNorm does not subtract the mean, so such a shift changes its output.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t5" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Summed input <var>a</var></dt><dd>Pre-activation <var>Wh</var> of a unit, the quantity being normalised.</dd>
+    <dt><var>H</var></dt><dd>Number of hidden units in the layer, the set LN averages over.</dd>
+    <dt>Gain <var>g</var>, bias <var>b</var></dt><dd>Per-unit learned scale and shift applied after normalisation.</dd>
+    <dt>Batch norm</dt><dd>Normalises each unit over the mini-batch (<a href="batchnorm.html">Ioffe &amp; Szegedy, 2015</a>).</dd>
+    <dt>Weight norm</dt><dd>Divides each unit's weight vector by its L2 norm (Salimans &amp; Kingma, 2016).</dd>
+    <dt>Recurrent BN</dt><dd>Batch norm in LSTMs with per-time-step statistics (Cooijmans et al., 2016).</dd>
+    <dt>Pre-LN / post-LN</dt><dd>LayerNorm placed before each transformer sub-block versus after the residual addition.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="batchnorm.html">Batch norm (2015)</a></p>
+  <p><strong>Led to:</strong> <a href="rmsnorm.html">RMSNorm (2019)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> (<a href="https://lovespark.love/papers-worth-reading/#layernorm">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // axis toggle
+  var svg=$('#ax'), mode='ln', m=6, r=rng(17), A=[];
+  for (var n=0;n<6;n++){ var row=[], off=gauss(r)*2, sc=0.5+r()*2; for (var i=0;i<6;i++) row.push(off+sc*gauss(r)+i*0.3); A.push(row); }
+  function norm(){ var out=[], n, i;
+    for (n=0;n<m;n++) out.push([0,0,0,0,0,0]);
+    if (mode==='ln'){ for (n=0;n<m;n++){ var mu=A[n].reduce(function(s,v){return s+v;},0)/6, va=A[n].reduce(function(s,v){return s+(v-mu)*(v-mu);},0)/6; for (i=0;i<6;i++) out[n][i]=(A[n][i]-mu)/Math.sqrt(va+1e-5); } }
+    else { for (i=0;i<6;i++){ var mu=0, va=0; for (n=0;n<m;n++) mu+=A[n][i]/m; for (n=0;n<m;n++) va+=Math.pow(A[n][i]-mu,2)/m; for (n=0;n<m;n++) out[n][i]=(A[n][i]-mu)/Math.sqrt(va+1e-5); } }
+    return out; }
+  function cell(x,y,v,sc,active){ var c=Math.min(1,Math.abs(v)/sc); S('rect',{x:x,y:y,width:34,height:28,'class':active?(v>0?'f-fire':'f-wire'):'f-rule','fill-opacity':active?0.1+0.5*c:0.35},svg); if (active) S('text',{x:x+17,y:y+18,'class':'t-s mid'},svg,fmt(v,1)); }
+  function draw(){ clear(svg); var out=norm(), x0=40, x1=340, y0=40;
+    S('text',{x:x0,y:22,'class':'t-s'},svg,'raw (rows = examples, columns = units)'); S('text',{x:x1,y:22,'class':'t-s'},svg,'normalised');
+    for (var n=0;n<6;n++){ S('text',{x:x0-8,y:y0+n*32+19,'class':'t-s end'},svg,n+1); for (var i=0;i<6;i++){ cell(x0+i*38,y0+n*32,A[n][i],4,n<m); if (n<m) cell(x1+i*38,y0+n*32,out[n][i],2,true); else cell(x1+i*38,y0+n*32,0,2,false); } }
+    if (mode==='ln') S('rect',{x:x0-3,y:y0-3,width:6*38+2,height:34,'class':'box-inh'},svg); else S('rect',{x:x0-3,y:y0-3,width:40,height:m*32+2,'class':'box-inh'},svg);
+    S('text',{x:x0+114,y:y0+6*32+22,'class':'t-inh mid'},svg,mode==='ln'?'one example, all its units':'one unit, all examples in the batch');
+    var r1=out[0].map(function(v){return fmt(v,2);}).join(', ');
+    $('#ax-r').innerHTML=(mode==='ln'?'Layer norm':'Batch norm')+', batch size '+m+': example 1 becomes <b>'+r1+'</b>'+(mode==='bn'&&m===1?' · every value is 0: a batch of one has no spread to measure.':''); }
+  function setMode(md){ mode=md; $('#ax-ln').classList.toggle('on',md==='ln'); $('#ax-ln').setAttribute('aria-pressed',md==='ln'); $('#ax-bn').classList.toggle('on',md==='bn'); $('#ax-bn').setAttribute('aria-pressed',md==='bn'); draw(); }
+  $('#ax-ln').onclick=function(){ setMode('ln'); }; $('#ax-bn').onclick=function(){ setMode('bn'); };
+  bindRange('ax-m',function(v){ m=v; draw(); });
+})();
+(function(){ // RNN state with/without LN
+  var svg=$('#rn'), ws=2.5, seed=3, H=32, T=60;
+  function sim(ln){ var r=rng(seed), W=[], U=[], i, j, t; for (i=0;i<H*H;i++) W.push(gauss(r)/Math.sqrt(H)); for (i=0;i<H;i++) U.push(gauss(r));
+    var xr=rng(seed+100), h=[], rms=[], sat=[]; for (i=0;i<H;i++) h.push(0.5*gauss(xr));
+    for (t=0;t<T;t++){ var x=0.3*gauss(xr), a=[];
+      for (i=0;i<H;i++){ var s=U[i]*x; for (j=0;j<H;j++) s+=ws*W[i*H+j]*h[j]; a.push(s); }
+      if (ln){ var mu=a.reduce(function(s,v){return s+v;},0)/H, va=a.reduce(function(s,v){return s+(v-mu)*(v-mu);},0)/H; a=a.map(function(v){ return (v-mu)/Math.sqrt(va+1e-5); }); }
+      h=a.map(Math.tanh); rms.push(Math.sqrt(h.reduce(function(s,v){return s+v*v;},0)/H)); sat.push(h.filter(function(v){return Math.abs(v)>0.95;}).length/H); }
+    return [rms,sat]; }
+  function draw(){ clear(svg); var P=sim(false), L=sim(true); function X(t){ return 60+t/(T-1)*510; } function Y1(v){ return 110-v*90; } function Y2(v){ return 230-v*70; }
+    S('line',{x1:60,y1:110,x2:570,y2:110,'class':'axis'},svg); S('line',{x1:60,y1:20,x2:60,y2:110,'class':'axis'},svg); S('line',{x1:60,y1:230,x2:570,y2:230,'class':'axis'},svg); S('line',{x1:60,y1:160,x2:60,y2:230,'class':'axis'},svg);
+    S('text',{x:54,y:24,'class':'t-s end'},svg,'1'); S('text',{x:54,y:114,'class':'t-s end'},svg,'0'); S('text',{x:54,y:164,'class':'t-s end'},svg,'100%'); S('text',{x:54,y:234,'class':'t-s end'},svg,'0%');
+    S('text',{x:66,y:16,'class':'t-s'},svg,'hidden-state size (RMS)'); S('text',{x:66,y:154,'class':'t-s'},svg,'units saturated');
+    S('text',{x:570,y:246,'class':'t-s end'},svg,'time step → 60');
+    [[P,'w'],[L,'w-fire']].forEach(function(q){ var d1='', d2=''; q[0][0].forEach(function(v,t){ d1+=(t?'L':'M')+X(t)+','+Y1(v); }); q[0][1].forEach(function(v,t){ d2+=(t?'L':'M')+X(t)+','+Y2(v); }); S('path',{d:d1,'class':q[1],'stroke-width':2},svg); S('path',{d:d2,'class':q[1],'stroke-width':2},svg); });
+    S('text',{x:300,y:138,'class':'t-wire'},svg,'blue: without layer norm'); S('text',{x:570,y:138,'class':'t-fire end'},svg,'amber: with');
+    var lp=P[0][T-1], ll=L[0][T-1], sp=P[1].slice(-20).reduce(function(s,v){return s+v;},0)/20, sl=L[1].slice(-20).reduce(function(s,v){return s+v;},0)/20;
+    $('#rn-r').innerHTML='After 60 steps, state size: without LN <b>'+fmt(lp,2)+'</b>, with LN <b>'+fmt(ll,2)+'</b> · saturated units (last 20 steps): without <b>'+fmt(sp*100,0)+'%</b>, with <b>'+fmt(sl*100,0)+'%</b>'; }
+  bindRange('rn-w',function(v){ ws=v; draw(); }); $('#rn-new').onclick=function(){ seed++; draw(); };
+})();
+(function(){ // invariance table
+  var svg=$('#iv'), seed=5;
+  var names=['BN','WN','LN'], tr=['W re-scale','W re-centre','w_i re-scale','data re-scale','data re-centre','one case re-scale'];
+  var paper={BN:[1,0,1,1,1,0],WN:[1,0,1,0,0,0],LN:[1,1,0,1,0,1]};
+  function compute(){ var r=rng(seed), I=5, O=6, M=8, W=[], X=[], i, j, n;
+    for (i=0;i<O;i++){ var row=[]; for (j=0;j<I;j++) row.push(gauss(r)); W.push(row); }
+    for (n=0;n<M;n++){ var x=[]; for (j=0;j<I;j++) x.push(gauss(r)+0.5); X.push(x); }
+    function A(W,X){ return X.map(function(x){ return W.map(function(w){ var s=0; for (var j=0;j<w.length;j++) s+=w[j]*x[j]; return s; }); }); }
+    function norm(kind,W,X){ var a=A(W,X), out;
+      if (kind==='LN') out=a.map(function(v){ var mu=v.reduce(function(s,z){return s+z;},0)/v.length, va=v.reduce(function(s,z){return s+(z-mu)*(z-mu);},0)/v.length; return v.map(function(z){ return (z-mu)/Math.sqrt(va); }); });
+      else if (kind==='BN'){ out=a.map(function(v){return v.slice();}); for (var i=0;i<O;i++){ var mu=0, va=0; a.forEach(function(v){ mu+=v[i]/a.length; }); a.forEach(function(v){ va+=Math.pow(v[i]-mu,2)/a.length; }); out.forEach(function(v,n){ v[i]=(a[n][i]-mu)/Math.sqrt(va); }); } }
+      else { var nr=W.map(function(w){ return Math.sqrt(w.reduce(function(s,z){return s+z*z;},0)); }); out=a.map(function(v){ return v.map(function(z,i){ return z/nr[i]; }); }); }
+      return out; }
+    var gam=[]; for (j=0;j<I;j++) gam.push(gauss(r)); var c=[]; for (j=0;j<I;j++) c.push(gauss(r)*2);
+    var T=[
+      function(W,X){ return [W.map(function(w){return w.map(function(z){return 2.7*z;});}),X]; },
+      function(W,X){ return [W.map(function(w){return w.map(function(z,j){return z+gam[j];});}),X]; },
+      function(W,X){ return [W.map(function(w,i){return w.map(function(z){return i===0?3*z:z;});}),X]; },
+      function(W,X){ return [W,X.map(function(x){return x.map(function(z){return 0.4*z;});})]; },
+      function(W,X){ return [W,X.map(function(x){return x.map(function(z,j){return z+c[j];});})]; },
+      function(W,X){ return [W,X.map(function(x,n){return x.map(function(z){return n===0?5*z:z;});})]; } ];
+    var res={}; names.forEach(function(k){ var base=norm(k,W,X); res[k]=T.map(function(f){ var q=f(W,X), o=norm(k,q[0],q[1]), d=0; o.forEach(function(v,n){ v.forEach(function(z,i){ d=Math.max(d,Math.abs(z-base[n][i])); }); }); return d<1e-9?1:0; }); });
+    return res; }
+  function draw(){ clear(svg); var res=compute(), x0=150, cw=80, agree=true;
+    tr.forEach(function(t,j){ var parts=t.split(' '); S('text',{x:x0+j*cw+cw/2,y:24,'class':'t-s mid'},svg,parts.slice(0,-1).join(' ')); S('text',{x:x0+j*cw+cw/2,y:38,'class':'t-s mid'},svg,parts[parts.length-1]); });
+    var full={BN:'batch norm',WN:'weight norm',LN:'layer norm'};
+    names.forEach(function(k,i){ var y=60+i*50; S('text',{x:x0-10,y:y+24,'class':'t end'},svg,full[k]);
+      res[k].forEach(function(v,j){ S('rect',{x:x0+j*cw+6,y:y,width:cw-12,height:38,'class':v?'box-ok':'box'},svg); S('text',{x:x0+j*cw+cw/2,y:y+25,'class':(v?'t-ok':'t-inh')+' mid','style':'font-size:18px'},svg,v?'✓':'✗'); if (v!==paper[k][j]) agree=false; }); });
+    $('#iv-r').innerHTML='Computed invariances '+(agree?'<b>match</b>':'<b>differ from</b>')+' Table 1 of the paper.'; }
+  $('#iv-run').onclick=function(){ seed++; draw(); }; draw();
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,229 @@
+<!--LEDE-->
+Networks that read sequences, like sentences or sound, kept forgetting anything more than a few steps back, because the learning signal faded as it travelled back in time. Hochreiter and Schmidhuber fix this with a memory cell whose contents are protected by gates, so information and error can survive for over a thousand steps.
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>A recurrent network reads a sequence one step at a time, passing a memory forward. To learn, it sends error signals backwards through those steps.</p>
+  <p>Each step multiplies the signal by some factor. Below 1, it shrinks to nothing within a few dozen steps; above 1, it blows up. So long-range lessons can't be learned.</p>
+  <p>LSTM adds a memory cell that copies its value forward unchanged (factor exactly 1), so the signal neither fades nor explodes.</p>
+  <p>Learned "gates" decide when to write into the cell and when to read from it, so the cell isn't disturbed by irrelevant inputs. The "forget" gate every modern LSTM has was added three years later.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1–3</p>
+  <h2>Reading a sequence with a memory</h2>
+  <div class="prose">
+    <p>Some data comes in order: words in a sentence, notes in a song, readings from a sensor. A <strong>recurrent</strong> network handles this by reading one item at a time and carrying a small internal memory from each step to the next, like a person reading a sentence word by word.</p>
+    <p>To learn, it uses <a href="backprop.html">backpropagation</a>, unrolled through time: the error at the end is passed back step by step to the moments that caused it. The trouble starts when the cause is far back, say the subject of a long sentence that decides a verb many words later.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Reading a mystery novel where the clue is on page 3 and the reveal on page 300. You only learn to spot clues if the "aha" at the end can reach back to page 3.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Recurrent networks learn from sequences by passing error back through time, which gets hard when cause and effect are far apart.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §3</p>
+  <h2>Why the signal fades or explodes</h2>
+  <div class="prose">
+    <p>Every step back in time, the error signal gets multiplied by roughly the same number (a weight times the slope of the unit). Multiply by 0.9 a hundred times and you get 0.00003: the signal has <strong>vanished</strong>. Multiply by 1.1 a hundred times and you get 13,780: it has <strong>exploded</strong>. Only a factor of exactly 1 keeps it steady.</p>
+    <p>Hochreiter had worked this out in detail in his 1991 diploma thesis. It means ordinary recurrent networks effectively can't learn links longer than about 5–10 steps.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Factor per step <input type="range" id="vg-f" min="0.5" max="1.3" step="0.01" value="0.9" data-fmt="2"><output id="vg-f-o">0.90</output></label><button class="btn" id="vg-one">Set to exactly 1 (LSTM's trick)</button></div>
+    <div class="svgbox"><svg id="vg" viewBox="0 0 600 240" role="img" aria-label="Error signal strength versus number of steps back in time"></svg></div>
+    <p class="readout" id="vg-r"></p>
+    <figcaption>Height of each bar = how much of the error signal reaches that many steps back (log scale; the dashed line is 1, no loss). Below 1 the bars drain away; above 1 they shoot off the chart.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Repeated multiplication makes learning signals vanish or explode over long time gaps. A factor of exactly 1 is the only stable choice.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Roughly how much signal is left after 50 steps at factor 0.8?</dt>
+    <dd>0.8<sup>50</sup> ≈ 0.000014, essentially nothing.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §4</p>
+  <h2>A memory cell with gates</h2>
+  <div class="prose">
+    <p>LSTM's core is a <strong>memory cell</strong> that connects to itself with a factor of exactly 1. Left alone, it keeps its value forever, and error flowing back through it stays the same size. The authors call this the <em>constant error carousel</em>.</p>
+    <p>But a cell that everything writes into gets scrambled, and a cell that always broadcasts disturbs everything else. So the cell gets two learned <strong>gates</strong>: an <strong>input gate</strong> that decides when new information may be written in, and an <strong>output gate</strong> that decides when the stored value is let out. Each gate is a number between 0 (closed) and 1 (open), computed from the current situation.</p>
+    <p>Below, open the input gate at the moment you want to store something, keep it closed while noise goes by, and open the output gate when you want to read it.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="mc-demo">Example: store step 1, read at step 10</button><button class="btn" id="mc-clear">Close all gates</button><label><input type="checkbox" id="mc-fg"> Add a forget gate (2000 version)</label></div>
+    <div class="svgbox wide"><svg id="mc" viewBox="0 0 660 300" role="img" aria-label="Timeline of inputs, gate settings, cell contents and output"></svg></div>
+    <p class="readout" id="mc-r"></p>
+    <figcaption>Click the gate squares to open (amber) or close them. The cell adds input × input gate at each step and never loses anything in the 1997 design. With the forget gate on, a third row appears: closing it at a step wipes the cell.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>The cell remembers by copying itself forward unchanged; the gates control what gets written in and what gets read out.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What would happen without an input gate?</dt>
+    <dd>Every input would be added to the cell, so irrelevant inputs would overwrite the information it is meant to keep.</dd>
+    <dt>What can't the 1997 cell do that the forget gate fixes?</dt>
+    <dd>It cannot clear itself. Its contents only accumulate, which becomes a problem on long, continuous streams.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §5</p>
+  <h2>Tests built to need long memory</h2>
+  <div class="prose">
+    <p>The authors design tasks where the answer depends on something seen long before, with nothing but noise in between. In the "adding problem", the network sees a long stream of random numbers, two of which are marked, and at the end must output their sum. In others, it must remember one symbol from the start of a sequence over 100 or even 1,000 steps.</p>
+    <p>Other recurrent methods of the time failed or learned very slowly once the gap went beyond about ten steps. LSTM solved these tasks with gaps of over 1,000 steps, and learned faster.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>On tasks designed to require long memory, LSTM succeeded where earlier recurrent networks failed.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · What came next</p>
+  <h2>From 1997 cell to modern LSTM</h2>
+  <div class="prose">
+    <p>The LSTM most people use differs from this paper. In 2000, Gers, Schmidhuber and Cummins added the <a href="forget-gate.html">forget gate</a>, letting the cell gradually let go of old information or reset. Later came "peephole" connections and full training through time. For about two decades LSTMs powered speech recognition, machine translation and phone keyboards, until <a href="transformer.html">transformers</a> took over by attending to every earlier step directly.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>The forget gate (2000) is so standard that "LSTM" today means the version with it. The 1997 design here has only input and output gates.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>LSTM's gated, self-copying memory solved the long-memory problem for recurrent networks and dominated sequence learning until transformers.</p>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Learning to store information over extended time intervals by recurrent backpropagation takes very long, mostly because of insufficient, decaying error backflow. LSTM is a gradient-based method that truncates the gradient where this does no harm and enforces constant error flow through "constant error carousels" within special units. Multiplicative gate units learn to open and close access to the constant error flow. LSTM is local in space and time, with computational complexity O(1) per time step and weight, and bridges lags exceeding 1,000 discrete steps even with noisy, incompressible inputs. <em>Neural Computation</em> 9(8), 1735–1780 (1997).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §3.1</p>
+  <h2>Exponential error decay</h2>
+  <div class="prose"><p>For a fully recurrent net with unit activations <var>y<sup>i</sup></var>(<var>t</var>) = <var>f<sub>i</sub></var>(net<sub><var>i</var></sub>(<var>t</var>)), the error signal ϑ propagated back <var>q</var> steps from unit <var>v</var> to unit <var>u</var> scales as</p></div>
+  <div class="eq">∂ϑ<sub><var>v</var></sub>(<var>t</var>−<var>q</var>) / ∂ϑ<sub><var>u</var></sub>(<var>t</var>) = Σ<sub><var>l</var><sub>1</sub>…<var>l</var><sub><var>q</var>−1</sub></sub> ∏<sub><var>m</var>=1</sub><sup><var>q</var></sup> <var>f</var>′<sub><var>l<sub>m</sub></var></sub>(net<sub><var>l<sub>m</sub></var></sub>(<var>t</var>−<var>m</var>)) <var>w</var><sub><var>l<sub>m</sub></var><var>l</var><sub><var>m</var>−1</sub></sub></div>
+  <div class="prose">
+    <p>If |<var>f</var>′(net)·<var>w</var>| &gt; 1 for all terms the product grows exponentially (explodes; weights oscillate); if &lt; 1 it decays exponentially. With logistic units, <var>f</var>′ ≤ 0.25, so |<var>w</var>| &lt; 4 guarantees decay. The analysis follows Hochreiter's 1991 diploma thesis; Bengio, Simard and Frasconi (1994) reached similar conclusions independently.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3.2</p>
+  <h2>The constant error carousel and two conflicts</h2>
+  <div class="prose">
+    <p>For a single unit <var>j</var> with a self-connection, constant error flow requires <var>f</var>′<sub><var>j</var></sub>(net<sub><var>j</var></sub>(<var>t</var>)) <var>w<sub>jj</sub></var> = 1.0, which integrates to <var>f<sub>j</sub></var> linear and <var>w<sub>jj</sub></var> = 1: the <strong>constant error carousel</strong> (CEC).</p>
+    <p>A naive CEC has two problems. <strong>Input weight conflict:</strong> the same incoming weight must sometimes store an input and at other times protect the stored value from irrelevant inputs. <strong>Output weight conflict:</strong> the same outgoing weight must sometimes retrieve the content and at other times keep it from perturbing other units. LSTM resolves both by moving the decision to multiplicative, context-sensitive gates.</p>
+  </div>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §4 · Figs. 1–2</p>
+  <h2>The memory cell</h2>
+  <div class="prose"><p>Cell <var>c<sub>j</sub></var> has input gate in<sub><var>j</var></sub> and output gate out<sub><var>j</var></sub>, both logistic. With <var>g</var> a centred logistic squashing to [−2, 2] and <var>h</var> one squashing to [−1, 1]:</p></div>
+  <div class="eq"><var>y</var><sup>in<sub>j</sub></sup>(<var>t</var>) = <var>f</var><sub>in<sub>j</sub></sub>(net<sub>in<sub>j</sub></sub>(<var>t</var>)), &nbsp;&nbsp; <var>y</var><sup>out<sub>j</sub></sup>(<var>t</var>) = <var>f</var><sub>out<sub>j</sub></sub>(net<sub>out<sub>j</sub></sub>(<var>t</var>))</div>
+  <div class="eq"><var>s<sub>c<sub>j</sub></sub></var>(<var>t</var>) = <var>s<sub>c<sub>j</sub></sub></var>(<var>t</var>−1) + <var>y</var><sup>in<sub>j</sub></sup>(<var>t</var>) · <var>g</var>(net<sub><var>c<sub>j</sub></var></sub>(<var>t</var>))</div>
+  <div class="eq"><var>y</var><sup><var>c<sub>j</sub></var></sup>(<var>t</var>) = <var>y</var><sup>out<sub>j</sub></sup>(<var>t</var>) · <var>h</var>(<var>s<sub>c<sub>j</sub></sub></var>(<var>t</var>))</div>
+  <div class="prose">
+    <p>Cells sharing the same gates form a <strong>memory cell block</strong> of size <var>S</var>. All net inputs may come from input units, gates, cells and conventional hidden units. Note what is absent relative to the modern cell: there is no forget gate (the internal state's self-weight is fixed at 1) and no peephole connections from the state to the gates.</p>
+    <p><strong>Learning.</strong> A variant of real-time recurrent learning in which errors arriving at net inputs of cells and gates are truncated: they do not propagate further back in time, except within the CEC, where they flow unchanged indefinitely. This gives O(W) cost per time step, with W the number of weights, and is local in space and time.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Input gate level <input type="range" id="dr-g" min="0" max="1" step="0.05" value="0.3" data-fmt="2"><output id="dr-g-o">0.30</output></label><label>Forget gate (2000) <input type="range" id="dr-f" min="0.8" max="1" step="0.01" value="1" data-fmt="2"><output id="dr-f-o">1.00</output></label></div>
+    <div class="svgbox wide"><svg id="dr" viewBox="0 0 640 220" role="img" aria-label="Internal state over 300 steps of a continuous input stream"></svg></div>
+    <p class="readout" id="dr-r"></p>
+    <figcaption>Internal state drift. The cell receives a continuous stream of mostly positive inputs <var>g</var> ∈ [−0.5, 1.5]. With forget level 1 (the 1997 cell) <var>s<sub>c</sub></var> grows without bound and <var>h</var>(<var>s<sub>c</sub></var>) saturates, killing the gradient through <var>h</var>. Any forget level below 1 bounds the state at about mean input × gate / (1 − <var>f</var>).</figcaption>
+  </figure>
+  <div class="prose"><p>The paper is aware of this <strong>internal state drift</strong> (§4.8, "Internal state drift and remedies") and suggests biasing input gates negatively at initialisation. A separate issue, §4.7 "Abuse problem and solutions" (cells being used early in training as mere bias units), is handled with sequential network construction and a negative initial output-gate bias. The principled fix, a learned forget gate, came in 2000.</p></div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §5</p>
+  <h2>Experiments</h2>
+  <div class="tablebox"><table>
+    <thead><tr><th>Exp.</th><th>Task</th><th>What it tests</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td>Embedded Reber grammar</td><td>A standard benchmark with short lags; LSTM learns faster and more reliably than RTRL, Elman nets, recurrent cascade-correlation.</td></tr>
+      <tr><td class="num">2</td><td>Noise-free and noisy sequences with long lags</td><td>Remember the first symbol of a sequence; lags up to 1,000 steps, including with many distractor symbols.</td></tr>
+      <tr><td class="num">3</td><td>Noise and signal on the same channel</td><td>Classify a sequence whose relevant information is buried in continuous-valued noise.</td></tr>
+      <tr><td class="num">4</td><td>Adding problem</td><td>Output the sum of two marked real values in a long sequence; lags of 100–1,000.</td></tr>
+      <tr><td class="num">5</td><td>Multiplication problem</td><td>As 4, with a product; tests non-integrative computation.</td></tr>
+      <tr><td class="num">6</td><td>Temporal order</td><td>Classify by the order of two or three widely separated symbols.</td></tr>
+    </tbody></table></div>
+  <div class="prose"><p>Comparisons were with real-time recurrent learning (RTRL), backpropagation through time (BPTT), Elman nets, recurrent cascade-correlation and neural sequence chunking. The authors also report that random weight guessing solves several earlier "long-lag" benchmarks from the literature, motivating their harder tasks.</p></div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does truncating gradients outside the CEC not hurt long-lag learning?</dt>
+    <dd>The long-range credit is carried entirely by the CEC, where error flows unchanged; the truncated paths are the ones that would vanish anyway.</dd>
+    <dt>Why does <var>g</var> map to [−2, 2] but <var>h</var> to [−1, 1]?</dt>
+    <dd>These are the paper's choices of squashing ranges for cell input and output; modern cells use tanh for both.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · Lineage</p>
+  <h2>The modern cell</h2>
+  <div class="eq"><var>c<sub>t</sub></var> = <var>f<sub>t</sub></var> ⊙ <var>c</var><sub><var>t</var>−1</sub> + <var>i<sub>t</sub></var> ⊙ tanh(<var>W<sub>c</sub></var>[<var>h</var><sub><var>t</var>−1</sub>, <var>x<sub>t</sub></var>] + <var>b<sub>c</sub></var>), &nbsp;&nbsp; <var>h<sub>t</sub></var> = <var>o<sub>t</sub></var> ⊙ tanh(<var>c<sub>t</sub></var>)</div>
+  <div class="prose"><ul>
+    <li><a href="forget-gate.html">Gers, Schmidhuber &amp; Cummins (2000)</a>: forget gate <var>f<sub>t</sub></var> on the self-connection.</li>
+    <li>Gers &amp; Schmidhuber (2000), Gers et al. (2002): peephole connections from the state to the gates.</li>
+    <li>Graves &amp; Schmidhuber (2005): full BPTT instead of truncated gradients; bidirectional LSTM.</li>
+    <li>Cho et al. (2014): the GRU, a simplified gated unit. Greff et al. (2017, "LSTM: A Search Space Odyssey") found the forget gate and output activation the most critical components.</li>
+  </ul></div>
+  <div class="later"><span class="label">Where it led</span>Gated recurrence underpinned sequence-to-sequence translation and the attention mechanism of <a href="bahdanau.html">Bahdanau et al. (2014)</a>, before the <a href="transformer.html">Transformer</a> (2017) replaced recurrence with attention over all positions.</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>RNN</dt><dd>Recurrent neural network; units feed back into themselves across time steps.</dd>
+    <dt>BPTT</dt><dd>Backpropagation through time: backprop on the network unrolled over the sequence.</dd>
+    <dt>RTRL</dt><dd>Real-time recurrent learning: forward-mode gradient computation online.</dd>
+    <dt>Vanishing gradient</dt><dd>Exponential decay of error signals propagated back over many steps.</dd>
+    <dt>CEC</dt><dd>Constant error carousel: a linear unit with self-weight 1.</dd>
+    <dt>Gate</dt><dd>A logistic unit whose output multiplies a signal, controlling its flow.</dd>
+    <dt>Memory block</dt><dd>Cells sharing one input gate and one output gate.</dd>
+    <dt>State drift</dt><dd>Unbounded growth of the cell state on long input streams.</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+(function(){ // vanishing / exploding
+  var svg=$('#vg'), f=0.9;
+  function draw(){ clear(svg); var T=60, top=30, bot=210, lmin=-6, lmax=2;
+    function Y(v){ var l=Math.log10(Math.max(v,1e-12)); l=Math.max(lmin,Math.min(lmax,l)); return bot-(l-lmin)/(lmax-lmin)*(bot-top); }
+    [1e2,1,1e-2,1e-4,1e-6].forEach(function(v){ S('line',{x1:60,y1:Y(v),x2:590,y2:Y(v),'class':v===1?'w-dash':'grid'},svg); S('text',{x:54,y:Y(v)+4,'class':'t-s end'},svg,v===1?'1':(v>1?'100':'10'+String(Math.log10(v)).replace('-','⁻').replace('2','²').replace('4','⁴').replace('6','⁶'))); });
+    for (var q=0;q<T;q++){ var v=Math.pow(f,q), y=Y(v); S('rect',{x:64+q*8.7,y:y,width:6,height:bot-y,'class':v>1.0001?'f-inh':(Math.abs(v-1)<1e-4?'f-ok':'f-wire')},svg); }
+    S('text',{x:325,y:232,'class':'t-s mid'},svg,'steps back in time →');
+    var v50=Math.pow(f,50); $('#vg-r').innerHTML='After 50 steps the signal is multiplied by <b>'+(v50>1e4||v50<1e-4?v50.toExponential(1):fmt(v50,4))+'</b>. '+(Math.abs(f-1)<1e-9?'Constant: this is the constant error carousel.':(f<1?'Vanishing.':'Exploding.')); }
+  var r=bindRange('vg-f',function(v){f=v;draw();});
+  $('#vg-one').onclick=function(){ r.value=1; r.dispatchEvent(new Event('input')); };
+})();
+(function(){ // memory cell gates timeline
+  var svg=$('#mc'), T=12, inp=[0.8,-0.5,0.3,-0.9,0.6,0.2,-0.4,0.7,-0.2,0.5,0.1,-0.6], ig=[], og=[], fg=[], useF=false;
+  function clr(){ ig=new Array(T).fill(0); og=new Array(T).fill(0); fg=new Array(T).fill(1); }
+  clr();
+  function draw(){ clear(svg); var x0=150, w=40, s=0, cell=[], out=[];
+    for (var t=0;t<T;t++){ s=(useF?fg[t]:1)*s + ig[t]*inp[t]; cell.push(s); out.push(og[t]*Math.tanh(s)); }
+    var rows=[['input',inp,null],['input gate',ig,'ig']]; if (useF) rows.push(['forget gate',fg,'fg']); rows.push(['cell',cell,null],['output gate',og,'og'],['output',out,null]);
+    for (var t=0;t<T;t++) S('text',{x:x0+t*w+w/2-4,y:18,'class':'t-s mid'},svg,t+1);
+    rows.forEach(function(r,i){ var y=28+i*44; S('text',{x:x0-10,y:y+22,'class':r[2]?'t-wire end':(r[0]==='cell'?'t-h end':'t end')},svg,r[0]);
+      for (var t=0;t<T;t++){ var v=r[1][t], X=x0+t*w;
+        if (r[2]){ var rc=S('rect',{x:X+2,y:y+4,width:w-8,height:28,'class':(v?'box-fire':'box')+' clickable'},svg); S('text',{x:X+w/2-2,y:y+22,'class':'t-s mid'},svg,v?'open':'shut');
+          (function(arr,tt){ rc.addEventListener('click',function(){ arr[tt]=arr[tt]?0:1; draw(); }); })(r[2]==='ig'?ig:(r[2]==='og'?og:fg),t); }
+        else { S('rect',{x:X+2,y:y+4,width:w-8,height:28,'class':Math.abs(v)<1e-9?'box':(r[0]==='cell'?'box-ok':'box-wire')},svg); S('text',{x:X+w/2-2,y:y+22,'class':'t mid'},svg,Math.abs(v)<1e-9?'0':fmt(v,1)); } } });
+    var lastOut=out.map(function(v,i){return [v,i];}).filter(function(p){return Math.abs(p[0])>1e-9;});
+    $('#mc-r').innerHTML = lastOut.length ? 'Output read at step(s) '+lastOut.map(function(p){return p[1]+1;}).join(', ')+'. Final cell value <b>'+fmt(cell[T-1],2)+'</b>.' : 'Nothing has been read out yet. Final cell value <b>'+fmt(cell[T-1],2)+'</b>.';
+  }
+  $('#mc-demo').onclick=function(){ clr(); ig[0]=1; og[9]=1; draw(); };
+  $('#mc-clear').onclick=function(){ clr(); draw(); };
+  $('#mc-fg').addEventListener('change',function(){ useF=this.checked; draw(); });
+  ig[0]=1; og[9]=1; draw();
+})();
+(function(){ // drift
+  var svg=$('#dr'), g=0.3, f=1;
+  var r=rng(4), xs=[]; for (var t=0;t<300;t++) xs.push(-0.5+2*r());
+  function draw(){ clear(svg); var s=0, ss=[]; xs.forEach(function(x){ s=f*s+g*x; ss.push(s); }); var mx=Math.max(5,Math.max.apply(null,ss.map(Math.abs)));
+    S('line',{x1:60,y1:190,x2:620,y2:190,'class':'axis'},svg); S('line',{x1:60,y1:20,x2:60,y2:190,'class':'axis'},svg);
+    var d=''; ss.forEach(function(v,i){ var X=60+i/299*560; d+=(i?'L':'M')+X+','+(190-v/mx*160); });
+    S('path',{d:d,'class':'w-fire'},svg);
+    var hd=''; ss.forEach(function(v,i){ var X=60+i/299*560; hd+=(i?'L':'M')+X+','+(190-(Math.tanh(v)+0)/1*40); }); S('path',{d:hd,'class':'w'},svg);
+    S('text',{x:66,y:30,'class':'t-fire'},svg,'cell state s_c (max '+fmt(mx,1)+')'); S('text',{x:620,y:146,'class':'t-wire end'},svg,'h(s_c), saturates at 1');
+    S('text',{x:340,y:210,'class':'t-s mid'},svg,'time step →');
+    var sat=ss.slice(-50).every(function(v){return Math.abs(Math.tanh(v))>0.99;});
+    $('#dr-r').innerHTML='Final state <b>'+fmt(ss[299],1)+'</b>. '+(sat?'h(s) is saturated, so its slope is ≈ 0 and gradients through the output are blocked.':'State stays in a usable range.'); }
+  bindRange('dr-g',function(v){g=v;draw();}); bindRange('dr-f',function(v){f=v;draw();});
+})();
+</script>

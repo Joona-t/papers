@@ -1,0 +1,319 @@
+<!--LEDE-->
+The standard way to make a language model follow human preferences (RLHF) trains a separate "reward model" and then runs a finicky reinforcement-learning loop against it. Rafailov and colleagues show that the reward model can be written in terms of the language model itself, so the whole pipeline collapses into one simple classification-style loss on pairs of preferred and rejected answers.
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>To teach a chatbot what people like, labs collect pairs of answers where a person said "this one is better", train a reward model to score answers, then use reinforcement learning to push the chatbot towards high scores without drifting too far from where it started.</p>
+  <p>The authors notice that this goal has an exact mathematical solution: the best chatbot is the starting chatbot with each answer's probability boosted according to its reward.</p>
+  <p>Turning that solution around, any chatbot implicitly defines a reward: how much more likely it makes an answer than the starting model did. So you can train the chatbot directly on the preference pairs, with no separate reward model and no reinforcement-learning loop.</p>
+  <p>This "Direct Preference Optimization" is a single, stable loss, and it matched or beat the reinforcement-learning method (PPO) on sentiment control, summarisation and dialogue in models up to 6 billion parameters.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1, §3</p>
+  <h2>The old recipe: three stages and a referee</h2>
+  <div class="prose">
+    <p>A freshly trained language model is good at continuing text but not necessarily at being helpful. The recipe made famous by <a href="instructgpt.html">InstructGPT</a>, called <strong>RLHF</strong> (reinforcement learning from human feedback), fixes this in three stages:</p>
+    <ol>
+      <li><strong>Supervised fine-tuning:</strong> show the model good example answers.</li>
+      <li><strong>Reward model:</strong> show people two answers to the same question, ask which is better, and train a second network to predict those judgements as a score.</li>
+      <li><strong>Reinforcement learning:</strong> let the model write answers, have the reward model score them, and nudge the model towards higher scores, with a penalty for drifting too far from the stage-1 model.</li>
+    </ol>
+    <p>Stage 3 is the troublesome one. It uses an algorithm called PPO, needs several copies of large networks in memory at once, requires generating text during training, and is notoriously sensitive to its settings.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A cook learning to please diners. RLHF hires a food critic who has studied the diners' comment cards, then has the cook make dish after dish for the critic to score. DPO skips the critic and has the cook study the comment cards directly.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>RLHF works, but its reinforcement-learning stage is complex, expensive and unstable. DPO's goal is to get the same result without it.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §3 · Eq. 1</p>
+  <h2>From "which is better?" to a score</h2>
+  <div class="prose">
+    <p>People don't give answers a score out of ten; they pick the better of two. To connect choices to scores, the paper uses a classic model from 1952 called <strong>Bradley–Terry</strong>, also used to rank chess players: each answer has a hidden score, and the bigger the gap between two scores, the more reliably people pick the higher one. Equal scores mean a coin flip.</p>
+    <p>A reward model is trained to find scores that make the observed choices as likely as possible. DPO keeps exactly this assumption; it just finds the scores in a different place.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Score of answer A <input type="range" id="bt-a" min="-3" max="3" step="0.1" value="1" data-fmt="1"><output id="bt-a-o">1.0</output></label>
+      <label>Score of answer B <input type="range" id="bt-b" min="-3" max="3" step="0.1" value="0" data-fmt="1"><output id="bt-b-o">0.0</output></label>
+      <button class="btn" id="bt-ask">Ask 20 people</button>
+    </div>
+    <div class="svgbox"><svg id="bt" viewBox="0 0 600 250" role="img" aria-label="Bradley-Terry curve: probability of preferring A against the score gap"></svg></div>
+    <p class="readout" id="bt-r"></p>
+    <figcaption>The S-shaped curve is the Bradley–Terry rule: chance that A is preferred = 1 / (1 + e<sup>−(score A − score B)</sup>). Each "Ask 20 people" draws 20 random judgements with that chance. Note that only the <em>difference</em> in scores matters: adding the same amount to both changes nothing.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Preferences are modelled as noisy comparisons of hidden scores; only score differences matter.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>A has score 2 and B has score 2. How often is A preferred?</dt>
+    <dd>Half the time. Only the difference counts, and it is zero.</dd>
+    <dt>Why does "only the difference matters" turn out to be useful later?</dt>
+    <dd>Because it means a reward can be shifted by any amount that depends only on the question without changing any predictions. DPO uses this freedom to cancel an otherwise impossible-to-compute term.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §4 · Eqs. 4–5</p>
+  <h2>Your language model is secretly a reward model</h2>
+  <div class="prose">
+    <p>RLHF's stage 3 asks for a model that earns high reward but stays close to the starting model (called the <strong>reference</strong> model). The authors point out that this goal has a known exact answer: take the reference model's probability for each possible answer and multiply it by a boost that grows with the answer's reward. A setting called <strong>β</strong> (beta) controls how strong the boost is: small β means "chase reward hard", large β means "stay close to the reference".</p>
+    <p>That exact answer can't be used directly, because it would require summing over every possible piece of text. But it can be turned around. If the best model is "reference times boost", then the boost, and hence the reward, can be read off any model by comparing it with the reference: an answer's reward is β times how much more likely the model makes it than the reference did (on a log scale).</p>
+    <p>So instead of training a reward model and then a chatbot, you write the Bradley–Terry training rule in terms of this <em>implicit</em> reward and train the chatbot directly. The impossible sum appears equally for both answers in a pair, and because only differences matter, it cancels.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>You can't see a student's private marking scheme, but you can infer it from how their answers changed since the start of term: whatever they now say much more often than before must be what they think scores well.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Every language model defines a reward, "how much more likely than the reference", so fitting the model to preferences directly is the same as fitting a reward model and then optimising it.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What happens to the implicit reward if the model is identical to the reference?</dt>
+    <dd>It is zero for every answer: the model hasn't boosted anything.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §4 · Eq. 7</p>
+  <h2>Training on pairs, live</h2>
+  <div class="prose">
+    <p>The DPO rule for one pair is simple. Make the preferred answer more likely and the rejected answer less likely, relative to the reference. Push hardest on pairs the model currently gets wrong (where it rates the rejected answer higher), and barely at all on pairs it already gets right.</p>
+    <p>Below, a tiny "model" chooses between five possible replies to one question. Hidden human scores generate the preferences (through the Bradley–Terry rule). Train it with DPO and watch two things: the model's probabilities shift, and its implicit rewards line up with the hidden scores it never saw directly.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>β <input type="range" id="dp-b" min="0.1" max="2" step="0.1" value="0.5" data-fmt="1"><output id="dp-b-o">0.5</output></label>
+      <button class="btn" id="dp-go" aria-pressed="false">Train</button><button class="btn" id="dp-reset">Reset to reference</button>
+    </div>
+    <div class="svgbox wide"><svg id="dp" viewBox="0 0 640 300" role="img" aria-label="Five replies with reference and trained probabilities and implicit rewards"></svg></div>
+    <p class="readout" id="dp-r"></p>
+    <figcaption>Question: "My code throws an error, can you help?" Grey bars: the reference model's probability for each reply. Amber bars: the model being trained. Right column: the implicit reward β·log(model ÷ reference), shifted so the top reply matches, next to the hidden score. Training uses the exact expected DPO gradient over all pairs. Try β = 0.1 (the model piles almost everything onto the best reply) and β = 2 (it stays near the reference). Either way the implicit rewards converge to the hidden scores. A toy, but the maths is the paper's.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>DPO is ordinary supervised training on preference pairs; β sets how far the model may move from the reference to satisfy them.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does a smaller β let the model move further from the reference?</dt>
+    <dd>The implicit reward is β times the log-ratio. To express the same reward differences with a smaller β, the log-ratios, and so the changes in probability, must be larger.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §6–7 · Fig. 2–3, Table 2</p>
+  <h2>Did it work, and what came next</h2>
+  <div class="prose">
+    <p>The authors tested three tasks: making movie-review continuations positive, summarising Reddit posts, and answering single-turn chat questions. On summaries, judged by GPT-4 against human-written reference summaries, DPO won about 61% of the time against PPO's best of 57%, and it was much less sensitive to the sampling temperature. In a check with human raters, DPO's summaries were preferred over PPO's 58% of the time.</p>
+    <p>All experiments used models of at most 6 billion parameters. Even so, DPO spread quickly because it is so easy to run: it needs no sampling during training and no reward model.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>DPO became a standard step in open models (for example Zephyr and Llama 3 used it alongside supervised fine-tuning). Follow-ups adjusted the loss: IPO (2023) guards against overfitting when preferences are near-deterministic, KTO (2024) learns from single thumbs-up or thumbs-down labels instead of pairs, and SimPO (2024) drops the reference model. For reasoning tasks with checkable answers, labs returned to online reinforcement learning, as in <a href="grpo.html">GRPO</a> and <a href="r1.html">DeepSeek-R1</a>.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>DPO matched or beat PPO-based RLHF on the paper's tasks with a far simpler method, and became a default tool for preference tuning.</p>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Large unsupervised language models are hard to steer precisely. RLHF fits a reward model to human preference labels and then fine-tunes the model with reinforcement learning to maximise that reward under a KL constraint to the original model, a complex and often unstable procedure. DPO introduces a reparameterisation of the reward model that allows the corresponding optimal policy to be extracted in closed form, so the standard RLHF problem can be solved with only a simple classification loss. DPO is stable, performant and computationally lightweight, needing no sampling from the policy during fine-tuning and little hyperparameter tuning. It controls sentiment better than PPO-based RLHF and matches or improves response quality in summarisation and single-turn dialogue. Rafailov, Sharma, Mitchell, Ermon, Manning, Finn, NeurIPS 2023 (arXiv 2305.18290).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §3 · Eqs. 1–3</p>
+  <h2>The RLHF problem DPO solves</h2>
+  <div class="prose"><p>Starting from an SFT model π<sup>SFT</sup>, prompts <var>x</var> yield answer pairs (<var>y</var><sub>1</sub>, <var>y</var><sub>2</sub>) labelled <var>y<sub>w</sub></var> ≻ <var>y<sub>l</sub></var>. Preferences are assumed generated by a latent reward <var>r</var>* through the Bradley–Terry model:</p></div>
+  <div class="eq"><var>p</var>*(<var>y</var><sub>1</sub> ≻ <var>y</var><sub>2</sub> | <var>x</var>) = exp(<var>r</var>*(<var>x</var>, <var>y</var><sub>1</sub>)) / [exp(<var>r</var>*(<var>x</var>, <var>y</var><sub>1</sub>)) + exp(<var>r</var>*(<var>x</var>, <var>y</var><sub>2</sub>))] <span class="n">(1)</span></div>
+  <div class="prose"><p>A reward model <var>r<sub>φ</sub></var> is fit by maximum likelihood, a binary classification:</p></div>
+  <div class="eq">ℒ<sub>R</sub>(<var>r<sub>φ</sub></var>, 𝒟) = −𝔼<sub>(<var>x</var>, <var>y<sub>w</sub></var>, <var>y<sub>l</sub></var>)∼𝒟</sub> [ log σ( <var>r<sub>φ</sub></var>(<var>x</var>, <var>y<sub>w</sub></var>) − <var>r<sub>φ</sub></var>(<var>x</var>, <var>y<sub>l</sub></var>) ) ] <span class="n">(2)</span></div>
+  <div class="prose"><p>and the policy is then optimised under a KL constraint to a reference π<sub>ref</sub> (normally π<sup>SFT</sup>):</p></div>
+  <div class="eq">max<sub>π<sub>θ</sub></sub> 𝔼<sub><var>x</var>∼𝒟, <var>y</var>∼π<sub>θ</sub>(<var>y</var>|<var>x</var>)</sub> [ <var>r<sub>φ</sub></var>(<var>x</var>, <var>y</var>) ] − β 𝔻<sub>KL</sub>[ π<sub>θ</sub>(<var>y</var>|<var>x</var>) ‖ π<sub>ref</sub>(<var>y</var>|<var>x</var>) ] <span class="n">(3)</span></div>
+  <div class="prose"><p>Because generation is discrete, Eq. 3 is not differentiable through sampling; it is usually optimised with PPO on the shaped reward <var>r<sub>φ</sub></var> − β(log π<sub>θ</sub> − log π<sub>ref</sub>).</p></div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §4 · Eqs. 4–7 · Appendix A.1</p>
+  <h2>The derivation</h2>
+  <div class="prose"><p>For any reward <var>r</var>, the KL-constrained objective (3) has the closed-form optimum (derived in Appendix A.1 following prior work on KL-regularised RL):</p></div>
+  <div class="eq">π<sub><var>r</var></sub>(<var>y</var>|<var>x</var>) = (1 / <var>Z</var>(<var>x</var>)) π<sub>ref</sub>(<var>y</var>|<var>x</var>) exp( <var>r</var>(<var>x</var>, <var>y</var>) / β ), &nbsp;&nbsp; <var>Z</var>(<var>x</var>) = Σ<sub><var>y</var></sub> π<sub>ref</sub>(<var>y</var>|<var>x</var>) exp(<var>r</var>(<var>x</var>, <var>y</var>)/β) <span class="n">(4)</span></div>
+  <div class="prose"><p><var>Z</var>(<var>x</var>) sums over all sequences and is intractable. Taking logs and rearranging expresses the reward through its optimal policy:</p></div>
+  <div class="eq"><var>r</var>(<var>x</var>, <var>y</var>) = β log ( π<sub><var>r</var></sub>(<var>y</var>|<var>x</var>) / π<sub>ref</sub>(<var>y</var>|<var>x</var>) ) + β log <var>Z</var>(<var>x</var>) <span class="n">(5)</span></div>
+  <div class="prose"><p>Substitute (5) into Bradley–Terry (1). Only reward differences between two completions of the same <var>x</var> appear, so β log <var>Z</var>(<var>x</var>) cancels, and the preference probability depends only on the policy and the reference. Maximum likelihood over a parametrised π<sub>θ</sub> gives the DPO objective:</p></div>
+  <div class="eq">ℒ<sub>DPO</sub>(π<sub>θ</sub>; π<sub>ref</sub>) = −𝔼<sub>(<var>x</var>, <var>y<sub>w</sub></var>, <var>y<sub>l</sub></var>)∼𝒟</sub> [ log σ( β log (π<sub>θ</sub>(<var>y<sub>w</sub></var>|<var>x</var>) / π<sub>ref</sub>(<var>y<sub>w</sub></var>|<var>x</var>)) − β log (π<sub>θ</sub>(<var>y<sub>l</sub></var>|<var>x</var>) / π<sub>ref</sub>(<var>y<sub>l</sub></var>|<var>x</var>)) ) ] <span class="n">(7)</span></div>
+  <div class="prose"><p>The figure applies Eq. 4 to a six-answer toy problem. The reward-versus-KL trade-off that PPO has to search for by sampling is, here, a closed-form curve traced by β.</p></div>
+  <figure class="live">
+    <div class="ctl"><label>β <input type="range" id="cf-b" min="0.1" max="5" step="0.1" value="1" data-fmt="1"><output id="cf-b-o">1.0</output></label></div>
+    <div class="svgbox wide"><svg id="cf" viewBox="0 0 640 260" role="img" aria-label="Optimal policy from Eq. 4 and the reward-KL frontier"></svg></div>
+    <p class="readout" id="cf-r"></p>
+    <figcaption>Left: π<sub>ref</sub> (grey) and π* from Eq. 4 (amber) over six answers with rewards shown beneath. Right: expected reward against KL(π* ‖ π<sub>ref</sub>) for all β; the dot is your β. Every point on the curve is the best achievable reward at that KL, which is the frontier the paper's Fig. 2 (left) measures empirically for DPO and PPO on IMDb.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does DPO need pairs rather than single labelled answers?</dt>
+    <dd>The β log <var>Z</var>(<var>x</var>) term only cancels in a difference of rewards for the same prompt. A single answer's reward would still contain the intractable partition function.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §4 "What does the DPO update do?"</p>
+  <h2>The gradient and its weighting</h2>
+  <div class="prose"><p>With the implicit reward <var>r̂</var><sub>θ</sub>(<var>x</var>, <var>y</var>) = β log (π<sub>θ</sub>(<var>y</var>|<var>x</var>) / π<sub>ref</sub>(<var>y</var>|<var>x</var>)):</p></div>
+  <div class="eq">∇<sub>θ</sub>ℒ<sub>DPO</sub> = −β 𝔼 [ σ( <var>r̂</var><sub>θ</sub>(<var>x</var>, <var>y<sub>l</sub></var>) − <var>r̂</var><sub>θ</sub>(<var>x</var>, <var>y<sub>w</sub></var>) ) · ( ∇<sub>θ</sub> log π(<var>y<sub>w</sub></var>|<var>x</var>) − ∇<sub>θ</sub> log π(<var>y<sub>l</sub></var>|<var>x</var>) ) ]</div>
+  <div class="prose">
+    <p>The update raises the log-likelihood of <var>y<sub>w</sub></var> and lowers that of <var>y<sub>l</sub></var>, each example weighted by how wrongly the implicit reward model currently orders the pair, scaled by β. The paper stresses that this weighting matters: a naive version that just raises <var>y<sub>w</sub></var> and lowers <var>y<sub>l</sub></var> with constant weight (unlikelihood training) can cause the language model to degenerate (Appendix Table 3).</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>β <input type="range" id="gw-b" min="0.05" max="1" step="0.05" value="0.1" data-fmt="2"><output id="gw-b-o">0.10</output></label>
+      <label>log-ratio, chosen <input type="range" id="gw-w" min="-20" max="20" step="1" value="0"><output id="gw-w-o">0</output></label>
+      <label>log-ratio, rejected <input type="range" id="gw-l" min="-20" max="20" step="1" value="0"><output id="gw-l-o">0</output></label>
+    </div>
+    <div class="svgbox"><svg id="gw" viewBox="0 0 600 250" role="img" aria-label="DPO loss and gradient weight against the implicit reward margin"></svg></div>
+    <p class="readout" id="gw-r"></p>
+    <figcaption>Horizontal axis: implicit reward margin <var>r̂</var>(<var>y<sub>w</sub></var>) − <var>r̂</var>(<var>y<sub>l</sub></var>) = β(log-ratio chosen − log-ratio rejected). Amber: per-pair loss −log σ(margin). Blue: gradient weight σ(−margin). Dashed: the constant weight of naive unlikelihood. Note that the loss only sees the margin, so it can be reduced by lowering <em>both</em> likelihoods as long as the rejected one falls faster; try chosen −10, rejected −20.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>A pair already has margin +5. How much does it contribute to the gradient?</dt>
+    <dd>Its weight is σ(−5) ≈ 0.0067, so almost nothing; the model concentrates on misordered pairs.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §5 · Theorem 1, Lemmas 1–2</p>
+  <h2>Theory: no loss of generality, and why PPO is unstable</h2>
+  <div class="prose">
+    <p><strong>Equivalence classes (Definition 1).</strong> Rewards <var>r</var> and <var>r</var>′ are equivalent iff <var>r</var>(<var>x</var>, <var>y</var>) − <var>r</var>′(<var>x</var>, <var>y</var>) = <var>f</var>(<var>x</var>). Lemma 1: equivalent rewards induce the same preference distribution under Plackett–Luce (and Bradley–Terry). Lemma 2: they induce the same optimal policy under (3).</p>
+    <p><strong>Theorem 1.</strong> Under mild assumptions (π<sub>ref</sub>(<var>y</var>|<var>x</var>) &gt; 0, β &gt; 0), every reward class consistent with Plackett–Luce or Bradley–Terry can be represented as <var>r</var>(<var>x</var>, <var>y</var>) = β log (π(<var>y</var>|<var>x</var>) / π<sub>ref</sub>(<var>y</var>|<var>x</var>)) for some model π. So restricting the reward model to this form loses nothing: the language model <em>is</em> a reward model whose own partition function is 1.</p>
+    <p><strong>Instability of actor-critic (§5.2).</strong> Viewed through the same lens, PPO-style RLHF optimises <var>r<sub>φ</sub></var>(<var>x</var>, <var>y</var>) − β log Σ<sub><var>y</var></sub> π<sub>ref</sub>(<var>y</var>|<var>x</var>) exp(<var>r<sub>φ</sub></var>(<var>x</var>, <var>y</var>)/β) − β log(π<sub>θ</sub>/π<sub>ref</sub>). The normalising term (a soft value function of the reference) does not change the optimum, but without it the policy-gradient estimate has high variance; it must be approximated by a learned value function or a single-sample human baseline, both sources of instability. DPO's reparameterisation yields a reward that needs no baseline.</p>
+  </div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §6 · Figs. 2–3, Tables 1–2, Appendix B</p>
+  <h2>Experiments</h2>
+  <div class="prose">
+    <p><strong>Setup.</strong> Default β = 0.1 (β = 0.5 for TL;DR), batch size 64, RMSprop, learning rate 1e-6 with 150-step linear warm-up. Evaluations with GPT-4 (gpt-4-0314) as judge unless stated.</p>
+    <ul>
+      <li><strong>Controlled sentiment (IMDb, GPT-2-large).</strong> Prefixes of movie reviews; a sentiment classifier provides ground-truth reward, so the true reward-KL frontier can be measured. Over 22 runs sweeping PPO target KL ∈ {3, 6, 9, 12}, DPO β ∈ {0.05, 0.1, 1, 5} and baselines, DPO gives the best frontier, dominating PPO and even PPO with access to the ground-truth reward (PPO-GT) (Fig. 2 left).</li>
+      <li><strong>Summarisation (Reddit TL;DR, GPT-J-based SFT).</strong> Win rate versus reference summaries: DPO about 61% at temperature 0.0, PPO's best 57% at 0.0; DPO is far more robust across temperatures (Fig. 2 right). Best-of-<var>N</var> is a strong but expensive baseline.</li>
+      <li><strong>Single-turn dialogue (Anthropic HH, Pythia-2.8B).</strong> Reference model trained on chosen completions. DPO is the only computationally efficient method that improves over the dataset's chosen completions, and matches or exceeds Best-of-128 (Fig. 3).</li>
+      <li><strong>Distribution shift (Table 1).</strong> TL;DR policies applied to CNN/DailyMail: GPT-4 win rate vs ground truth 0.36 (DPO) vs 0.26 (PPO) at temperature 0, 0.31 vs 0.23 at 0.25.</li>
+    </ul>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Table 2 (TL;DR, vs PPO at temp 0)</th><th>DPO</th><th>SFT</th><th>PPO-1</th></tr></thead>
+    <tbody>
+      <tr><td>Respondents</td><td class="num">272</td><td class="num">122</td><td class="num">199</td></tr>
+      <tr><td>GPT-4 (C) win %</td><td class="num">54</td><td class="num">32</td><td class="num">12</td></tr>
+      <tr><td>Human win %</td><td class="num">58</td><td class="num">43</td><td class="num">17</td></tr>
+      <tr><td>GPT-4 (C)–human agreement %</td><td class="num">67</td><td class="num">79</td><td class="num">85</td></tr>
+      <tr><td>Human–human agreement %</td><td class="num">65</td><td class="num">–</td><td class="num">87</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose"><p>GPT-4 agrees with humans about as often as humans agree with each other, which the authors use to justify GPT-4 as a proxy judge (§6.4). Raters were 25 volunteers, mostly Stanford STEM students.</p></div>
+</section>
+
+<section class="kp" id="t6">
+  <p class="eyebrow"><b>Section</b> · §7 and later work</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Scale.</strong> Experiments stopped at 6B parameters; scaling to frontier models was left open.</li>
+      <li><strong>Generalisation and over-optimisation.</strong> How DPO policies generalise out of distribution versus an explicit reward model, and how reward over-optimisation shows up in DPO (perhaps the slight late decline in Fig. 3 right), are named as open questions.</li>
+      <li><strong>Offline data.</strong> DPO learns from a fixed dataset of pairs, typically generated by another model; the paper suggests self-labelling with the DPO policy as future work.</li>
+      <li><strong>Judge sensitivity.</strong> GPT-4 win rates depend on the prompt used.</li>
+    </ul>
+  </div>
+  <div class="later"><span class="label">Later refinements</span>Several weaknesses surfaced in later work. Because only the margin is optimised, the likelihood of the chosen response often falls during training as well. With deterministic or near-deterministic preferences the Bradley–Terry optimum pushes margins to infinity and the KL regularisation stops binding, which motivated <strong>IPO</strong> (Azar et al., 2023, a squared loss on the margin). <strong>KTO</strong> (Ethayarajh et al., 2024) works from unpaired good/bad labels; <strong>SimPO</strong> (Meng et al., 2024) uses a length-normalised, reference-free reward; <strong>ORPO</strong> (Hong et al., 2024) folds preference optimisation into SFT. Online and iterative variants generate fresh pairs from the current policy, and comparisons such as Xu et al. (2024) found that well-tuned PPO can still outperform offline DPO on some tasks. For verifiable reasoning, the field moved to online RL with group baselines (<a href="grpo.html">GRPO</a>, <a href="r1.html">R1</a>). The RLHF pipeline DPO replaces is <a href="instructgpt.html">InstructGPT</a>'s.</div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why can the chosen response's likelihood decrease under DPO even as the loss falls?</dt>
+    <dd>The loss depends only on the difference of log-ratios. Lowering both log-probabilities, with the rejected one falling faster, increases the margin and reduces the loss.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t7" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>π<sub>ref</sub></dt><dd>Reference policy, usually the SFT model; the anchor of the KL constraint.</dd>
+    <dt>β</dt><dd>KL strength; in DPO, the scale of the implicit reward.</dd>
+    <dt>Implicit reward</dt><dd><var>r̂</var>(<var>x</var>, <var>y</var>) = β log(π<sub>θ</sub>/π<sub>ref</sub>).</dd>
+    <dt>Bradley–Terry</dt><dd>Pairwise preference model with P(<var>a</var> ≻ <var>b</var>) = σ(<var>r<sub>a</sub></var> − <var>r<sub>b</sub></var>).</dd>
+    <dt>Plackett–Luce</dt><dd>Its generalisation to rankings of more than two items.</dd>
+    <dt>Partition function <var>Z</var>(<var>x</var>)</dt><dd>Normaliser of the optimal policy; intractable, cancels in DPO.</dd>
+    <dt>PPO</dt><dd>Proximal Policy Optimization, the actor-critic RL algorithm used in RLHF.</dd>
+    <dt>Win rate</dt><dd>Fraction of comparisons a judge prefers one system's output.</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+var DPO_TXT=['"Sure, paste the error and code and I’ll walk through it."','"Errors usually mean a typo; check line by line."','"Have you tried turning it off and on again?"','"Can’t help without more information."','"Programming is hard. Try another hobby."'];
+var DPO_S=[2,0.8,-0.5,-0.2,-2], DPO_REF=[0.15,0.25,0.25,0.25,0.10];
+function softmax(t){ var m=Math.max.apply(null,t), e=t.map(function(v){return Math.exp(v-m);}), z=e.reduce(function(a,b){return a+b;},0); return e.map(function(v){return v/z;}); }
+(function(){ // Bradley-Terry
+  var svg=$('#bt'), a=1, b=0, votes=null;
+  function X(d){ return 60+(d+6)/12*480; } function Y(p){ return 200-p*170; }
+  function draw(){ clear(svg); var p=sigmoid(a-b);
+    S('line',{x1:60,y1:200,x2:540,y2:200,'class':'axis'},svg); S('line',{x1:60,y1:30,x2:60,y2:200,'class':'axis'},svg);
+    [0,0.5,1].forEach(function(v){ S('text',{x:54,y:Y(v)+4,'class':'t-s end'},svg,v); S('line',{x1:60,y1:Y(v),x2:540,y2:Y(v),'class':'grid'},svg); });
+    [-6,-3,0,3,6].forEach(function(d){ S('text',{x:X(d),y:216,'class':'t-s mid'},svg,d); });
+    S('text',{x:300,y:234,'class':'t-s mid'},svg,'score A − score B');
+    S('text',{x:66,y:24,'class':'t-s'},svg,'chance A is preferred');
+    var d=''; for (var x=-6;x<=6.01;x+=0.1) d+=(d?'L':'M')+X(x)+','+Y(sigmoid(x)); S('path',{d:d,'class':'w'},svg);
+    S('line',{x1:X(a-b),y1:200,x2:X(a-b),y2:Y(p),'class':'w-dash'},svg); S('circle',{cx:X(a-b),cy:Y(p),r:7,'class':'u-on'},svg);
+    if (votes){ votes.forEach(function(v,i){ S('circle',{cx:380+(i%10)*16,cy:120+Math.floor(i/10)*18,r:6,'class':v?'u-on':'u-wire'},svg); });
+      var na=votes.filter(function(v){return v;}).length; S('text',{x:380,y:100,'class':'t-s'},svg,'20 judges: '+na+' chose A (amber)'); }
+    $('#bt-r').innerHTML='Gap '+fmt(a-b,1)+' → A preferred with probability <b>'+fmt(p,3)+'</b>.';
+  }
+  bindRange('bt-a',function(v){ a=v; votes=null; draw(); }); bindRange('bt-b',function(v){ b=v; votes=null; draw(); });
+  var r=rng(5); $('#bt-ask').onclick=function(){ var p=sigmoid(a-b); votes=[]; for (var i=0;i<20;i++) votes.push(r()<p); draw(); };
+})();
+(function(){ // live DPO
+  var svg=$('#dp'), beta=0.5, th, timer=null, it=0;
+  function reset(){ th=DPO_REF.map(Math.log); it=0; draw(); }
+  function step(n){ for (var k=0;k<n;k++){ var p=softmax(th), h=p.map(function(x,i){return Math.log(x/DPO_REF[i]);}), g=[0,0,0,0,0];
+      for (var i=0;i<5;i++) for (var j=0;j<5;j++){ if (i===j) continue; var c=sigmoid(DPO_S[i]-DPO_S[j])*sigmoid(beta*(h[j]-h[i])); g[i]+=c; g[j]-=c; }
+      th=th.map(function(t,q){ return t+0.05*g[q]/beta; }); it++; } }
+  function loss(){ var p=softmax(th), h=p.map(function(x,i){return Math.log(x/DPO_REF[i]);}), L=0, n=0;
+    for (var i=0;i<5;i++) for (var j=0;j<5;j++){ if (i===j) continue; L+=-sigmoid(DPO_S[i]-DPO_S[j])*Math.log(sigmoid(beta*(h[i]-h[j]))); n+=sigmoid(DPO_S[i]-DPO_S[j]); } return L/n; }
+  function draw(){ clear(svg); var p=softmax(th), r=p.map(function(x,i){return beta*Math.log(x/DPO_REF[i]);}), off=DPO_S[0]-r[0];
+    S('text',{x:10,y:18,'class':'t-s'},svg,'reply'); S('text',{x:300,y:18,'class':'t-s'},svg,'probability (grey = reference)'); S('text',{x:520,y:18,'class':'t-s'},svg,'implicit / hidden');
+    DPO_TXT.forEach(function(t,i){ var y=34+i*52;
+      S('text',{x:10,y:y+14,'class':'t-s'},svg,t.length>40?t.slice(0,39)+'…"':t);
+      S('rect',{x:300,y:y,width:DPO_REF[i]*200,height:14,'class':'f-rule'},svg);
+      S('rect',{x:300,y:y+18,width:Math.max(1,p[i]*200),height:14,'class':'f-fire'},svg);
+      S('text',{x:306+Math.max(p[i],DPO_REF[i])*200,y:y+30,'class':'t-s'},svg,fmt(p[i],3));
+      S('text',{x:520,y:y+20,'class':'t-fire'},svg,it?fmt(r[i]+off,2):'–'); S('text',{x:575,y:y+20,'class':'t-ok'},svg,fmt(DPO_S[i],1)); });
+    $('#dp-r').innerHTML='Steps: <b>'+it+'</b>. DPO loss (expected over pairs): <b>'+fmt(loss(),3)+'</b>. Best reply now has probability <b>'+fmt(p[0],3)+'</b> (reference 0.150).';
+  }
+  bindRange('dp-b',function(v){ beta=v; if (svg.firstChild) draw(); });
+  $('#dp-reset').onclick=function(){ if (timer){ clearInterval(timer); timer=null; $('#dp-go').textContent='Train'; $('#dp-go').setAttribute('aria-pressed','false'); } reset(); };
+  $('#dp-go').onclick=function(){ var b=this; if (timer){ clearInterval(timer); timer=null; b.textContent='Train'; b.setAttribute('aria-pressed','false'); return; }
+    b.textContent='Pause'; b.setAttribute('aria-pressed','true');
+    timer=setInterval(function(){ step(25); draw(); if (it>=3000){ clearInterval(timer); timer=null; b.textContent='Train'; b.setAttribute('aria-pressed','false'); } },40); };
+  reset();
+})();
+(function(){ // closed form optimal policy
+  var svg=$('#cf'), R=[1.5,1.0,0.6,0.0,-0.8,-1.5], REF=[0.08,0.12,0.30,0.25,0.15,0.10], beta=1;
+  function pol(b){ var w=REF.map(function(p,i){ return p*Math.exp(R[i]/b); }), z=w.reduce(function(a,c){return a+c;},0); return w.map(function(v){return v/z;}); }
+  function stats(p){ var er=0, kl=0; p.forEach(function(q,i){ er+=q*R[i]; if (q>0) kl+=q*Math.log(q/REF[i]); }); return [er,kl]; }
+  var curve=[]; for (var b=0.05;b<=20;b*=1.08) curve.push(stats(pol(b)));
+  var kmax=Math.max.apply(null,curve.map(function(c){return c[1];}));
+  function draw(){ clear(svg); var p=pol(beta), st=stats(p);
+    for (var i=0;i<6;i++){ var x=30+i*48; S('rect',{x:x,y:200-REF[i]*170,width:18,height:REF[i]*170,'class':'f-rule'},svg); S('rect',{x:x+20,y:200-p[i]*170,width:18,height:Math.max(1,p[i]*170),'class':'f-fire'},svg);
+      S('text',{x:x+19,y:216,'class':'t-s mid'},svg,'r='+R[i]); }
+    S('line',{x1:26,y1:200,x2:320,y2:200,'class':'axis'},svg); S('text',{x:30,y:236,'class':'t-s'},svg,'six answers; grey π_ref, amber π*');
+    var X=function(k){ return 380+k/kmax*240; }, Y=function(e){ return 200-(e-(-0.1))/1.7*170; };
+    S('line',{x1:380,y1:200,x2:620,y2:200,'class':'axis'},svg); S('line',{x1:380,y1:30,x2:380,y2:200,'class':'axis'},svg);
+    var d=''; curve.forEach(function(c,k){ d+=(k?'L':'M')+X(c[1])+','+Y(c[0]); }); S('path',{d:d,'class':'w'},svg);
+    S('circle',{cx:X(st[1]),cy:Y(st[0]),r:7,'class':'u-on'},svg);
+    S('text',{x:500,y:220,'class':'t-s mid'},svg,'KL(π* ‖ π_ref), 0 to '+fmt(kmax,1)+' nats'); [0,0.5,1,1.5].forEach(function(e){ S('text',{x:374,y:Y(e)+4,'class':'t-s end'},svg,e); }); S('text',{x:386,y:24,'class':'t-s'},svg,'expected reward');
+    $('#cf-r').innerHTML='β = '+fmt(beta,1)+': expected reward <b>'+fmt(st[0],3)+'</b> (reference '+fmt(stats(REF)[0],3)+'), KL <b>'+fmt(st[1],3)+'</b> nats.';
+  }
+  bindRange('cf-b',function(v){ beta=v; draw(); });
+})();
+(function(){ // gradient weight
+  var svg=$('#gw'), b=0.1, w=0, l=0;
+  function X(m){ return 60+(m+6)/12*500; } function Y(v){ return 200-v/4*170; }
+  function draw(){ clear(svg); var m=b*(w-l);
+    S('line',{x1:60,y1:200,x2:560,y2:200,'class':'axis'},svg); S('line',{x1:X(0),y1:25,x2:X(0),y2:200,'class':'grid'},svg); S('line',{x1:60,y1:25,x2:60,y2:200,'class':'axis'},svg);
+    [0,1,2,3,4].forEach(function(v){ S('text',{x:54,y:Y(v)+4,'class':'t-s end'},svg,v); });
+    [-6,-3,0,3,6].forEach(function(v){ S('text',{x:X(v),y:216,'class':'t-s mid'},svg,v); });
+    S('text',{x:310,y:236,'class':'t-s mid'},svg,'implicit reward margin β·(log-ratio chosen − log-ratio rejected)');
+    var d1='',d2=''; for (var x=-6;x<=6.01;x+=0.1){ if (x>-3.98) d1+=(d1?'L':'M')+X(x)+','+Y(-Math.log(sigmoid(x))); d2+=(d2?'L':'M')+X(x)+','+Y(sigmoid(-x)); }
+    S('path',{d:d1,'class':'w-fire'},svg); S('path',{d:d2,'class':'w'},svg); S('line',{x1:60,y1:Y(1),x2:560,y2:Y(1),'class':'w-dash'},svg);
+    var mc=Math.max(-6,Math.min(6,m)); S('circle',{cx:X(mc),cy:Y(Math.min(4,-Math.log(sigmoid(m)))),r:6,'class':'u-on'},svg); S('circle',{cx:X(mc),cy:Y(sigmoid(-m)),r:5,'class':'u-wire'},svg);
+    S('text',{x:X(-3.2)+8,y:40,'class':'t-fire'},svg,'loss −log σ(m)'); S('text',{x:400,y:Y(1)-6,'class':'t-wire'},svg,'weight σ(−m)'); S('text',{x:556,y:Y(1)+14,'class':'t-s end'},svg,'naive weight = 1');
+    $('#gw-r').innerHTML='Margin <b>'+fmt(m,2)+'</b>, loss <b>'+fmt(-Math.log(sigmoid(m)),3)+'</b>, gradient weight <b>'+fmt(sigmoid(-m),3)+'</b>'+(w<0&&l<w?'. Both answers are now <em>less</em> likely than under the reference, yet the loss is lower.':'.');
+  }
+  bindRange('gw-b',function(v){ b=v; draw(); }); bindRange('gw-w',function(v){ w=v; draw(); }); bindRange('gw-l',function(v){ l=v; draw(); });
+})();
+</script>

@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Refusal concept cones (2025) study guide</title>
+<meta name="description" content="A 2024 paper found that a chat model&#x27;s refusals hinge on a single direction inside the network. This ICML 2025 paper asks whether that is the whole story, and finds it is not: by searching with gradient descent instead of taking an average, the authors find many directions that each control ref">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Safety &amp; security</b> · 2025</p>
+  <h1>The Geometry of Refusal in Large Language Models: Concept Cones and Representational Independence</h1>
+  <p class="cite">Tom Wollschläger et al. · ICML 2025</p>
+  <p class="lede">A 2024 paper found that a chat model's refusals hinge on a single direction inside the network. This ICML 2025 paper asks whether that is the whole story, and finds it is not: by searching with gradient descent instead of taking an average, the authors find many directions that each control refusal, whole multi-dimensional "cones" of them, and several that work independently of one another.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/2502.17420">Read the paper (free)</a> <a href="https://lovespark.love/papers-worth-reading/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, separate AI review (also by Claude), but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Earlier work found one "refusal direction" by subtracting the model's average internal state on harmless requests from its average on harmful ones.</p>
+  <p>This paper instead <em>searches</em> for refusal directions with an optimiser, asking for directions that switch refusal on when added and off when removed, while leaving everything else alone.</p>
+  <p>It finds not one direction but whole regions, called <strong>concept cones</strong>, of up to five dimensions, in which every direction controls refusal; larger models have roomier cones.</p>
+  <p>Being at right angles is not enough to make two directions truly separate, so the authors define <strong>representational independence</strong> and show there are several refusal directions that do not influence each other at all.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1–2</p>
+  <h2>Where we started: one arrow</h2>
+  <div class="prose">
+    <p>A language model keeps, for each word it reads, a long list of numbers that can be drawn as an arrow in a space with thousands of dimensions. Many ideas correspond to <strong>directions</strong> in that space. <a href="refusal.html">Arditi et al. (2024)</a> found a direction tied to refusal: remove it and the model stops refusing harmful requests; add it and the model refuses harmless ones.</p>
+    <p>Their direction came from simple averaging: the average arrow on harmful requests minus the average arrow on harmless ones. That is a quick estimate, but it answers a narrow question ("how do these two groups differ on average?") rather than the one we care about ("which directions actually <em>control</em> refusal?"). It might pick up other differences between the groups too, and it can only ever give one answer.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>To find what makes a dish spicy, you could compare the average recipe of spicy and mild dishes. You would get one answer, mostly chilli, but also some garlic that happens to co-occur. Testing ingredients one by one would reveal that chilli, black pepper and wasabi each make it hot, in different ways.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The single refusal direction came from averaging. That is a good first guess but cannot reveal whether other directions also control refusal.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §4 · Def. 4.1</p>
+  <h2>Searching instead of averaging</h2>
+  <div class="prose">
+    <p>The authors' method, <strong>Refusal Direction Optimization</strong> (RDO), treats the direction as something to be learned. A candidate direction is scored on three things at once, and nudged step by step (gradient descent, the same process used to train networks) to improve the score:</p>
+    <ul>
+      <li>When the direction is <strong>removed</strong>, the model should answer harmful requests rather than refuse.</li>
+      <li>When the direction is <strong>added</strong>, the model should refuse harmless requests.</li>
+      <li>When it is removed, the model's behaviour on harmless requests should <strong>not change</strong>. This is the "do no collateral damage" term.</li>
+    </ul>
+    <p>The resulting direction controls refusal about as well as the averaged one, and causes less collateral damage: on TruthfulQA, a test of not repeating common misconceptions, models edited with the learned direction lost less accuracy than models edited with the averaged one.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Asking directly for a direction that causes refusal, and nothing else, gives a cleaner direction than averaging.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is the "no change on harmless requests" term needed?</dt>
+    <dd>Without it, the optimiser could find a direction whose removal simply breaks the model, which also stops refusals. The term forces the direction to be specific to refusal.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §5 · Figs. 4, 17, 19</p>
+  <h2>Not a line but a cone</h2>
+  <div class="prose">
+    <p>Once you can search, you can ask for more: not one direction but a whole <em>region</em> in which every direction controls refusal. The authors look for a <strong>cone</strong>: pick a few arrows at right angles to each other and consider every mixture of them with non-negative amounts. Each arrow in that wedge-shaped region should, by itself, switch refusal on and off.</p>
+    <p>They find such cones with up to <strong>five</strong> dimensions in every model they tested (Qwen 2.5, Gemma 2 and Llama-3, from 1.5 to 14 billion parameters). The cones work less well as they get bigger, and they degrade faster in small models. The authors' explanation: a bigger model's internal arrows have more numbers (5,120 for Qwen 2.5 14B against 1,536 for the 1.5B), so there is more room for distinct refusal directions.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <span>Remove direction:</span>
+      <button class="btn" data-cd="0">1</button><button class="btn" data-cd="1">2</button><button class="btn" data-cd="2">3</button><button class="btn" data-cd="3">4</button><button class="btn" data-cd="4">5</button>
+      <button class="btn" id="cd-reset">Restore all</button>
+    </div>
+    <div class="svgbox"><svg id="cd" viewBox="0 0 600 260" role="img" aria-label="A toy model whose refusal depends on five directions, with a meter for refusal rate"></svg></div>
+    <p class="readout" id="cd-r"></p>
+    <figcaption>Illustrative toy, not the paper's model. Here the "harmful" signal is carried by five separate directions with different strengths, and the toy refuses according to their total. Removing the strongest one (as the 2024 single-direction edit would) cuts refusal a lot; removing more cuts it further, with diminishing returns. The paper reports the same qualitative pattern for real models when several independent directions are removed together (Fig. 8).</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>A building with several fire exits. Blocking the main exit (the old single direction) slows people down a lot, but they still get out through the side doors. To understand the building's safety you need the floor plan, not just the main door.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Refusal is controlled by a multi-dimensional region of directions, not a single line, and bigger models have room for larger regions.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does the cone only allow non-negative mixtures of its arrows?</dt>
+    <dd>So every direction in it pushes towards refusal. Allowing negative amounts would include directions that point the opposite way, which would suppress refusal instead.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §6.1 · Def. 6.1 · Figs. 6–8</p>
+  <h2>At right angles is not the same as independent</h2>
+  <div class="prose">
+    <p>Two directions at right angles ("orthogonal") look unrelated on paper. But a network has many layers with non-linear steps in between. Removing one direction at an early layer can change what later layers compute, including how strongly they express the other direction. The authors show exactly this: removing a learned direction that is at right angles to the averaged one still weakens the averaged direction in later layers.</p>
+    <p>So they define a stricter test, <strong>representational independence</strong>: removing direction A must leave the model's expression of direction B unchanged at every layer, and vice versa. They then search for refusal directions that pass this test with respect to the averaged direction and to each other, and find several. Each one still controls refusal on its own, yet none affects the others.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>How much layer 2 reuses A <input type="range" id="ri-k" min="0" max="1.5" step="0.05" value="0.8" data-fmt="2"><output id="ri-k-o">0.80</output></label>
+      <button class="btn" id="ri-ab" aria-pressed="false">Remove A at layer 1</button>
+    </div>
+    <div class="svgbox"><svg id="ri" viewBox="0 0 600 250" role="img" aria-label="Two orthogonal directions A and B across three layers, with B's strength shown before and after removing A"></svg></div>
+    <p class="readout" id="ri-r"></p>
+    <figcaption>Illustrative toy. A and B are at right angles. Each later layer adds a little B on top of whatever is there, plus an amount proportional to the (non-negative part of) A, controlled by the slider. Remove A and watch B shrink at layers 2 and 3 even though A and B are orthogonal. Set the slider to 0 and the two become representationally independent: removing A leaves B untouched.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Because layers interact non-linearly, directions can be at right angles yet still influence each other; the paper finds refusal directions that are truly independent.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>In the toy, why does removing A shrink B at later layers?</dt>
+    <dd>Layer 2 computes part of B from A. Removing A at layer 1 removes that input, so less B gets written later, despite A and B being orthogonal at every layer.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §6.2, §7 · Fig. 9</p>
+  <h2>Why it matters</h2>
+  <div class="prose">
+    <p>For people trying to understand models, the lesson is that a single direction was a useful simplification but not the full mechanism. Refusal is spread over several directions that can each do the job, which suggests that an attack need not go through the original direction.</p>
+    <p>The authors then optimise adversarial "gibberish suffixes" with <a href="gcg.html">GCG</a>, adding an extra term to the optimisation that rewards suppressing one of the newly found independent directions. These suffixes jailbreak the model 36% of the time, about as often as removing that direction does, so an attack written into the prompt can work through a direction other than the original one. (The suppression was designed in, not discovered: the point is that it is achievable from the input.)</p>
+    <p>For people trying to make models safer, the result cuts both ways: removing one direction is not the end of refusal, but a determined editor with the weights can find and remove several. Later work, such as <a href="abl-defense.html">training models to explain their refusals</a>, tries to make refusal harder to remove.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>This paper refines <a href="refusal.html">Arditi et al. (2024)</a>: "refusal is one direction" becomes "refusal is a cone, with a dominant direction and several independent ones". The authors note their directions were all optimised against the same target answers, so even more varied mechanisms may exist.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Refusal has more dimensions than first thought, which changes how we should picture both attacks and defences.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Adversarial inputs can bypass LLM safety alignment, and prior work attributed refusal to a single direction in activation space. The authors propose a gradient-based representation-engineering method, Refusal Direction Optimization, and use it to find multiple refusal directions and multi-dimensional concept cones that mediate refusal. Since orthogonal directions can still interact under intervention through non-linear effects, they introduce representational independence, which accounts for both linear and non-linear interactions, and find mechanistically independent refusal directions. Refusal is thus governed by complex spatial structures rather than a single direction. Wollschläger, Elstner, Geisler, Cohen-Addad, Günnemann &amp; Gasteiger, ICML 2025 (PMLR 267; arXiv:2502.17420).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2 · Eqs. 1–2 · App. A</p>
+  <h2>Setup and baseline</h2>
+  <div class="prose">
+    <p>Residual-stream activations <var>x</var><sup>(<var>l</var>)</sup> at layer <var>l</var>. The baseline is the difference-in-means (DIM) direction of <a href="refusal.html">Arditi et al.</a>, selected across layers and post-instruction positions. Two interventions with a unit direction <var>r̂</var>:</p>
+  </div>
+  <div class="eq"><var>x̃</var> = <var>x</var> − <var>r̂</var><var>r̂</var><sup>⊤</sup><var>x</var> &nbsp;(directional ablation, all layers) <span class="n">(1)</span></div>
+  <div class="eq"><var>x̌</var> = <var>x</var> − <var>α</var><var>r̂</var> &nbsp;(activation subtraction; addition uses +<var>α</var><var>r̂</var>) <span class="n">(2)</span></div>
+  <div class="prose">
+    <p><strong>Models.</strong> Qwen 2.5 Instruct 1.5B/3B/7B/14B, Gemma 2 IT 2B/9B, Llama-3 Instruct 8B. <strong>Data.</strong> SaladBench harmful prompts (1,184 train, 128 validation) and Alpaca harmless prompts. <strong>Evaluation.</strong> Attack success rate (ASR) on JailbreakBench, StrongREJECT and SORRY-Bench, judged by the fine-tuned StrongREJECT judge; side effects on TruthfulQA, ARC-Challenge, GSM8K and MMLU.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §4 · Def. 4.1 · Alg. 1 · Tables 1, 3, 5</p>
+  <h2>Refusal Direction Optimization (RDO)</h2>
+  <div class="prose">
+    <p>Definition 4.1 asks a refusal direction for two properties: <em>monotonic scaling</em> (adding or subtracting more of it monotonically increases or decreases refusal) and <em>surgical ablation</em> (ablating it makes harmful prompts be answered while harmless behaviour is preserved). RDO turns these into a loss over a direction <var>r</var>, optimised with AdamW:</p>
+  </div>
+  <div class="eq">ℒ = <var>λ</var><sub>abl</sub> ℒ<sub>ablation</sub> + <var>λ</var><sub>add</sub> ℒ<sub>addition</sub> + <var>λ</var><sub>ret</sub> ℒ<sub>retain</sub></div>
+  <div class="prose">
+    <ul>
+      <li>ℒ<sub>ablation</sub>: cross-entropy of the ablated model on harmful prompts toward a target completion that answers (<var>t</var><sub>answer</sub>).</li>
+      <li>ℒ<sub>addition</sub>: cross-entropy on harmless prompts, with <var>α</var><var>r̂</var> added at layer <var>l</var><sub>add</sub>, toward a refusal target (<var>t</var><sub>refusal</sub>).</li>
+      <li>ℒ<sub>retain</sub>: KL divergence between ablated and unmodified model on harmless prompts, over <var>t</var><sub>retain</sub>, limiting side effects.</li>
+    </ul>
+    <p>Weights <var>λ</var><sub>abl</sub> = 1.0, <var>λ</var><sub>add</sub> = 0.2, <var>λ</var><sub>ret</sub> = 1.0 (Table 3). The targets are generated in advance (Alg. 1), so RDO needs only forward and backward passes through the frozen model, optimising a single <var>d</var><sub>model</sub>-vector.</p>
+    <p><strong>Results.</strong> For ablation, RDO is competitive with DIM on ASR; for activation subtraction it is better on average (Table 5). Side effects are lower: on TruthfulQA, the paper reports roughly a 40% average reduction of the accuracy lost relative to DIM (Table 1). The figure below plots the values for two models.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn on" data-cv="tqa">Table 1: TruthfulQA</button>
+      <button class="btn" data-cv="asr">Table 5: JailbreakBench ASR</button>
+    </div>
+    <div class="svgbox"><svg id="cv" viewBox="0 0 600 270" role="img" aria-label="Bar chart comparing DIM and RDO directions"></svg></div>
+    <p class="readout" id="cv-r"></p>
+    <figcaption>Values transcribed from the paper's Tables 1 and 5 for the two models quoted here (the tables contain more). TruthfulQA view: accuracy of the unedited baseline, and after ablating the DIM or the RDO direction; closer to baseline is better. ASR view: attack success under directional ablation and under activation subtraction.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §5 · Alg. 2 · Figs. 4, 17, 19</p>
+  <h2>Refusal Cone Optimization (RCO)</h2>
+  <div class="prose"><p>An <var>N</var>-dimensional cone with orthonormal basis <var>B</var> = [<var>b</var><sub>1</sub>, …, <var>b</var><sub><var>N</var></sub>]:</p></div>
+  <div class="eq">ℛ<sub><var>N</var></sub> = { Σ<sub><var>i</var></sub> <var>λ</var><sub><var>i</var></sub> <var>b</var><sub><var>i</var></sub> &nbsp;|&nbsp; <var>λ</var><sub><var>i</var></sub> ≥ 0 } ∖ {0}</div>
+  <div class="prose">
+    <p>The aim is a <em>concept cone</em>: every direction in ℛ<sub><var>N</var></sub> should satisfy Def. 4.1. Non-negativity keeps all members pointing toward refusal; orthonormality avoids degenerate, co-linear bases. Each step samples directions uniformly on the unit sphere within the cone (rather than only the basis vectors), evaluates the RDO loss on them, takes a gradient step on <var>B</var>, and re-orthonormalises with Gram–Schmidt (projected gradient descent, Alg. 2).</p>
+    <p><strong>Findings.</strong> Refusal-mediating cones exist up to dimension 5 in all tested models. Performance of sampled directions (a lower bound on cone quality) declines with dimension; for Gemma 2 2B it degrades noticeably at 5 (Fig. 17), and best-of-<var>N</var> sampled ASR plateaus at 4 dimensions (Fig. 19). Across Qwen 2.5 sizes, the decline with dimension is steeper for smaller models (Fig. 4), which the authors attribute to residual width (1,536 for 1.5B vs 5,120 for 14B) allowing more near-orthogonal refusal directions.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Raw vector 1 angle <input type="range" id="gs-a" min="0" max="180" step="5" value="20"><output id="gs-a-o">20</output>°</label>
+      <label>Raw vector 2 angle <input type="range" id="gs-b" min="0" max="180" step="5" value="60"><output id="gs-b-o">60</output>°</label>
+      <button class="btn" id="gs-s">Sample 12 directions</button>
+    </div>
+    <div class="svgbox"><svg id="gs" viewBox="0 0 600 280" role="img" aria-label="Gram-Schmidt orthonormalisation of two vectors and the 2-D cone they span"></svg></div>
+    <p class="readout" id="gs-r"></p>
+    <figcaption>A 2-D slice of one RCO projection step. Two raw (pre-projection) basis vectors, dashed, are orthonormalised by Gram–Schmidt into <var>b</var><sub>1</sub>, <var>b</var><sub>2</sub>. The shaded wedge is the cone of non-negative combinations; dots are directions sampled uniformly by angle within it, as RCO samples them for the loss. With an orthonormal basis a 2-D cone is always a right-angle wedge; in <var>N</var> dimensions it is an orthant of the spanned subspace.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why sample directions inside the cone rather than just optimise the basis vectors?</dt>
+    <dd>The claim is that <em>every</em> direction in the cone mediates refusal. Training only on <var>b</var><sub><var>i</var></sub> could leave mixtures that fail; uniform sampling optimises the whole region and avoids bias toward the basis.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §6 · Def. 6.1 · Figs. 6–9</p>
+  <h2>Representational independence</h2>
+  <div class="prose">
+    <p><strong>Motivation (Fig. 6).</strong> An RDO direction constrained to be orthogonal to DIM (RDO<sup>⊥</sup>) still reduces DIM's expression in later layers when ablated: orthogonality in one layer's basis does not prevent causal interaction through attention and MLP non-linearities.</p>
+    <p><strong>Definition 6.1.</strong> Directions <var>λ</var> and <var>μ</var> are representationally independent under directional ablation if for every layer <var>l</var> in a set 𝕃:</p>
+  </div>
+  <div class="eq">cos(<var>x</var><sup>(<var>l</var>)</sup>, <var>λ</var>) = cos(<var>x̃</var><sup>(<var>l</var>)</sup><sub>abl(<var>μ</var>)</sub>, <var>λ</var>) &nbsp; and &nbsp; cos(<var>x</var><sup>(<var>l</var>)</sup>, <var>μ</var>) = cos(<var>x̃</var><sup>(<var>l</var>)</sup><sub>abl(<var>λ</var>)</sub>, <var>μ</var>)</div>
+  <div class="prose">
+    <p>where the ablated activations are computed by ablating at every layer, so effects accumulate through the network. The RepInd loss adds to the RDO loss the layer-averaged squared differences of these cosines (weight 200, over the first 90% of layers). Directions are found sequentially, each required to be RepInd from DIM and from all earlier ones.</p>
+    <p><strong>Findings.</strong> Such directions exist and each still mediates refusal (Fig. 7). Ablating the top-<var>k</var> RepInd directions together increases ASR monotonically in <var>k</var>, exceeds the DIM baseline for <var>k</var> ≥ 4, and shows diminishing returns (Fig. 8); ablating several DIM directions from different layers does not give this gain. In §6.2 (Fig. 9) GCG suffixes are optimised with an additional loss term rewarding ablation-like suppression of the first RepInd direction; the resulting suffixes jailbreak 36% of the time, comparable to that direction's own ablation ASR. This shows an input-space attack <em>can</em> operate through a direction other than DIM; it does not show that ordinary GCG suffixes do so.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Coupling <var>k</var> <input type="range" id="rl-k" min="0" max="1.5" step="0.05" value="0.6" data-fmt="2"><output id="rl-k-o">0.60</output></label>
+    </div>
+    <div class="svgbox"><svg id="rl" viewBox="0 0 600 240" role="img" aria-label="Cosine similarity with direction mu at each layer, with and without ablating lambda, and the resulting RepInd loss"></svg></div>
+    <p class="readout" id="rl-r"></p>
+    <figcaption>Illustrative 4-dimensional, 6-layer toy network computed live. Each layer adds <var>k</var>·ReLU(⟨<var>x</var>, <var>λ</var>⟩)·<var>μ</var>, standing in for an MLP that reads <var>λ</var> and writes <var>μ</var>, plus fixed contributions in other directions. Solid: the component ⟨<var>x</var><sup>(<var>l</var>)</sup>, <var>μ</var>⟩ unedited; dashed: after ablating <var>λ</var> at every layer. (The paper compares cosine similarities, which also divide by the activation's length; the toy uses the raw component to keep the picture clean.) The readout is the one-sided loss, mean over layers of the squared gap. It vanishes only when <var>k</var> = 0, however orthogonal <var>λ</var> and <var>μ</var> are.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §7 · Lineage</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose"><ul>
+    <li><strong>Shared targets.</strong> All directions are optimised toward the same answer and refusal targets, which may limit how distinct the found mechanisms can be; the authors suggest diverse targets or RL with a judge reward.</li>
+    <li><strong>Lower bounds.</strong> Cone dimensions and the number of independent directions are what the optimiser found, not upper limits; other, undiscovered regions may mediate refusal too.</li>
+    <li><strong>Scale.</strong> Models up to 14B; the trend with width suggests larger models may have larger cones, but this is extrapolation.</li>
+    <li><strong>Independence is defined for ablation.</strong> RepInd as defined concerns ablation interventions and the measured cosine; other interventions could reveal interactions it misses.</li>
+  </ul></div>
+  <div class="later"><span class="label">Lineage</span>Builds on <a href="refusal.html">Arditi et al. (2024)</a> and on representation engineering more broadly (Zou et al. 2023). Its conclusion, that refusal occupies a multi-dimensional structure, bears directly on <a href="abl-defense.html">defences against abliteration</a> (which aim to spread refusal out so that one projection removes less) and on <a href="abl-compare.html">abliteration tools</a>, most of which still remove a single direction per layer.</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>DIM</dt><dd>Difference-in-means direction, the 2024 baseline.</dd>
+    <dt>RDO</dt><dd>Refusal Direction Optimization: gradient-based search for a single direction.</dd>
+    <dt>RCO</dt><dd>Refusal Cone Optimization: learns an orthonormal basis of a refusal cone.</dd>
+    <dt>Concept cone</dt><dd>Set of non-negative combinations of basis vectors, all mediating the concept.</dd>
+    <dt>RepInd</dt><dd>Representational independence: ablating one direction leaves the other's cosine unchanged at every layer.</dd>
+    <dt>ASR</dt><dd>Attack success rate, here judged by the StrongREJECT judge.</dd>
+    <dt>Gram–Schmidt</dt><dd>Procedure turning a set of vectors into an orthonormal basis of the same span.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="refusal.html">Abliteration (2024)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> (<a href="https://lovespark.love/papers-worth-reading/#cones">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // five directions toy
+  var svg=$('#cd'), w=[2.6,1.5,1.1,0.8,0.6], off=[false,false,false,false,false];
+  function rate(){ var s=0; w.forEach(function(v,i){ if(!off[i]) s+=v; }); return sigmoid(1.6*(s-4.6)); }
+  function draw(){ clear(svg); var tot=w.reduce(function(a,b){return a+b;},0);
+    S('text',{x:20,y:24,'class':'t-h'},svg,'harmful signal, by direction');
+    w.forEach(function(v,i){ var y=40+i*36, len=v/tot*360;
+      S('text',{x:20,y:y+18,'class':'t'},svg,'direction '+(i+1));
+      S('rect',{x:120,y:y+4,width:len,height:20,'class':off[i]?'u-off':'f-fire'},svg);
+      if (off[i]) S('text',{x:126+len,y:y+18,'class':'t-inh'},svg,'removed'); });
+    var r=rate(); S('text',{x:500,y:24,'class':'t-h mid'},svg,'refusal rate');
+    S('rect',{x:470,y:40,width:60,height:180,'class':'box'},svg);
+    S('rect',{x:470,y:40+180*(1-r),width:60,height:180*r,'class':'f-wire'},svg);
+    S('text',{x:500,y:242,'class':'t-big mid'},svg,Math.round(r*100)+'%');
+    var n=off.filter(Boolean).length;
+    $('#cd-r').innerHTML='Removed <b>'+n+'</b> of 5 directions. Toy refusal rate: <b>'+Math.round(r*100)+'%</b>'+(n===0?' (click a number to remove that direction; 1 is the strongest).':'.'); }
+  $$('[data-cd]').forEach(function(b){ b.addEventListener('click',function(){ var i=+b.dataset.cd; off[i]=!off[i]; b.classList.toggle('on',off[i]); draw(); }); });
+  $('#cd-reset').onclick=function(){ off=[false,false,false,false,false]; $$('[data-cd]').forEach(function(b){ b.classList.remove('on'); }); draw(); };
+  draw();
+})();
+(function(){ // orthogonal but dependent toy, 3 layers
+  var svg=$('#ri'), k=0.8, ab=false;
+  function run(abl){ var A=1.0, B=0.4, out=[]; for (var l=0;l<3;l++){ if (abl) A=0; if (l>0){ B=B+0.15+k*Math.max(0,A); } out.push([A,B]); } return out; }
+  function draw(){ clear(svg); var o=run(false), a=run(true);
+    S('text',{x:20,y:22,'class':'t-h'},svg,'strength of B at each layer');
+    for (var l=0;l<3;l++){ var x=80+l*170;
+      S('text',{x:x+50,y:236,'class':'t mid'},svg,'layer '+(l+1));
+      var h0=o[l][1]*70, h1=a[l][1]*70;
+      S('rect',{x:x,y:215-h0,width:44,height:h0,'class':'f-wire'},svg);
+      S('rect',{x:x+56,y:215-(ab?h1:h0),width:44,height:(ab?h1:h0),'class':ab?'f-fire':'f-rule'},svg);
+      S('text',{x:x+22,y:209-h0,'class':'t-s mid'},svg,fmt(o[l][1],2));
+      S('text',{x:x+78,y:209-(ab?h1:h0),'class':'t-s mid'},svg,fmt(ab?a[l][1]:o[l][1],2)); }
+    S('line',{x1:60,y1:215,x2:580,y2:215,'class':'axis'},svg);
+    S('rect',{x:360,y:12,width:10,height:10,'class':'f-wire'},svg); S('text',{x:375,y:21,'class':'t-s'},svg,'unedited');
+    S('rect',{x:450,y:12,width:10,height:10,'class':ab?'f-fire':'f-rule'},svg); S('text',{x:465,y:21,'class':'t-s'},svg,ab?'A removed':'(press the button)');
+    var gap=o[2][1]-a[2][1];
+    $('#ri-r').innerHTML= ab ? (gap>1e-6?'Removing A lowers B at layer 3 from <b>'+fmt(o[2][1],2)+'</b> to <b>'+fmt(a[2][1],2)+'</b>: orthogonal, but <b>not</b> independent.':'With no reuse, removing A leaves B exactly as it was: <b>independent</b>.') : 'B grows layer by layer, partly because later layers build it from A.'; }
+  bindRange('ri-k',function(v){ k=v; draw(); });
+  $('#ri-ab').onclick=function(){ ab=!ab; this.setAttribute('aria-pressed',ab); this.classList.toggle('on',ab); draw(); };
+})();
+(function(){ // gram-schmidt cone
+  var svg=$('#gs'), a=20, b=60, samples=[], seed=1;
+  function draw(){ clear(svg); var cx=300, cy=230, R=180;
+    var v1=[Math.cos(a*Math.PI/180),Math.sin(a*Math.PI/180)], v2=[1.1*Math.cos(b*Math.PI/180),1.1*Math.sin(b*Math.PI/180)];
+    var b1=v1.slice(), d=v2[0]*b1[0]+v2[1]*b1[1], u=[v2[0]-d*b1[0], v2[1]-d*b1[1]], n=Math.hypot(u[0],u[1]);
+    S('line',{x1:30,y1:cy,x2:570,y2:cy,'class':'grid'},svg); S('line',{x1:cx,y1:cy,x2:cx,y2:20,'class':'grid'},svg);
+    if (n<1e-6){ $('#gs-r').textContent='The two raw vectors are parallel: Gram–Schmidt cannot produce a second direction (the cone collapses to a line).'; S('line',{x1:cx,y1:cy,x2:cx+b1[0]*R,y2:cy-b1[1]*R,'class':'w-fire','marker-end':'url(#af)'},svg); return; }
+    var b2=[u[0]/n,u[1]/n];
+    var t1=Math.atan2(b1[1],b1[0]), t2=Math.atan2(b2[1],b2[0]);
+    var p='M'+cx+','+cy; for (var s=0;s<=20;s++){ var lam=s/20, dx=Math.cos(lam*Math.PI/2)*b1[0]+Math.sin(lam*Math.PI/2)*b2[0], dy=Math.cos(lam*Math.PI/2)*b1[1]+Math.sin(lam*Math.PI/2)*b2[1]; p+='L'+(cx+dx*R)+','+(cy-dy*R); } p+='Z';
+    S('path',{d:p,'class':'f-fire','fill-opacity':0.15},svg);
+    S('line',{x1:cx,y1:cy,x2:cx+v1[0]*R*0.75,y2:cy-v1[1]*R*0.75,'class':'w-dash'},svg);
+    S('line',{x1:cx,y1:cy,x2:cx+v2[0]*R*0.75,y2:cy-v2[1]*R*0.75,'class':'w-dash'},svg);
+    S('text',{x:cx+v2[0]*R*0.78,y:cy-v2[1]*R*0.78-4,'class':'t-s mid'},svg,'raw 2');
+    S('line',{x1:cx,y1:cy,x2:cx+b1[0]*R,y2:cy-b1[1]*R,'class':'w-fire','marker-end':'url(#af)'},svg);
+    S('line',{x1:cx,y1:cy,x2:cx+b2[0]*R,y2:cy-b2[1]*R,'class':'w-fire','marker-end':'url(#af)'},svg);
+    function lab(v,t){ var x=cx+v[0]*(R+14), y=cy-v[1]*(R+14); x=Math.max(30,Math.min(570,x)); y=Math.max(16,Math.min(272,y)); S('text',{x:x,y:y,'class':'t-fire mid'},svg,t); }
+    lab(b1,'b₁'); lab(b2,'b₂');
+    samples.forEach(function(lam){ var dx=Math.cos(lam)*b1[0]+Math.sin(lam)*b2[0], dy=Math.cos(lam)*b1[1]+Math.sin(lam)*b2[1]; S('circle',{cx:cx+dx*R*0.85,cy:cy-dy*R*0.85,r:4,'class':'f-wire'},svg); });
+    var ang=(b-a+360)%360;
+    $('#gs-r').innerHTML='Raw vectors are <b>'+ang+'°</b> apart; after Gram–Schmidt b₁·b₂ = <b>'+fmt(Math.abs(b1[0]*b2[0]+b1[1]*b2[1]),3)+'</b> (orthogonal). '+(samples.length?'<b>'+samples.length+'</b> sampled cone directions shown; each has non-negative weights on b₁ and b₂.':''); }
+  bindRange('gs-a',function(v){ a=v; draw(); }); bindRange('gs-b',function(v){ b=v; draw(); });
+  $('#gs-s').onclick=function(){ var r=rng(seed++); samples=[]; for (var i=0;i<12;i++) samples.push(r()*Math.PI/2); draw(); };
+})();
+(function(){ // DIM vs RDO tables
+  var svg=$('#cv'), mode='tqa';
+  var tqa=[['Gemma 2 2B',55.8,47.8,51.4],['Qwen 2.5 14B',70.8,63.3,67.9]];
+  var asr=[['Llama 3 8B',[79.7,74.1],[80.3,79.0]],['Qwen 2.5 14B',[76.2,66.6],[75.7,75.6]]];
+  function bar(x,y,h,base,cls,lab){ S('rect',{x:x,y:base-h,width:40,height:h,'class':cls},svg); S('text',{x:x+20,y:base-h-6,'class':'t-s mid'},svg,lab); }
+  function draw(){ clear(svg); var base=225, sc=2.4, lo=0;
+    S('line',{x1:40,y1:base,x2:580,y2:base,'class':'axis'},svg);
+    if (mode==='tqa'){ lo=40; sc=5.5;
+      S('text',{x:40,y:20,'class':'t-s'},svg,'TruthfulQA accuracy (%), axis starts at 40');
+      tqa.forEach(function(m,i){ var x0=70+i*270;
+        [['baseline',m[1],'f-muted'],['DIM',m[2],'f-wire'],['RDO',m[3],'f-fire']].forEach(function(c,j){ bar(x0+j*60,0,(c[1]-lo)*sc,base,c[2],fmt(c[1],1)); S('text',{x:x0+j*60+20,y:base+16,'class':'t-s mid'},svg,c[0]); });
+        S('text',{x:x0+90,y:base+36,'class':'t mid'},svg,m[0]); });
+      var r1=(tqa[0][1]-tqa[0][3])/(tqa[0][1]-tqa[0][2]), r2=(tqa[1][1]-tqa[1][3])/(tqa[1][1]-tqa[1][2]);
+      $('#cv-r').innerHTML='Accuracy lost with RDO as a share of the loss with DIM: Gemma 2 2B <b>'+Math.round(r1*100)+'%</b>, Qwen 2.5 14B <b>'+Math.round(r2*100)+'%</b>.';
+    } else { lo=50; sc=5.5;
+      S('text',{x:40,y:20,'class':'t-s'},svg,'JailbreakBench ASR (%), axis starts at 50');
+      asr.forEach(function(m,i){ var x0=50+i*270;
+        [['DIM abl.',m[1][0],'f-wire'],['RDO abl.',m[2][0],'f-fire'],['DIM sub.',m[1][1],'f-wire'],['RDO sub.',m[2][1],'f-fire']].forEach(function(c,j){ bar(x0+j*55,0,(c[1]-lo)*sc,base,c[2],fmt(c[1],1)); S('text',{x:x0+j*55+20,y:base+16,'class':'t-s mid'},svg,c[0]); });
+        S('text',{x:x0+105,y:base+36,'class':'t mid'},svg,m[0]); });
+      $('#cv-r').innerHTML='Ablation: essentially tied. Subtraction: RDO higher by <b>'+fmt(79.0-74.1,1)+'</b> (Llama 3 8B) and <b>'+fmt(75.6-66.6,1)+'</b> points (Qwen 2.5 14B).'; } }
+  $$('[data-cv]').forEach(function(b){ b.addEventListener('click',function(){ mode=b.dataset.cv; $$('[data-cv]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }); });
+  draw();
+})();
+(function(){ // RepInd toy network
+  var svg=$('#rl'), k=0.6, nl=1, Ln=6;
+  var lam=[1,0,0,0], mu=[0,1,0,0];
+  var noise=[]; (function(){ var r=rng(11); for (var l=0;l<Ln;l++) noise.push([0.25+0.2*r(),0.1*gauss(r),0.3*gauss(r),0.3*gauss(r)]); })();
+  function act(z){ return nl*Math.max(0,z)+(1-nl)*z; }
+  function cos(x,v){ var d=0; for (var i=0;i<4;i++){ d+=x[i]*v[i]; } return d; }
+  function run(abl){ var x=[0.9,0.3,0.4,-0.2], out=[];
+    for (var l=0;l<Ln;l++){ if (abl) x[0]=0; var a=act(x[0]); var add=noise[l].slice(); add[1]+=k*a; add[0]+=0.15*Math.sin(l+1);
+      for (var i=0;i<4;i++) x[i]+=add[i]; if (abl) x[0]=0; out.push(cos(x,mu)); } return out; }
+  function draw(){ clear(svg); var o=run(false), a=run(true), x0=60, w=480, y0=200, h=160, M=Math.max(1,Math.max.apply(null,o.concat(a)));
+    S('line',{x1:x0,y1:y0,x2:x0+w,y2:y0,'class':'axis'},svg); S('line',{x1:x0,y1:y0,x2:x0,y2:y0-h-10,'class':'axis'},svg);
+    [0,0.5,1].forEach(function(t){ S('text',{x:x0-6,y:y0-t*h+4,'class':'t-s end'},svg,fmt(t*M,1)); S('line',{x1:x0,y1:y0-t*h,x2:x0+w,y2:y0-t*h,'class':'grid'},svg); });
+    function px(i){ return x0+20+i*(w-40)/(Ln-1); }
+    var d1='', d2='', loss=0;
+    for (var i=0;i<Ln;i++){ d1+=(i?'L':'M')+px(i)+','+(y0-o[i]/M*h); d2+=(i?'L':'M')+px(i)+','+(y0-a[i]/M*h); loss+=Math.pow(o[i]-a[i],2); S('text',{x:px(i),y:y0+16,'class':'t-s mid'},svg,'L'+(i+1)); }
+    S('path',{d:d1,'class':'w','stroke-width':2.2},svg); S('path',{d:d2,'class':'w-inh'},svg);
+    S('text',{x:x0+8,y:18,'class':'t-s'},svg,'⟨x, μ⟩ per layer');
+    S('line',{x1:380,y1:14,x2:405,y2:14,'class':'w','stroke-width':2.2},svg); S('text',{x:410,y:18,'class':'t-s'},svg,'unedited');
+    S('line',{x1:380,y1:30,x2:405,y2:30,'class':'w-inh'},svg); S('text',{x:410,y:34,'class':'t-s'},svg,'λ ablated');
+    S('text',{x:x0+w/2,y:234,'class':'t-s mid'},svg,'layer');
+    $('#rl-r').innerHTML='λ·μ = <b>0</b> (orthogonal). Toy RepInd loss (one side, mean squared gap): <b>'+fmt(loss/Ln,3)+'</b>'+(k===0?', exactly zero: independent.':'.'); }
+  bindRange('rl-k',function(v){ k=v; draw(); });
+})();
+</script>
+
+</body>
+</html>

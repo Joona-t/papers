@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chain of thought (2022) study guide</title>
+<meta name="description" content="Large language models were surprisingly poor at multi-step word problems, even when shown examples. Wei and colleagues find a remarkably simple fix: in the examples you give the model, write out the intermediate reasoning, not just the answer. Large models then produce their own step-by-step reasoni">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Language models &amp; AI</b> · 2022</p>
+  <h1>Chain-of-Thought Prompting Elicits Reasoning in Large Language Models</h1>
+  <p class="cite">Jason Wei et al. · NeurIPS 2022</p>
+  <p class="lede">Large language models were surprisingly poor at multi-step word problems, even when shown examples. Wei and colleagues find a remarkably simple fix: in the examples you give the model, write out the intermediate reasoning, not just the answer. Large models then produce their own step-by-step reasoning, and their accuracy on maths, commonsense and symbolic puzzles jumps, sometimes past fine-tuned systems.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/2201.11903">Read the paper (free)</a> <a href="https://lovespark.love/papers-worth-reading/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, separate AI review (also by Claude), but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>You can teach a large language model a task just by putting a few solved examples in front of the question ("few-shot prompting"), but for problems that need several steps, showing only the final answers works poorly.</p>
+  <p>If the examples instead include the reasoning in plain words ("Roger started with 5 balls. 2 cans of 3 tennis balls each is 6…"), the model writes similar reasoning before its own answer, a "chain of thought".</p>
+  <p>This helped only very large models (around 100 billion parameters and up); smaller models wrote fluent but wrong reasoning and sometimes got worse.</p>
+  <p>With eight such examples, the 540-billion-parameter PaLM model solved 56.9% of grade-school maths problems (up from 17.9%), beating the previous best, a fine-tuned GPT-3 with a separate answer checker. A few months later, others showed that simply adding "Let's think step by step" also works.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1</p>
+  <h2>Teaching by example, inside the prompt</h2>
+  <div class="prose">
+    <p>A language model continues whatever text it is given. <a href="gpt3.html">GPT-3</a> showed you can exploit this to "teach" a task without any retraining: write a few example questions with their answers, then the new question, and the model continues with an answer in the same style. This is <strong>few-shot prompting</strong>; the examples are called <strong>exemplars</strong>.</p>
+    <p>It works well for simple tasks but badly for problems needing several steps of reasoning, like maths word problems. And making models bigger helped less on these than on other tasks; the curve was nearly flat. Older approaches trained models specifically to write out solutions, which needs large datasets of worked solutions for every task.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Showing a student an answer key ("Q1: 11, Q2: 9") teaches them nothing about how to solve Q3. Showing them the worked solutions does.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Few-shot prompting teaches a task through examples in the prompt, but answer-only examples don't teach multi-step reasoning.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §2 · Fig. 1</p>
+  <h2>Show the working</h2>
+  <div class="prose">
+    <p>The paper's idea is simply to put the reasoning into the exemplars. Each example now goes question, then a short chain of reasoning in plain language, then the answer. Faced with a new question, the model imitates the pattern: it writes its own chain of reasoning, then an answer.</p>
+    <p>Toggle between the two prompts below. These are the paper's own example and the model's actual outputs from its Figure 1.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="cp-std" aria-pressed="false">Standard prompting</button><button class="btn on" id="cp-cot" aria-pressed="true">Chain-of-thought prompting</button></div>
+    <div class="svgbox wide"><svg id="cp" viewBox="0 0 640 300" role="img" aria-label="A standard prompt and a chain-of-thought prompt with the model's answers"></svg></div>
+    <p class="readout" id="cp-r"></p>
+    <figcaption>Text from the paper's Fig. 1. Top box: the prompt, one exemplar plus the new question (the real experiments used eight exemplars). Bottom box: what the model wrote. The only difference between the prompts is the highlighted reasoning in the exemplar's answer.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Write the reasoning into the examples and a large model will write reasoning into its answers.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Was the model retrained or changed in any way?</dt>
+    <dd>No. Only the prompt changed. Chain-of-thought prompting works with an off-the-shelf model, which is one of its main attractions.</dd>
+    <dt>Why might writing intermediate steps help a model that produces one word at a time?</dt>
+    <dd>Each step it writes becomes part of the input for the next words, so it can use earlier results (like "23 − 20 = 3") instead of having to jump to the final number in one go. It also spends more computation on harder problems, since longer problems get longer chains.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §3.2 · Fig. 4, Table 2</p>
+  <h2>Only big models can do it</h2>
+  <div class="prose">
+    <p>The authors tried three families of models at many sizes. For small models, chain-of-thought prompting did nothing or made things worse: they produced reasoning that read smoothly but didn't make sense. Only at around 100 billion parameters did the benefit appear, and then it was large.</p>
+    <p>The authors describe this as an <strong>emergent ability</strong> of scale: something that is absent in small models and appears in large ones, rather than improving gradually. Pick a family below to see the paper's numbers on GSM8K, a set of grade-school maths word problems.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" id="sc-0" aria-pressed="true">PaLM</button><button class="btn" id="sc-1" aria-pressed="false">LaMDA</button><button class="btn" id="sc-2" aria-pressed="false">GPT-3</button></div>
+    <div class="svgbox"><svg id="sc" viewBox="0 0 600 250" role="img" aria-label="GSM8K solve rate against model size for standard and chain-of-thought prompting"></svg></div>
+    <p class="readout" id="sc-r"></p>
+    <figcaption>Real numbers from the paper's Table 2 (GSM8K solve rate, %). Model size on a log scale. Grey: standard prompting. Amber: chain-of-thought prompting. Dashed line: the previous best (55%, a GPT-3 fine-tuned on worked solutions, plus a trained verifier, Cobbe et al. 2021).</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Chain of thought is useless or harmful for small models and dramatically helpful for very large ones.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What happens to the smallest GPT-3 model with chain-of-thought prompting?</dt>
+    <dd>It gets worse: 2.2% with standard prompting, 0.5% with chain of thought. Small models imitate the form of reasoning without being able to do it.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §4–5 · Tables 4–5</p>
+  <h2>Not just arithmetic</h2>
+  <div class="prose">
+    <p>The same trick helped on <strong>commonsense</strong> questions. For example, on deciding whether a sports sentence is plausible ("Joao Moutinho caught the screen pass in the NFC championship"; he is a footballer, so no), PaLM 540B went from 80.5% to 95.4%, above the 84% of an unaided sports enthusiast. On StrategyQA, questions like "Would a pear sink in water?" that need several implicit steps, it went from 68.6% to 77.8%.</p>
+    <p>It also helped on <strong>symbolic</strong> puzzles such as "take the last letter of each word and join them". Most strikingly, after seeing examples with only two words, models using chain of thought could handle three or four words, which standard prompting failed at almost completely. Writing the steps lets the model extend a procedure to longer inputs.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Chain of thought helps on any task a person would solve by reasoning in words, and helps models generalise to longer problems than in the examples.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §6 and later</p>
+  <h2>Is it really reasoning? And what came next</h2>
+  <div class="prose">
+    <p>The authors are careful: the chains look like human reasoning, but whether the model is truly "reasoning" is left open. Chains can also be wrong while the final answer is right (especially on multiple-choice questions), and the method only helps models that are expensive to run.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>Later the same year, Kojima et al. (2022) showed that you don't even need worked examples: adding "Let's think step by step" to the question raised InstructGPT's (text-davinci-002) accuracy on MultiArith from 17.7% to 78.7% and on GSM8K from 10.4% to 40.7%. "Self-consistency" (Wang et al., 2022) sampled many chains and took a majority vote over their answers. <a href="react.html">ReAct</a> interleaved reasoning with actions such as searches. Most recently, reasoning models like <a href="r1.html">DeepSeek-R1</a> are trained with reinforcement learning to produce long chains of thought by themselves, no prompt needed.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Prompting for step-by-step reasoning started a line of work that led to models trained to think before they answer.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Generating a chain of thought, a series of intermediate reasoning steps, significantly improves the ability of large language models to perform complex reasoning. Such abilities emerge naturally in sufficiently large models through chain-of-thought prompting, where a few chain-of-thought demonstrations are provided as exemplars. Experiments on three large language models show improvements on arithmetic, commonsense and symbolic reasoning tasks. Prompting PaLM 540B with eight chain-of-thought exemplars achieves state-of-the-art accuracy on GSM8K, surpassing even fine-tuned GPT-3 with a verifier. Wei, Wang, Schuurmans, Bosma, Ichter, Xia, Chi, Le, Zhou (Google Research, Brain Team), NeurIPS 2022 (arXiv 2201.11903).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2</p>
+  <h2>Definition and motivation</h2>
+  <div class="prose">
+    <p>"A chain of thought is a series of intermediate natural language reasoning steps that lead to the final output." A chain-of-thought prompt is a few-shot prompt of ⟨input, chain of thought, output⟩ triples. The authors list four properties: (1) decomposition, so additional computation can be allocated to problems requiring more steps; (2) an interpretable window into model behaviour, suggesting how an answer was reached and where it went wrong (with the caveat that full characterisation of the underlying computation remains open); (3) applicability, in principle, to any task humans can solve via language; (4) it can be elicited from sufficiently large off-the-shelf models simply by including exemplars, with no fine-tuning.</p>
+    <p>The approach unites two older ideas: rationale-augmented training and fine-tuning for intermediate steps (e.g. Ling et al., 2017; Cobbe et al., 2021), which requires costly annotated datasets, and in-context few-shot prompting (Brown et al., 2020), which works poorly on reasoning and scales flatly. The paper's motivation is to keep the second's convenience while getting the first's benefit.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3.1–3.2 · Tables 1–2, Fig. 4</p>
+  <h2>Arithmetic reasoning</h2>
+  <div class="prose">
+    <p><strong>Setup.</strong> Benchmarks: GSM8K, SVAMP, ASDiv, AQuA, MAWPS. Eight hand-written chain-of-thought exemplars used for all benchmarks except AQuA (four exemplars from its training set, since it is multiple choice). Models: GPT-3 (350M, 1.3B, 6.7B, 175B; the 175B results use text-davinci-002), LaMDA (420M–137B), PaLM (8B, 62B, 540B), plus UL2 20B and Codex (code-davinci-002). Greedy decoding. LaMDA results average five random seeds of exemplar order.</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>GSM8K (Table 2)</th><th>Standard</th><th>Chain of thought</th><th>Δ</th></tr></thead>
+    <tbody>
+      <tr><td>PaLM 8B</td><td class="num">4.9</td><td class="num">4.1</td><td class="num">−0.8</td></tr>
+      <tr><td>PaLM 62B</td><td class="num">9.6</td><td class="num">29.9</td><td class="num">+20.3</td></tr>
+      <tr><td>PaLM 540B</td><td class="num">17.9</td><td class="num">56.9</td><td class="num">+39.0</td></tr>
+      <tr><td>LaMDA 137B</td><td class="num">6.5</td><td class="num">14.3</td><td class="num">+7.8</td></tr>
+      <tr><td>GPT-3 175B</td><td class="num">15.6</td><td class="num">46.9</td><td class="num">+31.3</td></tr>
+      <tr><td>Prior best (fine-tuned GPT-3 + verifier)</td><td class="num" colspan="3">55</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>Three findings (§3.2): CoT is an emergent ability of scale, with no positive effect for small models (Appendix A.1: it hurts most models under 10B); gains are larger for harder problems (GSM8K, where baseline is lowest, more than doubles for the largest GPT and PaLM) and small or negative on easy one-step sets (e.g. MAWPS SingleOp); and PaLM 540B with CoT is competitive with or beats prior fine-tuned state of the art (SVAMP 79.0 vs prior best 57.4; MAWPS 93.3 vs 88.4).</p>
+    <p><strong>Error analysis.</strong> Of 50 correct LaMDA 137B GSM8K answers, almost all had logically and mathematically valid chains (the main text and Appendix D.1 differ slightly on the count, at most two being correct by chance). Of 50 incorrect ones, 46% had minor errors (8% calculator-only errors, 16% symbol-mapping errors, 22% one step missing) and 54% major errors in semantic understanding or coherence. Scaling PaLM from 62B to 540B fixed a large share of one-step-missing (12 of 18) and semantic-understanding errors (6 of 20).</p>
+  </div>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §3.3–3.4 · Figs. 5–6, Table 6</p>
+  <h2>Ablations and robustness</h2>
+  <div class="prose"><p>Is it the natural-language reasoning that helps, or something incidental? Three ablations isolate alternatives, and several robustness checks vary who wrote the chains. Numbers below are LaMDA 137B on GSM8K (mean ± std over seeds, Table 6); the paper's Figure 5 shows the same pattern for PaLM 540B.</p></div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" id="ab-0" aria-pressed="true">Ablations</button><button class="btn" id="ab-1" aria-pressed="false">Robustness</button></div>
+    <div class="svgbox"><svg id="ab" viewBox="0 0 600 250" role="img" aria-label="GSM8K accuracy for chain-of-thought ablations and robustness variants"></svg></div>
+    <p class="readout" id="ab-r"></p>
+    <figcaption>Real numbers, LaMDA 137B, GSM8K solve rate (%), Table 6. Click a bar for what the variant tests. Error bars show ± one standard deviation across exemplar orders.</figcaption>
+  </figure>
+  <div class="prose">
+    <p>Conclusions: an equation alone is not enough on semantically hard problems (it helps on easier one- or two-step sets, per the paper); extra tokens alone (dots matching the chain's length) do not help, so the gain is not just more computation; reasoning placed after the answer does not help, so the benefit is not merely that CoT activates relevant knowledge. CoT is robust to annotator style and exemplar choice, though variance exists (on coin flip, accuracy ranged from 99.6% with annotator A to 71.4% with annotator C, Appendix A.2).</p>
+  </div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §4–5 · Tables 4–5, Figs. 7–8</p>
+  <h2>Commonsense and symbolic reasoning</h2>
+  <div class="tablebox"><table>
+    <thead><tr><th>PaLM 540B (Table 4)</th><th>Standard</th><th>CoT</th><th>Note</th></tr></thead>
+    <tbody>
+      <tr><td>CSQA</td><td class="num">78.1</td><td class="num">79.9</td><td>small gain</td></tr>
+      <tr><td>StrategyQA</td><td class="num">68.6</td><td class="num">77.8</td><td>prior best 69.4</td></tr>
+      <tr><td>Date understanding</td><td class="num">49.0</td><td class="num">65.3</td><td>BIG-bench</td></tr>
+      <tr><td>Sports understanding</td><td class="num">80.5</td><td class="num">95.4</td><td>sports enthusiast 84</td></tr>
+      <tr><td>SayCan (robot planning)</td><td class="num">80.8</td><td class="num">91.7</td><td>maps to robot actions</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose"><p>(The text gives StrategyQA as 75.6% while Table 4 lists 77.8; the table is used here.) Symbolic tasks test out-of-domain length generalisation: exemplars use 2 words or 2 coin flips, test sets also use 3 and 4. Build a last-letter-concatenation chain below and compare with the paper's results.</p></div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Name <input type="text" id="ll-in" value="Amy Brown" size="22" style="font-family:var(--mono);font-size:.85rem;padding:3px 6px;border:1px solid var(--rule);background:var(--paper);color:var(--ink)"></label>
+      <button class="btn" id="ll-rand">Random name</button>
+    </div>
+    <div class="svgbox wide"><svg id="ll" viewBox="0 0 640 250" role="img" aria-label="Chain of thought for last letter concatenation and the paper's accuracy by word count"></svg></div>
+    <p class="readout" id="ll-r"></p>
+    <figcaption>Top: the chain-of-thought format used in the paper's exemplars for this task, generated for your input. Bottom: PaLM 540B accuracy from Table 5 (grey standard, amber CoT). Only 2-word names appear in the exemplars, so 3 and 4 words are out of domain. Typing a name with 3 or 4 words highlights that column.</figcaption>
+  </figure>
+  <div class="prose"><p>Coin flip (does a coin, initially heads up, remain heads up after people flip or don't flip it?): 2 flips 98.1 → 100.0 (in domain), 3 flips 49.3 → 98.6, 4 flips 54.8 → 90.2 (out of domain).</p></div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §6 and later work</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Reasoning or imitation?</strong> Emulating a thought process does not establish that the network is "reasoning"; this is left open.</li>
+      <li><strong>Unfaithful chains.</strong> No guarantee of correct reasoning paths; correct answers can come from wrong chains, especially for multiple-choice or binary tasks. Later work (e.g. Turpin et al., 2023) showed stated chains can omit factors that actually drive the answer.</li>
+      <li><strong>Cost.</strong> Emergence only at ~100B parameters makes serving expensive; inducing reasoning in small models is future work.</li>
+      <li><strong>Annotation.</strong> Cheap for few-shot prompting, but costly if used for fine-tuning; exemplar sensitivity exists.</li>
+    </ul>
+  </div>
+  <div class="later"><span class="label">Later refinements</span>Zero-shot CoT (Kojima et al., 2022): "Let's think step by step" took text-davinci-002 from 17.7% to 78.7% on MultiArith and 10.4% to 40.7% on GSM8K without exemplars. Self-consistency (Wang et al., 2022) samples diverse chains and majority-votes the answers. Least-to-most prompting decomposes problems explicitly; program-of-thought and PAL offload arithmetic to code; tree-of-thoughts searches over chains. <a href="react.html">ReAct</a> interleaves reasoning traces with tool actions. The "emergence" framing was challenged by Schaeffer et al. (2023), who argued that some apparent emergent abilities reflect discontinuous metrics like exact-match accuracy. CoT also became a training target: rationale fine-tuning (e.g. Flan-style CoT data), and reinforcement learning on verifiable rewards producing long CoT in <a href="r1.html">DeepSeek-R1</a> and similar reasoning models. Constitutional AI used CoT in its AI feedback model (<a href="constitutional.html">guide</a>).</div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Which ablation rules out "CoT just gives the model more tokens to compute with"?</dt>
+    <dd>Variable compute only: replacing the chain with a sequence of dots of equal length gave 6.4% vs 6.5% standard, no gain.</dd>
+    <dt>Which ablation rules out "CoT just activates relevant knowledge"?</dt>
+    <dd>Chain of thought after the answer: the reasoning is present in the exemplars but produced after the answer, and it gives 6.1%, no better than standard.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Few-shot prompting</dt><dd>Including input–output exemplars in the prompt, with no weight updates.</dd>
+    <dt>Exemplar</dt><dd>One worked example in the prompt.</dd>
+    <dt>Chain of thought</dt><dd>Intermediate natural-language reasoning steps before the answer.</dd>
+    <dt>Emergent ability</dt><dd>One absent in smaller models and present in larger ones.</dd>
+    <dt>Greedy decoding</dt><dd>Always taking the most likely next token.</dd>
+    <dt>Out-of-domain (OOD)</dt><dd>Test inputs longer or otherwise different from exemplars.</dd>
+    <dt>Self-consistency</dt><dd>Majority vote over answers from sampled chains.</dd>
+    <dt>GSM8K</dt><dd>8.5k grade-school maths word problems (Cobbe et al., 2021).</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="gpt3.html">GPT-3 (2020)</a></p>
+  <p><strong>Led to:</strong> <a href="react.html">ReAct (2022)</a>, <a href="r1.html">DeepSeek-R1 (2025)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> (<a href="https://lovespark.love/papers-worth-reading/#cot">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+function wrapTxt(t,n){ var w=t.split(' '), lines=[], cur=''; w.forEach(function(x){ if ((cur+' '+x).length>n){ lines.push(cur); cur=x; } else cur=cur?cur+' '+x:x; }); if (cur) lines.push(cur); return lines; }
+(function(){ // standard vs CoT prompt
+  var svg=$('#cp'), cot=true;
+  var Q1='Q: Roger has 5 tennis balls. He buys 2 more cans of tennis balls. Each can has 3 tennis balls. How many tennis balls does he have now?';
+  var R1='Roger started with 5 balls. 2 cans of 3 tennis balls each is 6 tennis balls. 5 + 6 = 11.';
+  var Q2='Q: The cafeteria had 23 apples. If they used 20 to make lunch and bought 6 more, how many apples do they have?';
+  var OUTS='A: The answer is 27.', OUTC='A: The cafeteria had 23 apples originally. They used 20 to make lunch. So they had 23 - 20 = 3. They bought 6 more apples, so they have 3 + 6 = 9. The answer is 9.';
+  function draw(){ clear(svg); var y=26, n=84;
+    S('text',{x:12,y:16,'class':'t-s'},svg,'Model input');
+    var lines=wrapTxt(Q1,n).map(function(l){return [l,'t'];});
+    if (cot){ lines.push(['A:','t']); wrapTxt(R1,n).forEach(function(l){ lines.push([l,'t-fire']); }); lines.push(['The answer is 11.','t']); }
+    else lines.push(['A: The answer is 11.','t']);
+    wrapTxt(Q2,n).forEach(function(l){ lines.push([l,'t']); });
+    var h=lines.length*16+12; S('rect',{x:6,y:y-4,width:628,height:h,rx:3,'class':'box'},svg);
+    lines.forEach(function(l,k){ S('text',{x:14,y:y+12+k*16,'class':l[1]},svg,l[0]); });
+    y+=h+22; S('text',{x:12,y:y-8,'class':'t-s'},svg,'Model output');
+    var ol=wrapTxt(cot?OUTC:OUTS,n), h2=ol.length*16+12; S('rect',{x:6,y:y-4,width:628,height:h2,rx:3,'class':cot?'box-ok':'box-inh'},svg);
+    ol.forEach(function(l,k){ S('text',{x:14,y:y+12+k*16,'class':'t'},svg,l); });
+    S('text',{x:630,y:y-8,'class':cot?'t-ok end':'t-inh end'},svg,cot?'✓ correct':'✗ wrong');
+    svg.setAttribute('viewBox','0 0 640 '+(y+h2+4));
+    $('#cp-r').innerHTML=cot?'With the reasoning in the exemplar, the model writes its own steps and gets <b>9</b>.':'With an answer-only exemplar, the model jumps straight to <b>27</b>.';
+  }
+  function set(c){ cot=c; $('#cp-cot').classList.toggle('on',c); $('#cp-std').classList.toggle('on',!c); $('#cp-cot').setAttribute('aria-pressed',c); $('#cp-std').setAttribute('aria-pressed',!c); draw(); }
+  $('#cp-cot').onclick=function(){ set(true); }; $('#cp-std').onclick=function(){ set(false); }; draw();
+})();
+(function(){ // scale chart
+  var svg=$('#sc'), fam=0;
+  var F=[['PaLM',[[8,4.9,4.1],[62,9.6,29.9],[540,17.9,56.9]]],['LaMDA',[[0.42,2.6,0.4],[2,3.6,1.9],[8,3.2,1.6],[68,5.7,8.2],[137,6.5,14.3]]],['GPT-3',[[0.35,2.2,0.5],[1.3,2.4,0.5],[6.7,4.0,2.4],[175,15.6,46.9]]]];
+  function X(b){ return 60+(Math.log(b)/Math.LN10+0.5)/3.3*500; } function Y(v){ return 210-v/60*185; }
+  function draw(){ clear(svg); var d=F[fam][1];
+    S('line',{x1:60,y1:210,x2:560,y2:210,'class':'axis'},svg); S('line',{x1:60,y1:20,x2:60,y2:210,'class':'axis'},svg);
+    [0,20,40,60].forEach(function(v){ S('line',{x1:60,y1:Y(v),x2:560,y2:Y(v),'class':'grid'},svg); S('text',{x:54,y:Y(v)+4,'class':'t-s end'},svg,v); });
+    [0.5,1,10,100,500].forEach(function(b){ S('text',{x:X(b),y:226,'class':'t-s mid'},svg,b+'B'); });
+    S('text',{x:310,y:244,'class':'t-s mid'},svg,'model parameters (log scale)'); S('text',{x:66,y:16,'class':'t-s'},svg,'GSM8K solve rate (%)');
+    S('line',{x1:60,y1:Y(55),x2:560,y2:Y(55),'class':'w-dash'},svg); S('text',{x:66,y:Y(55)-5,'class':'t-s'},svg,'prior best 55');
+    var a='',b=''; d.forEach(function(p,i){ a+=(i?'L':'M')+X(p[0])+','+Y(p[1]); b+=(i?'L':'M')+X(p[0])+','+Y(p[2]); }); S('path',{d:a,'class':'w-dash'},svg); S('path',{d:b,'class':'w-fire'},svg);
+    d.forEach(function(p){ S('circle',{cx:X(p[0]),cy:Y(p[1]),r:5,'class':'f-muted'},svg); S('circle',{cx:X(p[0]),cy:Y(p[2]),r:6,'class':'u-on'},svg); S('text',{x:X(p[0])+8,y:Y(p[2])-6,'class':'t-fire'},svg,p[2]); });
+    var L=d[d.length-1]; $('#sc-r').innerHTML=F[fam][0]+': largest model '+L[1]+'% → <b>'+L[2]+'%</b> with chain of thought; smallest '+d[0][1]+'% → <b>'+d[0][2]+'%</b>.';
+  }
+  [0,1,2].forEach(function(k){ $('#sc-'+k).onclick=function(){ fam=k; [0,1,2].forEach(function(j){ $('#sc-'+j).classList.toggle('on',j===k); $('#sc-'+j).setAttribute('aria-pressed',j===k); }); draw(); }; });
+  draw();
+})();
+(function(){ // ablation chart
+  var svg=$('#ab'), mode=0, sel=-1;
+  var G=[[['Standard prompting',6.5,0.4,'Answer-only exemplars.'],['Equation only',5.4,0.2,'Exemplars give just the equation before the answer. Not enough for semantically hard GSM8K problems.'],['Variable compute only',6.4,0.3,'Dots (…) of the same length as the chain: extra tokens without reasoning. No gain.'],['Reasoning after answer',6.1,0.4,'Chain given after the answer, so it cannot help compute it. No gain.'],['Chain of thought',14.3,0.4,'Full natural-language reasoning before the answer.']],
+         [['Standard prompting',6.5,0.4,'Baseline.'],['CoT, annotator A',14.3,0.4,'The original exemplars (one of the co-authors).'],['CoT, annotator B',15.5,0.6,'Chains for the same exemplars written independently by another co-author.'],['CoT, annotator C',17.6,1.0,'A third annotator.'],['CoT, concise style',11.1,0.3,'Annotator A rewrote chains more concisely.'],['GSM8K exemplars α',12.6,0.6,'Eight exemplars with chains taken from the GSM8K training set (Cobbe et al.).'],['GSM8K exemplars β',12.7,0.5,'A second random set.'],['GSM8K exemplars γ',12.6,0.7,'A third random set.']]];
+  function draw(){ clear(svg); var d=G[mode], h=Math.min(40,220/d.length);
+    d.forEach(function(r,i){ var y=12+i*h, g=S('g',{'class':'clickable'},svg), w=r[1]*20;
+      S('text',{x:185,y:y+h/2+2,'class':i===sel?'t-fire end':'t end'},g,r[0]);
+      S('rect',{x:195,y:y+3,width:w,height:h-10,'class':i===0?'f-muted':(r[1]>10?'f-fire':'f-wire')},g);
+      S('line',{x1:195+(r[1]-r[2])*20,y1:y+h/2-2,x2:195+(r[1]+r[2])*20,y2:y+h/2-2,'class':'w-ink'},g);
+      S('text',{x:203+(r[1]+r[2])*20,y:y+h/2+2,'class':'t-s'},g,fmt(r[1],1)+' ± '+fmt(r[2],1));
+      g.addEventListener('click',function(){ sel=i; draw(); }); });
+    S('line',{x1:195,y1:8,x2:195,y2:232,'class':'axis'},svg); [0,5,10,15,18].forEach(function(v){ S('text',{x:195+v*20,y:246,'class':'t-s mid'},svg,v); });
+    $('#ab-r').textContent=sel>=0?d[sel][0]+': '+d[sel][3]:'Click a bar.'; }
+  [0,1].forEach(function(k){ $('#ab-'+k).onclick=function(){ mode=k; sel=-1; [0,1].forEach(function(j){ $('#ab-'+j).classList.toggle('on',j===k); $('#ab-'+j).setAttribute('aria-pressed',j===k); }); draw(); }; });
+  draw();
+})();
+(function(){ // last letter concatenation
+  var svg=$('#ll'), inp=$('#ll-in'), r=rng(17);
+  var first=['Elon','Larry','Sergey','Bill','Amy','Grace','Ada','Alan','Rosa','Marie','Jean','Kai'], mid=['Lee','Ann','Rose','Jo','Ray'], last=['Musk','Page','Brin','Gates','Brown','Hopper','Lovelace','Turing','Parks','Curie','Ng','Smith'];
+  var T5={2:[7.6,99.4],3:[0.2,94.8],4:[0.0,63.0]};
+  function draw(){ clear(svg); var words=inp.value.trim().split(/\s+/).filter(function(w){return /[A-Za-z]/.test(w);}).slice(0,6);
+    var q='Q: Take the last letters of the words in "'+words.join(' ')+'" and concatenate them.';
+    var parts=words.map(function(w){ var m=w.replace(/[^A-Za-z]/g,''); return 'The last letter of "'+w+'" is "'+m.slice(-1)+'".'; });
+    var ans=words.map(function(w){ return w.replace(/[^A-Za-z]/g,'').slice(-1); }).join('');
+    var txt='A: '+parts.join(' ')+' Concatenating them is "'+ans+'". The answer is '+ans+'.';
+    var lines=wrapTxt(q,86).concat(wrapTxt(txt,86)); S('rect',{x:6,y:6,width:628,height:lines.length*16+12,rx:3,'class':'box-wire'},svg);
+    lines.forEach(function(l,k){ S('text',{x:14,y:24+k*16,'class':k<wrapTxt(q,86).length?'t':'t-fire'},svg,l); });
+    var y0=Math.max(110,lines.length*16+40), base=240; S('line',{x1:60,y1:base,x2:600,y2:base,'class':'axis'},svg);
+    [2,3,4].forEach(function(n,i){ var x=110+i*170, hgt=base-y0-14, on=words.length===n;
+      S('rect',{x:x,y:base-T5[n][0]/100*hgt,width:50,height:Math.max(1,T5[n][0]/100*hgt),'class':'f-muted'},svg);
+      S('rect',{x:x+56,y:base-T5[n][1]/100*hgt,width:50,height:T5[n][1]/100*hgt,'class':on?'f-fire':'f-wire'},svg);
+      S('text',{x:x+81,y:base-T5[n][1]/100*hgt-4,'class':'t-s mid'},svg,T5[n][1]); S('text',{x:x+25,y:base-T5[n][0]/100*hgt-4,'class':'t-s mid'},svg,T5[n][0]);
+      S('text',{x:x+53,y:y0-2,'class':on?'t-fire mid':'t-s mid'},svg,n+' words'+(n>2?' (OOD)':' (in domain)')); });
+    svg.setAttribute('viewBox','0 0 640 250');
+    $('#ll-r').innerHTML=words.length+' word'+(words.length===1?'':'s')+' → answer <b>'+ans+'</b>.'+(T5[words.length]?' PaLM 540B on '+words.length+'-word names: standard '+T5[words.length][0]+'%, chain of thought <b>'+T5[words.length][1]+'%</b>.':' The paper tested 2, 3 and 4 words.'); }
+  inp.addEventListener('input',draw);
+  $('#ll-rand').onclick=function(){ var n=2+Math.floor(r()*3), w=[first[Math.floor(r()*first.length)]]; if (n>2) w.push(mid[Math.floor(r()*mid.length)]); if (n>3) w.push(mid[Math.floor(r()*mid.length)]); w.push(last[Math.floor(r()*last.length)]); inp.value=w.join(' '); draw(); };
+  draw();
+})();
+</script>
+
+</body>
+</html>

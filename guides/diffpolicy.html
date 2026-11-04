@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diffusion Policy (2023) study guide</title>
+<meta name="description" content="When people demonstrate a task to a robot, they don&#x27;t always do it the same way: sometimes they go left around an obstacle, sometimes right. A robot that learns by averaging the demonstrations goes straight into the obstacle. Chi and colleagues borrow the machinery of image diffusion models to ">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Robotics &amp; reinforcement learning</b> · 2023</p>
+  <h1>Diffusion Policy: Visuomotor Policy Learning via Action Diffusion</h1>
+  <p class="cite">Cheng Chi et al. · RSS 2023</p>
+  <p class="lede">When people demonstrate a task to a robot, they don't always do it the same way: sometimes they go left around an obstacle, sometimes right. A robot that learns by averaging the demonstrations goes straight into the obstacle. Chi and colleagues borrow the machinery of image diffusion models to generate a whole short sequence of robot actions from noise, which captures all the ways of doing the task and commits to one of them. Across 12 tasks from four benchmarks (15 in the 2024 extended version), it beat the previous best methods by 46.9% on average.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/2303.04137">Read the paper (free)</a> <a href="https://lovespark.love/papers-worth-reading/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, separate AI review (also by Claude), but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>A common way to teach robots is by demonstration: a person controls the robot a few hundred times and the robot learns to copy what it sees ("behaviour cloning").</p>
+  <p>Demonstrations often solve a task in more than one way, and standard learners blur those ways together, producing actions that match none of them.</p>
+  <p>Diffusion Policy treats the next stretch of robot motion like an image to be generated: start from random noise and refine it step by step, guided by what the cameras see. Like an image generator, it can produce any of the valid options, cleanly.</p>
+  <p>It plans about a second of motion at a time, carries out part of it, then plans again. This made it markedly more reliable in simulation and on real robots, and the same idea now sits inside large robot models such as <a href="pi0.html">π0</a>.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1, §4.1 · Fig. 3</p>
+  <h2>The averaging trap</h2>
+  <div class="prose">
+    <p>In <strong>behaviour cloning</strong>, a robot is shown many examples of "what the cameras saw" paired with "what the person made the robot do", and a neural network learns to predict the action from the observation. The simplest version predicts a single best action, trained to be as close as possible to the demonstrated ones.</p>
+    <p>That works when there is one right answer. But suppose half the demonstrations go left around a cup and half go right. The prediction that is "closest on average" to both is straight down the middle, into the cup. In the jargon, the action distribution is <strong>multimodal</strong> (it has several separate peaks), and a single averaged prediction lands between them.</p>
+    <p>Below, the dashed lines are demonstrations of getting from the bottom to the top around an obstacle. Compare the averaged prediction with samples from a diffusion model trained on the same demonstrations.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="av-mean">Average the demos</button><button class="btn" id="av-diff">Sample with diffusion</button><button class="btn" id="av-clear">Clear</button></div>
+    <div class="svgbox"><svg id="av" viewBox="0 0 600 300" role="img" aria-label="Demonstration paths around an obstacle, the averaged path through it, and sampled diffusion paths around it"></svg></div>
+    <p class="readout" id="av-r"></p>
+    <figcaption>Dashed: 24 demonstrated paths of 16 waypoints each, half passing left of the obstacle, half right. Blue: the average path, what a squared-error regression learns. Amber: paths generated by a diffusion process (50 denoising steps) using the exact best denoiser for these demos. Each click adds a new sample. Toy illustration, not the paper's task.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>Ask two friends for directions round a lake: one says "go left", the other "go right". Averaging their advice tells you to swim.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>When demonstrations solve a task in several ways, predicting the average action can be worse than any of them. The learner must be able to choose one way.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does a squared-error learner end up in the middle?</dt>
+    <dd>For a given observation, the single prediction that minimises the average squared distance to all demonstrated actions is their mean, which here lies between the two routes.</dd>
+    <dt>What does "multimodal" mean here?</dt>
+    <dd>For the same situation, there are several distinct good actions (modes), such as going left or going right.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §2 · Fig. 1</p>
+  <h2>Robot motion, generated like an image</h2>
+  <div class="prose">
+    <p>Image <a href="ddpm.html">diffusion models</a> generate a picture by starting from random static and removing noise step by step. Diffusion Policy applies the same procedure to robot actions. The thing being generated is not a picture but a short <strong>action sequence</strong>: the next 16 target positions for the robot's hand, say. The noise-removing network is also given what the robot currently sees, so the actions it generates fit the situation.</p>
+    <p>Because a diffusion model learns the whole spread of possible outputs, not just their average, each run lands on one of the demonstrated ways. Which one depends on the random starting noise. And because the whole sequence is generated together, it is a coherent plan rather than a jumble of steps from different strategies.</p>
+    <p>Drag the slider to watch one action sequence emerge from noise.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Denoising step <input type="range" id="dn-k" min="0" max="50" step="1" value="50"><output id="dn-k-o">50</output></label><button class="btn" id="dn-play">Play</button><button class="btn" id="dn-new">New noise</button></div>
+    <div class="svgbox"><svg id="dn" viewBox="0 0 600 300" role="img" aria-label="A 16-waypoint action sequence being denoised from random noise into a smooth path"></svg></div>
+    <p class="readout" id="dn-r"></p>
+    <figcaption>Step 50 is pure noise; step 0 is the finished plan. Amber dots: the 16 waypoints at the chosen step. Faint line: the clean plan the denoiser currently expects. The same demonstrations and exact denoiser as above. Toy illustration.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Diffusion Policy generates a whole sequence of future actions by denoising, conditioned on what the robot sees, so it can represent several valid strategies and commit to one.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>In Diffusion Policy, what plays the role of the "image"?</dt>
+    <dd>A short sequence of future robot actions (for example, target positions for the next 16 time steps).</dd>
+    <dt>What decides whether a given run goes left or right?</dt>
+    <dd>The random noise it starts from (and the randomness added during denoising). Different noise leads to different valid plans.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §2.3, §4.3 · Figs. 2, 5</p>
+  <h2>Plan a stretch, do part of it, plan again</h2>
+  <div class="prose">
+    <p>Generating takes time, many network passes per plan, so the robot can't afford to plan from scratch at every tiny time step. And committing to a very long plan would make it slow to react if something changes. The paper's compromise, borrowed from control engineering, is <strong>receding-horizon control</strong>: look at the last couple of camera frames, plan the next 16 steps, carry out the first 8, then look again and make a new plan.</p>
+    <p>Carrying out several steps of one plan has a second benefit: the robot sticks with one strategy instead of flip-flopping between "left" and "right" at every moment. The paper found 8 executed steps to be the best setting for most of its tasks; fewer gave jittery motion, more made the robot slow to react.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Steps executed per plan <input type="range" id="rh-a" min="1" max="16" step="1" value="8"><output id="rh-a-o">8</output></label></div>
+    <div class="svgbox wide"><svg id="rh" viewBox="0 0 640 230" role="img" aria-label="Timeline of planning cycles: observed frames, predicted steps and executed steps"></svg></div>
+    <p class="readout" id="rh-r"></p>
+    <figcaption>Each row is one planning cycle over a 48-step episode. Blue: the 2 most recent observations it looks at. Grey: the 16 steps it predicts. Amber: the steps it actually carries out before re-planning. Fewer executed steps means more re-planning (more reactive, more computation); more means longer commitment.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Diffusion Policy plans 16 steps, executes about 8, and re-plans: a balance between consistency and reacting to change.</p>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §5–7 · Tables 1–6</p>
+  <h2>Results in simulation and on real robots</h2>
+  <div class="prose">
+    <p>The authors compared Diffusion Policy with three strong earlier methods: a recurrent network that outputs a mixture of bell curves (LSTM-GMM), an "implicit" energy-based policy (IBC), and a transformer that clusters actions (BET). Across 12 simulated tasks (15 in v5) from four benchmarks, from lifting objects to multi-stage kitchen chores, it improved on the best of them by 46.9% on average.</p>
+    <p>On real robots: pushing a T-shaped block into place (95% success, the baselines 0 to 20%), flipping a mug (90% vs 0% for LSTM-GMM), and pouring and spreading sauce on pizza dough. An extended version adds two-armed tasks such as unrolling a mat and folding a shirt (75% success on each).</p>
+    <p>Two practical findings stood out. Commanding target <em>positions</em> worked better than commanding <em>velocities</em>, the opposite of what earlier methods preferred. And training was stable: unlike the energy-based method, its performance did not swing wildly between training checkpoints.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Diffusion Policy outperformed the best previous behaviour-cloning methods by a wide margin, in simulation and on real hardware.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §9 and legacy</p>
+  <h2>Limits, and where the idea went</h2>
+  <div class="prose">
+    <p>Diffusion Policy still only imitates: it needs good demonstrations and can't improve beyond them on its own. And generating each plan takes many network passes, which makes it slower and more computationally demanding than simpler policies, an issue for very fast control loops.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>"Generate a chunk of actions with a generative model" became a standard design for robot learning. Large vision-language-action models such as <a href="pi0.html">π0</a> (2024) generate action chunks with <a href="flowmatch.html">flow matching</a>, a close cousin of diffusion that needs fewer steps; others speed up diffusion policies with consistency-model distillation. Action chunking was also central to ACT (Zhao et al., 2023), developed in parallel for low-cost bimanual arms.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Treating robot actions as something to generate, not just predict, handled multiple strategies cleanly and shaped how today's robot foundation models produce actions.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Diffusion Policy generates robot behaviour by representing a visuomotor policy as a conditional denoising diffusion process. Benchmarked on 12 tasks from 4 robot manipulation benchmarks (15 in v5), it consistently outperforms existing state-of-the-art robot learning methods, with an average improvement of 46.9%. It learns the gradient of the action-distribution score function and iteratively optimises with respect to that gradient field at inference via a series of stochastic Langevin dynamics steps. The diffusion formulation handles multimodal action distributions, suits high-dimensional action spaces, and trains stably. Key technical contributions are receding-horizon control, visual conditioning, and a time-series diffusion transformer. Chi, Xu, Feng, Cousineau, Du, Burchfiel, Tedrake and Song; RSS 2023, with an extended version (arXiv:2303.04137v5, 2024) adding bimanual experiments.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2 · Eqs. 1–5</p>
+  <h2>Formulation</h2>
+  <div class="prose"><p>Starting from <var>x</var><sup><var>K</var></sup> ~ <span class="v">N</span>(0, <var>I</var>), <var>K</var> denoising iterations produce <var>x</var><sup>0</sup>:</p></div>
+  <div class="eq"><var>x</var><sup><var>k</var>−1</sup> = α ( <var>x</var><sup><var>k</var></sup> − γ ε<sub>θ</sub>(<var>x</var><sup><var>k</var></sup>, <var>k</var>) + <span class="v">N</span>(0, σ<sup>2</sup><var>I</var>) ) <span class="n">(1)</span></div>
+  <div class="prose"><p>which the paper reads as noisy gradient descent <var>x</var>′ = <var>x</var> − γ∇<var>E</var>(<var>x</var>) (Eq. 2): ε<sub>θ</sub> predicts the gradient field of an implicit energy, and α, γ, σ as functions of <var>k</var> are the noise schedule. Training is DDPM's (Eq. 3). For a policy, the generated variable is the action sequence <b>A</b><sub><var>t</var></sub> and the denoiser is conditioned on observations <b>O</b><sub><var>t</var></sub>:</p></div>
+  <div class="eq"><b>A</b><sub><var>t</var></sub><sup><var>k</var>−1</sup> = α ( <b>A</b><sub><var>t</var></sub><sup><var>k</var></sup> − γ ε<sub>θ</sub>(<b>O</b><sub><var>t</var></sub>, <b>A</b><sub><var>t</var></sub><sup><var>k</var></sup>, <var>k</var>) + <span class="v">N</span>(0, σ<sup>2</sup><var>I</var>) ) <span class="n">(4)</span></div>
+  <div class="eq"><var>L</var> = MSE( ε<sup><var>k</var></sup>, ε<sub>θ</sub>(<b>O</b><sub><var>t</var></sub>, <b>A</b><sub><var>t</var></sub><sup>0</sup> + ε<sup><var>k</var></sup>, <var>k</var>) ) <span class="n">(5)</span></div>
+  <div class="prose">
+    <p>Modelling <var>p</var>(<b>A</b><sub><var>t</var></sub> | <b>O</b><sub><var>t</var></sub>) rather than the joint <var>p</var>(<b>A</b><sub><var>t</var></sub>, <b>O</b><sub><var>t</var></sub>) (as Diffuser, Janner et al. 2022, does for planning) avoids predicting future observations, speeds inference and makes end-to-end training of the vision encoder feasible. <strong>Horizons (§2.3, Fig. 2a):</strong> the policy takes the last <var>T</var><sub><var>o</var></sub> observations, predicts <var>T</var><sub><var>p</var></sub> actions and executes <var>T</var><sub><var>a</var></sub> of them before re-planning, warm-starting the next inference from the previous prediction. Typical values (Table 7): <var>T</var><sub><var>o</var></sub> = 2, <var>T</var><sub><var>p</var></sub> = 16, <var>T</var><sub><var>a</var></sub> = 8. Actions are normalised to [−1, 1] (App. A).</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3 · Fig. 2b–c · Table 5</p>
+  <h2>Key design decisions</h2>
+  <div class="prose"><ul>
+    <li><strong>CNN-based denoiser.</strong> The 1-D temporal convolutional U-Net from Diffuser, with observation features and the step <var>k</var> injected by FiLM (feature-wise scale and shift) in every convolutional layer, and only the action sequence as the denoised signal. Works out of the box on most tasks but is biased towards low-frequency signals, so it struggles with rapidly changing actions such as velocity commands. The authors recommend starting here.</li>
+    <li><strong>Time-series diffusion transformer.</strong> A minGPT-style decoder: noisy action tokens as inputs, the embedding of <var>k</var> and the observation features attended to by causal cross-attention. Better on high-rate and velocity-control tasks but more sensitive to hyperparameters.</li>
+    <li><strong>Visual encoder.</strong> A ResNet-18 trained from scratch end to end (one per camera view), with global average pooling replaced by spatial softmax pooling and BatchNorm replaced by GroupNorm for stability with EMA weights. In Table 5 (Square task), from-scratch ResNet-18 scored 0.94 versus 0.58 frozen-pretrained; a fine-tuned CLIP ViT-B/16 reached 0.98.</li>
+    <li><strong>Noise schedule.</strong> The square cosine schedule of Improved DDPM worked best (§3.3).</li>
+    <li><strong>Inference speed.</strong> DDIM decouples training and inference iterations: 100 training iterations and 10 inference iterations gave about 0.1 s latency on an Nvidia 3080 (§3.4); real-world experiments used 16 inference iterations (App. A.4).</li>
+  </ul></div>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §4 · Eqs. 6–8 · Figs. 3–6</p>
+  <h2>Why it works: four properties</h2>
+  <div class="prose">
+    <p><strong>Multimodality (§4.1, Fig. 3).</strong> Stochastic initialisation and Langevin-style sampling let different rollouts converge to different modes, while sequence prediction keeps each rollout in one mode. On Push-T, Diffusion Policy commits to going left or right around the block; LSTM-GMM and IBC are biased to one mode, and BET fails to commit, lacking temporal consistency.</p>
+    <p><strong>Position control (§4.2, Fig. 4).</strong> Diffusion Policy works best with absolute position actions, whereas the baselines did best with velocity control. Explanation: position actions are more multimodal (a problem for the baselines, not for diffusion) and suffer less from compounding error.</p>
+    <p><strong>Action sequences (§4.3, Fig. 5).</strong> Per-step multimodal sampling can alternate between modes from one step to the next, giving jittery actions; predicting and executing a sequence prevents that. Sequence prediction also helps with idle pauses in demonstrations, which single-step policies tend to overfit (BC-RNN and IBC "often get stuck" in real experiments). Too long a horizon reduces performance through slow reaction; <var>T</var><sub><var>a</var></sub> = 8 was best on most tasks, and position control stayed near peak performance with up to 4 steps of latency.</p>
+    <p><strong>Training stability (§4.4, Eqs. 6–8).</strong> IBC models <var>p</var><sub>θ</sub>(<b>a</b> | <b>o</b>) = e<sup>−<var>E</var><sub>θ</sub>(<b>o</b>,<b>a</b>)</sup>/<var>Z</var>(<b>o</b>, θ) and trains with an InfoNCE-style loss whose negative samples estimate the intractable <var>Z</var>, causing unstable training (Fig. 6: its success rate oscillates even as the loss falls smoothly). Diffusion avoids <var>Z</var> entirely, because the score does not depend on it:</p>
+  </div>
+  <div class="eq">∇<sub><b>a</b></sub> log <var>p</var>(<b>a</b> | <b>o</b>) = −∇<sub><b>a</b></sub><var>E</var><sub>θ</sub>(<b>a</b>, <b>o</b>) − ∇<sub><b>a</b></sub> log <var>Z</var>(<b>o</b>, θ) = −∇<sub><b>a</b></sub><var>E</var><sub>θ</sub>(<b>a</b>, <b>o</b>) ≈ −ε<sub>θ</sub>(<b>a</b>, <b>o</b>) <span class="n">(8)</span></div>
+  <div class="prose"><p>The figure is a toy version of the §4.3 argument. A point robot heads to a goal past an obstacle; at each re-plan the policy samples a "left" or "right" detour, with the choice depending on its current lateral position (a multimodal policy conditioned on observation). It then executes <var>T</var><sub><var>a</var></sub> steps of that plan.</p></div>
+  <figure class="live">
+    <div class="ctl"><label>Executed steps <var>T</var><sub><var>a</var></sub> <input type="range" id="tc-a" min="1" max="16" step="1" value="1"><output id="tc-a-o">1</output></label><button class="btn" id="tc-go">New rollouts</button></div>
+    <div class="svgbox"><svg id="tc" viewBox="0 0 600 280" role="img" aria-label="Rollouts of a point robot past an obstacle with different action horizons"></svg></div>
+    <p class="readout" id="tc-r"></p>
+    <figcaption>30 rollouts drawn (statistics over 300). Each plan is 16 steps that move forward and steer towards a detour lane on the sampled side; the probability of choosing the right-hand side is a logistic function of lateral position (scale 0.2), so a robot in the middle chooses 50/50 and one already off-centre usually continues. Red rollouts touch the obstacle. With <var>T</var><sub><var>a</var></sub> = 1 the robot dithers near the centre line; longer horizons commit. Toy illustration of the mechanism, not the paper's experiment (it omits the cost of slow reactions, which is why the paper's optimum is 8 rather than 16).</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §5–7 · Tables 1–6</p>
+  <h2>Evaluation</h2>
+  <div class="prose">
+    <p>Simulation benchmarks: Robomimic (Lift, Can, Square, Transport, ToolHang; proficient-human "ph" and mixed-human "mh" data), Push-T, Multimodal Block Pushing, and Franka Kitchen, with state and image observations. Baselines: LSTM-GMM (BC-RNN), IBC, BET. Metrics are the max and the average of the last 10 checkpoints (each over many rollouts); DP-C and DP-T denote the CNN and transformer variants. The 46.9% is the average over tasks of the relative improvement of the best Diffusion Policy variant over the best baseline, computed as described in App. B.2.</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Task (max / avg)</th><th>LSTM-GMM</th><th>IBC</th><th>BET</th><th>DP-C</th><th>DP-T</th></tr></thead>
+    <tbody>
+      <tr><td>Push-T, state (Table 1)</td><td class="num">0.67 / 0.61</td><td class="num">0.90 / 0.84</td><td class="num">0.79 / 0.70</td><td class="num">0.95 / 0.91</td><td class="num">0.95 / 0.79</td></tr>
+      <tr><td>Push-T, image (Table 2)</td><td class="num">0.69 / 0.54</td><td>–</td><td>–</td><td class="num">0.91 / 0.84</td><td>–</td></tr>
+      <tr><td>Kitchen p4 (Table 4)</td><td class="num">0.34</td><td>–</td><td class="num">0.44</td><td class="num">0.99</td><td class="num">0.96</td></tr>
+      <tr><td>Block push p2 (Table 4)</td><td>–</td><td>–</td><td class="num">0.71</td><td>–</td><td class="num">0.94</td></tr>
+    </tbody></table></div>
+  <div class="prose">
+    <p>(Cells marked – are omitted here, not missing from the paper.) <strong>Real world (§6–7).</strong> Push-T (Table 6): 0.95 success, 0.80 IoU, against 1.00 / 0.84 for a human and 0 to 0.20 success for IBC and LSTM-GMM; robust to occlusion and to the block being moved mid-task (Fig. 8). Mug flipping (Fig. 9): 90% over 20 trials, LSTM-GMM 0%. Sauce pouring IoU 0.74 and spreading coverage 0.77 (Fig. 10). Bimanual (§7): egg beater 55% (210 demos), mat unrolling 75% (162), shirt folding 75% (284). Diffusion Policy also beats LSTM-GMM at every training-set size tested (Fig. 15).</p>
+  </div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §9 and lineage</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose"><ul>
+    <li><strong>Behaviour cloning limits.</strong> Needs adequate demonstrations; suboptimal or negative data are not used. Combining with reinforcement learning is left to future work.</li>
+    <li><strong>Compute and latency.</strong> Higher than LSTM-GMM; action chunking only partly compensates for high-rate control. The authors point to faster samplers and consistency models.</li>
+    <li><strong>Per-task training.</strong> Each policy is trained for one task from its own demonstrations, without language or broad pretraining.</li>
+  </ul></div>
+  <div class="later"><span class="label">Later refinements</span>Consistency Policy (Prasad et al., 2024) distils Diffusion Policy for few-step inference. 3D Diffusion Policy conditions on point clouds. ACT (Zhao et al., 2023) introduced action chunking with a CVAE transformer at about the same time. Generalist policies took the generative action head into large models: Octo uses a diffusion head, and <a href="pi0.html">π0</a> (2024) attaches a <a href="flowmatch.html">flow-matching</a> action expert to a vision-language model, generating 50-step action chunks; <a href="oxe.html">Open X-Embodiment</a> supplied cross-robot data. <a href="rt2.html">RT-2</a> took the other route, emitting discretised actions as language tokens.</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Behaviour cloning</dt><dd>Supervised learning of a policy from demonstration (observation, action) pairs.</dd>
+    <dt>Multimodal distribution</dt><dd>A distribution with several separated peaks (several valid actions).</dd>
+    <dt><var>T</var><sub><var>o</var></sub>, <var>T</var><sub><var>p</var></sub>, <var>T</var><sub><var>a</var></sub></dt><dd>Observation, prediction and action-execution horizons.</dd>
+    <dt>Receding horizon</dt><dd>Plan over a horizon, execute the first part, re-plan from the new state.</dd>
+    <dt>FiLM</dt><dd>Feature-wise linear modulation: conditioning by a learned per-channel scale and bias.</dd>
+    <dt>IBC</dt><dd>Implicit behavioural cloning: an energy-based policy trained with negative samples.</dd>
+    <dt>LSTM-GMM / BET</dt><dd>Recurrent policy with a Gaussian-mixture output; Behaviour Transformer with k-means action bins plus offsets.</dd>
+    <dt>DDIM</dt><dd>Deterministic diffusion sampler allowing fewer inference than training steps.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="ddpm.html">DDPM (2020)</a></p>
+  <p><strong>Led to:</strong> <a href="pi0.html">π0 (2024)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> (<a href="https://lovespark.love/papers-worth-reading/#diffpolicy">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+var DP=(function(){ var K=50, beta=[0], al=[1], ab=[1];
+  for (var k=1;k<=K;k++){ var b=1e-3+(0.3-1e-3)*(k-1)/(K-1); beta.push(b); al.push(1-b); ab.push(ab[k-1]*(1-b)); }
+  var r=rng(31), demos=[];
+  for (var i=0;i<24;i++){ var side=i%2?1:-1, c=side*(0.95+0.2*r()), wob=0.05*gauss(r), d=[];
+    for (var j=0;j<16;j++){ var u=j/15, x=2*u*(1-u)*c+wob*Math.sin(Math.PI*u)+0.015*gauss(r), y=-0.9+1.8*u+0.015*gauss(r); d.push(x,y); }
+    demos.push(d); }
+  var s2=0.03*0.03;
+  function x0hat(x,k){ var a=Math.sqrt(ab[k]), v=1-ab[k], L=demos.map(function(d){ var e=0; for (var i=0;i<32;i++){ var q=x[i]-a*d[i]; e+=q*q; } return -e/(2*(ab[k]*s2+v)); });
+    var m=Math.max.apply(null,L), w=L.map(function(l){ return Math.exp(l-m); }), Z=w.reduce(function(p,q){return p+q;},0), o=[];
+    for (var i=0;i<32;i++){ var sacc=0; for (var n=0;n<demos.length;n++){ var dd=demos[n][i]; sacc+=w[n]/Z*(dd+a*s2/(ab[k]*s2+v)*(x[i]-a*dd)); } o.push(sacc); } return o; }
+  function sample(seed,keep){ var rr=rng(seed), x=[]; for (var i=0;i<32;i++) x.push(gauss(rr)); var hist=keep?[x.slice()]:null;
+    for (var k=K;k>=1;k--){ var h=x0hat(x,k), a=Math.sqrt(ab[k]), sq=Math.sqrt(1-ab[k]);
+      for (var i=0;i<32;i++){ var e=(x[i]-a*h[i])/sq; x[i]=(x[i]-beta[k]/sq*e)/Math.sqrt(al[k])+(k>1?Math.sqrt(beta[k])*gauss(rr):0); }
+      if (keep) hist.push(x.slice()); }
+    return keep?hist:x; }
+  var mean=[]; for (var i=0;i<32;i++){ var s=0; demos.forEach(function(d){ s+=d[i]; }); mean.push(s/demos.length); }
+  function hits(p){ for (var j=0;j<16;j++){ if (Math.hypot(p[2*j],p[2*j+1])<0.22) return true; if (j<15){ var mx=(p[2*j]+p[2*j+2])/2, my=(p[2*j+1]+p[2*j+3])/2; if (Math.hypot(mx,my)<0.22) return true; } } return false; }
+  function X(x){ return 300+x*190; } function Y(y){ return 150-y*150; }
+  function path(svg,p,cl,extra){ var d=''; for (var j=0;j<16;j++) d+=(j?'L':'M')+fmt(X(p[2*j]),1)+','+fmt(Y(p[2*j+1]),1); var e=S('path',{d:d,'class':cl},svg); if (extra) for (var k in extra) e.setAttribute(k,extra[k]); return e; }
+  function scene(svg,showDemos){ S('circle',{cx:X(0),cy:Y(0),r:0.2*150,'class':'box-inh'},svg); S('text',{x:X(0),y:Y(0)+4,'class':'t-inh mid'},svg,'obstacle');
+    S('circle',{cx:X(0),cy:Y(-0.9),r:6,'class':'u-wire'},svg); S('text',{x:X(0)+12,y:Y(-0.9)+4,'class':'t-s'},svg,'start');
+    S('circle',{cx:X(0),cy:Y(0.9),r:6,'class':'u-on'},svg); S('text',{x:X(0)+12,y:Y(0.9)+4,'class':'t-s'},svg,'goal');
+    if (showDemos) demos.forEach(function(d){ path(svg,d,'w-dash',{'stroke-opacity':0.45}); }); }
+  return {sample:sample,x0hat:x0hat,mean:mean,hits:hits,path:path,scene:scene,X:X,Y:Y,K:K};
+})();
+(function(){ // averaging trap
+  var svg=$('#av'), showMean=true, samples=[], seed=100;
+  function draw(){ clear(svg); DP.scene(svg,true);
+    if (showMean) DP.path(svg,DP.mean,'w',{'stroke-width':3});
+    samples.forEach(function(p,i){ DP.path(svg,p,i===samples.length-1?'w-fire':'w-fire',{'stroke-opacity':i===samples.length-1?1:0.45}); });
+    var L=samples.filter(function(p){ return p[16]<0; }).length, H=samples.filter(DP.hits).length;
+    var msg=[]; if (showMean) msg.push('Average path: <b>'+(DP.hits(DP.mean)?'goes through the obstacle':'clear')+'</b>.');
+    if (samples.length) msg.push('Diffusion samples: <b>'+samples.length+'</b> ('+L+' left, '+(samples.length-L)+' right), <b>'+H+'</b> hitting the obstacle.');
+    $('#av-r').innerHTML=msg.join(' ')||'Press a button.'; }
+  $('#av-mean').onclick=function(){ showMean=true; draw(); };
+  $('#av-diff').onclick=function(){ samples.push(DP.sample(seed++,false)); if (samples.length>12) samples.shift(); draw(); };
+  $('#av-clear').onclick=function(){ samples=[]; showMean=false; draw(); };
+  for (var i0=0;i0<4;i0++) samples.push(DP.sample(seed++,false));
+  draw();
+})();
+(function(){ // denoising
+  var svg=$('#dn'), k=50, seed=7, hist, timer=null;
+  function make(){ hist=DP.sample(seed++,true); }
+  function draw(){ clear(svg); DP.scene(svg,false); var x=hist[DP.K-k];
+    if (k>0) DP.path(svg,DP.x0hat(x,k),'w-faint');
+    var d=''; for (var j=0;j<16;j++){ var px=Math.max(4,Math.min(596,DP.X(x[2*j]))), py=Math.max(4,Math.min(296,DP.Y(x[2*j+1]))); d+=(j?'L':'M')+fmt(px,1)+','+fmt(py,1); }
+    S('path',{d:d,'class':'w-fire','stroke-opacity':0.5},svg);
+    for (var j=0;j<16;j++) S('circle',{cx:Math.max(4,Math.min(596,DP.X(x[2*j]))),cy:Math.max(4,Math.min(296,DP.Y(x[2*j+1]))),r:3.5,'class':'u-on'},svg);
+    $('#dn-r').innerHTML= k===50 ? 'Step 50: pure noise. Slide towards 0 or press Play.' : (k===0 ? 'Step 0: a finished plan going <b>'+(x[16]<0?'left':'right')+'</b> of the obstacle.' : 'Step <b>'+k+'</b>: the expected plan currently goes '+(DP.x0hat(x,k)[16]<0?'left':'right')+'.'); }
+  var rr=bindRange('dn-k',function(v){ k=v; if (hist) draw(); }); make(); draw();
+  $('#dn-new').onclick=function(){ make(); draw(); };
+  $('#dn-play').onclick=function(){ var b=this; if (timer){ clearInterval(timer); timer=null; b.textContent='Play'; return; } if (k===0) k=50; b.textContent='Pause';
+    timer=setInterval(function(){ k--; rr.value=k; $('#dn-k-o').textContent=k; draw(); if (k<=0){ clearInterval(timer); timer=null; b.textContent='Play'; } },80); };
+})();
+(function(){ // receding horizon timeline
+  var svg=$('#rh'), Ta=8, To=2, Tp=16, E=48;
+  function draw(){ clear(svg); var X=function(t){ return 40+t*10; }, rows=[], t=0; while (t<E){ rows.push(t); t+=Ta; }
+    var h=Math.min(18,175/rows.length), gap=Math.min(4,h*0.25);
+    S('line',{x1:X(0),y1:20,x2:X(E),y2:20,'class':'axis'},svg); [0,8,16,24,32,40,48].forEach(function(t){ S('text',{x:X(t),y:14,'class':'t-s mid'},svg,t); });
+    rows.forEach(function(t0,i){ var y=28+i*h;
+      S('rect',{x:X(Math.max(0,t0-To+1)),y:y,width:X(t0+1)-X(Math.max(0,t0-To+1))-1,height:h-gap,'class':'f-wire'},svg);
+      S('rect',{x:X(t0),y:y,width:X(Math.min(E+4,t0+Tp))-X(t0),height:h-gap,'class':'f-rule'},svg);
+      S('rect',{x:X(t0),y:y,width:X(Math.min(E,t0+Ta))-X(t0)-1,height:h-gap,'class':'f-fire'},svg); });
+    S('rect',{x:40,y:214,width:12,height:10,'class':'f-wire'},svg); S('text',{x:58,y:223,'class':'t-wire'},svg,'observed'); S('rect',{x:150,y:214,width:12,height:10,'class':'f-rule'},svg); S('text',{x:168,y:223,'class':'t-s'},svg,'predicted'); S('rect',{x:260,y:214,width:12,height:10,'class':'f-fire'},svg); S('text',{x:278,y:223,'class':'t-fire'},svg,'executed');
+    $('#rh-r').innerHTML='<var>T</var><sub>a</sub> = <b>'+Ta+'</b>: <b>'+rows.length+'</b> plans in a 48-step episode; '+fmt(100*Ta/Tp,0)+'% of each 16-step prediction is used. '+(Ta===8?'This is the paper’s usual setting.':(Ta<4?'Very reactive, but more computation and less commitment.':(Ta>12?'Long commitment: slow to react if something changes.':''))); }
+  bindRange('rh-a',function(v){ Ta=v; draw(); });
+})();
+(function(){ // temporal consistency toy
+  var svg=$('#tc'), Ta=1, seed=1;
+  function plan(p,side){ // 16 waypoints: move forward 0.1 per step, steer (at most 0.09 per step) to a detour lane on 'side' near the obstacle
+    var pts=[], x=p[0], y=p[1]; for (var j=1;j<=16;j++){ y+=0.1; var xs=(y>-0.6&&y<0.6)?side*0.5:0; x+=Math.max(-0.09,Math.min(0.09,xs-x)); pts.push([x,y]); } return pts; }
+  function rollout(r){ var p=[0.01*gauss(r),-0.9], tr=[p.slice()], hit=false, sw=0, last=0;
+    while (p[1]<0.85){ var pl=1/(1+Math.exp(-p[0]/0.2)), side=r()<pl?1:-1, pts=plan(p,side); if (last&&side!==last) sw++; last=side;
+      for (var j=0;j<Ta&&p[1]<0.85;j++){ p=pts[j].slice(); tr.push(p.slice()); if (Math.hypot(p[0],p[1])<0.22) hit=true; } }
+    return {tr:tr,hit:hit,steps:sw}; }
+  function draw(){ clear(svg); var r=rng(seed), R=[]; for (var i=0;i<300;i++) R.push(rollout(r));
+    S('circle',{cx:DP.X(0),cy:DP.Y(0),r:0.2*150,'class':'box-inh'},svg); S('circle',{cx:DP.X(0),cy:DP.Y(-0.9),r:6,'class':'u-wire'},svg); S('circle',{cx:DP.X(0),cy:DP.Y(0.9),r:6,'class':'u-on'},svg);
+    R.slice(0,30).forEach(function(o){ var d=''; o.tr.forEach(function(q,i){ d+=(i?'L':'M')+fmt(DP.X(q[0]),1)+','+fmt(Math.max(4,DP.Y(q[1])),1); }); S('path',{d:d,'class':o.hit?'w-inh':'w-fire','stroke-opacity':0.7},svg); });
+    var H=R.filter(function(o){ return o.hit; }).length, st=0; R.forEach(function(o){ st+=o.steps; });
+    $('#tc-r').innerHTML='<var>T</var><sub>a</sub> = <b>'+Ta+'</b>: <b>'+fmt(100*H/R.length,0)+'%</b> of 300 rollouts touch the obstacle; on average the chosen side switches <b>'+fmt(st/R.length,1)+'</b> times per episode.'; }
+  bindRange('tc-a',function(v){ Ta=v; draw(); }); $('#tc-go').onclick=function(){ seed++; draw(); };
+})();
+</script>
+
+</body>
+</html>

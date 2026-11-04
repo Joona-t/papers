@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PPO (2017) study guide</title>
+<meta name="description" content="Can you get the stability of a trust-region method like TRPO with nothing more than ordinary gradient steps? PPO says yes: clip the objective so that an update gains nothing from pushing any action&#x27;s probability more than about 20% away from where it started, then reuse each batch of experience">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Robotics &amp; reinforcement learning</b> · 2017</p>
+  <h1>Proximal Policy Optimization Algorithms</h1>
+  <p class="cite">John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, Oleg Klimov · arXiv</p>
+  <p class="lede">Can you get the stability of a trust-region method like TRPO with nothing more than ordinary gradient steps? PPO says yes: clip the objective so that an update gains nothing from pushing any action's probability more than about 20% away from where it started, then reuse each batch of experience for several passes. It is simple, robust, and became the default policy-gradient algorithm, including for training language models from human feedback.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/1707.06347">Read the paper (free)</a> <a href="https://lovespark.love/papers-worth-reading/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, separate AI review (also by Claude), but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Policy-gradient learning makes good actions more likely and bad ones less likely, but large or repeated updates on the same batch of experience can wreck the policy.</p>
+  <p><a href="trpo.html">TRPO</a> fixed this with a hard limit on how much the behaviour may change, solved with heavy second-order maths. PPO gets most of the same effect with a one-line change to the objective: for each action, compare its new probability with its old one, and stop rewarding the update once that ratio leaves the range 0.8 to 1.2.</p>
+  <p>Because the clipped objective stops pulling once the policy has moved far enough, the same batch can safely be used for several passes of ordinary gradient descent, which makes learning much more data-efficient than plain policy gradients.</p>
+  <p>On simulated robots and Atari, PPO matched or beat the alternatives while being far simpler to implement, and it went on to become the workhorse of reinforcement learning from human feedback.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1–2</p>
+  <h2>The problem PPO solves</h2>
+  <div class="prose">
+    <p>A <strong>policy</strong> is a network that, given a situation, outputs the probability of each action. A <strong>policy gradient</strong> collects some experience, works out which actions did better than expected (their <strong>advantage</strong> is positive) and which did worse, and shifts probability accordingly.</p>
+    <p>Collecting experience is expensive (you have to run the robot or play the game), so you would like to squeeze several learning steps out of each batch. But the batch only tells you about behaviour close to the policy that collected it. Keep optimising on it and the policy drifts far away, chasing patterns that held only for the old behaviour, and performance can collapse.</p>
+    <p>The earlier fix, <a href="trpo.html">TRPO</a>, limits each update so the new policy stays within a small "distance" of the old one. It works, but it needs a special second-order optimisation step that is fiddly to implement and does not mix well with common network designs. PPO's authors, from the same group, wanted the same stability using only the plain gradient steps every deep learning library already provides.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>You get feedback on a draft essay and revise it. One careful revision helps. Revising the same paragraph twenty times against the same single comment, without fresh feedback, tends to overcorrect. PPO lets you revise several times, but stops counting any change that has already gone well past what the feedback was about.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The goal: reuse each batch of experience for several updates without letting the policy run away from the data it was based on, using only ordinary gradient steps.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §3 · Eq. 7 · Fig. 1</p>
+  <h2>The clip: stop rewarding change after 20%</h2>
+  <div class="prose">
+    <p>For each action in the batch, PPO looks at a single number, the <strong>probability ratio</strong>: the action's probability under the policy being trained divided by its probability under the policy that collected the data. A ratio of 1 means "unchanged", 1.5 means "now 50% more likely", 0.7 means "30% less likely".</p>
+    <p>The ordinary objective is "ratio × advantage": for a good action, raising its ratio always looks better, without limit. PPO <strong>clips</strong> the ratio to a band, by default 0.8 to 1.2 (ε = 0.2). For a good action, once the ratio passes 1.2 the objective goes flat, so there is no more reward for pushing further. For a bad action, once the ratio drops below 0.8 it goes flat too. And PPO always takes the more pessimistic of the clipped and unclipped versions, so the clip can only ever remove incentives, never add them.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn" id="cl-pos" aria-pressed="true">Good action (A &gt; 0)</button><button class="btn" id="cl-neg" aria-pressed="false">Bad action (A &lt; 0)</button>
+      <label>Ratio r <input type="range" id="cl-r" min="0" max="2" step="0.02" value="1.3" data-fmt="2"><output id="cl-r-o">1.30</output></label>
+      <label>ε <input type="range" id="cl-e" min="0.05" max="0.5" step="0.05" value="0.2" data-fmt="2"><output id="cl-e-o">0.20</output></label>
+    </div>
+    <div class="svgbox"><svg id="cl" viewBox="0 0 600 250" role="img" aria-label="The clipped objective for one action as a function of the probability ratio"></svg></div>
+    <p class="readout" id="cl-r-out"></p>
+    <figcaption>A re-drawing of the paper's Fig. 1 for one action with advantage +1 or −1. Dashed: the unclipped objective r × A. Amber: PPO's objective min(r × A, clip(r, 1−ε, 1+ε) × A). Where the amber line is flat, the gradient is zero, so this action stops pushing the update. Note the asymmetry: if a bad action has become <em>more</em> likely (r &gt; 1), the objective still pulls it back down.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>PPO's objective gives credit for moving an action's probability only up to about ±20% from where it started; beyond that, the incentive vanishes.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>A good action's ratio is already 1.4. Does PPO keep pushing it up?</dt>
+    <dd>No. With ε = 0.2 its term is clipped at 1.2 × A, so its gradient is zero and it no longer drives the update.</dd>
+    <dt>Why take the minimum of the clipped and unclipped terms rather than just the clipped one?</dt>
+    <dd>So the objective is pessimistic: if an update has accidentally made things worse for an action (a bad action became more likely), that mistake still shows up in full and gets corrected.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §3 · §5 · Algorithm 1</p>
+  <h2>Several passes over each batch, safely</h2>
+  <div class="prose">
+    <p>The payoff of clipping is reuse. PPO collects a batch of experience, then runs several <strong>epochs</strong> (passes) of gradient steps over it, between 3 and 15 in the paper's experiments, before collecting fresh data. Without the clip, more passes over the same batch keep pushing the same actions further and further, and the policy can lock onto a mediocre choice. With the clip, actions that have already moved enough drop out of the update.</p>
+    <p>Try it on a three-slot-machine toy: the machines pay 1.0, 0.7 and 0.2 on average, with plenty of noise. Each round the agent plays 16 times, then does several passes over those 16 results.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Passes per batch <input type="range" id="ep-k" min="1" max="20" step="1" value="15"><output id="ep-k-o">15</output></label>
+      <button class="btn" id="ep-one">Run one agent</button><button class="btn" id="ep-many">Run 200 agents</button>
+    </div>
+    <div class="svgbox"><svg id="ep" viewBox="0 0 600 260" role="img" aria-label="Action probabilities over 40 rounds with and without clipping"></svg></div>
+    <p class="readout" id="ep-r"></p>
+    <figcaption>A toy, not the paper's experiment. Both agents use the same batches, the same advantage (reward minus batch average) and the same step size; the only difference is the objective, ratio × advantage (left) or PPO's clipped version with ε = 0.2 (right). Green = best machine. With 1 pass they are identical; with 10 or more passes the unclipped agent often commits to the 0.7 machine.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Clipping is what makes it safe to squeeze several updates out of every batch of experience.</p>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §5 · Eq. 9</p>
+  <h2>The rest of the recipe: a critic and a curiosity bonus</h2>
+  <div class="prose">
+    <p>To know whether an action was "better than expected", you need an expectation. PPO trains a second output, the <strong>value</strong> (or "critic"), which predicts the future reward from each situation. The advantage of an action is then roughly "what actually happened afterwards minus what the critic predicted". The paper uses a method called generalised advantage estimation, which blends short-term and long-term evidence with a knob λ.</p>
+    <p>The final objective adds three things: the clipped policy term, a penalty for the critic's prediction errors, and a small <strong>entropy bonus</strong> that rewards the policy for staying a bit random, so it keeps exploring. Data come from short stretches of play (128 steps from each of 8 parallel game copies in Atari; 2,048 steps in the robot tasks) before each update.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A sports coach (the critic) predicts how a play will go. If the play turns out better than the coach predicted, the player does more of it; if worse, less. Meanwhile the coach updates their predictions, and everyone is encouraged to keep trying the occasional new move.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>PPO in practice is an actor–critic method: clipped policy updates, a learned value baseline for advantages, and an entropy bonus for exploration.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §6 · Tables 1–2</p>
+  <h2>Results, and an unexpected second career</h2>
+  <div class="prose">
+    <p>On seven simulated robot tasks, the clipped version with ε = 0.2 scored best among all the variants the authors tried, including penalty-based versions closer to TRPO. Removing the clip entirely, while still taking many passes over each batch, scored worse than a random policy on average. On 49 Atari games it beat two strong rivals, A2C and ACER, on learning speed; on final performance ACER won more games. It also learned a 3-D humanoid robot that runs towards moving targets and gets up after being knocked over.</p>
+    <p>PPO's real legacy came later. Its combination of simplicity and robustness made it the standard choice for the final stage of training chat models: <a href="instructgpt.html">InstructGPT</a> used PPO to fine-tune a language model against a reward model trained on human preferences.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>For language models, PPO's critic is a large extra network to train. <a href="grpo.html">GRPO</a> (2024) drops it: it samples a group of answers to the same prompt and uses each answer's reward relative to the group average as its advantage, while keeping PPO's clipped ratio. Direct preference optimisation (<a href="dpo.html">DPO</a>, 2023) skips reinforcement learning altogether for preference data.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>PPO was about as good as anything else on benchmarks and far simpler, which is why it became the default, from robots to RLHF.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>A new family of policy-gradient methods that alternate between sampling data through interaction with the environment and optimising a "surrogate" objective with stochastic gradient ascent. Unlike standard policy gradients, which do one update per sample, the objective allows multiple epochs of minibatch updates. Proximal Policy Optimization keeps some of the benefits of TRPO but is much simpler to implement, more general and has better sample complexity empirically. On simulated robotic locomotion and Atari it outperforms other online policy-gradient methods and strikes a favourable balance of sample complexity, simplicity and wall-time. arXiv:1707.06347 (2017).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2 · Eqs. 1–5</p>
+  <h2>Background: policy gradients and TRPO</h2>
+  <div class="prose"><p>The standard estimator and the loss whose gradient produces it:</p></div>
+  <div class="eq"><var>ĝ</var> = Ê<sub><var>t</var></sub>[ ∇<sub>θ</sub> log π<sub>θ</sub>(<var>a<sub>t</sub></var> | <var>s<sub>t</sub></var>) Â<sub><var>t</var></sub> ], &nbsp;&nbsp; <var>L</var><sup>PG</sup>(θ) = Ê<sub><var>t</var></sub>[ log π<sub>θ</sub>(<var>a<sub>t</sub></var> | <var>s<sub>t</sub></var>) Â<sub><var>t</var></sub> ] <span class="n">(1–2)</span></div>
+  <div class="prose"><p>Ê<sub><var>t</var></sub> is an empirical average over a finite batch. Doing multiple optimisation steps on <var>L</var><sup>PG</sup> with the same trajectory "is not well-justified" and empirically leads to destructively large updates. <a href="trpo.html">TRPO</a> instead solves</p></div>
+  <div class="eq">max<sub>θ</sub> Ê<sub><var>t</var></sub>[ (π<sub>θ</sub>(<var>a<sub>t</sub></var>|<var>s<sub>t</sub></var>) / π<sub>θ<sub>old</sub></sub>(<var>a<sub>t</sub></var>|<var>s<sub>t</sub></var>)) Â<sub><var>t</var></sub> ] &nbsp; s.t. &nbsp; Ê<sub><var>t</var></sub>[ KL[π<sub>θ<sub>old</sub></sub>(·|<var>s<sub>t</sub></var>), π<sub>θ</sub>(·|<var>s<sub>t</sub></var>)] ] ≤ δ <span class="n">(3–4)</span></div>
+  <div class="prose"><p>by conjugate gradient after linear and quadratic approximations. The theory behind TRPO actually suggests a penalty, Ê<sub><var>t</var></sub>[ratio · Â<sub><var>t</var></sub> − β KL] (Eq. 5), but a single β that works across problems, or even across one run, is hard to find; that motivates PPO's first-order alternatives.</p></div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3 · Eqs. 6–7 · Figs. 1–2</p>
+  <h2>The clipped surrogate objective</h2>
+  <div class="prose"><p>With <var>r<sub>t</sub></var>(θ) = π<sub>θ</sub>(<var>a<sub>t</sub></var>|<var>s<sub>t</sub></var>) / π<sub>θ<sub>old</sub></sub>(<var>a<sub>t</sub></var>|<var>s<sub>t</sub></var>), so <var>r</var>(θ<sub>old</sub>) = 1, the conservative-policy-iteration surrogate is <var>L</var><sup>CPI</sup>(θ) = Ê<sub><var>t</var></sub>[<var>r<sub>t</sub></var>(θ) Â<sub><var>t</var></sub>] (Eq. 6). Unconstrained, it invites excessively large updates. PPO's main objective is</p></div>
+  <div class="eq"><var>L</var><sup>CLIP</sup>(θ) = Ê<sub><var>t</var></sub>[ min( <var>r<sub>t</sub></var>(θ) Â<sub><var>t</var></sub>, clip(<var>r<sub>t</sub></var>(θ), 1 − ε, 1 + ε) Â<sub><var>t</var></sub> ) ] <span class="n">(7)</span></div>
+  <div class="prose">
+    <p>with ε a hyperparameter, e.g. ε = 0.2. The second term removes the incentive for moving <var>r<sub>t</sub></var> outside [1 − ε, 1 + ε]; the minimum makes the result a lower (pessimistic) bound on the unclipped objective. The clip is active only when it would make the objective larger: for Â &gt; 0 when <var>r</var> &gt; 1 + ε, for Â &lt; 0 when <var>r</var> &lt; 1 − ε. Changes in <var>r</var> that make the objective worse are always included. To first order around θ<sub>old</sub>, <var>L</var><sup>CLIP</sup> equals <var>L</var><sup>CPI</sup>.</p>
+    <p>Fig. 2 interpolates along the update direction from one PPO iteration on Hopper-v1: <var>L</var><sup>CLIP</sup> lies below <var>L</var><sup>CPI</sup> and is maximal at the end of the update, where the KL is about 0.02, so it behaves like <var>L</var><sup>CPI</sup> with a penalty for large updates.</p>
+    <p>A caveat noticed later: clipping removes the gradient from samples whose ratio is out of range but does not bound the ratio itself. With many epochs and large learning rates the ratio, and the KL, can still drift beyond 1 ± ε, which is why many implementations add early stopping on KL.</p>
+  </div>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §4 · Eq. 8</p>
+  <h2>The alternative: adaptive KL penalty</h2>
+  <div class="eq"><var>L</var><sup>KLPEN</sup>(θ) = Ê<sub><var>t</var></sub>[ <var>r<sub>t</sub></var>(θ) Â<sub><var>t</var></sub> − β KL[π<sub>θ<sub>old</sub></sub>(·|<var>s<sub>t</sub></var>), π<sub>θ</sub>(·|<var>s<sub>t</sub></var>)] ] <span class="n">(8)</span></div>
+  <div class="prose"><p>After several epochs of minibatch SGD on Eq. 8, compute <var>d</var> = Ê<sub><var>t</var></sub>[KL]. If <var>d</var> &lt; <var>d</var><sub>targ</sub> / 1.5, halve β; if <var>d</var> &gt; 1.5 <var>d</var><sub>targ</sub>, double it. The constants 1.5 and 2 are heuristic, and the algorithm is insensitive to them and to β's initial value. The authors found it performed worse than clipping but kept it as an important baseline. Heess et al. (2017) used this variant for their 3-D locomotion results.</p></div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §5 · Eqs. 9–12 · Algorithm 1</p>
+  <h2>The full algorithm</h2>
+  <div class="prose"><p>With a network sharing parameters between policy and value function, the combined objective (maximised) is</p></div>
+  <div class="eq"><var>L</var><sub><var>t</var></sub><sup>CLIP+VF+S</sup>(θ) = Ê<sub><var>t</var></sub>[ <var>L</var><sub><var>t</var></sub><sup>CLIP</sup>(θ) − <var>c</var><sub>1</sub> <var>L</var><sub><var>t</var></sub><sup>VF</sup>(θ) + <var>c</var><sub>2</sub> <var>S</var>[π<sub>θ</sub>](<var>s<sub>t</sub></var>) ] <span class="n">(9)</span></div>
+  <div class="prose"><p><var>L</var><sup>VF</sup> = (<var>V</var><sub>θ</sub>(<var>s<sub>t</sub></var>) − <var>V</var><sub><var>t</var></sub><sup>targ</sup>)<sup>2</sup>, <var>S</var> is an entropy bonus. Advantages use truncated generalised advantage estimation over a segment of length <var>T</var>:</p></div>
+  <div class="eq">Â<sub><var>t</var></sub> = δ<sub><var>t</var></sub> + (γλ)δ<sub><var>t</var>+1</sub> + ⋯ + (γλ)<sup><var>T</var>−<var>t</var>−1</sup>δ<sub><var>T</var>−1</sub>, &nbsp;&nbsp; δ<sub><var>t</var></sub> = <var>r<sub>t</sub></var> + γ<var>V</var>(<var>s</var><sub><var>t</var>+1</sub>) − <var>V</var>(<var>s<sub>t</sub></var>) <span class="n">(11–12)</span></div>
+  <div class="prose"><p>With λ = 1 this reduces to the finite-horizon estimator of Eq. 10 (Mnih et al., 2016). (The arXiv text prints the last exponent as <var>T</var> − <var>t</var> + 1; the sum written out here is the intended one, ending at δ<sub><var>T</var>−1</sub>.)</p></div>
+  <figure class="live">
+    <div class="ctl">
+      <label>γ <input type="range" id="ga-g" min="0.5" max="1" step="0.01" value="0.99" data-fmt="2"><output id="ga-g-o">0.99</output></label>
+      <label>λ <input type="range" id="ga-l" min="0" max="1" step="0.05" value="0.95" data-fmt="2"><output id="ga-l-o">0.95</output></label>
+    </div>
+    <div class="svgbox"><svg id="ga" viewBox="0 0 600 250" role="img" aria-label="TD errors and GAE advantages over an 8-step segment"></svg></div>
+    <p class="readout" id="ga-r"></p>
+    <figcaption>A made-up 8-step segment: rewards (top row) and critic values <var>V</var>(<var>s<sub>t</sub></var>) (second row), with <var>V</var>(<var>s<sub>T</sub></var>) = 0.5 bootstrapping the end. Blue bars: one-step TD errors δ<sub><var>t</var></sub>. Amber bars: Â<sub><var>t</var></sub> from Eq. 11. λ = 0 gives Â = δ (low variance, relies on the critic); λ = 1 sums all future TD errors (the Monte Carlo return minus <var>V</var>, unbiased but noisier). The paper uses γ = 0.99, λ = 0.95.</figcaption>
+  </figure>
+  <pre class="algo"><span class="c">Algorithm 1: PPO, actor-critic style</span>
+for iteration = 1, 2, …:
+    for actor = 1 … N:
+        run π_θold in the environment for T timesteps
+        compute advantage estimates Â₁ … Â_T
+    optimise surrogate L wrt θ, with K epochs and minibatch size M ≤ NT
+    θold ← θ</pre>
+  <div class="tablebox"><table>
+    <thead><tr><th>Hyperparameter</th><th>MuJoCo (Table 3)</th><th>Atari (Table 5)</th></tr></thead>
+    <tbody>
+      <tr><td>Horizon <var>T</var></td><td class="num">2048</td><td class="num">128</td></tr>
+      <tr><td>Adam step size</td><td class="num">3 × 10⁻⁴</td><td class="num">2.5 × 10⁻⁴ × α</td></tr>
+      <tr><td>Epochs <var>K</var></td><td class="num">10</td><td class="num">3</td></tr>
+      <tr><td>Minibatch</td><td class="num">64</td><td class="num">32 × 8</td></tr>
+      <tr><td>γ, λ</td><td class="num">0.99, 0.95</td><td class="num">0.99, 0.95</td></tr>
+      <tr><td>Actors <var>N</var></td><td class="num">–</td><td class="num">8</td></tr>
+      <tr><td>Clip ε</td><td class="num">0.2</td><td class="num">0.1 × α</td></tr>
+      <tr><td><var>c</var><sub>1</sub>, <var>c</var><sub>2</sub></td><td>separate networks, no entropy</td><td class="num">1, 0.01</td></tr>
+    </tbody></table></div>
+  <div class="prose"><p>α is annealed linearly from 1 to 0 over training. MuJoCo runs use 1 million timesteps; policy and value are separate networks with two hidden layers of 64 tanh units; the policy outputs the mean of a Gaussian with variable standard deviations.</p></div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §6 · Tables 1–2 · Figs. 3–6</p>
+  <h2>Experiments</h2>
+  <div class="prose"><p><strong>Surrogate comparison (§6.1, Table 1).</strong> Seven MuJoCo tasks (OpenAI Gym), three seeds each, one million timesteps; the score of the last 100 episodes is normalised so a random policy is 0 and the best result is 1, then averaged over 21 runs.</p></div>
+  <figure class="live">
+    <div class="ctl" id="tt-ctl"></div>
+    <div class="svgbox"><svg id="tt" viewBox="0 0 600 300" role="img" aria-label="Bar chart of Table 1 average normalised scores"></svg></div>
+    <p class="readout" id="tt-r"></p>
+    <figcaption>Average normalised scores from Table 1 of the paper (β initialised at 1 for the KL rows). Choose a family to highlight it. Clipping with ε = 0.2 is the best single setting; no clipping or penalty is below a random policy.</figcaption>
+  </figure>
+  <div class="prose">
+    <p><strong>Comparison with other algorithms (§6.2, Fig. 3).</strong> On the same seven tasks, PPO (clip) is compared with TRPO, CEM, vanilla policy gradient with adaptive step size, A2C and A2C with trust region; it outperforms the previous methods on almost all of the environments.</p>
+    <p><strong>Humanoid showcase (§6.3, Figs. 4–5).</strong> Roboschool humanoid running, steering towards moving flags, and getting up after being hit by cubes, with 32 or 128 parallel actors and minibatches of 4,096.</p>
+    <p><strong>Atari (§6.4, Table 2).</strong> 49 games, 40M frames, three seeds, compared with tuned A2C and ACER. Games "won" by each algorithm:</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Scoring metric</th><th>A2C</th><th>ACER</th><th>PPO</th><th>Tie</th></tr></thead>
+    <tbody>
+      <tr><td>Average episode reward over all of training (learning speed)</td><td class="num">1</td><td class="num">18</td><td class="num">30</td><td class="num">0</td></tr>
+      <tr><td>Average episode reward over last 100 episodes (final performance)</td><td class="num">1</td><td class="num">28</td><td class="num">19</td><td class="num">1</td></tr>
+    </tbody></table></div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does "no clipping or penalty" score below zero in Table 1?</dt>
+    <dd>With multiple epochs of SGD per batch, the unconstrained <var>L</var><sup>CPI</sup> drives very large policy updates; on some tasks (the paper mentions HalfCheetah) the policy collapses to worse than random.</dd>
+    <dt>PPO wins more Atari games on metric (1) but fewer on (2). What does that say?</dt>
+    <dd>PPO learns faster (higher reward averaged over training), but ACER, which uses experience replay, often reaches a higher final score.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t6">
+  <p class="eyebrow"><b>Section</b> · Lineage</p>
+  <h2>Limitations and later refinements</h2>
+  <div class="prose"><ul>
+    <li><strong>No guarantee.</strong> Unlike TRPO's theory, <var>L</var><sup>CLIP</sup> has no monotonic-improvement proof, and clipping does not strictly enforce a trust region (Wang et al., 2019, "Truly PPO"; Ilyas et al., 2020).</li>
+    <li><strong>Implementation sensitivity.</strong> Engstrom et al. (2020) showed that code-level choices such as value clipping, reward and observation normalisation, orthogonal initialisation and learning-rate annealing account for much of PPO's advantage over TRPO; Huang et al.'s "37 implementation details" (2022) catalogues them.</li>
+    <li><strong>On-policy sample cost.</strong> Data are discarded after <var>K</var> epochs, so replay-based off-policy methods (SAC, TD3) are often more sample-efficient in continuous control.</li>
+  </ul></div>
+  <div class="later"><span class="label">Later refinements</span>PPO became the RL step in RLHF: Ziegler et al. (2019), Stiennon et al. (2020) and <a href="instructgpt.html">InstructGPT</a> (2022) optimise a learned reward with PPO plus a per-token KL penalty to the supervised model. For reasoning models, <a href="grpo.html">GRPO</a> (DeepSeekMath, 2024) keeps the clipped ratio but replaces the learned critic with group-relative advantages, as used in <a href="r1.html">DeepSeek-R1</a>. <a href="dpo.html">DPO</a> (2023) avoids RL for pairwise preferences altogether.</div>
+</section>
+
+<section class="kp" id="t7" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt><var>r<sub>t</sub></var>(θ)</dt><dd>Probability ratio π<sub>θ</sub>(<var>a<sub>t</sub></var>|<var>s<sub>t</sub></var>) / π<sub>θ<sub>old</sub></sub>(<var>a<sub>t</sub></var>|<var>s<sub>t</sub></var>).</dd>
+    <dt>ε</dt><dd>Clip range; ratios outside [1 − ε, 1 + ε] get no further credit.</dd>
+    <dt>Advantage Â</dt><dd>Estimate of how much better an action did than the critic expected.</dd>
+    <dt>GAE(λ)</dt><dd>Generalised advantage estimation: exponentially weighted sum of TD errors.</dd>
+    <dt>Epoch</dt><dd>One full pass of minibatch SGD over the current batch.</dd>
+    <dt>Entropy bonus</dt><dd>Reward for keeping the action distribution spread out, encouraging exploration.</dd>
+    <dt>A2C / ACER</dt><dd>Synchronous advantage actor-critic; actor-critic with experience replay.</dd>
+    <dt>RLHF</dt><dd>Reinforcement learning from human feedback: optimise a policy against a reward model trained on human preferences.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="trpo.html">TRPO (2015)</a></p>
+  <p><strong>Led to:</strong> <a href="instructgpt.html">InstructGPT (RLHF) (2022)</a>, <a href="grpo.html">GRPO (2024)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> (<a href="https://lovespark.love/papers-worth-reading/#ppo">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // clip function
+  var svg=$('#cl'), A=1, r=1.3, e=0.2;
+  function L(x){ var c=Math.max(1-e,Math.min(1+e,x)); return Math.min(x*A, c*A); }
+  function draw(){ clear(svg); var X=function(x){ return 50+x/2*500; }, Y=function(v){ return 125-v*50; };
+    S('line',{x1:X(0),y1:Y(0),x2:X(2),y2:Y(0),'class':'axis'},svg); S('line',{x1:X(0),y1:20,x2:X(0),y2:230,'class':'axis'},svg);
+    [0,0.5,1,1.5,2].forEach(function(t){ S('text',{x:X(t),y:Y(0)+16,'class':'t-s mid'},svg,String(t)); });
+    S('rect',{x:X(1-e),y:20,width:X(1+e)-X(1-e),height:210,'class':'f-ok','fill-opacity':0.12},svg);
+    S('text',{x:X(1),y:34,'class':'t-ok mid'},svg,'1 ± ε');
+    var d='',u=''; for (var i=0;i<=100;i++){ var x=i*0.02; d+=(i?'L':'M')+X(x)+','+Y(L(x)); u+=(i?'L':'M')+X(x)+','+Y(x*A); }
+    S('path',{d:u,'class':'w-dash'},svg); S('path',{d:d,'class':'w-fire'},svg);
+    S('circle',{cx:X(1),cy:Y(A),r:4,'class':'f-inh'},svg);
+    S('circle',{cx:X(r),cy:Y(L(r)),r:7,'class':'u-on'},svg);
+    S('text',{x:X(2),y:Y(0)+32,'class':'t-s end'},svg,'ratio r = π_new / π_old →');
+    S('text',{x:X(0)+6,y:A>0?220:30,'class':'t-s'},svg,A>0?'A = +1':'A = −1');
+    var flat = (A>0 && r>1+e) || (A<0 && r<1-e);
+    $('#cl-r-out').innerHTML='Objective at r = '+fmt(r,2)+': <b>'+fmt(L(r),3)+'</b> (unclipped '+fmt(r*A,3)+'). Gradient: <b>'+(flat?'zero, the clip is active':(A>0?'pushes r up':'pushes r down'))+'</b>.'; }
+  bindRange('cl-r',function(v){ r=v; draw(); }); bindRange('cl-e',function(v){ e=v; draw(); });
+  $('#cl-pos').onclick=function(){ A=1; this.setAttribute('aria-pressed','true'); $('#cl-neg').setAttribute('aria-pressed','false'); draw(); };
+  $('#cl-neg').onclick=function(){ A=-1; this.setAttribute('aria-pressed','true'); $('#cl-pos').setAttribute('aria-pressed','false'); draw(); };
+})();
+(function(){ // epochs toy
+  var svg=$('#ep'), MU=[1.0,0.7,0.2], K=15, seed=1;
+  function sm(th){ var m=Math.max.apply(null,th), e=th.map(function(t){return Math.exp(t-m);}), s=e[0]+e[1]+e[2]; return e.map(function(v){return v/s;}); }
+  function run(clip,sd){ var r=rng(sd), th=[0,0,0], hist=[], maxr=1;
+    for (var it=0;it<40;it++){ var p0=sm(th), n=16, rs=[], as=[];
+      for (var k=0;k<n;k++){ var u=r(), a=u<p0[0]?0:(u<p0[0]+p0[1]?1:2); as.push(a); rs.push(MU[a]+gauss(r)); }
+      var b=rs.reduce(function(x,y){return x+y;})/n, Av=rs.map(function(v){return v-b;});
+      for (var e=0;e<K;e++){ var p=sm(th), g=[0,0,0];
+        for (var k=0;k<n;k++){ var a=as[k], ratio=p[a]/p0[a]; if (ratio>maxr) maxr=ratio;
+          var act=!clip || !((Av[k]>0 && ratio>1.2) || (Av[k]<0 && ratio<0.8));
+          if (act) for (var i=0;i<3;i++) g[i]+=ratio*((i===a?1:0)-p[i])*Av[k]/n; }
+        th=th.map(function(t,i){ return t+g[i]; }); }
+      hist.push(sm(th)); }
+    return {h:hist,maxr:maxr}; }
+  function panel(x0,title,o){ var pw=270, ph=170, y0=40, bw=pw/40, h=o.h;
+    S('text',{x:x0,y:y0-12,'class':'t-h'},svg,title);
+    h.forEach(function(p,i){ var y=y0+ph; [[0,'f-ok'],[1,'f-wire'],[2,'f-inh']].forEach(function(c){ var hh=p[c[0]]*ph; y-=hh; S('rect',{x:x0+i*bw,y:y,width:bw+0.3,height:hh,'class':c[1],'fill-opacity':c[0]===0?0.85:0.6},svg); }); });
+    S('rect',{x:x0,y:y0,width:pw,height:ph,'class':'area'},svg);
+    var f=h[h.length-1]; S('text',{x:x0,y:y0+ph+18,'class':'t-s'},svg,'final: best '+fmt(100*f[0],0)+'% · largest ratio seen '+(o.maxr>100?'>100':fmt(o.maxr,1))); }
+  function one(){ clear(svg); panel(20,'No clipping',run(false,seed)); panel(310,'PPO clip (ε = 0.2)',run(true,seed));
+    S('text',{x:20,y:252,'class':'t-s'},svg,'green = best machine (1.0), blue = 0.7, red = 0.2; 40 rounds, left to right');
+    $('#ep-r').innerHTML='Agent #'+seed+', '+K+' pass'+(K>1?'es':'')+' per batch. Press again for another agent.'; seed++; }
+  function many(){ var ok=[0,0], ex=[0,0]; for (var s=1;s<=200;s++){ [false,true].forEach(function(c,j){ var p=run(c,500+s).h; p=p[p.length-1]; if (p[0]>0.5) ok[j]++; ex[j]+=p[0]+0.7*p[1]+0.2*p[2]; }); }
+    $('#ep-r').innerHTML='200 agents, '+K+' passes per batch. Ending mostly on the best machine: no clipping <b>'+ok[0]/2+'%</b>, PPO clip <b>'+ok[1]/2+'%</b>. Final average payout: <b>'+fmt(ex[0]/200,3)+'</b> vs <b>'+fmt(ex[1]/200,3)+'</b>.'; }
+  bindRange('ep-k',function(v){ K=v; });
+  $('#ep-one').onclick=one; $('#ep-many').onclick=many;
+  seed=1; while (seed<80 && run(false,seed).h[39][1]<0.6) seed++; one();
+})();
+(function(){ // GAE
+  var svg=$('#ga'), g=0.99, l=0.95, R=[0,0,1,0,0,0,1,0], V=[0.6,0.7,0.9,0.3,0.4,0.6,0.9,0.4], VT=0.5;
+  function draw(){ clear(svg); var T=R.length, d=[], A=[];
+    for (var t=0;t<T;t++){ var vn = t+1<T ? V[t+1] : VT; d.push(R[t]+g*vn-V[t]); }
+    for (var t=0;t<T;t++){ var s=0, w=1; for (var k=t;k<T;k++){ s+=w*d[k]; w*=g*l; } A.push(s); }
+    var x0=90, cw=60, Y0=170, sc=60;
+    S('text',{x:x0-10,y:30,'class':'t-s end'},svg,'reward r'); S('text',{x:x0-10,y:52,'class':'t-s end'},svg,'value V');
+    S('line',{x1:x0-5,y1:Y0,x2:x0+T*cw,y2:Y0,'class':'axis'},svg);
+    for (var t=0;t<T;t++){ var cx=x0+t*cw+cw/2;
+      S('text',{x:cx,y:30,'class':(R[t]?'t-fire':'t')+' mid'},svg,String(R[t])); S('text',{x:cx,y:52,'class':'t-s mid'},svg,fmt(V[t],1));
+      var hd=d[t]*sc, ha=A[t]*sc;
+      S('rect',{x:cx-20,y:hd>0?Y0-hd:Y0,width:16,height:Math.max(1,Math.abs(hd)),'class':'f-wire'},svg);
+      S('rect',{x:cx+2,y:ha>0?Y0-ha:Y0,width:16,height:Math.max(1,Math.abs(ha)),'class':'f-fire'},svg);
+      S('text',{x:cx,y:240,'class':'t-s mid'},svg,'t='+t); }
+    S('text',{x:x0-10,y:Y0+4,'class':'t-s end'},svg,'0');
+    S('text',{x:595,y:74,'class':'t-s end'},svg,'then V(s_T) = '+VT);
+    S('text',{x:x0-10,y:Y0-60,'class':'t-wire end'},svg,'δ_t'); S('text',{x:x0-10,y:Y0-44,'class':'t-fire end'},svg,'Â_t');
+    $('#ga-r').innerHTML='γλ = <b>'+fmt(g*l,3)+'</b>. Â<sub>0</sub> = <b>'+fmt(A[0],3)+'</b>, Â<sub>3</sub> = <b>'+fmt(A[3],3)+'</b>, Â<sub>7</sub> = δ<sub>7</sub> = <b>'+fmt(A[7],3)+'</b>.'; }
+  bindRange('ga-g',function(v){ g=v; draw(); }); bindRange('ga-l',function(v){ l=v; draw(); });
+})();
+(function(){ // Table 1
+  var svg=$('#tt'), sel='all';
+  var rows=[['No clipping or penalty',-0.39,'none'],['Clipping, ε = 0.1',0.76,'clip'],['Clipping, ε = 0.2',0.82,'clip'],['Clipping, ε = 0.3',0.70,'clip'],['Adaptive KL, d_targ = 0.003',0.68,'akl'],['Adaptive KL, d_targ = 0.01',0.74,'akl'],['Adaptive KL, d_targ = 0.03',0.71,'akl'],['Fixed KL, β = 0.3',0.62,'fkl'],['Fixed KL, β = 1',0.71,'fkl'],['Fixed KL, β = 3',0.72,'fkl'],['Fixed KL, β = 10',0.69,'fkl']];
+  var fams=[['all','All'],['clip','Clipping'],['akl','Adaptive KL'],['fkl','Fixed KL']], ctl=$('#tt-ctl');
+  fams.forEach(function(f){ var b=document.createElement('button'); b.className='btn'; b.textContent=f[1]; b.onclick=function(){ sel=f[0]; draw(); }; b.dataset.f=f[0]; ctl.appendChild(b); });
+  function draw(){ $$('#tt-ctl .btn').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.f===sel); }); clear(svg);
+    var X=function(v){ return 300+v*300*0.85; };
+    S('line',{x1:X(0),y1:6,x2:X(0),y2:292,'class':'axis'},svg);
+    rows.forEach(function(r,i){ var y=10+i*26, on=sel==='all'||r[2]===sel, best=r[1]===0.82;
+      S('text',{x:X(0)-(r[1]<0?X(0)-X(r[1])+8:8),y:y+15,'class':(on?'t':'t-s')+' end'},svg,r[0]);
+      S('rect',{x:Math.min(X(0),X(r[1])),y:y,width:Math.abs(X(r[1])-X(0)),height:18,'class':r[1]<0?'f-inh':(best?'f-fire':'f-wire'),'fill-opacity':on?0.9:0.2},svg);
+      S('text',{x:r[1]<0?X(0)+6:X(r[1])+6,y:y+14,'class':'t-s'},svg,fmt(r[1],2)); });
+    var f=rows.filter(function(r){ return sel==='all'||r[2]===sel; }), b=f.reduce(function(a,c){ return c[1]>a[1]?c:a; });
+    $('#tt-r').innerHTML='Best in '+(sel==='all'?'the whole table':'this family')+': <b>'+b[0]+'</b> at <b>'+fmt(b[1],2)+'</b>.'; }
+  draw();
+})();
+</script>
+
+</body>
+</html>

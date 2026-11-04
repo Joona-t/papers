@@ -1,0 +1,281 @@
+<!--LEDE-->
+Policy-gradient methods learn by nudging an agent's behaviour towards whatever just worked, but a nudge that is too big can wreck a good policy in one step. This paper derives a limit on how far each update may move the policy, a "trust region" measured by KL divergence, proves that a penalised version of it never makes things worse, and turns it into a practical algorithm that learns swimming, hopping and walking gaits and plays Atari from pixels.
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>A "policy" is the agent's set of habits: for each situation, how likely it is to choose each action. Policy-gradient learning shifts those probabilities toward actions that turned out well.</p>
+  <p>The estimate of "what turned out well" is only trustworthy for behaviour close to what the agent just did, so a big step can push the policy somewhere much worse, and then the agent collects worse data and may never recover.</p>
+  <p>The paper proves that if you limit how much the action probabilities change (measured by a quantity called KL divergence), you can guarantee improvement in theory, and turns this into a practical rule: take the biggest step that keeps the average change under a small budget.</p>
+  <p>With one budget setting (δ = 0.01) the method learns robot swimming, hopping and walking in simulation, and plays several Atari games from screen pixels.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1–2</p>
+  <h2>Learning habits directly</h2>
+  <div class="prose">
+    <p>There are two broad ways to learn by trial and error. One, used by <a href="dqn.html">DQN</a>, learns a score for every action and then picks the best-scoring one. The other learns the <strong>policy</strong> directly: a network that takes in the situation and outputs probabilities for each action (or, for a robot joint, a range of likely torques). This second approach copes naturally with smooth, continuous actions like motor commands.</p>
+    <p>The basic recipe, called a <strong>policy gradient</strong>, is simple: try things, then make actions that turned out better than usual a bit more likely and actions that turned out worse a bit less likely. "Better than usual" is called the <strong>advantage</strong>: how much better this action did than the agent's average from that situation.</p>
+    <p>The catch is the phrase "a bit". How big a step should you take? Too small and learning crawls. Too large and something nasty happens, as the next idea shows.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A tennis coach watching you serve says "toss the ball a bit higher". If you take that literally and throw it twice as high, your serve collapses. The advice was only good for small changes near what you were doing.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Policy gradients adjust action probabilities directly. The size of each adjustment is the hard part.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §1 · §4</p>
+  <h2>Why one big step can ruin everything</h2>
+  <div class="prose">
+    <p>Each update is based on a small, noisy batch of experience, and it only tells you which way is uphill near the current policy. If one step pushes almost all the probability onto a mediocre action, the agent then almost never tries anything else. Its new data carry no information about the better actions, so it cannot climb back out. This is different from ordinary supervised learning, where a bad step is corrected by the next batch of the same data; here, a bad policy changes the data itself.</p>
+    <p>Below, an agent learns which of three slot machines to play (average payouts 1.0, 0.7 and 0.2, with lots of noise). Each round it plays 8 times and updates. "Plain steps" moves by a fixed multiple of the estimated gradient. "Trust region" takes the same direction but shrinks the step until the policy changes by no more than a small budget.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Step size <input type="range" id="bd-lr" min="5" max="50" step="5" value="30"><output id="bd-lr-o">30</output></label>
+      <button class="btn" id="bd-one">Run one agent</button><button class="btn" id="bd-many">Run 200 agents</button>
+    </div>
+    <div class="svgbox"><svg id="bd" viewBox="0 0 600 260" role="img" aria-label="Probability of choosing each slot machine over 60 updates, for plain steps and trust-region steps"></svg></div>
+    <p class="readout" id="bd-r"></p>
+    <figcaption>A toy re-creation of the idea, not the paper's experiment. Stacked bars show the policy's probabilities for the three machines after each of 60 updates (green = best machine). Plain steps use REINFORCE with an average-reward baseline. Trust-region steps use the same estimate but halve the step until KL(old ‖ new) ≤ 0.01, the paper's δ. Large plain steps often lock onto the 0.7 machine for good; run 200 agents to see how often.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>In reinforcement learning, a policy that collapses onto a bad habit stops gathering the evidence it would need to recover. Small, controlled steps prevent this.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why can't the plain learner recover after locking onto the 0.7 machine?</dt>
+    <dd>Once it almost never plays the 1.0 machine, its batches contain almost no evidence about that machine, so the gradient never points back towards it.</dd>
+    <dt>What does the trust-region rule limit: the step in parameters or the change in behaviour?</dt>
+    <dd>The change in behaviour: how different the new action probabilities are from the old ones, whatever parameter change that takes.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §3–4</p>
+  <h2>Measuring how far a policy moved</h2>
+  <div class="prose">
+    <p>To limit the size of a step you need a ruler. Measuring how far the network's weights moved is a poor ruler: in some directions a tiny weight change transforms behaviour, in others a big one does almost nothing. TRPO instead measures how different the <em>behaviour</em> is, using the <strong>Kullback–Leibler (KL) divergence</strong> between the old and new action probabilities.</p>
+    <p>KL divergence is zero when the two are identical and grows as they differ. It is especially sensitive when an action the old policy liked becomes rare. The paper limits the <em>average</em> KL over the situations the agent visited to δ = 0.01 per update.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Shift towards action A <input type="range" id="kl-s" min="-1.5" max="1.5" step="0.05" value="0.3" data-fmt="2"><output id="kl-s-o">0.30</output></label>
+      <label>Budget δ <input type="range" id="kl-d" min="0.005" max="0.05" step="0.005" value="0.01" data-fmt="3"><output id="kl-d-o">0.010</output></label>
+    </div>
+    <div class="svgbox"><svg id="kl" viewBox="0 0 600 230" role="img" aria-label="Old and new action probabilities with their KL divergence"></svg></div>
+    <p class="readout" id="kl-r"></p>
+    <figcaption>Old policy: 50% A, 30% B, 20% C (grey bars). The slider moves probability from C towards A (or the other way); amber bars are the new policy. KL(old ‖ new) = Σ old × log(old / new). Inside the budget the step would be allowed as is; outside it, TRPO would shorten the step.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>TRPO measures step size by how much the behaviour changes (KL divergence), not by how much the weights change.</p>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §3 · Theorem 1 · Algorithm 1</p>
+  <h2>A guarantee, then a practical shortcut</h2>
+  <div class="prose">
+    <p>The paper's theory starts from a neat fact: you can write the new policy's performance as the old performance plus the advantages of the new policy's choices, if you knew which situations it will visit. You do not know that yet, so the paper uses the old policy's situations instead. That estimate is accurate for small changes and increasingly wrong for big ones.</p>
+    <p>The authors prove how wrong it can get: the error is at most a constant times the largest KL divergence between old and new. So "estimate minus penalty" is a <strong>pessimistic lower bound</strong> on true performance. Raise the lower bound and the true performance must rise too. Repeating this gives a sequence of policies that never gets worse, at least when every quantity is computed exactly.</p>
+    <p>The penalty the theory demands is so large that steps become tiny. The practical algorithm keeps the spirit but swaps the penalty for a budget: maximise the estimate, subject to the average KL being at most δ.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Climbing a hill in fog, you can only see a few metres. A rule like "never step further than you can see the ground" is cautious, but you will never walk off a cliff, and you still get to the top.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Theory: estimate minus a KL penalty is a lower bound, so improving it guarantees progress. Practice: replace the penalty with a fixed KL budget per step.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §8 · Figs. 2–4 · Table 1</p>
+  <h2>Results, and the simpler successor</h2>
+  <div class="prose">
+    <p>The authors trained neural-network policies to control simulated robots in the MuJoCo physics engine: a swimmer, a one-legged hopper and a two-legged walker, with torques on each joint as actions. The same method with the same budget learned all three gaits; a natural-gradient method with a fixed step did well on easier tasks but did not learn to hop or walk.</p>
+    <p>They then applied the same algorithm, barely changed, to seven Atari games from pixels. It was not better than DQN across the board (it won on some games and lost on others), but it showed that one general method could handle both robot control and video games.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>TRPO's update needs second-order machinery (a conjugate-gradient solve and a line search), which is awkward with large networks or shared policy-and-value networks. In 2017 the same first author proposed <a href="ppo.html">PPO</a>, which gets similar stability by simply clipping how much each action's probability ratio can count, using ordinary gradient steps. PPO largely replaced TRPO and later became the standard optimiser for fine-tuning language models from human feedback (<a href="instructgpt.html">InstructGPT</a>).</div>
+  <p class="takeaway"><span class="label">Takeaway</span>A single KL budget made policy-gradient learning reliable across robots and Atari. Its successor PPO kept the idea and dropped the heavy maths.</p>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>An iterative procedure for optimising policies with guaranteed monotonic improvement. Several approximations to the theoretically justified procedure yield Trust Region Policy Optimization (TRPO), similar to natural policy gradient methods and effective for optimising large nonlinear policies such as neural networks. It performs robustly on simulated robotic swimming, hopping and walking, and on Atari games from raw images, with little hyperparameter tuning, despite approximations that deviate from the theory. ICML 2015 (PMLR 37), arXiv:1502.05477.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2 · Eqs. 1–6</p>
+  <h2>Preliminaries: the surrogate <var>L</var></h2>
+  <div class="prose"><p>Infinite-horizon discounted MDP with initial distribution ρ<sub>0</sub>; η(π) = 𝔼[Σ<sub><var>t</var></sub> γ<sup><var>t</var></sup> <var>r</var>(<var>s<sub>t</sub></var>)] is expected discounted return, <var>A</var><sub>π</sub>(<var>s</var>, <var>a</var>) = <var>Q</var><sub>π</sub>(<var>s</var>, <var>a</var>) − <var>V</var><sub>π</sub>(<var>s</var>). Kakade and Langford's identity gives the return of another policy π̃ exactly:</p></div>
+  <div class="eq">η(π̃) = η(π) + 𝔼<sub><var>s</var><sub>0</sub>, <var>a</var><sub>0</sub>, … ∼ π̃</sub>[ Σ<sub><var>t</var></sub> γ<sup><var>t</var></sup> <var>A</var><sub>π</sub>(<var>s<sub>t</sub></var>, <var>a<sub>t</sub></var>) ] = η(π) + Σ<sub><var>s</var></sub> ρ<sub>π̃</sub>(<var>s</var>) Σ<sub><var>a</var></sub> π̃(<var>a</var>|<var>s</var>) <var>A</var><sub>π</sub>(<var>s</var>, <var>a</var>) <span class="n">(1–2)</span></div>
+  <div class="prose"><p>with ρ<sub>π̃</sub> the discounted visitation frequency. The dependence of ρ<sub>π̃</sub> on π̃ makes this hard to optimise, so the local approximation replaces it with ρ<sub>π</sub>:</p></div>
+  <div class="eq"><var>L</var><sub>π</sub>(π̃) = η(π) + Σ<sub><var>s</var></sub> ρ<sub>π</sub>(<var>s</var>) Σ<sub><var>a</var></sub> π̃(<var>a</var>|<var>s</var>) <var>A</var><sub>π</sub>(<var>s</var>, <var>a</var>) <span class="n">(3)</span></div>
+  <div class="prose"><p>For a parameterised policy, <var>L</var> matches η to first order at θ<sub>0</sub> (Eq. 4): equal values and equal gradients. So a sufficiently small step that improves <var>L</var> improves η, but the identity says nothing about how small. Kakade and Langford's conservative policy iteration answered this for mixture policies π<sub>new</sub> = (1 − α)π<sub>old</sub> + απ′ (Eq. 5), with the bound</p></div>
+  <div class="eq">η(π<sub>new</sub>) ≥ <var>L</var><sub>π<sub>old</sub></sub>(π<sub>new</sub>) − (2εγ / (1 − γ)<sup>2</sup>) α<sup>2</sup>, &nbsp; ε = max<sub><var>s</var></sub> |𝔼<sub><var>a</var>∼π′</sub>[<var>A</var><sub>π</sub>(<var>s</var>, <var>a</var>)]| <span class="n">(6)</span></div>
+  <div class="prose"><p>Mixtures are unwieldy in practice. The paper's first contribution is to extend the bound to general stochastic policies.</p></div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3 · Theorem 1 · Eqs. 7–10 · Algorithm 1</p>
+  <h2>Monotonic improvement by minorisation–maximisation</h2>
+  <div class="prose"><p>Replace α by the maximum total-variation divergence <var>D</var><sub>TV</sub><sup>max</sup>(π, π̃) = max<sub><var>s</var></sub> <var>D</var><sub>TV</sub>(π(·|<var>s</var>) ‖ π̃(·|<var>s</var>)) (Eq. 7). <strong>Theorem 1:</strong> with α = <var>D</var><sub>TV</sub><sup>max</sup>(π<sub>old</sub>, π<sub>new</sub>) and ε = max<sub><var>s</var>,<var>a</var></sub> |<var>A</var><sub>π</sub>(<var>s</var>, <var>a</var>)|,</p></div>
+  <div class="eq">η(π<sub>new</sub>) ≥ <var>L</var><sub>π<sub>old</sub></sub>(π<sub>new</sub>) − (4εγ / (1 − γ)<sup>2</sup>) α<sup>2</sup> <span class="n">(8)</span></div>
+  <div class="prose"><p>Since <var>D</var><sub>TV</sub>(<var>p</var> ‖ <var>q</var>)<sup>2</sup> ≤ <var>D</var><sub>KL</sub>(<var>p</var> ‖ <var>q</var>) (Pinsker), this gives</p></div>
+  <div class="eq">η(π̃) ≥ <var>L</var><sub>π</sub>(π̃) − <var>C</var> · <var>D</var><sub>KL</sub><sup>max</sup>(π, π̃), &nbsp; <var>C</var> = 4εγ / (1 − γ)<sup>2</sup> <span class="n">(9)</span></div>
+  <div class="prose">
+    <p><strong>Algorithm 1</strong> iterates π<sub><var>i</var>+1</sub> = argmax<sub>π</sub> [<var>L</var><sub>π<sub><var>i</var></sub></sub>(π) − <var>C</var> <var>D</var><sub>KL</sub><sup>max</sup>(π<sub><var>i</var></sub>, π)]. Writing <var>M<sub>i</sub></var>(π) for the bracket, η(π<sub><var>i</var>+1</sub>) ≥ <var>M<sub>i</sub></var>(π<sub><var>i</var>+1</sub>) and η(π<sub><var>i</var></sub>) = <var>M<sub>i</sub></var>(π<sub><var>i</var></sub>), so η(π<sub><var>i</var>+1</sub>) − η(π<sub><var>i</var></sub>) ≥ <var>M<sub>i</sub></var>(π<sub><var>i</var>+1</sub>) − <var>M<sub>i</sub></var>(π<sub><var>i</var></sub>) ≥ 0 (Eq. 10). This is a minorisation–maximisation (MM) algorithm: <var>M<sub>i</sub></var> is a surrogate that touches η at π<sub><var>i</var></sub> and lies below it everywhere.</p>
+    <p>The figure shows MM in one dimension. The local surrogate is drawn as its linear part (which is what <var>L</var> agrees with to first order); the penalty is quadratic, as KL is to second order. The true curve's curvature is bounded by 2, so any penalty coefficient of at least 1 makes <var>M</var> a valid lower bound.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Penalty <var>C</var> <input type="range" id="mm-c" min="0.15" max="3" step="0.05" value="1.0" data-fmt="2"><output id="mm-c-o">1.00</output></label>
+      <button class="btn" id="mm-step">MM step</button><button class="btn" id="mm-rst">Reset</button>
+    </div>
+    <div class="svgbox"><svg id="mm" viewBox="0 0 600 260" role="img" aria-label="True objective, local linear surrogate, and penalised lower bound in one dimension"></svg></div>
+    <p class="readout" id="mm-r"></p>
+    <figcaption>Illustrative 1-D objective η(θ) = 2 sin θ + 0.3θ (ink). At the current θ (blue dot), dashed: the first-order surrogate; amber: <var>M</var>(θ) = surrogate − <var>C</var>(θ − θ<sub>old</sub>)<sup>2</sup>. Each step jumps to the peak of <var>M</var>. With <var>C</var> ≥ 1, <var>M</var> stays under η and every step improves η. Lower <var>C</var> below 1 and the "bound" pokes above η: steps get bigger and can overshoot and make η worse. Large <var>C</var> is safe but slow, which is the paper's reason for switching to a constraint.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §4–6 · Eqs. 11–14, 17 · Appendix C</p>
+  <h2>The practical algorithm</h2>
+  <div class="prose"><p>With the theoretical <var>C</var>, steps are very small. The paper instead imposes a trust-region constraint (Eq. 11), and since a constraint on the maximum KL over all states is intractable, uses the average KL under the old state distribution:</p></div>
+  <div class="eq">maximise<sub>θ</sub> <var>L</var><sub>θ<sub>old</sub></sub>(θ) &nbsp; subject to &nbsp; <var>D̄</var><sub>KL</sub><sup>ρ<sub>θ<sub>old</sub></sub></sup>(θ<sub>old</sub>, θ) ≤ δ <span class="n">(12)</span></div>
+  <div class="prose"><p>Replacing sums by sample averages, Σ<sub><var>s</var></sub> ρ by an expectation, advantages by <var>Q</var>-values (a constant shift) and Σ<sub><var>a</var></sub> by importance sampling with distribution <var>q</var>:</p></div>
+  <div class="eq">max<sub>θ</sub> 𝔼<sub><var>s</var>∼ρ<sub>θ<sub>old</sub></sub>, <var>a</var>∼<var>q</var></sub>[ (π<sub>θ</sub>(<var>a</var>|<var>s</var>) / <var>q</var>(<var>a</var>|<var>s</var>)) <var>Q</var><sub>θ<sub>old</sub></sub>(<var>s</var>, <var>a</var>) ] &nbsp; s.t. &nbsp; 𝔼<sub><var>s</var>∼ρ<sub>θ<sub>old</sub></sub></sub>[ <var>D</var><sub>KL</sub>(π<sub>θ<sub>old</sub></sub>(·|<var>s</var>) ‖ π<sub>θ</sub>(·|<var>s</var>)) ] ≤ δ <span class="n">(14)</span></div>
+  <div class="prose">
+    <p><strong>Sampling schemes (§5).</strong> <em>Single path:</em> roll out π<sub>θ<sub>old</sub></sub>, <var>q</var> = π<sub>θ<sub>old</sub></sub>, estimate <var>Q</var> by the discounted return from each state; works on a physical system. <em>Vine:</em> from a set of states on trunk trajectories, branch <var>K</var> actions each and run short rollouts with common random numbers; much lower variance per <var>Q</var> estimate but needs many more simulator calls and the ability to reset to arbitrary states.</p>
+    <p><strong>Solving the subproblem (§6, Appendix C).</strong> Linearise the objective (gradient <var>g</var>) and quadratise the constraint with the Fisher information matrix <var>F</var>, computed as the analytic Hessian of the KL rather than the covariance of gradients. Compute the search direction <var>s</var> ≈ <var>F</var><sup>−1</sup><var>g</var> with conjugate gradient using only Fisher–vector products (on a 10% subsample of the data), scale it to the maximal step β = √(2δ / <var>s</var><sup>T</sup><var>F</var><var>s</var>), then backtrack with a line search until the surrogate improves and the KL constraint holds.</p>
+    <p><strong>Relation to natural policy gradient (§7, Eq. 17).</strong> Linearising <var>L</var> and quadratising KL gives θ<sub>new</sub> = θ<sub>old</sub> + (1/λ)<var>F</var><sup>−1</sup>∇<var>L</var>. Natural policy gradient fixes the step 1/λ; TRPO fixes the KL δ and chooses the step to meet it, and the line search enforces the constraint on the actual nonlinear policy. With a Euclidean constraint the same derivation gives vanilla policy gradient (Eq. 18), and with no constraint, policy iteration.</p>
+  </div>
+  <pre class="algo"><span class="c">TRPO, one iteration (single path)</span>
+collect trajectories with π_θold
+estimate Q (or advantages) by discounted returns
+g  = ∇θ of the importance-weighted surrogate at θold
+s  = ConjugateGradient(F, g)               <span class="c">F·v via Hessian of mean KL</span>
+β  = sqrt(2δ / sᵀF s)
+for j = 0, 1, 2, …:                         <span class="c">backtracking line search</span>
+    θ = θold + 0.5ʲ β s
+    if surrogate(θ) > surrogate(θold) and meanKL(θold, θ) ≤ δ: break
+θold ← θ</pre>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Which two approximations separate the practical algorithm from the guaranteed one?</dt>
+    <dd>A hard constraint with a chosen δ replaces the penalty with the theoretical <var>C</var>, and the average KL over visited states replaces the maximum KL over all states. (Estimation error in the advantages is also ignored.)</dd>
+    <dt>Why compute Fisher–vector products rather than the Fisher matrix?</dt>
+    <dd>For a network with many thousands of parameters the matrix is too large to form or invert; conjugate gradient needs only products <var>F</var><var>v</var>, which cost about as much as a gradient.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §8 · Tables 1–2 · Figs. 3–4</p>
+  <h2>Experiments</h2>
+  <div class="prose"><p><strong>Locomotion in MuJoCo (§8.1).</strong> Swimmer (10-D state), hopper (12-D) and walker; Gaussian policies from a one-hidden-layer network; δ = 0.01 throughout. Rewards favour forward velocity with small control costs (plus a bonus for each non-terminal step in hopper, and a penalty for strong foot impacts in walker).</p></div>
+  <div class="tablebox"><table>
+    <thead><tr><th></th><th>Swimmer</th><th>Hopper</th><th>Walker</th></tr></thead>
+    <tbody>
+      <tr><td>Policy parameters</td><td class="num">364</td><td class="num">4,806</td><td class="num">8,206</td></tr>
+      <tr><td>Hidden units</td><td class="num">30</td><td class="num">50</td><td class="num">50</td></tr>
+      <tr><td>Simulation steps per iteration</td><td class="num">50K</td><td class="num">1M</td><td class="num">1M</td></tr>
+      <tr><td>Policy iterations</td><td class="num">200</td><td class="num">200</td><td class="num">200</td></tr>
+    </tbody></table></div>
+  <div class="prose"><p>Baselines: cross-entropy method, CMA-ES, natural gradient with fixed step, empirical-FIM natural gradient, max-KL TRPO (cart-pole only) and reward-weighted regression. Single-path and vine TRPO solved all tasks; natural gradient did well on the easier tasks but failed to produce hopping and walking gaits; CEM and CMA-ES scaled poorly to larger policies.</p>
+  <p><strong>Atari from pixels (§8.2, Table 1).</strong> A small convolutional policy (two conv layers of 16 channels with stride 2, one fully connected layer of 20 units; 33,500 parameters), 500 iterations, taking about 30 hours per game on a 16-core computer, one run per game.</p></div>
+  <div class="tablebox"><table>
+    <thead><tr><th></th><th>B. Rider</th><th>Breakout</th><th>Enduro</th><th>Pong</th><th>Q*bert</th><th>Seaquest</th><th>S. Inv.</th></tr></thead>
+    <tbody>
+      <tr><td>Random</td><td class="num">354</td><td class="num">1.2</td><td class="num">0</td><td class="num">−20.4</td><td class="num">157</td><td class="num">110</td><td class="num">179</td></tr>
+      <tr><td>Human</td><td class="num">7456</td><td class="num">31.0</td><td class="num">368</td><td class="num">−3.0</td><td class="num">18900</td><td class="num">28010</td><td class="num">3690</td></tr>
+      <tr><td>DQN (2013)</td><td class="num">4092</td><td class="num">168.0</td><td class="num">470</td><td class="num">20.0</td><td class="num">1952</td><td class="num">1705</td><td class="num">581</td></tr>
+      <tr><td>UCC-I</td><td class="num">5702</td><td class="num">380</td><td class="num">741</td><td class="num">21</td><td class="num">20025</td><td class="num">2995</td><td class="num">692</td></tr>
+      <tr><td>TRPO single path</td><td class="num">1425.2</td><td class="num">10.8</td><td class="num">534.6</td><td class="num">20.9</td><td class="num">1973.5</td><td class="num">1908.6</td><td class="num">568.4</td></tr>
+      <tr><td>TRPO vine</td><td class="num">859.5</td><td class="num">34.2</td><td class="num">430.8</td><td class="num">20.9</td><td class="num">7732.5</td><td class="num">788.4</td><td class="num">450.2</td></tr>
+    </tbody></table></div>
+  <div class="prose"><p>UCC-I is Guo et al. (2014), which trains a network by imitating Monte Carlo tree search run on the emulator. TRPO is competitive with <a href="dqn.html">DQN</a> on some games and well behind on others (Breakout, Beam Rider); the authors' point is generality, since the same algorithm and δ handled both domains.</p></div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §9 and lineage</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose"><ul>
+    <li><strong>Theory–practice gap.</strong> Monotonic improvement is proved only for the penalised max-KL update with exact advantages; the algorithm used constrains average KL with sampled estimates.</li>
+    <li><strong>Sample efficiency.</strong> On-policy: every batch is used for one update and then discarded. The authors suggest combining with model learning for real robots.</li>
+    <li><strong>Engineering complexity.</strong> Conjugate gradient, Fisher–vector products and line search are awkward with architectures that share parameters between policy and value function, or that use noise like dropout.</li>
+    <li><strong>Vine</strong> requires state resets, which only simulators provide.</li>
+  </ul></div>
+  <div class="later"><span class="label">Later refinements</span>Generalized Advantage Estimation (Schulman et al., 2015) paired TRPO with a learned value baseline and λ-returns for much lower-variance advantages. ACKTR (2017) used Kronecker-factored curvature for cheaper natural-gradient steps. <a href="ppo.html">PPO</a> (2017) replaced the KL-constrained second-order step with a clipped probability-ratio objective optimised by several epochs of first-order SGD; it matched or beat TRPO on MuJoCo and became the default, including for RLHF in <a href="instructgpt.html">InstructGPT</a>. Later analyses (Engstrom et al., 2020, "Implementation Matters in Deep Policy Gradients") found that code-level details explain much of the gap between such methods.</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Policy π(<var>a</var>|<var>s</var>)</dt><dd>Probability of action <var>a</var> in state <var>s</var>.</dd>
+    <dt>η(π)</dt><dd>Expected discounted return of π.</dd>
+    <dt>Advantage</dt><dd><var>A</var>(<var>s</var>, <var>a</var>) = <var>Q</var>(<var>s</var>, <var>a</var>) − <var>V</var>(<var>s</var>): how much better <var>a</var> is than the policy's average in <var>s</var>.</dd>
+    <dt>KL divergence</dt><dd><var>D</var><sub>KL</sub>(<var>p</var> ‖ <var>q</var>) = Σ <var>p</var> log(<var>p</var>/<var>q</var>); zero iff <var>p</var> = <var>q</var>.</dd>
+    <dt>Trust region</dt><dd>The set of parameters whose policy is within δ of the old one in average KL.</dd>
+    <dt>MM algorithm</dt><dd>Minorise–maximise: repeatedly maximise a surrogate that lower-bounds the objective and touches it at the current point.</dd>
+    <dt>Fisher matrix</dt><dd>Second-order approximation of KL in parameter space; defines the natural gradient.</dd>
+    <dt>Conjugate gradient</dt><dd>Iterative solver for <var>F</var><var>x</var> = <var>g</var> using only matrix–vector products.</dd>
+    <dt>Single path / vine</dt><dd>The paper's two sampling schemes for estimating <var>Q</var>.</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+(function(){ // bandit: plain vs trust region
+  var svg=$('#bd'), MU=[1.0,0.7,0.2], lr=30, seed=1;
+  function sm(th){ var m=Math.max.apply(null,th), e=th.map(function(t){return Math.exp(t-m);}), s=e[0]+e[1]+e[2]; return e.map(function(v){return v/s;}); }
+  function kl(p,q){ var s=0; for (var i=0;i<3;i++) if (p[i]>0) s+=p[i]*Math.log(p[i]/Math.max(q[i],1e-300)); return s; }
+  function run(tr,sd){ var r=rng(sd), th=[0,0,0], hist=[];
+    for (var it=0;it<60;it++){ var p=sm(th), g=[0,0,0], n=8, rs=[], as=[];
+      for (var k=0;k<n;k++){ var u=r(), a=u<p[0]?0:(u<p[0]+p[1]?1:2); as.push(a); rs.push(MU[a]+gauss(r)); }
+      var b=rs.reduce(function(x,y){return x+y;})/n;
+      for (var k=0;k<n;k++) for (var i=0;i<3;i++) g[i]+=((i===as[k]?1:0)-p[i])*(rs[k]-b)/n;
+      var st=g.map(function(v){return lr*v;});
+      if (tr){ var sc=1; for (var j=0;j<30;j++){ var nt=th.map(function(t,i){return t+sc*st[i];}); if (kl(p,sm(nt))<=0.01) break; sc*=0.5; } st=st.map(function(v){return v*sc;}); }
+      th=th.map(function(t,i){return t+st[i];}); hist.push(sm(th)); }
+    return hist; }
+  function panel(x0,title,h){ var pw=270, ph=170, y0=40, bw=pw/60;
+    S('text',{x:x0,y:y0-12,'class':'t-h'},svg,title);
+    h.forEach(function(p,i){ var y=y0+ph; [[0,'f-ok'],[1,'f-wire'],[2,'f-inh']].forEach(function(c){ var hh=p[c[0]]*ph; y-=hh; S('rect',{x:x0+i*bw,y:y,width:bw+0.3,height:hh,'class':c[1],'fill-opacity':c[0]===0?0.85:0.6},svg); }); });
+    S('rect',{x:x0,y:y0,width:pw,height:ph,'class':'area'},svg);
+    var f=h[h.length-1]; S('text',{x:x0,y:y0+ph+18,'class':'t-s'},svg,'final: best '+fmt(100*f[0],0)+'%, 0.7-machine '+fmt(100*f[1],0)+'%'); }
+  function one(){ clear(svg); var a=run(false,seed), b=run(true,seed); panel(20,'Plain steps',a); panel(310,'Trust region (δ = 0.01)',b);
+    S('text',{x:20,y:252,'class':'t-s'},svg,'green = best machine (1.0), blue = 0.7, red = 0.2; time runs left to right');
+    $('#bd-r').innerHTML='Agent #'+seed+' with step size '+lr+'. Press again for another agent.'; seed++; }
+  function many(){ var ok=[0,0], ex=[0,0]; for (var s=1;s<=200;s++){ [false,true].forEach(function(t,j){ var p=run(t,1000+s); p=p[p.length-1]; if (p[0]>0.5) ok[j]++; ex[j]+=p[0]+0.7*p[1]+0.2*p[2]; }); }
+    $('#bd-r').innerHTML='200 agents, step size '+lr+'. Ending mostly on the best machine: plain <b>'+ok[0]/2+'%</b>, trust region <b>'+ok[1]/2+'%</b>. Average payout per pull at the end: plain <b>'+fmt(ex[0]/200,3)+'</b>, trust region <b>'+fmt(ex[1]/200,3)+'</b>.'; }
+  bindRange('bd-lr',function(v){ lr=v; });
+  $('#bd-one').onclick=one; $('#bd-many').onclick=many; seed=1; while (seed<60 && run(false,seed)[59][1]<0.6) seed++; one();
+})();
+(function(){ // KL bars
+  var svg=$('#kl'), s=0.3, d=0.01, old=[0.5,0.3,0.2];
+  function draw(){ clear(svg); var w=[old[0]*Math.exp(s),old[1],old[2]*Math.exp(-s)], z=w[0]+w[1]+w[2], nw=w.map(function(v){return v/z;});
+    var k=0; for (var i=0;i<3;i++) k+=old[i]*Math.log(old[i]/nw[i]);
+    ['A','B','C'].forEach(function(n,i){ var x=60+i*130, H=160; S('rect',{x:x,y:30+H-old[i]*H,width:40,height:old[i]*H,'class':'f-muted','fill-opacity':0.5},svg);
+      S('rect',{x:x+46,y:30+H-nw[i]*H,width:40,height:nw[i]*H,'class':'f-fire'},svg);
+      S('text',{x:x+43,y:210,'class':'t mid'},svg,'action '+n); S('text',{x:x+20,y:24+H-old[i]*H,'class':'t-s mid'},svg,fmt(old[i],2)); S('text',{x:x+66,y:24+H-nw[i]*H,'class':'t-fire mid'},svg,fmt(nw[i],2)); });
+    S('line',{x1:40,y1:190,x2:440,y2:190,'class':'axis'},svg);
+    var inside=k<=d; S('text',{x:520,y:80,'class':'t-big mid'},svg,fmt(k,4)); S('text',{x:520,y:100,'class':'t-s mid'},svg,'KL(old ‖ new)');
+    S('text',{x:520,y:130,'class':(inside?'t-ok':'t-inh')+' mid'},svg,inside?'within δ':'exceeds δ'); S('text',{x:520,y:148,'class':'t-s mid'},svg,'δ = '+fmt(d,3));
+    $('#kl-r').innerHTML='New policy: A <b>'+fmt(nw[0],3)+'</b>, B <b>'+fmt(nw[1],3)+'</b>, C <b>'+fmt(nw[2],3)+'</b>. KL = <b>'+fmt(k,4)+'</b> '+(inside?'≤':'>')+' δ = '+fmt(d,3)+(inside?': allowed.':': TRPO would shrink this step.'); }
+  bindRange('kl-s',function(v){ s=v; draw(); }); bindRange('kl-d',function(v){ d=v; draw(); });
+})();
+(function(){ // MM in 1-D
+  var svg=$('#mm'), C=1, th, hist;
+  function eta(x){ return 2*Math.sin(x)+0.3*x; } function deta(x){ return 2*Math.cos(x)+0.3; }
+  var lo=-2, hi=6.5, X=function(x){ return 40+(x-lo)/(hi-lo)*530; }, Y=function(v){ return 118-v*28; };
+  function reset(){ th=-0.8; hist=[th]; draw(''); }
+  function draw(msg){ clear(svg);
+    S('line',{x1:40,y1:Y(0),x2:570,y2:Y(0),'class':'grid'},svg);
+    var a='',m='',l='',pl=0,pm=0; for (var i=0;i<=170;i++){ var x=lo+i*(hi-lo)/170; a+=(i?'L':'M')+X(x)+','+Y(eta(x));
+      var lin=eta(th)+deta(th)*(x-th), M=lin-C*(x-th)*(x-th), yl=Y(lin), ym=Y(M);
+      if (yl>4&&yl<232){ l+=(l&&pl?'L':'M')+X(x)+','+yl; pl=1; } else pl=0;
+      if (ym>4&&ym<232){ m+=(m&&pm?'L':'M')+X(x)+','+ym; pm=1; } else pm=0; }
+    S('path',{d:a,'class':'w-ink'},svg); S('path',{d:l,'class':'w-dash'},svg); S('path',{d:m,'class':'w-fire'},svg);
+    hist.forEach(function(h,i){ S('circle',{cx:X(h),cy:Y(eta(h)),r:3,'class':'f-muted'},svg); });
+    S('circle',{cx:X(th),cy:Y(eta(th)),r:7,'class':'u-wire'},svg);
+    var nx=th+deta(th)/(2*C); S('line',{x1:X(nx),y1:Y(eta(th)+deta(th)*(nx-th)-C*(nx-th)*(nx-th)),x2:X(nx),y2:Y(eta(nx)),'class':'w-faint'},svg);
+    S('text',{x:40,y:252,'class':'t-s'},svg,'ink: true η(θ) · dashed: surrogate · amber: M(θ)');
+    S('text',{x:560,y:250,'class':'t-s end'},svg,'θ →');
+    var viol=false; for (var i=0;i<=200;i++){ var x=lo+i*(hi-lo)/200; if (eta(th)+deta(th)*(x-th)-C*(x-th)*(x-th) > eta(x)+1e-9) { viol=true; break; } }
+    $('#mm-r').innerHTML='θ = <b>'+fmt(th,2)+'</b>, η = <b>'+fmt(eta(th),3)+'</b>. M is '+(viol?'<b>not</b> a valid lower bound here (it rises above η somewhere).':'a valid lower bound.')+(msg?' '+msg:''); }
+  function step(){ var old=eta(th); th=th+deta(th)/(2*C); th=Math.max(lo,Math.min(hi,th)); hist.push(th); var ch=eta(th)-old;
+    draw('Last step changed η by <b>'+(ch>=0?'+':'')+fmt(ch,3)+'</b>'+(ch<-1e-6?': it got <b>worse</b>.':'.')); }
+  bindRange('mm-c',function(v){ C=v; if (hist) draw(''); });
+  $('#mm-step').onclick=step; $('#mm-rst').onclick=reset; reset();
+})();
+</script>

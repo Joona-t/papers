@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Batch norm (2015) study guide</title>
+<meta name="description" content="Deep networks in 2015 trained slowly and needed small learning rates and careful initialisation. Ioffe and Szegedy insert a step that standardises each unit&#x27;s input using the statistics of the current mini-batch, then lets the network rescale it as it likes. Training became dramatically faster ">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Neural networks</b> · 2015</p>
+  <h1>Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift</h1>
+  <p class="cite">Sergey Ioffe, Christian Szegedy · ICML 2015</p>
+  <p class="lede">Deep networks in 2015 trained slowly and needed small learning rates and careful initialisation. Ioffe and Szegedy insert a step that standardises each unit's input using the statistics of the current mini-batch, then lets the network rescale it as it likes. Training became dramatically faster and more forgiving. Their explanation, reducing "internal covariate shift", was later disputed, but the technique became a standard part of deep learning.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/1502.03167">Read the paper (free)</a> <a href="https://lovespark.love/papers-worth-reading/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, separate AI review (also by Claude), but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Inside a deep network, each layer's inputs are the previous layer's outputs, and those keep changing as training adjusts the earlier layers. The authors argued this constant shifting, which they named <strong>internal covariate shift</strong>, slows training down.</p>
+  <p>Their fix, <strong>batch normalisation</strong>: for each unit, take the values it produces across the current mini-batch of examples, subtract their average and divide by their spread, so they are centred on zero with spread one; then apply a learned scale and shift.</p>
+  <p>Networks with this step tolerated far higher learning rates, cared less about initialisation, could use saturating units like sigmoids, and needed less dropout. On ImageNet a batch-normalised network matched the original accuracy in 14 times fewer training steps.</p>
+  <p>Later work (Santurkar and colleagues, 2018) showed the benefit probably does not come from reducing internal covariate shift at all, but from making the optimisation landscape smoother.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1–2</p>
+  <h2>A moving target for every layer</h2>
+  <div class="prose">
+    <p>A deep network is a stack of layers, each feeding the next. Training adjusts all of them at once with <a href="backprop.html">backpropagation</a>. The paper's starting observation: when you change the weights of layer 3, the numbers flowing into layer 4 change their typical size and centre. Layer 4 was just learning to deal with the old numbers, and now has to adapt to new ones. The deeper the network, the more these shifts compound.</p>
+    <p>It was already known that networks learn faster when their <em>inputs</em> are standardised: shifted to average zero and scaled to a typical size of one. The authors call the shifting inside the network <strong>internal covariate shift</strong> ("covariate shift" being the statistician's term for the input distribution changing) and set out to standardise the input of every layer, not just the first.</p>
+    <p>A practical symptom was the <strong>sigmoid</strong>, an S-shaped unit that flattens out for large positive or negative inputs. If a unit's input drifts into the flat part, its slope is nearly zero and it stops learning. Keeping inputs centred keeps units in their responsive middle range.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A relay of translators, each translating the previous one's output. If the person upstream keeps changing their vocabulary, everyone downstream has to keep re-learning. Batch norm is like agreeing on a standard dictionary between every pair of neighbours.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The paper's premise: inputs to inner layers keep shifting during training, and that slows learning, so standardise them.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is it bad for a sigmoid unit's input to drift to large values?</dt>
+    <dd>The sigmoid is flat there, so its slope is nearly zero and almost no learning signal passes through it.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §3 · Algorithm 1</p>
+  <h2>Standardise over the mini-batch, then rescale</h2>
+  <div class="prose">
+    <p>Networks are trained on small groups of examples at a time, called <strong>mini-batches</strong>. Batch normalisation works one unit at a time. Take the values the unit produced for every example in the mini-batch. Compute their average (the <strong>mean</strong>) and their typical distance from it (the <strong>standard deviation</strong>). Subtract the mean and divide by the standard deviation. Now this unit's values have average 0 and spread 1 within the batch.</p>
+    <p>Forcing every unit to exactly that range could limit what the network can express: perhaps a unit genuinely works better with large values. So each unit also gets two learned numbers, a <strong>scale</strong> γ and a <strong>shift</strong> β, applied after standardising. The network can learn any centre and spread it likes, including undoing the normalisation entirely. What changes is that centre and spread are now controlled directly by two numbers rather than emerging from tangled interactions of all the earlier weights.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Raw centre <input type="range" id="nz-m" min="-6" max="6" step="0.1" value="3.5" data-fmt="1"><output id="nz-m-o">3.5</output></label>
+      <label>Raw spread <input type="range" id="nz-s" min="0.2" max="4" step="0.1" value="2.5" data-fmt="1"><output id="nz-s-o">2.5</output></label>
+      <label>Scale γ <input type="range" id="nz-g" min="0" max="3" step="0.1" value="1" data-fmt="1"><output id="nz-g-o">1.0</output></label>
+      <label>Shift β <input type="range" id="nz-b" min="-3" max="3" step="0.1" value="0" data-fmt="1"><output id="nz-b-o">0.0</output></label>
+      <button class="btn" id="nz-new">New batch</button>
+    </div>
+    <div class="svgbox"><svg id="nz" viewBox="0 0 600 270" role="img" aria-label="A batch of eight values before and after normalisation, and passed through a sigmoid"></svg></div>
+    <p class="readout" id="nz-r"></p>
+    <figcaption>Top row: the values one unit produced for the 8 examples in a mini-batch. Middle row: after subtracting the batch mean and dividing by the batch standard deviation, then applying γ and β. Bottom: those values fed through a sigmoid (the S-curve), showing how many land on its flat, unresponsive parts. Move the raw centre far from zero: without normalisation the sigmoid saturates, with it the values stay in the useful middle.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>For each unit: subtract the batch mean, divide by the batch spread, then apply a learned scale and shift.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>A batch has values 2, 4, 6. What are they after standardising (before γ and β)?</dt>
+    <dd>Mean 4, standard deviation √(8/3) ≈ 1.63, so roughly −1.22, 0, 1.22.</dd>
+    <dt>Why add γ and β if they could just undo the normalisation?</dt>
+    <dd>So the network loses no expressive power. The benefit is that centre and spread become two directly learnable numbers per unit instead of side effects of all earlier weights.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §3.3, §4.1–4.2 · Figs. 1–3</p>
+  <h2>Much faster, much bolder training</h2>
+  <div class="prose">
+    <p>The headline result is speed. Because each layer's inputs stay in a sensible range, the network tolerates a much larger <strong>learning rate</strong> (the size of each training step) without blowing up. On ImageNet, a batch-normalised version of Google's Inception network reached the original's accuracy in 14 times fewer steps, and with a larger learning rate went on to beat it. It even trained well with sigmoid units, where the original network made essentially no progress.</p>
+    <p>The figure below re-runs that comparison in miniature: two identical deep networks, four hidden layers of 16 sigmoid units each, learn to separate two interleaved spirals. One has batch normalisation before every sigmoid. Try a few learning rates.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Learning rate <input type="range" id="bt-lr" min="0.1" max="5" step="0.1" value="1" data-fmt="1"><output id="bt-lr-o">1.0</output></label>
+      <button class="btn" id="bt-run" aria-pressed="false">Train both</button><button class="btn" id="bt-reset">Reset</button>
+    </div>
+    <div class="svgbox"><svg id="bt" viewBox="0 0 600 260" role="img" aria-label="Decision maps and loss curves for a plain and a batch-normalised deep sigmoid network"></svg></div>
+    <p class="readout" id="bt-r"></p>
+    <figcaption>Left: what each network currently predicts across the square (amber or blue class) with the training points. Right: training loss (lower is better) over 2,000 steps of mini-batches of 32; blue line plain network, amber line batch-normalised. Same starting weights for both. At every learning rate in the slider's range the plain network stalls for a long time, while the batch-normalised one learns the spirals. Predictions for the batch-normalised network use running averages of the batch statistics, as at test time. Illustrative toy in the spirit of the paper's MNIST experiment (Fig. 1).</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Normalising inside the network let deep models train with bigger steps, fewer tricks and in far fewer iterations.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does the plain deep sigmoid network struggle?</dt>
+    <dd>Signals and gradients shrink as they pass through many sigmoids, and units drift into flat regions, so the early layers receive almost no useful learning signal. Normalising keeps every layer's inputs in the sigmoid's responsive range.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §3.1, §3.4 · Algorithm 2</p>
+  <h2>The batch as a side effect: noise in training, averages at test</h2>
+  <div class="prose">
+    <p>A quirk follows from using batch statistics: an example's normalised value depends on <em>which other examples</em> happen to be in its batch. The same image gives slightly different internal values each time it is seen. The paper found this jitter acts as a <strong>regulariser</strong>, a mild form of noise that discourages overfitting, much like <a href="dropout.html">dropout</a>, which could often be reduced or removed.</p>
+    <p>At test time you want a prediction for one image that does not depend on its neighbours. So after training, the network replaces the batch statistics with averages over the whole training set (in practice, running averages kept during training), and each batch-norm step becomes a fixed rescaling.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Batch size <input type="range" id="bs-m" min="2" max="128" step="1" value="8"><output id="bs-m-o">8</output></label>
+      <button class="btn" id="bs-new">Resample</button>
+    </div>
+    <div class="svgbox"><svg id="bs" viewBox="0 0 600 220" role="img" aria-label="Histogram of one example's normalised value across many random batches"></svg></div>
+    <p class="readout" id="bs-r"></p>
+    <figcaption>One fixed example whose raw value is 1.0, from a unit whose values across the whole dataset have mean 0 and spread 1. We put it into 2,000 random mini-batches and record its normalised value each time. With a large dataset-wide normalisation it would always be exactly 1.0 (dashed). Small batches make it jump around a lot; large batches pin it down.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Batch statistics make training slightly noisy, which helps generalisation; at test time fixed dataset averages are used instead, so predictions are deterministic.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What goes wrong with a batch size of 1?</dt>
+    <dd>The batch standard deviation is zero and the mean equals the value itself, so every value normalises to 0 (or is undefined): the unit carries no information. Batch norm needs reasonably large batches.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · Later work</p>
+  <h2>Right method, disputed reason</h2>
+  <div class="prose">
+    <p>In 2018 Shibani Santurkar and colleagues at MIT tested the paper's explanation directly. They deliberately <em>added</em> random shifts and rescalings after each batch-norm layer, recreating the very instability batch norm was supposed to remove, and the networks still trained about as well as with ordinary batch norm. They also found batch norm does not reliably reduce internal covariate shift by their measures. Their alternative account: batch norm makes the error landscape smoother, so gradients are more predictable and larger steps are safe.</p>
+    <p>So the method works, but probably not for the reason the title gives. Researchers still debate the full story.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>Batch norm's dependence on the batch is awkward for small batches and for recurrent networks. <a href="layernorm.html">Layer normalisation</a> (2016) normalises across a single example's units instead and became the default in <a href="transformer.html">transformers</a>; group normalisation (2018) serves vision models with small batches. Batch norm remains common in convolutional networks such as <a href="resnet.html">ResNet</a>.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Batch norm's speed-up is real and widely reproduced; the "internal covariate shift" explanation is not the accepted reason any more.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Training deep networks is complicated by the fact that each layer's input distribution changes as the preceding layers' parameters change, which requires lower learning rates and careful initialisation and makes saturating nonlinearities hard to train. The authors call this internal covariate shift and address it by normalising layer inputs, making normalisation part of the architecture and performing it for each training mini-batch. Batch Normalization permits much higher learning rates and less careful initialisation, and in some cases removes the need for Dropout. Applied to a state-of-the-art image classifier, it reaches the same accuracy with 14 times fewer training steps and beats the original by a significant margin; an ensemble reaches 4.9% top-5 validation error (4.8% test) on ImageNet. ICML 2015.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2</p>
+  <h2>Internal covariate shift, and why normalisation must be differentiated</h2>
+  <div class="prose">
+    <p>Internal covariate shift is defined as the change in the distribution of network activations due to the change in network parameters during training. Whitening inputs (zero mean, unit variance, decorrelated) is known to speed convergence (LeCun et al., 1998), so the goal is to whiten every layer's inputs.</p>
+    <p>The paper's key argument is that normalisation must sit <em>inside</em> the gradient computation. Consider a layer <var>x</var> = <var>u</var> + <var>b</var> normalised as <var>x̂</var> = <var>x</var> − E[<var>x</var>], where the mean is computed over the training data. If the gradient step ignores the dependence of E[<var>x</var>] on <var>b</var>, then Δ<var>b</var> ∝ −∂ℓ/∂<var>x̂</var>, yet <var>u</var> + (<var>b</var> + Δ<var>b</var>) − E[<var>u</var> + (<var>b</var> + Δ<var>b</var>)] = <var>u</var> + <var>b</var> − E[<var>u</var> + <var>b</var>]: the update changes nothing in the output or the loss, so <var>b</var> grows without bound. The paper reports observing this blow-up empirically. Full whitening inside backprop, however, needs the covariance matrix, its inverse square root and their derivatives: too costly.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3 · Algorithm 1</p>
+  <h2>The BN transform</h2>
+  <div class="prose"><p>Two simplifications: normalise each scalar feature independently (no decorrelation), and estimate the statistics from the mini-batch. For a mini-batch ℬ = {<var>x</var><sub>1…<var>m</var></sub>} of one activation:</p></div>
+<pre class="algo"><span class="c">Algorithm 1: Batch Normalizing Transform, applied to activation x over a mini-batch</span>
+μ<sub>ℬ</sub>   ← (1/m) Σ<sub>i</sub> x<sub>i</sub>                       <span class="c">mini-batch mean</span>
+σ²<sub>ℬ</sub>  ← (1/m) Σ<sub>i</sub> (x<sub>i</sub> − μ<sub>ℬ</sub>)²               <span class="c">mini-batch variance</span>
+x̂<sub>i</sub>   ← (x<sub>i</sub> − μ<sub>ℬ</sub>) / √(σ²<sub>ℬ</sub> + ε)             <span class="c">normalise</span>
+y<sub>i</sub>   ← γ x̂<sub>i</sub> + β ≡ BN<sub>γ,β</sub>(x<sub>i</sub>)               <span class="c">scale and shift</span></pre>
+  <div class="prose">
+    <p>Setting γ = √Var[<var>x</var>] and β = E[<var>x</var>] recovers the original activation, so the transform can represent the identity. Backpropagation goes through μ<sub>ℬ</sub> and σ²<sub>ℬ</sub>, so the gradient for each example depends on the whole batch. The paper gives the chain-rule terms:</p>
+  </div>
+  <div class="eq">∂ℓ/∂<var>x̂<sub>i</sub></var> = ∂ℓ/∂<var>y<sub>i</sub></var> · γ, &nbsp; ∂ℓ/∂γ = Σ<sub><var>i</var></sub> ∂ℓ/∂<var>y<sub>i</sub></var> · <var>x̂<sub>i</sub></var>, &nbsp; ∂ℓ/∂β = Σ<sub><var>i</var></sub> ∂ℓ/∂<var>y<sub>i</sub></var></div>
+  <div class="eq">∂ℓ/∂<var>x<sub>i</sub></var> = (1 / (<var>m</var>√(σ²<sub>ℬ</sub> + ε))) · [ <var>m</var> ∂ℓ/∂<var>x̂<sub>i</sub></var> − Σ<sub><var>j</var></sub> ∂ℓ/∂<var>x̂<sub>j</sub></var> − <var>x̂<sub>i</sub></var> Σ<sub><var>j</var></sub> ∂ℓ/∂<var>x̂<sub>j</sub></var> <var>x̂<sub>j</sub></var> ]</div>
+  <div class="prose"><p>The second line is the paper's three chain-rule terms (through <var>x̂</var>, μ<sub>ℬ</sub> and σ²<sub>ℬ</sub>) collected into one expression. It shows that the input gradient is the upstream gradient with its batch mean and its component along <var>x̂</var> projected out: BN removes gradient directions that would only shift or rescale the batch. The live training on the Plain English tab uses exactly this backward pass.</p></div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Sum ∂ℓ/∂<var>x<sub>i</sub></var> over the batch. What do you get, and why?</dt>
+    <dd>Zero. Shifting all inputs by a constant leaves every <var>x̂<sub>i</sub></var> unchanged, so the loss has zero derivative in that direction.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §3.1–3.2 · Algorithm 2</p>
+  <h2>Inference and convolutional layers</h2>
+  <div class="prose">
+    <p><strong>Inference (Algorithm 2).</strong> After training, use population statistics: E[<var>x</var>] ← E<sub>ℬ</sub>[μ<sub>ℬ</sub>] and Var[<var>x</var>] ← (<var>m</var>/(<var>m</var> − 1)) · E<sub>ℬ</sub>[σ²<sub>ℬ</sub>], the unbiased variance estimate, averaged over training mini-batches of size <var>m</var> (moving averages can be used instead, to track the model as it trains). BN then becomes a fixed affine map,</p>
+  </div>
+  <div class="eq"><var>y</var> = (γ / √(Var[<var>x</var>] + ε)) · <var>x</var> + (β − γ E[<var>x</var>] / √(Var[<var>x</var>] + ε))</div>
+  <div class="prose">
+    <p>which can be folded into the preceding linear layer.</p>
+    <p><strong>Placement and convolutions (§3.2).</strong> BN is applied to <var>x</var> = <var>Wu</var> + <var>b</var>, immediately before the nonlinearity: <var>z</var> = <var>g</var>(BN(<var>Wu</var>)); the bias <var>b</var> is dropped because mean subtraction cancels it and β takes its role. The authors argue <var>Wu</var> is more likely to have a symmetric, non-sparse, "more Gaussian" distribution than the layer input <var>u</var>. For convolutional layers, normalisation must respect the convolutional property, so statistics are shared over all spatial locations of a feature map: the effective mini-batch is <var>m</var>′ = <var>m</var> · <var>p</var> · <var>q</var> for <var>p</var> × <var>q</var> feature maps, with one γ, β pair per feature map.</p>
+  </div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §3.3–3.4</p>
+  <h2>Why higher learning rates work; regularisation</h2>
+  <div class="prose"><p>BN makes a layer invariant to the scale of its weights. For scalar <var>a</var>:</p></div>
+  <div class="eq">BN(<var>Wu</var>) = BN((<var>aW</var>)<var>u</var>), &nbsp; ∂BN((<var>aW</var>)<var>u</var>)/∂<var>u</var> = ∂BN(<var>Wu</var>)/∂<var>u</var>, &nbsp; ∂BN((<var>aW</var>)<var>u</var>)/∂(<var>aW</var>) = (1/<var>a</var>) · ∂BN(<var>Wu</var>)/∂<var>W</var></div>
+  <div class="prose"><p>So backpropagation through the layer is unaffected by the scale of its parameters, and larger weights receive smaller gradients, which stabilises parameter growth. The authors further conjecture that BN may push layer Jacobians toward singular values near 1, which would help gradient propagation; they present this as a conjecture under strong assumptions. Check the scale invariance numerically:</p></div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Weight scale <var>a</var> <input type="range" id="si-a" min="0.1" max="10" step="0.1" value="1" data-fmt="1"><output id="si-a-o">1.0</output></label>
+      <button class="btn" id="si-bn" aria-pressed="true">BN on</button>
+    </div>
+    <div class="svgbox"><svg id="si" viewBox="0 0 600 220" role="img" aria-label="Outputs and gradient norms of a layer as its weights are scaled"></svg></div>
+    <p class="readout" id="si-r"></p>
+    <figcaption>A layer with 6 inputs and 4 units, applied to a batch of 16 random inputs, followed by a sigmoid and a fixed random loss. Bars: the 4 units' sigmoid outputs for the first example. With BN on, scaling <var>W</var> by <var>a</var> leaves the outputs unchanged and the weight-gradient norm falls as 1/<var>a</var>. With BN off, outputs saturate toward 0 or 1 as <var>a</var> grows and gradients vanish for a different reason.</figcaption>
+  </figure>
+  <div class="prose"><p><strong>Regularisation (§3.4).</strong> A training example is seen together with other examples in its mini-batch, so the network no longer produces deterministic values for it. The authors found this beneficial for generalisation and that Dropout can be removed or reduced.</p></div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §4 · Figs. 1–4</p>
+  <h2>Experiments</h2>
+  <div class="prose">
+    <p><strong>MNIST (§4.1, Fig. 1).</strong> Three fully connected hidden layers of 100 sigmoid units, 50,000 steps with 60 examples per mini-batch. The BN network reaches higher test accuracy, and the 15th, 50th and 85th percentiles of a typical sigmoid input stay much more stable over training than without BN.</p>
+    <p><strong>ImageNet (§4.2).</strong> A variant of Inception (5×5 convolutions replaced by two 3×3 layers; 13.6 million parameters). Simply adding BN is "BN-Baseline". The accelerated versions also changed (§4.2.1): increase the learning rate; remove Dropout; reduce L2 weight regularisation by a factor of 5; accelerate learning-rate decay by 6×; remove Local Response Normalisation; shuffle training examples more thoroughly; reduce photometric distortions.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" id="im-steps" aria-pressed="true">Steps to 72.2%</button><button class="btn" id="im-acc" aria-pressed="false">Maximum accuracy</button></div>
+    <div class="svgbox"><svg id="im" viewBox="0 0 600 230" role="img" aria-label="Bar chart of the paper's Figure 3 numbers"></svg></div>
+    <p class="readout" id="im-r"></p>
+    <figcaption>Real values from the paper's Fig. 3 (single-crop validation accuracy). Initial learning rates: Inception 0.0015, BN-x5 0.0075 (5×), BN-x30 0.045 (30×). BN-x5-Sigmoid uses sigmoid instead of ReLU; it never reaches 72.2%, but Inception with sigmoids stays at roughly chance (about 1/1000) without BN.</figcaption>
+  </figure>
+  <div class="prose">
+    <p><strong>Ensemble (§4.2.3, Fig. 4).</strong> Six BN-x30-based networks with some variations (initial weights, dropout of 5% or 10%, per-activation BN in the last hidden layers) reach 4.9% top-5 validation error and 4.82% top-5 test error, ahead of the previous best (He et al., 2015, 4.94%) and of the reported accuracy of human raters. A single BN-Inception with multi-crop evaluation gets 5.82% top-5, versus 6.67% for the GoogLeNet ensemble.</p>
+  </div>
+</section>
+
+<section class="kp" id="t6">
+  <p class="eyebrow"><b>Section</b> · §5 and later work</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>The explanation.</strong> Santurkar, Tsipras, Ilyas and Madry ("How Does Batch Normalization Help Optimization?", NeurIPS 2018) injected random, time-varying non-zero-mean, non-unit-variance noise after BN layers and found training performance largely unaffected, and found BN does not necessarily reduce internal covariate shift. They argue BN improves the Lipschitzness of the loss and its gradients, smoothing the landscape. Other accounts emphasise the scale invariance of §3.3 (an effective, automatically adapting learning rate).</li>
+      <li><strong>Batch dependence.</strong> Small or non-i.i.d. batches give noisy or biased statistics, and the train/test discrepancy (batch versus population statistics) hurts. Batch Renormalization (Ioffe, 2017) and Group Normalization (Wu &amp; He, 2018) address this.</li>
+      <li><strong>Sequences.</strong> The conclusion lists recurrent networks as future work; per-time-step statistics proved awkward, motivating <a href="layernorm.html">Layer Normalization</a>.</li>
+      <li><strong>Placement.</strong> The paper normalises before the nonlinearity; many later architectures normalise elsewhere (e.g. pre-activation residual blocks), with mixed evidence on what is best.</li>
+    </ul>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>Batch norm enabled very deep convolutional networks such as <a href="resnet.html">ResNet</a>. In sequence models and <a href="transformer.html">transformers</a>, <a href="layernorm.html">LayerNorm</a> and later <a href="rmsnorm.html">RMSNorm</a> replaced it. Normaliser-free networks (Brock et al., 2021) later showed that scaled weight standardisation and adaptive gradient clipping can recover BN's benefits without batch statistics.</div>
+</section>
+
+<section class="kp" id="t7" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Internal covariate shift</dt><dd>Change in the distribution of network activations due to parameter changes during training (the paper's definition).</dd>
+    <dt>Whitening</dt><dd>Transforming inputs to zero mean, unit variance and no correlation.</dd>
+    <dt>μ<sub>ℬ</sub>, σ²<sub>ℬ</sub></dt><dd>Mini-batch mean and (biased) variance of one activation.</dd>
+    <dt>γ, β</dt><dd>Learned per-activation (per-feature-map for convolutions) scale and shift.</dd>
+    <dt>ε</dt><dd>Small constant added to the variance for numerical stability.</dd>
+    <dt>Population statistics</dt><dd>Mean and unbiased variance over the training data, used at inference.</dd>
+    <dt>BN-x5, BN-x30</dt><dd>BN-Inception with 5× and 30× the original initial learning rate.</dd>
+    <dt>Saturation</dt><dd>Operating in the flat region of a nonlinearity, where gradients vanish.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Led to:</strong> <a href="layernorm.html">Layer norm (2016)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> (<a href="https://lovespark.love/papers-worth-reading/#batchnorm">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+function BNNet(sizes, bn, seed){ var r=rng(seed); this.bn=bn; this.L=[];
+  for (var l=1;l<sizes.length;l++){ var a=sizes[l-1], b=sizes[l], W=[], g=[], be=[], bias=[], rm=[], rv=[], i;
+    for (i=0;i<b*a;i++) W.push(gauss(r)*Math.sqrt(1/a));
+    for (i=0;i<b;i++){ g.push(1); be.push(0); bias.push(0); rm.push(0); rv.push(1); }
+    this.L.push({a:a,b:b,W:W,g:g,be:be,bias:bias,rm:rm,rv:rv,last:l===sizes.length-1}); } }
+BNNet.prototype.forward=function(X, train){ var self=this, H=X, cache=[];
+  this.L.forEach(function(Ly){ var m=H.length, a=Ly.a, b=Ly.b, Z=[], i, j, n;
+    for (n=0;n<m;n++){ var z=[]; for (i=0;i<b;i++){ var s=0; for (j=0;j<a;j++) s+=Ly.W[i*a+j]*H[n][j]; z.push(s); } Z.push(z); }
+    var c={H:H,Z:Z};
+    if (Ly.last){ for (n=0;n<m;n++) for (i=0;i<b;i++) Z[n][i]+=Ly.bias[i]; cache.push(c); H=Z; return; }
+    var U;
+    if (self.bn){ var mu=[], sd=[];
+      for (i=0;i<b;i++){ var mm=0, vv=0;
+        if (train){ for (n=0;n<m;n++) mm+=Z[n][i]/m; for (n=0;n<m;n++) vv+=Math.pow(Z[n][i]-mm,2)/m; Ly.rm[i]=0.9*Ly.rm[i]+0.1*mm; Ly.rv[i]=0.9*Ly.rv[i]+0.1*vv*m/(m-1); }
+        else { mm=Ly.rm[i]; vv=Ly.rv[i]; }
+        mu.push(mm); sd.push(Math.sqrt(vv+1e-5)); }
+      var Xh=Z.map(function(z){ return z.map(function(v,i){ return (v-mu[i])/sd[i]; }); });
+      U=Xh.map(function(x){ return x.map(function(v,i){ return Ly.g[i]*v+Ly.be[i]; }); }); c.Xh=Xh; c.sd=sd; }
+    else U=Z.map(function(z){ return z.map(function(v,i){ return v+Ly.bias[i]; }); });
+    var A=U.map(function(u){ return u.map(sigmoid); }); c.A=A; cache.push(c); H=A; });
+  this.cache=cache; return H; };
+function Z0(m,a){ var o=[]; for (var n=0;n<m;n++){ var r=[]; for (var j=0;j<a;j++) r.push(0); o.push(r); } return o; }
+BNNet.prototype.step=function(X, Y, lr){ var out=this.forward(X,true), m=X.length, loss=0, self=this, n, i, j;
+  var dZ=out.map(function(o,n){ var mx=Math.max.apply(null,o), e=o.map(function(v){return Math.exp(v-mx);}), s=e.reduce(function(a,b){return a+b;},0); loss-=Math.log(e[Y[n]]/s+1e-12)/m; return e.map(function(v,k){ return (v/s-(k===Y[n]?1:0))/m; }); });
+  for (var l=this.L.length-1;l>=0;l--){ var Ly=this.L[l], c=this.cache[l], a=Ly.a, b=Ly.b;
+    if (!Ly.last){ var dU=dZ.map(function(d,n){ return d.map(function(v,i){ var aa=c.A[n][i]; return v*aa*(1-aa); }); });
+      if (self.bn){ var dz=Z0(m,b);
+        for (i=0;i<b;i++){ var sdx=0, sdxx=0, dg=0, db=0;
+          for (n=0;n<m;n++){ var dxh=dU[n][i]*Ly.g[i]; sdx+=dxh; sdxx+=dxh*c.Xh[n][i]; dg+=dU[n][i]*c.Xh[n][i]; db+=dU[n][i]; }
+          for (n=0;n<m;n++){ var dxh2=dU[n][i]*Ly.g[i]; dz[n][i]=(m*dxh2-sdx-c.Xh[n][i]*sdxx)/(m*c.sd[i]); }
+          Ly.g[i]-=lr*dg; Ly.be[i]-=lr*db; }
+        dZ=dz; }
+      else { for (i=0;i<b;i++){ var db2=0; for (n=0;n<m;n++) db2+=dU[n][i]; Ly.bias[i]-=lr*db2; } dZ=dU; } }
+    else { for (i=0;i<b;i++){ var db3=0; for (n=0;n<m;n++) db3+=dZ[n][i]; Ly.bias[i]-=lr*db3; } }
+    var dH=Z0(m,a);
+    for (i=0;i<b;i++) for (j=0;j<a;j++){ var g=0, w=Ly.W[i*a+j]; for (n=0;n<m;n++){ g+=dZ[n][i]*c.H[n][j]; dH[n][j]+=dZ[n][i]*w; } Ly.W[i*a+j]-=lr*g; }
+    dZ=dH; }
+  return loss; };
+(function(){ // normalise a batch
+  var svg=$('#nz'), cm=3.5, cs=2.5, g=1, b=0, seed=4, raw=[];
+  function newb(){ var r=rng(seed++); raw=[]; for (var i=0;i<8;i++) raw.push(gauss(r)); }
+  function draw(){ clear(svg); var v=raw.map(function(z){ return cm+cs*z; }), m=v.reduce(function(s,x){return s+x;},0)/8, sd=Math.sqrt(v.reduce(function(s,x){return s+(x-m)*(x-m);},0)/8+1e-5), y=v.map(function(x){ return g*(x-m)/sd+b; });
+    function X(x){ return 300+Math.max(-11,Math.min(11,x))*25; }
+    [[50,'raw values',v,'u-wire'],[120,'normalised, then γ·x̂ + β',y,'u-on']].forEach(function(row){ S('line',{x1:20,y1:row[0],x2:580,y2:row[0],'class':'axis'},svg); S('text',{x:20,y:row[0]-14,'class':'t-s'},svg,row[1]);
+      for (var t=-10;t<=10;t+=5) S('text',{x:X(t),y:row[0]+16,'class':'t-s mid'},svg,t); row[2].forEach(function(x){ S('circle',{cx:X(x),cy:row[0],r:5,'class':row[3]},svg); }); });
+    // sigmoid panel
+    var px0=60, px1=540, py0=250, py1=170; function SX(x){ return px0+(Math.max(-8,Math.min(8,x))+8)/16*(px1-px0); } function SY(s){ return py0-s*(py0-py1); }
+    var d=''; for (var x=-8;x<=8;x+=0.1) d+=(d?'L':'M')+SX(x)+','+SY(sigmoid(x)); S('path',{d:d,'class':'w-dash'},svg);
+    var sat=0, satr=0;
+    v.forEach(function(x){ S('circle',{cx:SX(x),cy:SY(sigmoid(x)),r:4,'class':'u-wire'},svg); var s=sigmoid(x); if (s*(1-s)<0.05) satr++; });
+    y.forEach(function(x){ S('circle',{cx:SX(x),cy:SY(sigmoid(x)),r:4,'class':'u-on'},svg); var s=sigmoid(x); if (s*(1-s)<0.05) sat++; });
+    S('text',{x:px0+8,y:py1-4,'class':'t-s'},svg,'sigmoid (S-curve)'); S('text',{x:px0-6,y:py0+4,'class':'t-s end'},svg,'0'); S('text',{x:px0-6,y:py1+4,'class':'t-s end'},svg,'1');
+    $('#nz-r').innerHTML='Batch mean <b>'+fmt(m,2)+'</b>, standard deviation <b>'+fmt(sd,2)+'</b> · saturated sigmoids (slope &lt; 0.05): raw <b>'+satr+'/8</b>, normalised <b>'+sat+'/8</b>'; }
+  bindRange('nz-m',function(x){ cm=x; if (raw.length) draw(); }); bindRange('nz-s',function(x){ cs=x; if (raw.length) draw(); });
+  bindRange('nz-g',function(x){ g=x; if (raw.length) draw(); }); bindRange('nz-b',function(x){ b=x; if (raw.length) draw(); });
+  $('#nz-new').onclick=function(){ newb(); draw(); }; newb(); draw();
+})();
+(function(){ // live training plain vs BN
+  var svg=$('#bt'), lr=1, A, B, r, hA, hB, timer=null, DX=[], DY=[], dr=rng(2), sA=0, sB=0;
+  for (var i=0;i<400;i++){ var c=i%2, t=dr()*3+0.3, ang=t*2+c*Math.PI; DX.push([t*Math.cos(ang)/3+0.05*gauss(dr), t*Math.sin(ang)/3+0.05*gauss(dr)]); DY.push(c); }
+  var grid=[]; for (var gy=0;gy<18;gy++) for (var gx=0;gx<18;gx++) grid.push([-1.15+2.3*(gx+0.5)/18, 1.15-2.3*(gy+0.5)/18]);
+  function reset(){ A=new BNNet([2,16,16,16,16,2],false,3); B=new BNNet([2,16,16,16,16,2],true,3); r=rng(9); hA=[]; hB=[]; sA=0; sB=0; draw(); }
+  function acc(n){ var o=n.forward(DX,false), k=0; o.forEach(function(v,i){ if ((v[1]>v[0]?1:0)===DY[i]) k++; }); return k/DX.length; }
+  function panel(n,x0,title){ var o=n.forward(grid,false), cs=7;
+    o.forEach(function(v,k){ var gx=k%18, gy=Math.floor(k/18), e=Math.exp(v[1]-v[0]), p=e/(1+e); S('rect',{x:x0+gx*cs,y:30+gy*cs,width:cs,height:cs,'class':p>0.5?'f-fire':'f-wire','fill-opacity':Math.abs(p-0.5)*1.4+0.06},svg); });
+    DX.forEach(function(d,k){ if (k%3) return; S('circle',{cx:x0+(d[0]+1.15)/2.3*126,cy:30+(1.15-d[1])/2.3*126,r:1.8,'class':DY[k]?'f-fire':'f-wire','stroke':'var(--card)','stroke-width':0.5},svg); });
+    S('text',{x:x0+63,y:20,'class':'t mid'},svg,title); }
+  function draw(){ clear(svg); panel(A,10,'plain'); panel(B,150,'with batch norm');
+    var x0=310, x1=585, y0=210, y1=30; S('line',{x1:x0,y1:y0,x2:x1,y2:y0,'class':'axis'},svg); S('line',{x1:x0,y1:y1,x2:x0,y2:y0,'class':'axis'},svg);
+    S('text',{x:x0+4,y:y1-6,'class':'t-s'},svg,'training loss'); S('text',{x:x1,y:y0+16,'class':'t-s end'},svg,'steps → 2,000');
+    [0,0.35,0.7].forEach(function(v){ S('text',{x:x0-4,y:y0-v/0.8*(y0-y1)+4,'class':'t-s end'},svg,v); });
+    function path(h,cl){ if (h.length<2) return; var d=''; h.forEach(function(p,i){ d+=(i?'L':'M')+(x0+p[0]/2000*(x1-x0))+','+(y0-Math.min(0.8,p[1])/0.8*(y0-y1)); }); S('path',{d:d,'class':cl},svg); }
+    path(hA,'w'); path(hB,'w-fire');
+    S('text',{x:10,y:185,'class':'t-s'},svg,'accuracy '+fmt(acc(A)*100,0)+'%'); S('text',{x:150,y:185,'class':'t-s'},svg,'accuracy '+fmt(acc(B)*100,0)+'%');
+    var st=hA.length?hA[hA.length-1][0]:0;
+    $('#bt-r').innerHTML=st===0?'Press Train both.':'Step <b>'+st+'</b> · plain loss <b>'+fmt(sA,3)+'</b> · batch-norm loss <b>'+fmt(sB,3)+'</b> (smoothed; 0.693 means guessing)'; }
+  function stop(){ clearInterval(timer); timer=null; var b=$('#bt-run'); b.textContent='Train both'; b.setAttribute('aria-pressed','false'); }
+  $('#bt-run').onclick=function(){ if (timer){ stop(); return; } if (hA.length && hA[hA.length-1][0]>=2000) reset(); this.textContent='Pause'; this.setAttribute('aria-pressed','true');
+    timer=setInterval(function(){ for (var k=0;k<20;k++){ var X=[], Y=[]; for (var b=0;b<32;b++){ var q=Math.floor(r()*DX.length); X.push(DX[q]); Y.push(DY[q]); }
+        var la=A.step(X,Y,lr), lb=B.step(X,Y,lr), t=hA.length?hA[hA.length-1][0]+1:1; sA=t===1?la:0.95*sA+0.05*la; sB=t===1?lb:0.95*sB+0.05*lb; hA.push([t,sA]); hB.push([t,sB]); }
+      draw(); if (hA[hA.length-1][0]>=2000) stop(); },15); };
+  $('#bt-reset').onclick=function(){ if (timer) stop(); reset(); };
+  bindRange('bt-lr',function(v){ lr=v; });
+  reset();
+})();
+(function(){ // batch-companion noise
+  var svg=$('#bs'), m=8, seed=1;
+  function draw(){ clear(svg); var r=rng(seed), K=2000, vals=[];
+    for (var k=0;k<K;k++){ var xs=[1.0]; for (var i=1;i<m;i++) xs.push(gauss(r)); var mu=xs.reduce(function(s,v){return s+v;},0)/m, va=xs.reduce(function(s,v){return s+(v-mu)*(v-mu);},0)/m; vals.push((1-mu)/Math.sqrt(va+1e-5)); }
+    var lo=-1, hi=4, nb=60, h=[]; for (var i=0;i<nb;i++) h.push(0); vals.forEach(function(v){ var b=Math.floor((v-lo)/(hi-lo)*nb); if (b>=0&&b<nb) h[b]++; });
+    var mx=Math.max.apply(null,h), bw=540/nb; function X(v){ return 30+(v-lo)/(hi-lo)*540; }
+    h.forEach(function(c,i){ var hh=c/mx*160; S('rect',{x:30+i*bw,y:185-hh,width:bw-0.6,height:hh,'class':'f-fire','fill-opacity':0.8},svg); });
+    S('line',{x1:30,y1:185,x2:570,y2:185,'class':'axis'},svg); for (var t=-1;t<=4;t++) S('text',{x:X(t),y:201,'class':'t-s mid'},svg,t);
+    S('line',{x1:X(1),y1:15,x2:X(1),y2:185,'class':'w-dash'},svg); S('text',{x:X(1)+6,y:24,'class':'t-s'},svg,'value with dataset statistics: 1.0');
+    S('text',{x:570,y:216,'class':'t-s end'},svg,'normalised value of the same example');
+    var mean=vals.reduce(function(s,v){return s+v;},0)/K, sd=Math.sqrt(vals.reduce(function(s,v){return s+(v-mean)*(v-mean);},0)/K);
+    $('#bs-r').innerHTML='Across 2,000 random batches of size <b>'+m+'</b>: average <b>'+fmt(mean,2)+'</b>, standard deviation <b>'+fmt(sd,2)+'</b>'+(m===2?' (with two values, each always normalises to exactly ±1)':''); }
+  bindRange('bs-m',function(v){ m=v; draw(); }); $('#bs-new').onclick=function(){ seed++; draw(); };
+})();
+(function(){ // scale invariance
+  var svg=$('#si'), a=1, bn=true, r=rng(31), U=[], W=[], C=[];
+  for (var n=0;n<16;n++){ var u=[]; for (var j=0;j<6;j++) u.push(gauss(r)); U.push(u); }
+  for (var i=0;i<24;i++) W.push(gauss(r)*0.6); for (var n=0;n<16;n++){ var c=[]; for (var i=0;i<4;i++) c.push(gauss(r)); C.push(c); }
+  function compute(){ var Z=U.map(function(u){ var z=[]; for (var i=0;i<4;i++){ var s=0; for (var j=0;j<6;j++) s+=a*W[i*6+j]*u[j]; z.push(s); } return z; }), m=16, mu=[], sd=[], Xh, A, i, n;
+    if (bn){ for (i=0;i<4;i++){ var mm=0, vv=0; for (n=0;n<m;n++) mm+=Z[n][i]/m; for (n=0;n<m;n++) vv+=Math.pow(Z[n][i]-mm,2)/m; mu.push(mm); sd.push(Math.sqrt(vv+1e-8)); } Xh=Z.map(function(z){ return z.map(function(v,i){ return (v-mu[i])/sd[i]; }); }); }
+    else Xh=Z;
+    A=Xh.map(function(x){ return x.map(sigmoid); });
+    // loss = sum C*A ; gradient wrt effective weights aW
+    var dXh=A.map(function(x,n){ return x.map(function(s,i){ return C[n][i]*s*(1-s); }); }), dZ;
+    if (bn){ dZ=Z0(m,4); for (i=0;i<4;i++){ var s1=0, s2=0; for (n=0;n<m;n++){ s1+=dXh[n][i]; s2+=dXh[n][i]*Xh[n][i]; } for (n=0;n<m;n++) dZ[n][i]=(m*dXh[n][i]-s1-Xh[n][i]*s2)/(m*sd[i]); } }
+    else dZ=dXh;
+    var g2=0; for (i=0;i<4;i++) for (var j=0;j<6;j++){ var g=0; for (n=0;n<m;n++) g+=dZ[n][i]*U[n][j]; g2+=g*g; }
+    return [A[0], Math.sqrt(g2)]; }
+  function draw(){ clear(svg); var res=compute(), out=res[0];
+    S('line',{x1:40,y1:180,x2:330,y2:180,'class':'axis'},svg); S('line',{x1:40,y1:30,x2:40,y2:180,'class':'axis'},svg);
+    S('text',{x:34,y:34,'class':'t-s end'},svg,'1'); S('text',{x:34,y:184,'class':'t-s end'},svg,'0'); S('text',{x:185,y:200,'class':'t-s mid'},svg,'unit outputs for example 1');
+    out.forEach(function(v,i){ var h=v*150; S('rect',{x:60+i*65,y:180-h,width:44,height:h,'class':'f-fire','fill-opacity':0.85},svg); S('text',{x:82+i*65,y:176-h,'class':'t-s mid'},svg,fmt(v,3)); });
+    S('text',{x:370,y:60,'class':'t-s'},svg,'‖∂loss/∂(aW)‖'); S('text',{x:370,y:96,'class':'t-big'},svg,fmt(res[1],4));
+    S('text',{x:370,y:130,'class':'t-s'},svg,'× a ='); S('text',{x:370,y:160,'class':'t-big'},svg,fmt(res[1]*a,4));
+    $('#si-r').innerHTML=bn?'BN on: outputs are identical for every <var>a</var>; gradient × <var>a</var> is constant, i.e. the gradient scales as 1/<var>a</var>.':'BN off: outputs drift toward 0 or 1 as <var>a</var> grows (saturation) and the gradient collapses.'; }
+  bindRange('si-a',function(v){ a=v; draw(); });
+  $('#si-bn').onclick=function(){ bn=!bn; this.setAttribute('aria-pressed',bn); this.textContent=bn?'BN on':'BN off'; draw(); };
+})();
+(function(){ // ImageNet Fig. 3 numbers
+  var svg=$('#im'), mode='steps', rows=[['Inception',31.0,72.2],['BN-Baseline',13.3,72.7],['BN-x5',2.1,73.0],['BN-x30',2.7,74.8],['BN-x5-Sigmoid',null,69.8]];
+  function draw(){ clear(svg); var x0=140, x1=560;
+    rows.forEach(function(r,i){ var y=20+i*40, v=mode==='steps'?r[1]:r[2];
+      S('text',{x:x0-8,y:y+19,'class':'t end'},svg,r[0]);
+      if (v==null){ S('text',{x:x0+4,y:y+19,'class':'t-inh'},svg,'never reaches 72.2%'); return; }
+      var w=mode==='steps'?v/46*(x1-x0):(v-65)/(76-65)*(x1-x0);
+      S('rect',{x:x0,y:y+4,width:w,height:22,'class':i===0?'f-wire':'f-fire','fill-opacity':0.85},svg);
+      S('text',{x:x0+w+6,y:y+19,'class':'t'},svg,mode==='steps'?fmt(v,1)+' × 10⁶ steps':fmt(v,1)+'%'); });
+    S('line',{x1:x0,y1:15,x2:x0,y2:220,'class':'axis'},svg);
+    if (mode==='acc') S('text',{x:x0+2,y:226,'class':'t-s'},svg,'axis starts at 65%');
+    $('#im-r').innerHTML=mode==='steps'?'BN-x5 reaches Inception\'s final accuracy in <b>'+fmt(31/2.1,1)+'×</b> fewer steps (the paper rounds to 14×).':'BN-x30 ends <b>2.6</b> points above Inception.'; }
+  $('#im-steps').onclick=function(){ mode='steps'; this.classList.add('on'); this.setAttribute('aria-pressed','true'); $('#im-acc').classList.remove('on'); $('#im-acc').setAttribute('aria-pressed','false'); draw(); };
+  $('#im-acc').onclick=function(){ mode='acc'; this.classList.add('on'); this.setAttribute('aria-pressed','true'); $('#im-steps').classList.remove('on'); $('#im-steps').setAttribute('aria-pressed','false'); draw(); };
+  draw();
+})();
+</script>
+
+</body>
+</html>

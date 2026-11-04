@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Universal jailbreaks (GCG) (2023) study guide</title>
+<meta name="description" content="Chat models are trained to refuse harmful requests, but is that refusal robust? This paper showed that an automated search can find a string of odd-looking tokens which, appended to a request, makes open models comply, and that a string found on open models often works on closed commercial ones too.">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Safety &amp; security</b> · 2023</p>
+  <h1>Universal and Transferable Adversarial Attacks on Aligned Language Models</h1>
+  <p class="cite">Andy Zou, Zifan Wang, Nicholas Carlini, Milad Nasr, J. Zico Kolter, Matt Fredrikson · arXiv</p>
+  <p class="lede">Chat models are trained to refuse harmful requests, but is that refusal robust? This paper showed that an automated search can find a string of odd-looking tokens which, appended to a request, makes open models comply, and that a string found on open models often works on closed commercial ones too. It turned "jailbreaking" from hand-crafted tricks into an optimisation problem, and showed that safety training gives no guarantee against adversarial inputs.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/2307.15043">Read the paper (free)</a> <a href="https://lovespark.love/papers-worth-reading/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, separate AI review (also by Claude), but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Chat models such as ChatGPT and LLaMA-2-Chat are "aligned": trained to decline requests for harmful content. People had found manual tricks to get round this, but those were fiddly and quickly patched.</p>
+  <p>The authors automate it: they search for a short string of tokens (a <strong>suffix</strong>) that, added after a request, makes the model start its reply with an agreeable opening like "Sure, here is", after which it tends to carry on.</p>
+  <p>The search uses the model's own gradients (a signal of which way to change things) to shortlist promising token swaps, then tests them; optimising one suffix across many requests and several models makes it general.</p>
+  <p>Suffixes found on small open models also worked, at varying rates, on GPT-3.5, GPT-4, PaLM-2 and Claude-1, though Claude-2 was barely affected, showing that refusal training was brittle in ways nobody had a fix for.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1</p>
+  <h2>Adversarial examples, now for text</h2>
+  <div class="prose">
+    <p>A decade earlier, researchers showed that image classifiers can be fooled by <a href="adversarial.html">adversarial examples</a>: tiny, carefully computed changes to a picture, invisible to people, that make the network confidently wrong. The recipe is to use the network's own gradients to find the change that most increases its error.</p>
+    <p>Text is harder. An image's pixels can be nudged by tiny amounts; words cannot. You can only swap one token (a word or word-piece) for another, and there are tens of thousands to choose from at every position. Earlier automatic attacks on language models mostly failed against chat models trained to refuse.</p>
+    <p>This paper's contribution is a search method that works well enough in this discrete setting to break aligned chat models reliably, with no human creativity needed.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A combination lock with 20 dials and 32,000 symbols on each. Trying every combination is hopeless. But if the lock gives a faint click when a dial gets "warmer", you can turn the dials one at a time towards the clicks. The gradient is that faint click.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>GCG brings the adversarial-example idea from images to chat models: let the model's own internals guide a search for inputs that defeat its training.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §2.1</p>
+  <h2>Aim for the first words of the reply</h2>
+  <div class="prose">
+    <p>What should the search aim for? "Make the model say something harmful" is too vague to measure. The authors use a simple proxy: make the model's reply <em>begin</em> with an affirmative phrase that restates the request, such as "Sure, here is …". Language models continue in the style they start in, so once a model has committed to "Sure, here is", it usually carries on rather than reversing into a refusal.</p>
+    <p>This turns the goal into a number the search can improve: how likely the model is to produce those exact opening words.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>The attack targets the opening of the response, because a model that starts by agreeing tends to keep going.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why not simply aim for the single word "Sure"?</dt>
+    <dd>A single agreeable token can still be followed by a refusal. Targeting a longer opening that repeats the request commits the model more firmly to answering.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §2.2</p>
+  <h2>Search one token at a time, guided by gradients</h2>
+  <div class="prose">
+    <p>The method is called <strong>Greedy Coordinate Gradient</strong> (GCG). "Coordinate" means it changes one position of the suffix at a time; "greedy" means it keeps whichever change helps most right now; "gradient" means it uses the model's gradients to decide which changes are worth testing.</p>
+    <p>Try a miniature version below. This is a made-up scoring function, not a language model: five slots, eight nonsense syllables, and a hidden score that depends on which syllables sit where and next to what. Click slots to change them by hand and try to push the score over the line. Then let the greedy search do it.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="gm-step">One greedy step</button><button class="btn" id="gm-run">Run search</button><button class="btn" id="gm-rst">Random start</button></div>
+    <div class="svgbox"><svg id="gm" viewBox="0 0 600 230" role="img" aria-label="A five-slot toy suffix and its score"></svg></div>
+    <p class="readout" id="gm-r"></p>
+    <figcaption>An abstract toy. Click a slot to cycle its syllable. The score is a fixed hidden function (each syllable has a value in each slot, plus bonuses and penalties for neighbouring pairs), standing in for "how likely the model is to begin with the target words". The greedy step tries every single-slot change (5 × 7 = 35 options) and keeps the best. A real suffix has about 20 slots and a vocabulary of about 32,000 tokens, roughly 640,000 options per step, which is why GCG uses gradients to shortlist a few hundred to test.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>GCG is a patient, guided trial-and-error: shortlist promising single-token swaps using gradients, test them for real, keep the best, repeat.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does the search need gradients at all, if it tests candidates for real anyway?</dt>
+    <dd>There are far too many possible swaps to test them all each step. Gradients cheaply estimate which swaps are likely to help, so only a small shortlist needs real evaluation.</dd>
+    <dt>Why can a greedy search get stuck?</dt>
+    <dd>Sometimes no single swap improves the score even though changing two slots together would; the toy's pair bonuses can create such local optima.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §2.3 · §3.2 · Table 2</p>
+  <h2>Universal and transferable</h2>
+  <div class="prose">
+    <p>Two further steps made the attack alarming. First, <strong>universal</strong>: rather than one suffix per request, the authors optimised a single suffix to work across many different harmful requests at once. Second, <strong>transferable</strong>: they optimised it against several open models together (Vicuna and Guanaco, small chat models built on LLaMA) and then simply pasted it, unchanged, after requests to closed commercial models they had no internal access to.</p>
+    <p>Pick an attack setting to see the share of 388 test behaviours that each closed model complied with.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl" id="tf-ctl"></div>
+    <div class="svgbox"><svg id="tf" viewBox="0 0 600 220" role="img" aria-label="Attack success rates on closed models for different attack settings"></svg></div>
+    <p class="readout" id="tf-r"></p>
+    <figcaption>Real numbers from Table 2 (attack success rate, %, averaged over 388 behaviours). "Request only": the harmful request with nothing added. "+ Sure, here's": asking the model to start that way. "GCG (Vicuna)": a suffix optimised on Vicuna models. "Ensemble": counting a success if any of several optimised suffixes works. Claude-2 was barely affected.</figcaption>
+  </figure>
+  <div class="prose">
+    <p>Why would a suffix found on a small open model work on GPT-4? The paper notes one likely factor: Vicuna was itself trained on conversations with ChatGPT, so it may share some of its quirks. More generally, models trained on similar data seem to share similar weaknesses, as image classifiers do.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>One automatically found suffix, built on free models, could make several commercial chat models comply with requests they would otherwise refuse.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §3.3 · §6</p>
+  <h2>Disclosure, patches and defences</h2>
+  <div class="prose">
+    <p>Before publishing, the authors shared their results with OpenAI, Google, Meta and Anthropic. The specific suffixes in the paper were quickly blocked, but the authors' point was that blocking known strings does not fix the underlying weakness: the search can simply find new ones.</p>
+    <p>Defences developed since, explained only in outline:</p>
+    <ul>
+      <li><strong>Gibberish detectors.</strong> GCG suffixes look like nonsense, so a filter that flags very unnatural text ("high perplexity") catches most of them. Attackers responded with searches that produce readable text.</li>
+      <li><strong>Random perturbation.</strong> Slightly scrambling the input several times and taking a majority vote breaks suffixes that depend on exact characters.</li>
+      <li><strong>Training on attacks.</strong> Include such attacks during safety training, or change the model's internals so harmful-content pathways are disrupted whatever the input.</li>
+    </ul>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>Jailbreak research grew into a field with shared benchmarks (HarmBench) and many attack styles, including ones where one language model attacks another in plain language. Later work found that refusal in many chat models is controlled by a single internal direction, which explains why it can be bypassed so cleanly (<a href="refusal.html">Arditi et al., 2024</a>). Defences that act on the model's internal representations rather than on its inputs became a leading approach, though no method yet offers a guarantee.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Patching individual attack strings is not a defence; robustness has to come from how models are trained and deployed.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Aligned LLMs are trained not to generate objectionable content, and manual "jailbreaks" circumvent this with significant human ingenuity and brittleness. The authors propose a simple and effective attack: find a suffix that, attached to a wide range of queries, maximises the probability that the model produces an affirmative response. The suffix is found automatically by combining greedy and gradient-based search, improving over prior automatic prompt-generation methods. Suffixes optimised on multiple prompts and multiple open models (Vicuna-7B and 13B) transfer to black-box public interfaces including ChatGPT, Bard and Claude, and to open models such as LLaMA-2-Chat, Pythia and Falcon. This substantially advances adversarial attacks on aligned models and raises the question of how to prevent them. Zou, Wang, Carlini, Nasr, Kolter &amp; Fredrikson, arXiv 2307.15043, July 2023.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2.1 · Eqs. 1–4</p>
+  <h2>Objective</h2>
+  <div class="prose">
+    <p>An LLM maps a token sequence <var>x</var><sub>1:<var>n</var></sub>, <var>x<sub>i</sub></var> ∈ {1, …, <var>V</var>}, to a next-token distribution, and the probability of a continuation factorises autoregressively:</p>
+  </div>
+  <div class="eq"><var>p</var>(<var>x</var><sub><var>n</var>+1:<var>n</var>+<var>H</var></sub> | <var>x</var><sub>1:<var>n</var></sub>) = ∏<sub><var>i</var>=1</sub><sup><var>H</var></sup> <var>p</var>(<var>x</var><sub><var>n</var>+<var>i</var></sub> | <var>x</var><sub>1:<var>n</var>+<var>i</var>−1</sub>) <span class="n">(2)</span></div>
+  <div class="prose">
+    <p>The prompt consists of the chat template, a user request, and an adversarial suffix of modifiable token positions ℐ ⊂ {1, …, <var>n</var>}. The adversarial loss is the negative log-probability of a target response <var>x</var><sup>⋆</sup><sub><var>n</var>+1:<var>n</var>+<var>H</var></sub> (an affirmative prefix that repeats the request):</p>
+  </div>
+  <div class="eq">ℒ(<var>x</var><sub>1:<var>n</var></sub>) = − log <var>p</var>(<var>x</var><sup>⋆</sup><sub><var>n</var>+1:<var>n</var>+<var>H</var></sub> | <var>x</var><sub>1:<var>n</var></sub>) <span class="n">(3)</span></div>
+  <div class="eq">minimise<sub><var>x</var><sub>ℐ</sub> ∈ {1,…,<var>V</var>}<sup>|ℐ|</sup></sub> ℒ(<var>x</var><sub>1:<var>n</var></sub>) <span class="n">(4)</span></div>
+  <div class="prose">
+    <p>The rationale (§2.1) is borrowed from manual jailbreaks: if the model's first tokens are affirmative, its response distribution shifts to a "mode" in which it complies. Targeting several tokens rather than one avoids the model starting with "Sure" and then refusing.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §2.2–2.3 · Algorithms 1–2</p>
+  <h2>Greedy Coordinate Gradient</h2>
+  <div class="prose">
+    <p>The core difficulty is optimisation over a discrete set. GCG builds on AutoPrompt's idea: represent token <var>x<sub>i</sub></var> as a one-hot vector <var>e</var><sub><var>x<sub>i</sub></var></sub>, and use the gradient ∇<sub><var>e</var><sub><var>x<sub>i</sub></var></sub></sub>ℒ ∈ ℝ<sup><var>V</var></sup> as a linear approximation of the effect of swapping in each token. For each modifiable position, the <var>k</var> tokens with the largest negative gradient form a candidate set. Then <var>B</var> candidate suffixes are formed, each by replacing one uniformly random position with a uniformly random token from that position's candidate set; all <var>B</var> are evaluated exactly with forward passes, and the best replaces the current suffix. This repeats for <var>T</var> iterations.</p>
+    <p>The difference from AutoPrompt is that AutoPrompt picks a single position per iteration and evaluates replacements only there, while GCG evaluates candidates across all positions in one batch; the authors report this substantially improves results. Experiments use <var>k</var> = 256, <var>B</var> = 512, 20 suffix tokens and 500 steps (§3).</p>
+    <p><strong>Universal, multi-model (Algorithm 2).</strong> To find one suffix for many behaviours, gradients (top-<var>k</var> candidates) and losses are summed across prompts, and prompts are added incrementally: start with one, add the next only once the suffix succeeds on all current ones. Across models, gradients and losses are aggregated likewise, which requires a shared tokenizer (Vicuna and Guanaco both use LLaMA's).</p>
+    <p>The figure runs the same procedure on a small differentiable toy loss with a 200-token vocabulary and 8 suffix positions, comparing it with random search given the same number of loss evaluations.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Candidates per position <var>k</var> <input type="range" id="gc-k" min="1" max="200" step="1" value="8"><output id="gc-k-o">8</output></label>
+      <label>Batch <var>B</var> <input type="range" id="gc-b" min="2" max="40" step="1" value="12"><output id="gc-b-o">12</output></label>
+      <button class="btn" id="gc-run">Run 60 iterations</button><button class="btn" id="gc-seed">New problem</button>
+    </div>
+    <div class="svgbox"><svg id="gc" viewBox="0 0 600 260" role="img" aria-label="Loss curves for gradient-guided coordinate search and random search on a toy problem"></svg></div>
+    <p class="readout" id="gc-r"></p>
+    <figcaption>An abstract toy, not a language model: tokens have random unit-length 8-dimensional embeddings, and the "loss" is −log σ(<var>f</var>) where <var>f</var> sums a position-weighted score of each token plus an interaction between neighbouring tokens. Gradient-guided (amber): top-<var>k</var> candidates per position from the gradient with respect to the one-hot token, then <var>B</var> random single swaps, keep the best. Random (blue): <var>B</var> single swaps with uniformly random tokens. Try <var>k</var> = 200 (the whole vocabulary): the gradient then adds nothing and the two curves nearly coincide. Small <var>k</var> focuses the batch on promising swaps, but because the gradient is only a linear approximation, <var>k</var> = 1 tends to stall where its single favourite swap stops helping.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why evaluate candidates exactly instead of trusting the gradient?</dt>
+    <dd>The gradient with respect to a one-hot vector is only a first-order estimate of a discrete jump between embeddings, which can be far from accurate; exact forward passes pick the swap that truly lowers the loss.</dd>
+    <dt>Why must the models in a multi-model attack share a tokenizer?</dt>
+    <dd>Gradients are taken over token indices; summing them across models only makes sense if index <var>v</var> means the same token in each.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §3.1 · Table 1 · Fig. 2</p>
+  <h2>White-box results on AdvBench</h2>
+  <div class="prose">
+    <p><strong>AdvBench</strong> has two parts: 500 <em>harmful strings</em> (the model must output an exact string, 3 to 44 tokens long, mean 16) and 500 <em>harmful behaviours</em> (instructions; success means the model makes a reasonable attempt to comply). Baselines: GBDA, PEZ and AutoPrompt, all run for 500 steps with 20 optimisable tokens.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" data-mdl="0">Vicuna-7B</button><button class="btn" data-mdl="1">LLaMA-2-7B-Chat</button></div>
+    <div class="svgbox"><svg id="tb1" viewBox="0 0 600 230" role="img" aria-label="Attack success rates by method on two open models"></svg></div>
+    <p class="readout" id="tb1-r"></p>
+    <figcaption>Table 1, attack success rate (%). "Strings": exact harmful string elicited. "Behaviour (1)": one suffix per behaviour. "Behaviour (train/test)": one universal suffix optimised on 25 behaviours, evaluated on those and on 100 held-out ones.</figcaption>
+  </figure>
+  <div class="prose">
+    <p>GCG dominates: on harmful strings it reaches 88% on Vicuna-7B and 57% on LLaMA-2-7B-Chat (Table 1; the paper's prose says 55%), where GBDA and PEZ reach 0%. A universal suffix trained on 25 behaviours elicits 98% of 100 held-out behaviours on Vicuna and 84% on LLaMA-2-Chat. Fig. 2 shows GCG also reaching low loss much faster than AutoPrompt.</p>
+  </div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §3.2–3.3 · Table 2 · Fig. 3</p>
+  <h2>Transfer to black-box models</h2>
+  <div class="prose">
+    <p>Suffixes were optimised on Vicuna-7B and 13B (two runs with different seeds), and on Vicuna-7B/13B plus Guanaco-7B/13B, over 25 behaviours, then tested on 388 behaviours against closed APIs.</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Method</th><th>GPT-3.5</th><th>GPT-4</th><th>Claude-1</th><th>Claude-2</th><th>PaLM-2</th></tr></thead>
+    <tbody>
+      <tr><td>Behaviour only</td><td class="num">1.8</td><td class="num">8.0</td><td class="num">0.0</td><td class="num">0.0</td><td class="num">0.0</td></tr>
+      <tr><td>+ "Sure, here's"</td><td class="num">5.7</td><td class="num">13.1</td><td class="num">0.0</td><td class="num">0.0</td><td class="num">0.0</td></tr>
+      <tr><td>+ GCG (Vicuna)</td><td class="num">34.3</td><td class="num">34.5</td><td class="num">2.6</td><td class="num">0.0</td><td class="num">31.7</td></tr>
+      <tr><td>+ GCG (Vicuna &amp; Guanacos)</td><td class="num">47.4</td><td class="num">29.1</td><td class="num">37.6</td><td class="num">1.8</td><td class="num">36.1</td></tr>
+      <tr><td>+ Concatenate</td><td class="num">79.6</td><td class="num">24.2</td><td class="num">38.4</td><td class="num">1.3</td><td class="num">14.4</td></tr>
+      <tr><td>+ Ensemble</td><td class="num">86.6</td><td class="num">46.9</td><td class="num">47.9</td><td class="num">2.1</td><td class="num">66.0</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>"Concatenate" joins multiple optimised suffixes into one; "Ensemble" counts success if any of the suffixes works. Caveats the authors note (§3.3): Vicuna is distilled from ChatGPT outputs, which may inflate transfer to GPT-3.5; running too many optimisation steps can overfit to the source models and reduce transfer (Fig. 6); and Claude's chat interface appeared to apply an initial content filter that the API did not. Human judgement of "success" (did the output attempt the behaviour) is a coarse metric.</p>
+  </div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §5–6 · Lineage</p>
+  <h2>Defences and lineage</h2>
+  <div class="prose">
+    <p>The paper itself names adversarial training as the natural direction and notes that, in vision, input-level detectors and preprocessing have repeatedly been broken by adaptive attacks (§3.3, §5). It disclosed results to OpenAI, Google, Meta and Anthropic in advance (§6), arguing that publication was warranted because the method is simple and the problem needed attention before more capable systems were deployed.</p>
+    <ul>
+      <li><strong>Detection.</strong> GCG suffixes have very high perplexity, so perplexity filters catch them (Jain et al., 2023; Alon &amp; Kamfonas, 2023), at some false-positive cost. Fluency-constrained attacks (e.g. AutoDAN, Zhu et al., 2023) and LLM-driven attacks (PAIR, Chao et al., 2023) produce readable prompts that evade such filters.</li>
+      <li><strong>Input smoothing.</strong> SmoothLLM (Robey et al., 2023) randomly perturbs several copies of the input and aggregates the responses, exploiting the brittleness of character-exact suffixes.</li>
+      <li><strong>Training.</strong> Adversarial training against GCG-style attacks (e.g. R2D2 in HarmBench, Mazeika et al., 2024) and representation-level methods such as circuit breakers (Zou et al., 2024) that reroute harmful internal representations regardless of the prompt.</li>
+      <li><strong>Understanding.</strong> <a href="refusal.html">Arditi et al. (2024)</a> found refusal mediated by a single residual-stream direction, and that adversarial suffixes suppress it; this gives a mechanistic account of why a short suffix can flip behaviour.</li>
+    </ul>
+  </div>
+  <div class="later"><span class="label">Lineage</span>From <a href="adversarial.html">Szegedy et al. (2013)</a> and gradient-based attacks on images, through HotFlip and AutoPrompt for discrete text, to GCG on aligned chat models. GCG became the standard white-box baseline in jailbreak evaluation; later variants improved efficiency and transfer, while the broader lesson, that alignment by fine-tuning does not imply adversarial robustness, informs work such as <a href="sleeper.html">sleeper agents</a> and <a href="constitutional.html">Constitutional AI</a>-style classifiers. The related threat of instructions arriving through retrieved content is <a href="injection.html">indirect prompt injection</a>.</div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is a perplexity filter not a complete defence?</dt>
+    <dd>It targets a property of this particular attack (gibberish tokens), not the vulnerability; attacks optimised under a fluency constraint, or written by another LLM, have normal perplexity.</dd>
+    <dt>What does the near-zero Claude-2 transfer rate tell us, and what doesn't it?</dt>
+    <dd>That these specific suffixes rarely transferred to that model and interface; it does not show the model is robust to attacks optimised against it or to other attack styles.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Aligned model</dt><dd>A model fine-tuned (e.g. with RLHF) to follow instructions and refuse harmful ones.</dd>
+    <dt>Jailbreak</dt><dd>An input that makes an aligned model produce content it was trained to refuse.</dd>
+    <dt>Suffix</dt><dd>Tokens appended after the user's request; the optimisation variable.</dd>
+    <dt>One-hot gradient</dt><dd>Gradient of the loss with respect to the indicator vector of a token, used to rank substitutions.</dd>
+    <dt>Universal</dt><dd>One suffix that works across many prompts.</dd>
+    <dt>Transfer</dt><dd>An attack crafted on one model succeeding on another.</dd>
+    <dt>ASR</dt><dd>Attack success rate.</dd>
+    <dt>Perplexity</dt><dd>How surprising text is to a language model; gibberish has high perplexity.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="adversarial.html">Adversarial examples (2013)</a></p>
+  <p><strong>Led to:</strong> <a href="refusal.html">Abliteration (2024)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> (<a href="https://lovespark.love/papers-worth-reading/#gcg">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // greedy toy
+  var syl=['ka','lo','mi','zu','pe','ri','sa','to'], P=5, r=rng(11), U=[], Pr=[], svg=$('#gm'), x, hist=[], timer=null, TH=5;
+  for (var i=0;i<P;i++){ var row=[]; for (var j=0;j<8;j++) row.push((r()-0.5)*2.4); U.push(row); }
+  for (var a=0;a<8;a++){ var row2=[]; for (var b=0;b<8;b++) row2.push((r()-0.5)*2.2); Pr.push(row2); }
+  function score(s){ var t=0; for (var i=0;i<P;i++){ t+=U[i][s[i]]; if (i) t+=Pr[s[i-1]][s[i]]; } return t; }
+  var rs=rng(5);
+  function reset(){ x=[]; for (var i=0;i<P;i++) x.push(Math.floor(rs()*8)); hist=[score(x)]; draw(); }
+  function step(){ var best=score(x), bi=-1, bj=-1; for (var i=0;i<P;i++) for (var j=0;j<8;j++){ if (j===x[i]) continue; var y=x.slice(); y[i]=j; var s=score(y); if (s>best+1e-9){ best=s; bi=i; bj=j; } }
+    if (bi<0) return false; x[bi]=bj; hist.push(best); return true; }
+  function draw(){ clear(svg); var s=score(x);
+    S('text',{x:20,y:24,'class':'t-s'},svg,'request …');
+    x.forEach(function(t,i){ var bx=100+i*62; var rr=S('rect',{x:bx,y:8,width:54,height:30,'class':'box-wire clickable'},svg); var tt=S('text',{x:bx+27,y:28,'class':'t mid clickable'},svg,syl[t]);
+      rr.onclick=tt.onclick=function(){ x[i]=(x[i]+1)%8; hist.push(score(x)); draw(); }; });
+    S('text',{x:420,y:28,'class':'t-s'},svg,'→ reply begins …');
+    var X=function(k){ return 60+k*(500/Math.max(10,hist.length-1)); }, Y=function(v){ return 200-(v+4)/14*140; };
+    S('line',{x1:60,y1:200,x2:570,y2:200,'class':'axis'},svg); S('line',{x1:60,y1:60,x2:60,y2:200,'class':'axis'},svg);
+    S('line',{x1:60,y1:Y(TH),x2:570,y2:Y(TH),'class':'w-dash'},svg); S('text',{x:566,y:Y(TH)-5,'class':'t-s end'},svg,'model "complies" above this line');
+    var d=''; hist.forEach(function(v,k){ d+=(k?'L':'M')+X(k)+','+Y(Math.max(-4,Math.min(10,v))); }); S('path',{d:d,'class':'w-fire'},svg); S('circle',{cx:X(hist.length-1),cy:Y(Math.max(-4,Math.min(10,hist[hist.length-1]))),r:5,'class':'u-on'},svg);
+    S('text',{x:54,y:Y(0)+4,'class':'t-s end'},svg,'0'); S('text',{x:54,y:Y(10)+4,'class':'t-s end'},svg,'10'); S('text',{x:315,y:222,'class':'t-s mid'},svg,'changes made');
+    $('#gm-r').innerHTML='Score <b>'+fmt(s,2)+'</b> '+(s>TH?'(over the line: the toy "model" complies).':'(below the line: the toy "model" refuses).'); }
+  $('#gm-step').onclick=function(){ if (!step()) $('#gm-r').innerHTML+=' No single change improves it: a local optimum.'; else draw(); };
+  $('#gm-run').onclick=function(){ if (timer) return; timer=setInterval(function(){ if (!step()){ clearInterval(timer); timer=null; draw(); var s=score(x); $('#gm-r').innerHTML+=' Search stopped: no single change helps.'; return; } draw(); },250); };
+  $('#gm-rst').onclick=function(){ if (timer){ clearInterval(timer); timer=null; } reset(); }; reset();
+})();
+(function(){ // transfer chart
+  var R=[['Request only',[1.8,8.0,0.0,0.0,0.0]],['+ "Sure, here\'s"',[5.7,13.1,0,0,0]],['GCG (Vicuna)',[34.3,34.5,2.6,0.0,31.7]],['GCG (Vicuna & Guanacos)',[47.4,29.1,37.6,1.8,36.1]],['Concatenate',[79.6,24.2,38.4,1.3,14.4]],['Ensemble',[86.6,46.9,47.9,2.1,66.0]]];
+  var Mn=['GPT-3.5','GPT-4','Claude-1','Claude-2','PaLM-2'], svg=$('#tf'), ctl=$('#tf-ctl');
+  R.forEach(function(rw,i){ var b=document.createElement('button'); b.className='btn'+(i===2?' on':''); b.textContent=rw[0]; b.onclick=function(){ $$('.btn',ctl).forEach(function(x,j){ x.classList.toggle('on',j===i); }); draw(i); }; ctl.appendChild(b); });
+  function draw(k){ clear(svg); var v=R[k][1];
+    S('line',{x1:50,y1:180,x2:580,y2:180,'class':'axis'},svg); [0,25,50,75,100].forEach(function(g){ var y=180-g*1.6; S('line',{x1:50,y1:y,x2:580,y2:y,'class':'grid'},svg); S('text',{x:44,y:y+4,'class':'t-s end'},svg,g+'%'); });
+    v.forEach(function(a,i){ var x=80+i*100, h=a*1.6; S('rect',{x:x,y:180-h,width:60,height:Math.max(h,1),'class':'f-inh'},svg); S('text',{x:x+30,y:174-h,'class':'t-s mid'},svg,a); S('text',{x:x+30,y:198,'class':'t mid'},svg,Mn[i]); });
+    $('#tf-r').innerHTML=R[k][0]+': highest on <b>'+Mn[v.indexOf(Math.max.apply(null,v))]+'</b> at <b>'+Math.max.apply(null,v)+'%</b>; Claude-2 <b>'+v[3]+'%</b>.'; }
+  draw(2);
+})();
+(function(){ // GCG vs random on toy differentiable loss
+  var V=200, D=8, N=8, svg=$('#gc'), K=8, B=12, pseed=21;
+  var E, W, M;
+  function setup(){ var r=rng(pseed); E=[]; for (var v=0;v<V;v++){ var e=[]; for (var d=0;d<D;d++) e.push(gauss(r)); var nn=Math.sqrt(dot(e,e)); E.push(e.map(function(q){ return q/nn; })); }
+    W=[]; for (var i=0;i<N;i++){ var w=[]; for (var d=0;d<D;d++) w.push(gauss(r)); W.push(w); }
+    M=[]; for (var a=0;a<D;a++){ var m=[]; for (var b=0;b<D;b++) m.push(gauss(r)*0.8); M.push(m); } }
+  function dot(a,b){ var s=0; for (var i=0;i<a.length;i++) s+=a[i]*b[i]; return s; }
+  function mv(Mx,v){ return Mx.map(function(row){ return dot(row,v); }); }
+  function mtv(Mx,v){ var o=[]; for (var j=0;j<D;j++){ var s=0; for (var i=0;i<D;i++) s+=Mx[i][j]*v[i]; o.push(s); } return o; }
+  function f(x){ var s=-22; for (var i=0;i<N;i++){ s+=dot(W[i],E[x[i]]); if (i<N-1) s+=dot(E[x[i]],mv(M,E[x[i+1]])); } return s; }
+  function loss(x){ var z=f(x); return Math.log(1+Math.exp(-z)); }
+  function grads(x){ var z=f(x), c=-1/(1+Math.exp(z)), G=[]; for (var i=0;i<N;i++){ var g=W[i].slice(); if (i<N-1){ var a=mv(M,E[x[i+1]]); for (var d=0;d<D;d++) g[d]+=a[d]; } if (i>0){ var b=mtv(M,E[x[i-1]]); for (d=0;d<D;d++) g[d]+=b[d]; }
+      G.push(E.map(function(e){ return c*dot(g,e); })); } return G; }
+  function run(mode,seed){ var r=rng(seed), x=[]; for (var i=0;i<N;i++) x.push(Math.floor(r()*V)); var L=[loss(x)];
+    for (var t=0;t<60;t++){ var cand=null; if (mode==='g'){ var G=grads(x); cand=G.map(function(g){ return g.map(function(v,j){ return [v,j]; }).sort(function(a,b){ return a[0]-b[0]; }).slice(0,K).map(function(p){ return p[1]; }); }); }
+      var best=null, bl=Infinity; for (var b=0;b<B;b++){ var y=x.slice(), pos=Math.floor(r()*N); y[pos]= mode==='g' ? cand[pos][Math.floor(r()*K)] : Math.floor(r()*V); var l=loss(y); if (l<bl){ bl=l; best=y; } }
+      if (bl<L[L.length-1]) x=best; L.push(loss(x)); } return {L:L,x:x}; }
+  function draw(){ clear(svg); var gs=[], rs=[]; for (var s=0;s<5;s++){ gs.push(run('g',100+s).L); rs.push(run('r',100+s).L); }
+    function avg(A){ return A[0].map(function(_,t){ var s=0; A.forEach(function(a){ s+=a[t]; }); return s/A.length; }); }
+    var g=avg(gs), rr=avg(rs), mx=Math.max(g[0],rr[0])*1.05, X=function(t){ return 60+t*8.5; }, Y=function(l){ return 220-l/mx*190; };
+    S('line',{x1:60,y1:220,x2:575,y2:220,'class':'axis'},svg); S('line',{x1:60,y1:24,x2:60,y2:220,'class':'axis'},svg);
+    [0,mx/2,mx].forEach(function(v){ S('text',{x:54,y:Y(v)+4,'class':'t-s end'},svg,fmt(v,1)); });
+    [0,20,40,60].forEach(function(t){ S('text',{x:X(t),y:238,'class':'t-s mid'},svg,t); }); S('text',{x:320,y:254,'class':'t-s mid'},svg,'iteration (each uses B exact loss evaluations)'); S('text',{x:66,y:20,'class':'t-s'},svg,'toy adversarial loss (mean of 5 runs)');
+    function path(L,cls){ var d=''; L.forEach(function(l,t){ d+=(t?'L':'M')+X(t)+','+Y(l); }); S('path',{d:d,'class':cls},svg); }
+    path(rr,'w'); path(g,'w-fire');
+    S('line',{x1:400,y1:40,x2:425,y2:40,'class':'w-fire'},svg); S('text',{x:432,y:44,'class':'t-fire'},svg,'gradient-guided'); S('line',{x1:400,y1:60,x2:425,y2:60,'class':'w'},svg); S('text',{x:432,y:64,'class':'t-wire'},svg,'random search');
+    $('#gc-r').innerHTML='After 60 iterations: gradient-guided loss <b>'+fmt(g[60],3)+'</b>, random search <b>'+fmt(rr[60],3)+'</b> (same budget of '+(60*B)+' evaluations).'; }
+  setup();
+  bindRange('gc-k',function(v){ K=v; draw(); }); bindRange('gc-b',function(v){ B=v; draw(); });
+  $('#gc-run').onclick=draw; $('#gc-seed').onclick=function(){ pseed++; setup(); draw(); };
+})();
+(function(){ // Table 1
+  var M=[[['GBDA',[0,4,4,6]],['PEZ',[0,11,4,3]],['AutoPrompt',[25,95,96,98]],['GCG',[88,99,100,98]]],[['GBDA',[0,0,0,0]],['PEZ',[0,0,0,1]],['AutoPrompt',[3,45,36,35]],['GCG',[57,56,88,84]]]];
+  var C=['Strings','Behaviour (1)','Behaviour (train)','Behaviour (test)'], svg=$('#tb1');
+  function draw(k){ clear(svg); var d=M[k];
+    S('line',{x1:50,y1:180,x2:580,y2:180,'class':'axis'},svg); [0,50,100].forEach(function(g){ var y=180-g*1.5; S('line',{x1:50,y1:y,x2:580,y2:y,'class':'grid'},svg); S('text',{x:44,y:y+4,'class':'t-s end'},svg,g+'%'); });
+    C.forEach(function(c,ci){ var gx=62+ci*130; S('text',{x:gx+56,y:198,'class':'t-s mid'},svg,c);
+      d.forEach(function(m,mi){ var v=m[1][ci], h=v*1.5, x=gx+mi*28; S('rect',{x:x,y:180-h,width:24,height:Math.max(h,1),'class':m[0]==='GCG'?'f-fire':'f-wire','fill-opacity':m[0]==='GCG'?1:0.35+mi*0.2},svg); if (m[0]==='GCG') S('text',{x:x+12,y:174-h,'class':'t-fire mid'},svg,v); }); });
+    d.forEach(function(m,mi){ S('rect',{x:62+mi*120,y:212,width:12,height:12,'class':m[0]==='GCG'?'f-fire':'f-wire','fill-opacity':m[0]==='GCG'?1:0.35+mi*0.2},svg); S('text',{x:80+mi*120,y:222,'class':'t-s'},svg,m[0]); });
+    $('#tb1-r').innerHTML=(k?'LLaMA-2-7B-Chat':'Vicuna-7B')+': GCG harmful-string success <b>'+d[3][1][0]+'%</b> vs AutoPrompt <b>'+d[2][1][0]+'%</b>.'; }
+  $$('[data-mdl]').forEach(function(b){ b.onclick=function(){ $$('[data-mdl]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(+b.getAttribute('data-mdl')); }; }); draw(0);
+})();
+</script>
+
+</body>
+</html>

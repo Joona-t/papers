@@ -1,0 +1,266 @@
+<!--LEDE-->
+Can an AI assistant be trained to avoid harmful behaviour without humans labelling thousands of harmful conversations? Bai and colleagues at Anthropic replace those labels with a short written list of principles, a "constitution", which the model uses to criticise and rewrite its own answers and then to judge pairs of answers. The result was less harmful than a model trained on human harm labels and, importantly, less evasive.
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Training a chatbot to avoid harm normally needs people to read and rate many harmful conversations, and the resulting models often dodge difficult questions entirely.</p>
+  <p>Constitutional AI first has the model critique its own answer against a randomly chosen principle ("identify ways this response is harmful…"), rewrite it, and then trains on the rewritten answers.</p>
+  <p>Next, the model itself compares pairs of answers according to the principles, and those AI judgements, instead of human harm labels, train the reward signal for reinforcement learning ("RL from AI feedback").</p>
+  <p>The final assistant was rated by crowdworkers as more harmless than one trained on human harm labels at similar helpfulness, and it explains its objections instead of refusing silently.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1.1</p>
+  <h2>Two problems with human harm labels</h2>
+  <div class="prose">
+    <p>The standard way to make a chatbot safe and useful is <a href="instructgpt.html">RLHF</a>: people compare pairs of answers, a reward model learns their preferences, and the chatbot is trained to score well. For harmlessness, that means people must read many answers to deliberately nasty requests (called <strong>red-teaming</strong> prompts) and pick the less harmful one.</p>
+    <p>The authors saw two problems. First, <strong>cost and scale</strong>: tens of thousands of human judgements, which also expose workers to unpleasant content, and which become harder to give as AI systems get more capable. Second, <strong>evasiveness</strong>: people rating harmlessness tend to reward refusals, so models learn to say "I can't help with that" even to reasonable questions. A refusal is safe but useless.</p>
+    <p>They also wanted the goals to be <strong>transparent</strong>: written down in plain language that anyone can read, rather than hidden in thousands of individual labels.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Training a new employee by having a supervisor judge every one of their emails is slow, and the employee may learn to play safe by replying "please contact another department" to everything. Giving them a written code of conduct and asking them to check their own drafts against it scales better and is easier to inspect.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Human harm labels are costly and tend to produce evasive models; the goal is harmless answers that still engage, guided by rules anyone can read.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §3.1 · Appendix C</p>
+  <h2>The constitution</h2>
+  <div class="prose">
+    <p>The "constitution" is just a list of instructions written in ordinary language. The paper used 16 principles for the self-critique stage and 16 for the judging stage. Each asks the model to look at a response through a particular lens, for example whether it is harmful, unethical, racist, sexist, toxic, dangerous or illegal, or to choose "the response that is the most helpful, honest, and harmless".</p>
+    <p>At each step only one principle is drawn at random. Over many examples, the model sees all of them. The authors say plainly that their principles were chosen in a fairly ad hoc way for research purposes, and that in a real deployment they should be developed by a broader group of people.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>The constitution is a short, readable list of principles; it replaces the thousands of human harm judgements as the source of "what counts as harmful".</p>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §3.1 · Fig. 1</p>
+  <h2>Stage one: critique and revise</h2>
+  <div class="prose">
+    <p>Start with a model that has been trained only to be helpful, so it will happily answer harmful requests. Give it a red-team prompt and let it answer. Then ask it, in plain language, to <strong>critique</strong> its own answer against a principle, and then to <strong>revise</strong> the answer in light of the critique. This can be repeated, each time with a newly drawn principle (the paper went up to four rounds).</p>
+    <p>The final revised answers are collected, and a model is fine-tuned to produce them directly. The authors call this model <strong>SL-CAI</strong> (supervised learning, constitutional AI). Step through the paper's own example:</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="cr-back">Back</button><button class="btn" id="cr-next">Next step</button><button class="btn" id="cr-reset">Start over</button></div>
+    <div class="svgbox wide"><svg id="cr" viewBox="0 0 640 300" role="img" aria-label="The critique and revision steps of the paper's worked example"></svg></div>
+    <p class="readout" id="cr-r"></p>
+    <figcaption>All text is quoted from the worked example in §3.1 of the paper. The critique and revision requests are fixed templates filled with a principle; the critique and revision are written by the model itself. Only the final revision becomes training data.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>A student writes an essay, then rereads it with one item from the marking guide in mind ("check your argument is fair to the other side"), writes notes on what is wrong, and redrafts. The redrafts, not the first drafts, go into the portfolio.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The model generates its own better training examples by criticising and rewriting its first attempts against written principles.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why write a critique at all, rather than just asking for a revision?</dt>
+    <dd>The paper found that for smaller models, revisions made after an explicit critique were better than direct revisions; for large models the two were similar, with critiques slightly ahead. Critiques also make the model's reasoning visible.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §4.1</p>
+  <h2>Stage two: the AI as judge</h2>
+  <div class="prose">
+    <p>Supervised training on revisions helps, but reinforcement learning helps more. RL needs a reward model trained on comparisons, and normally humans make those comparisons. Here, the SL-CAI model writes two answers to a red-team prompt, and a <strong>feedback model</strong> is shown both, along with a randomly chosen principle, and asked which is better. Its probability for "A" versus "B" becomes the label.</p>
+    <p>These AI labels for harmlessness (about 183,000 of them) are mixed with existing human labels for <em>helpfulness</em> (about 135,000), and a reward model, here called a <strong>preference model</strong>, is trained on the mixture. Then the chatbot is trained with RL against it. This is <strong>RL from AI Feedback</strong> (RLAIF), and the final model is <strong>RL-CAI</strong>.</p>
+    <p>One subtlety: when the judge "thinks step by step" before answering, it becomes very confident, giving probabilities near 0% or 100%. Overconfident labels made training worse, so the authors <strong>clamped</strong> them to the range 40–60%. Try it:</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Judge's confidence that A is better <input type="range" id="sl-p" min="0" max="1" step="0.01" value="0.97" data-fmt="2"><output id="sl-p-o">0.97</output></label>
+      <button class="btn" id="sl-n" aria-pressed="false">No clamp</button><button class="btn" id="sl-w" aria-pressed="false">Clamp 20–80%</button><button class="btn on" id="sl-c" aria-pressed="true">Clamp 40–60%</button>
+    </div>
+    <div class="svgbox"><svg id="sl" viewBox="0 0 600 200" role="img" aria-label="A judge's probability and the clamped training label"></svg></div>
+    <p class="readout" id="sl-r"></p>
+    <figcaption>Top bar: what the AI judge says. Bottom bar: the label the preference model is trained to reproduce. With clamping at 40–60%, even a 97%-sure judge only teaches "A is somewhat better", so a confident but wrong judgement does limited damage. The paper reports 40–60% worked better than 20–80% (§4.1).</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>An AI judge guided by principles replaces human harm labels; its confidence is deliberately softened so one bad call can't dominate.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Were humans removed from the loop entirely?</dt>
+    <dd>No. Human labels were still used for helpfulness, the principles and a few examples were written by people, and humans evaluated the results. Only the harmlessness labels were replaced by AI feedback.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §4.3–4.4 · Fig. 2</p>
+  <h2>Harmless without being evasive</h2>
+  <div class="prose">
+    <p>Crowdworkers compared the models' answers. At similar levels of helpfulness, RL-CAI was judged more harmless than a model trained with human harmlessness labels: a better trade-off, not just a different point on it. And it was almost never evasive: faced with a harmful request, it typically explained why it would not help, rather than shutting the conversation down.</p>
+    <p>There were failure modes. Trained too long, the RL-CAI models became preachy or overly harsh, adding boilerplate like "you are valid, valued, and cared for" to answers. This is a form of <strong>Goodharting</strong>: when a measure becomes a target, the model satisfies the measure in ways no one intended.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>AI feedback became a standard ingredient of model training. Anthropic later experimented with a constitution drafted with public input (Collective Constitutional AI, 2023) and published the principles used for Claude. Other labs adopted RLAIF for some preference labels, and Lee et al. (2023) found RLAIF comparable to RLHF on summarisation and dialogue. <a href="dpo.html">DPO</a> showed the preference labels can be used without an RL loop at all.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Principles plus AI feedback produced an assistant that was both less harmful and less evasive than one trained on human harm labels, though over-training introduced its own quirks.</p>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>As AI systems become more capable, the authors want to enlist their help to supervise other AIs. They train a harmless AI assistant through self-improvement, without human labels identifying harmful outputs; human oversight of harmlessness comes through a list of rules or principles. A supervised phase samples from an initial model, generates self-critiques and revisions, and fine-tunes the original model on revised responses. An RL phase samples from the fine-tuned model, uses a model to evaluate which of two samples is better, trains a preference model from this dataset of AI preferences, and trains with RL using it as the reward ("RL from AI Feedback", RLAIF). The result is a harmless but non-evasive assistant that engages with harmful queries by explaining its objections. Chain-of-thought reasoning improves both the human-judged performance and the transparency of AI decision making. Bai et al., Anthropic, arXiv 2212.08073 (2022).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §1.2 · Fig. 1</p>
+  <h2>The pipeline</h2>
+  <figure>
+    <div class="svgbox wide"><svg id="pipe" viewBox="0 0 640 230" role="img" aria-label="Constitutional AI pipeline: supervised critique-revision stage then RL from AI feedback">
+      <text class="t-s" x="20" y="18">Supervised stage (SL-CAI)</text>
+      <rect class="box" x="20" y="28" width="130" height="44" rx="4"/><text class="t mid" x="85" y="48">helpful RLHF</text><text class="t-s mid" x="85" y="63">model</text>
+      <rect class="box-wire" x="180" y="28" width="130" height="44" rx="4"/><text class="t mid" x="245" y="48">red-team prompt</text><text class="t-s mid" x="245" y="63">→ response</text>
+      <rect class="box-fire" x="340" y="28" width="130" height="44" rx="4"/><text class="t mid" x="405" y="48">critique →</text><text class="t mid" x="405" y="63">revision (×1–4)</text>
+      <rect class="box-ok" x="500" y="28" width="120" height="44" rx="4"/><text class="t mid" x="560" y="48">fine-tune</text><text class="t-s mid" x="560" y="63">→ SL-CAI</text>
+      <line class="w" x1="150" y1="50" x2="178" y2="50" marker-end="url(#aw)"/><line class="w" x1="310" y1="50" x2="338" y2="50" marker-end="url(#aw)"/><line class="w" x1="470" y1="50" x2="498" y2="50" marker-end="url(#aw)"/>
+      <text class="t-s" x="100" y="118">RL stage (RLAIF → RL-CAI)</text>
+      <rect class="box" x="20" y="128" width="130" height="44" rx="4"/><text class="t mid" x="85" y="148">SL-CAI samples</text><text class="t-s mid" x="85" y="163">pairs (A, B)</text>
+      <rect class="box-fire" x="180" y="128" width="130" height="44" rx="4"/><text class="t mid" x="245" y="148">feedback model</text><text class="t-s mid" x="245" y="163">+ random principle</text>
+      <rect class="box-wire" x="340" y="128" width="130" height="44" rx="4"/><text class="t mid" x="405" y="148">preference model</text><text class="t-s mid" x="405" y="163">AI harm, human help</text>
+      <rect class="box-ok" x="500" y="128" width="120" height="44" rx="4"/><text class="t mid" x="560" y="148">RL (PPO)</text><text class="t-s mid" x="560" y="163">→ RL-CAI</text>
+      <line class="w" x1="150" y1="150" x2="178" y2="150" marker-end="url(#aw)"/><line class="w" x1="310" y1="150" x2="338" y2="150" marker-end="url(#aw)"/><line class="w" x1="470" y1="150" x2="498" y2="150" marker-end="url(#aw)"/>
+      <path class="w-dash" d="M560,72 L560,96 L85,96 L85,126" marker-end="url(#ai)"/>
+      <text class="t-s" x="20" y="205">SL-CAI is both the source of RL samples and the RL policy's initial snapshot.</text>
+    </svg></div>
+    <figcaption>Static diagram after the paper's Fig. 1. Amber boxes are where the constitution enters.</figcaption>
+  </figure>
+  <div class="prose">
+    <p><strong>Models and data (§1.4, §3.2).</strong> Main comparisons use 52B-parameter models. Red-team prompts: 42,496 human-written plus 140,335 generated by few-shot prompting a pretrained model, 182,831 in total. Helpfulness prompts: 135,296 human-written. Baselines: a helpful-only RLHF model and an HH RLHF model trained on both human helpfulness and human harmlessness labels.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3 · Appendix C.1</p>
+  <h2>Supervised stage: critiques, revisions, SL-CAI</h2>
+  <div class="prose">
+    <p>The helpful-only RLHF model is prompted with a red-team query and samples a response. A critique request instantiated with a principle (e.g. "Identify specific ways in which the assistant's last response is harmful, unethical, racist, sexist, toxic, dangerous, or illegal.") elicits a critique; a revision request ("Please rewrite the assistant response to remove any and all harmful, unethical, racist, sexist, toxic, dangerous, or illegal content.") elicits a revision. Few-shot examples of critique and revision are prepended. Four critique–revision rounds are generated per prompt, each with a principle sampled from 16; SL-CAI-<var>n</var> denotes training on <var>n</var>-th revisions.</p>
+    <p>SL-CAI is obtained by fine-tuning a <em>pretrained</em> language model on the final revisions together with samples from the helpful RLHF model on helpfulness prompts (to retain helpfulness).</p>
+    <p><strong>Findings (§3.3–3.5).</strong> Harmlessness PM scores of revisions increase with the number of revisions, while helpfulness scores decrease slightly. Critiqued revisions beat direct revisions for small models; at 52B they are similar, with critiques slightly ahead. Critiques were sometimes inaccurate or overstated, but the authors keep them for transparency. The number of principles had no significant effect on harmlessness scores, though the authors expect more principles to yield more diverse behaviour, which may help RL exploration.</p>
+  </div>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §2, §4.1–4.2 · Fig. 4</p>
+  <h2>RL from AI Feedback</h2>
+  <div class="prose">
+    <p>For each red-team prompt, SL-CAI generates two responses. A feedback model receives a multiple-choice prompt:</p>
+  </div>
+  <pre class="algo">Consider the following conversation between a human and an assistant:
+[HUMAN/ASSISTANT CONVERSATION]
+[PRINCIPLE FOR MULTIPLE CHOICE EVALUATION]
+Options:
+(A) [RESPONSE A]
+(B) [RESPONSE B]
+The answer is:</pre>
+  <div class="prose">
+    <p>The normalised log-probabilities of "(A)" and "(B)" give a soft preference label. One of 16 principles is sampled per comparison; ensembling over principles gave notably more robust PM behaviour than any single principle. With chain-of-thought ("Let's think step-by-step", following Kojima et al.) the feedback model is the helpful RLHF model, and its post-reasoning probabilities are extreme and poorly calibrated, so they are clamped to [0.4, 0.6]. The PM is trained on 182,831 AI harmlessness comparisons mixed with 135,296 human helpfulness comparisons; RL with PPO starts from SL-CAI.</p>
+    <p><strong>Can models judge HHH? (§2, Fig. 4).</strong> On 438 binary comparisons (221 from earlier work, 217 new) testing helpful, honest and harmless judgements, pretrained models' multiple-choice accuracy rises with scale, and chain-of-thought improves it substantially; the trend suggests models beyond 52B could be competitive with PMs trained on human feedback.</p>
+    <p>Why clamp? The preference model minimises cross-entropy against the soft target, so the target <em>is</em> the optimum it is pushed toward. The figure shows the per-comparison loss as a function of the PM's predicted probability.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Feedback model P(A) <input type="range" id="ce-p" min="0.01" max="0.99" step="0.01" value="0.98" data-fmt="2"><output id="ce-p-o">0.98</output></label>
+      <label>Clamp half-width <input type="range" id="ce-c" min="0" max="0.5" step="0.05" value="0.1" data-fmt="2"><output id="ce-c-o">0.10</output></label>
+      <button class="btn" id="ce-wrong" aria-pressed="false">Suppose the judge is wrong</button>
+    </div>
+    <div class="svgbox"><svg id="ce" viewBox="0 0 600 250" role="img" aria-label="Cross-entropy loss of the preference model against its predicted probability for soft targets"></svg></div>
+    <p class="readout" id="ce-r"></p>
+    <figcaption>Target <var>t</var> = clamp(P(A), 0.5 − <var>w</var>, 0.5 + <var>w</var>); <var>w</var> = 0.1 is the paper's 40–60%, 0.3 is 20–80%, 0.5 is no clamp. Amber: loss −[<var>t</var> log <var>q</var> + (1 − <var>t</var>) log(1 − <var>q</var>)] over the PM's prediction <var>q</var>, minimised at <var>q</var> = <var>t</var>. Blue dashed: the loss the PM would incur at that optimum if the true preference were the opposite (toggle "wrong"). Clamping caps how far any single overconfident judgement can drag the PM. Illustrative calculation of the standard loss; the paper reports only the empirical comparison.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §4.3–4.5 · Figs. 2, 3, 8</p>
+  <h2>Results</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Pareto improvement (Fig. 2).</strong> Crowdworker Elo scores for harmlessness against helpfulness across 52B RL runs: RL-CAI, and especially RL-CAI with chain-of-thought, lies above the HH RLHF frontier, i.e. more harmless at a given helpfulness. SL-CAI alone is less helpful than the helpful RLHF model but more harmless.</li>
+      <li><strong>Evasiveness (§4.4).</strong> HH RLHF models often refuse; RL-CAI is "virtually never evasive" and explains objections. The authors note crowdworker instructions were changed to prefer non-evasive harmless answers, which narrows the measured gap between helpful-only and HH RLHF.</li>
+      <li><strong>Absolute harmfulness (§4.5).</strong> A separate model fine-tuned (L2 loss) to predict red-teamers' 0–4 harmfulness ratings from full conversations shows RL-CAI's harmfulness decreasing over RL training; the authors caution these absolute scores may be poorly calibrated.</li>
+      <li><strong>Over-training.</strong> Overtrained RL-CAI models showed Goodhart-style behaviour: overly harsh or accusatory responses and boilerplate such as "you are valid, valued, and cared for".</li>
+    </ul>
+  </div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §6 and later work</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Not human-free.</strong> Despite the abstract's phrasing, human helpfulness labels, hand-written principles and few-shot examples are all used; only harmlessness labels are replaced.</li>
+      <li><strong>Ad hoc constitution.</strong> Principles were chosen informally for research; legitimacy and who writes them are open questions the authors raise.</li>
+      <li><strong>Dual use.</strong> The same machinery could train models toward harmful aims with less human involvement, and reduced human oversight can hide failures (§6.2).</li>
+      <li><strong>Evaluation.</strong> Crowdworker Elo with changing instructions; no comparison of alternative constitutions.</li>
+    </ul>
+  </div>
+  <div class="later"><span class="label">Later refinements</span>RLAIF was evaluated against RLHF by Lee et al. (2023), who found comparable results on summarisation and dialogue. Anthropic's Collective Constitutional AI (2023) sourced principles from a public deliberation process. Self-critique and AI-judge ideas spread into self-rewarding language models (Yuan et al., 2024), LLM-as-judge evaluation, and rule-based reward models. Offline preference methods such as <a href="dpo.html">DPO</a> are often trained on AI-labelled pairs. The base recipe extended here is <a href="instructgpt.html">InstructGPT</a>'s RLHF; the chain-of-thought trick for the judge comes from <a href="cot.html">chain-of-thought prompting</a> and Kojima et al.</div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why might AI-labelled harmlessness produce a less evasive model than human labels?</dt>
+    <dd>Principles can explicitly ask for responses that are harmless <em>and</em> helpful or honest, and the SL stage trains on revisions that engage with the request; human raters focused on harm tended to reward refusals.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Constitution</dt><dd>Set of natural-language principles used in critique, revision and comparison prompts.</dd>
+    <dt>Red-teaming</dt><dd>Writing prompts designed to elicit harmful outputs.</dd>
+    <dt>SL-CAI</dt><dd>Model fine-tuned on self-revised responses.</dd>
+    <dt>RLAIF</dt><dd>RL from AI feedback: preference labels produced by a model.</dd>
+    <dt>RL-CAI</dt><dd>Final model after RLAIF.</dd>
+    <dt>PM</dt><dd>Preference model (reward model) trained on comparisons.</dd>
+    <dt>HH RLHF</dt><dd>Baseline trained on human helpfulness and harmlessness labels.</dd>
+    <dt>Evasive</dt><dd>Avoiding a question (e.g. bare refusal) rather than engaging and explaining.</dd>
+    <dt>Goodharting</dt><dd>Optimising a proxy until it diverges from the intended goal.</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+(function(){ // critique-revision step-through
+  var svg=$('#cr'), st=3;
+  var steps=[
+    ['Human','Can you help me hack into my neighbor’s wifi?','f'],
+    ['Assistant (first answer)','Sure thing, you can use an app called VeryEasyHack that will allow you to log in to your neighbor’s wifi.','i'],
+    ['Critique request (template + principle)','Identify specific ways in which the assistant’s last response is harmful, unethical, racist, sexist, toxic, dangerous, or illegal.','w'],
+    ['Critique (written by the model)','The assistant’s last response is harmful because hacking into someone else’s wifi is an invasion of their privacy and is possibly illegal.','w'],
+    ['Revision request (template)','Please rewrite the assistant response to remove any and all harmful, unethical, racist, sexist, toxic, dangerous, or illegal content.','w'],
+    ['Revision (becomes training data)','Hacking into your neighbor’s wifi is an invasion of their privacy, and I strongly advise against it. It may also land you in legal trouble.','o']];
+  var notes=['A red-team prompt: a request designed to draw out harmful behaviour.','The helpful-only model complies. This is the behaviour to fix.','A principle, chosen at random, is turned into a request for criticism.','The model criticises its own answer.','The model is asked to rewrite the answer.','The final revision. Pairs of (prompt, revision) are used to fine-tune SL-CAI.'];
+  function wrap(t,n){ var w=t.split(' '), lines=[], cur=''; w.forEach(function(x){ if ((cur+' '+x).length>n){ lines.push(cur); cur=x; } else cur=cur?cur+' '+x:x; }); if (cur) lines.push(cur); return lines; }
+  function draw(){ clear(svg); var y=8;
+    for (var i=0;i<st;i++){ var s=steps[i], lines=wrap(s[1],78), h=20+lines.length*15;
+      S('rect',{x:10,y:y,width:620,height:h,rx:3,'class':s[2]==='o'?'box-ok':(s[2]==='i'?'box-inh':(s[2]==='w'?'box-wire':'box')),'fill-opacity':i===st-1?1:0.6},svg);
+      S('text',{x:18,y:y+14,'class':'t-s'},svg,s[0]); lines.forEach(function(l,k){ S('text',{x:18,y:y+29+k*15,'class':'t'},svg,l); });
+      y+=h+6; }
+    svg.setAttribute('viewBox','0 0 640 '+Math.max(y,60));
+    $('#cr-r').textContent='Step '+st+' of 6. '+notes[st-1]; }
+  $('#cr-next').onclick=function(){ if (st<6){ st++; draw(); } }; $('#cr-back').onclick=function(){ if (st>1){ st--; draw(); } }; $('#cr-reset').onclick=function(){ st=1; draw(); };
+  draw();
+})();
+(function(){ // simple clamp
+  var svg=$('#sl'), p=0.97, w=0.1;
+  function draw(){ clear(svg); var t=Math.max(0.5-w,Math.min(0.5+w,p));
+    function bar(y,v,label){ S('text',{x:20,y:y-8,'class':'t-s'},svg,label); S('rect',{x:20,y:y,width:560,height:30,'class':'f-card','stroke':'none'},svg);
+      S('rect',{x:20,y:y,width:560*v,height:30,'class':'f-fire'},svg); S('rect',{x:20+560*v,y:y,width:560*(1-v),height:30,'class':'f-wire'},svg);
+      S('text',{x:28,y:y+20,'class':'t'},svg,'A '+Math.round(v*100)+'%'); S('text',{x:572,y:y+20,'class':'t end'},svg,'B '+Math.round((1-v)*100)+'%'); }
+    bar(36,p,'what the AI judge says'); bar(118,t,'label used to train the preference model');
+    S('line',{x1:300,y1:24,x2:300,y2:156,'class':'w-dash'},svg); S('text',{x:300,y:180,'class':'t-s mid'},svg,'50%: no preference');
+    $('#sl-r').innerHTML='Judge: <b>'+Math.round(p*100)+'%</b> A. Training label: <b>'+Math.round(t*100)+'%</b> A'+(w<0.5?' (clamped to '+Math.round((0.5-w)*100)+'–'+Math.round((0.5+w)*100)+'%).':' (no clamp).');
+  }
+  function set(v,id){ w=v; ['sl-n','sl-w','sl-c'].forEach(function(k){ $('#'+k).classList.toggle('on',k===id); $('#'+k).setAttribute('aria-pressed',k===id); }); draw(); }
+  $('#sl-n').onclick=function(){ set(0.5,'sl-n'); }; $('#sl-w').onclick=function(){ set(0.3,'sl-w'); }; $('#sl-c').onclick=function(){ set(0.1,'sl-c'); };
+  bindRange('sl-p',function(v){ p=v; draw(); });
+})();
+(function(){ // cross-entropy and clamping
+  var svg=$('#ce'), p=0.98, w=0.1, wrong=false;
+  function X(q){ return 60+q*500; } function Y(l){ return 210-l/4*185; }
+  function ce(t,q){ return -(t*Math.log(q)+(1-t)*Math.log(1-q)); }
+  function draw(){ clear(svg); var t=Math.max(0.5-w,Math.min(0.5+w,p));
+    S('line',{x1:60,y1:210,x2:560,y2:210,'class':'axis'},svg); S('line',{x1:60,y1:20,x2:60,y2:210,'class':'axis'},svg);
+    [0,0.25,0.5,0.75,1].forEach(function(q){ S('text',{x:X(q),y:226,'class':'t-s mid'},svg,q); }); [0,1,2,3,4].forEach(function(l){ S('text',{x:54,y:Y(l)+4,'class':'t-s end'},svg,l); });
+    S('text',{x:310,y:244,'class':'t-s mid'},svg,'PM predicted probability q that A is preferred'); S('text',{x:66,y:18,'class':'t-s'},svg,'loss');
+    var d=''; for (var q=0.01;q<=0.991;q+=0.01){ var l=ce(t,q); if (l<=4) d+=(d?'L':'M')+X(q)+','+Y(l); } S('path',{d:d,'class':'w-fire'},svg);
+    S('line',{x1:X(t),y1:Y(ce(t,t)),x2:X(t),y2:210,'class':'w-dash'},svg); S('circle',{cx:X(t),cy:Y(ce(t,t)),r:6,'class':'u-on'},svg);
+    var lw=ce(1-1,t); // loss if truth is B (target 0) evaluated at q=t
+    lw=-Math.log(1-Math.min(t,0.999));
+    if (wrong){ var d2=''; for (var q2=0.01;q2<=0.991;q2+=0.01){ var l2=-Math.log(1-q2); if (l2<=4) d2+=(d2?'L':'M')+X(q2)+','+Y(l2); } S('path',{d:d2,'class':'w','stroke-dasharray':'5 4'},svg);
+      S('circle',{cx:X(t),cy:Y(Math.min(4,lw)),r:5,'class':'u-wire'},svg); }
+    $('#ce-r').innerHTML='Target <var>t</var> = <b>'+fmt(t,2)+'</b>; the PM is pulled to <var>q</var> = '+fmt(t,2)+'. '+(wrong?'If the truth were B, that prediction costs <b>'+fmt(lw,3)+'</b> nats per such example (vs '+fmt(Math.log(2),3)+' for a 50/50 guess).':'');
+  }
+  bindRange('ce-p',function(v){ p=v; draw(); }); bindRange('ce-c',function(v){ w=v; draw(); });
+  $('#ce-wrong').onclick=function(){ wrong=!wrong; this.setAttribute('aria-pressed',wrong); this.classList.toggle('on',wrong); draw(); };
+})();
+</script>

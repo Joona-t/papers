@@ -1,0 +1,288 @@
+<!--LEDE-->
+Adapting a giant language model to a new task normally means retraining all of its billions of numbers and storing a full copy for every task. LoRA asks whether the change really needs that many degrees of freedom, and answers no: freeze the original model and learn the change as the product of two thin matrices. On GPT-3 this cut the trainable parameters by about 10,000 times and the memory needed by three times, matched full fine-tuning in quality, and adds no delay at all when the model is used.
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Fine-tuning a pretrained model means nudging all its weights for a new task, which for a 175-billion-parameter model like GPT-3 needs enormous memory and a 350 GB copy for every task.</p>
+  <p>The authors bet that the <em>change</em> needed for a task is simple, in a precise sense called "low rank": it can be written as one tall thin matrix times one short wide one.</p>
+  <p>So LoRA keeps the original weights frozen and trains only these two small matrices beside some of them; when training ends, their product can be added straight into the frozen weights, so the adapted model runs exactly as fast as the original.</p>
+  <p>On GPT-3 and smaller models this matched or beat full fine-tuning on several benchmarks while training about 10,000 times fewer parameters, and it became the standard way to customise large models.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1–2</p>
+  <h2>The cost of fine-tuning everything</h2>
+  <div class="prose">
+    <p>A large language model is first <strong>pretrained</strong> on huge amounts of text, then usually <strong>fine-tuned</strong>: trained a bit more on examples of one task, such as answering questions about a database or summarising conversations. Ordinary fine-tuning adjusts every one of the model's parameters.</p>
+    <p>For GPT-3, that is 175 billion numbers. Training them needs the model, its gradients and the optimiser's bookkeeping all in GPU memory, about 1.2 terabytes in the paper's setup. And each task produces a new 350-gigabyte copy of the model. A company serving a hundred customised versions would need a hundred full copies.</p>
+    <p>Earlier shortcuts existed. <strong>Adapters</strong> insert small extra layers into the network and train only those, but the extra layers have to run one after another, which slows the model down when answering one request at a time. <strong>Prefix tuning</strong> trains a few special input vectors, but those use up part of the model's input length and turned out to be hard to optimise.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Full fine-tuning of a giant model is expensive to train and to store; earlier cheap alternatives cost speed or quality.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §4.1 · Fig. 1 · Eq. 3</p>
+  <h2>Learn the change as two thin matrices</h2>
+  <div class="prose">
+    <p>Inside a transformer, most of the work is done by big square grids of numbers called <strong>weight matrices</strong>. One of GPT-3's is 12,288 rows by 12,288 columns: about 151 million numbers. Fine-tuning changes each matrix <var>W</var> to <var>W</var> + Δ<var>W</var>, where Δ<var>W</var> (say "delta W") is the change.</p>
+    <p>LoRA writes the change as a product of two thin matrices, <var>B</var> × <var>A</var>. <var>B</var> is tall and thin (12,288 × <var>r</var>), <var>A</var> is short and wide (<var>r</var> × 12,288), and <var>r</var>, the <strong>rank</strong>, is small, like 1, 4 or 8. Multiplied together they make a full-size 12,288 × 12,288 change, but they contain only 2 × 12,288 × <var>r</var> numbers. With <var>r</var> = 4 that is about 98,000 numbers instead of 151 million.</p>
+    <p>During training only <var>A</var> and <var>B</var> change; the original <var>W</var> is frozen. <var>B</var> starts at zero, so at the start the model behaves exactly like the original.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Matrix size <var>d</var> <input type="range" id="pc-d" min="256" max="12288" step="256" value="12288"><output id="pc-d-o">12288</output></label>
+      <label>Rank <var>r</var> <input type="range" id="pc-r" min="1" max="64" step="1" value="4"><output id="pc-r-o">4</output></label>
+    </div>
+    <div class="svgbox"><svg id="pc" viewBox="0 0 600 270" role="img" aria-label="A full weight matrix compared with the two thin LoRA matrices"></svg></div>
+    <p class="readout" id="pc-r-r"></p>
+    <figcaption>Left: the frozen <var>d</var> × <var>d</var> matrix <var>W</var>. Right: LoRA's <var>B</var> (<var>d</var> × <var>r</var>) and <var>A</var> (<var>r</var> × <var>d</var>), drawn to the same scale (but never thinner than a couple of pixels so you can see them). 12,288 is GPT-3's model width. The count below is for one matrix; the paper adapts two matrices in each of GPT-3's 96 layers.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>Imagine adjusting the colour of a huge photo. You could edit every pixel separately, or apply a few global sliders such as "warmer" and "more contrast". Each slider changes every pixel, but you only had to choose a few numbers. LoRA bets that adapting a model to a task is more like moving a few sliders than repainting the picture.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>LoRA freezes the original weights and learns each change as <var>B</var> × <var>A</var>, which has a tiny fraction of the numbers but still affects the whole matrix.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why start <var>B</var> at zero rather than starting both matrices random?</dt>
+    <dd>So that <var>B</var> × <var>A</var> = 0 at the start, and the adapted model is exactly the pretrained model before training. Training then moves smoothly away from a known good starting point.</dd>
+    <dt>If you double <var>r</var>, how does the number of trainable numbers change?</dt>
+    <dd>It doubles, because it is 2 × <var>d</var> × <var>r</var>. The full matrix's size, <var>d</var> × <var>d</var>, does not depend on <var>r</var>.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §4.1 · §7</p>
+  <h2>Why a low-rank change is enough</h2>
+  <div class="prose">
+    <p>"Rank" measures how many independent patterns a matrix contains. A rank-1 matrix is just one pattern, a column times a row, like a multiplication table. A rank-4 matrix is four such patterns added together. A full-rank 12,288-wide matrix could contain 12,288 patterns.</p>
+    <p>Earlier work had found that big pretrained models can be fine-tuned well even when the change is squeezed into a small random subspace (they have a low "intrinsic dimension"). The LoRA authors guessed the same holds for the change to each weight matrix: it has low intrinsic rank. Their experiments supported this strongly. For GPT-3, a rank of 1 or 2 was nearly as good as 64 on the tasks they tested, and the important directions found at rank 8 were mostly the same as those found at rank 64.</p>
+    <p>Below, a made-up "change" matrix is built from a few patterns plus a little noise. Slide the rank and see how much of it a rank-<var>r</var> product can capture.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Rank <var>r</var> <input type="range" id="lr-r" min="0" max="8" step="1" value="1"><output id="lr-r-o">1</output></label>
+      <label>Noise <input type="range" id="lr-n" min="0" max="0.6" step="0.05" value="0.15" data-fmt="2"><output id="lr-n-o">0.15</output></label>
+    </div>
+    <div class="svgbox"><svg id="lr" viewBox="0 0 600 260" role="img" aria-label="A 16 by 16 update matrix and its best rank-r approximation"></svg></div>
+    <p class="readout" id="lr-rr"></p>
+    <figcaption>Left: a 16 × 16 "update" made of three patterns of decreasing strength plus random noise (amber positive, blue negative). Middle: the best possible rank-<var>r</var> version (computed by singular value decomposition). Right: what is left over. Three patterns are captured by rank 3; beyond that you are only fitting noise. Illustrative; real updates are far larger, but the paper's analysis (§7.2) finds the same kind of concentration in a few directions.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>The change a task needs seems to live in a handful of directions, so a very low rank captures almost all of it.</p>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §4.1–4.2 · Table 4</p>
+  <h2>No slowdown, tiny files, same quality</h2>
+  <div class="prose">
+    <p>Because <var>B</var> × <var>A</var> is the same shape as <var>W</var>, after training you can simply add it in: <var>W</var> + <var>B</var><var>A</var> is one ordinary matrix again. The adapted model has exactly the same size and speed as the original. To switch tasks, subtract one product and add another.</p>
+    <p>For GPT-3, adapting two matrices per layer with rank 4 made each task's saved changes about 35 megabytes instead of 350 gigabytes, a ten-thousandth of the size. Training needed about a third of the memory (350 GB instead of 1.2 TB) and ran about 25% faster, because no gradients are needed for the frozen weights. On tests such as turning questions into database queries (WikiSQL), recognising whether one sentence follows from another (MultiNLI) and summarising chat conversations (SAMSum), LoRA matched or beat full fine-tuning.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>LoRA became the default way to customise open models, and many variants followed. <a href="qlora.html">QLoRA</a> (2023) stores the frozen model in 4-bit precision, letting a 65-billion-parameter model be fine-tuned on a single 48 GB GPU. DoRA (2024) splits each weight into a size and a direction and trains them separately. Later studies found LoRA tends to learn less than full fine-tuning on very different domains such as code and maths, but also forgets less of what the model already knew.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>LoRA updates merge into the original weights, so they cost nothing at run time, take megabytes to store, and matched full fine-tuning on the paper's tests.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why do adapters slow a model down while LoRA does not?</dt>
+    <dd>Adapters are extra layers that must be computed in sequence on every request. LoRA's change has the same shape as an existing weight matrix, so it can be added into that matrix once and disappear.</dd>
+    <dt>What is the catch of merging?</dt>
+    <dd>A merged model serves one task. To mix requests for different tasks in a single batch, you keep <var>B</var> and <var>A</var> separate and pay a small extra cost.</dd>
+  </dl></details>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>As models grow, full fine-tuning, which retrains all parameters, becomes less feasible; deploying independent fine-tuned instances of GPT-3 175B is prohibitively expensive. Low-Rank Adaptation freezes the pretrained weights and injects trainable rank-decomposition matrices into each layer of the transformer, greatly reducing the number of trainable parameters for downstream tasks. Compared with GPT-3 175B fine-tuned with Adam, LoRA reduces trainable parameters by 10,000× and GPU memory by 3×. It performs on par with or better than fine-tuning on RoBERTa, DeBERTa, GPT-2 and GPT-3, despite fewer trainable parameters, higher training throughput and, unlike adapters, no additional inference latency. An empirical study of rank deficiency in adaptation sheds light on its efficacy. Hu, Shen, Wallis, Allen-Zhu, Li, Wang, Wang &amp; Chen (Microsoft), ICLR 2022 (arXiv 2106.09685).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2 · Eqs. 1–2</p>
+  <h2>Problem statement</h2>
+  <div class="prose"><p>Full fine-tuning of an autoregressive model <var>P</var><sub>Φ</sub>(<var>y</var>|<var>x</var>) on context–target pairs 𝒵 = {(<var>x<sub>i</sub></var>, <var>y<sub>i</sub></var>)} solves</p></div>
+  <div class="eq">max<sub>Φ</sub> Σ<sub>(<var>x</var>,<var>y</var>)∈𝒵</sub> Σ<sub><var>t</var>=1</sub><sup>|<var>y</var>|</sup> log <var>P</var><sub>Φ</sub>(<var>y<sub>t</sub></var> | <var>x</var>, <var>y</var><sub>&lt;<var>t</var></sub>) <span class="n">(1)</span></div>
+  <div class="prose"><p>starting from Φ<sub>0</sub> and learning ΔΦ with |ΔΦ| = |Φ<sub>0</sub>|. LoRA instead encodes the increment as ΔΦ = ΔΦ(Θ) with |Θ| ≪ |Φ<sub>0</sub>|:</p></div>
+  <div class="eq">max<sub>Θ</sub> Σ<sub>(<var>x</var>,<var>y</var>)∈𝒵</sub> Σ<sub><var>t</var>=1</sub><sup>|<var>y</var>|</sup> log <var>p</var><sub>Φ<sub>0</sub>+ΔΦ(Θ)</sub>(<var>y<sub>t</sub></var> | <var>x</var>, <var>y</var><sub>&lt;<var>t</var></sub>) <span class="n">(2)</span></div>
+  <div class="prose"><p>§3 argues existing methods have drawbacks: adapter layers (Houlsby et al., 2019; Lin et al., 2020) add sequential depth whose latency matters at small batch sizes (Table 1: on GPT-2 medium with batch 1 and sequence length 128, +20.7% to +30.3% forward latency), and prefix tuning is hard to optimise, with performance changing non-monotonically in the number of trainable parameters, and it reserves part of the sequence length.</p></div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §4.1–4.2 · Eq. 3</p>
+  <h2>The reparametrisation</h2>
+  <div class="prose"><p>For a pretrained weight <var>W</var><sub>0</sub> ∈ ℝ<sup><var>d</var>×<var>k</var></sup>, constrain its update to Δ<var>W</var> = <var>BA</var> with <var>B</var> ∈ ℝ<sup><var>d</var>×<var>r</var></sup>, <var>A</var> ∈ ℝ<sup><var>r</var>×<var>k</var></sup>, <var>r</var> ≪ min(<var>d</var>, <var>k</var>). <var>W</var><sub>0</sub> receives no gradient. The forward pass becomes</p></div>
+  <div class="eq"><var>h</var> = <var>W</var><sub>0</sub><var>x</var> + Δ<var>W</var><var>x</var> = <var>W</var><sub>0</sub><var>x</var> + (α/<var>r</var>) <var>BA</var><var>x</var> <span class="n">(3)</span></div>
+  <div class="prose">
+    <p><strong>Initialisation.</strong> <var>A</var> random Gaussian, <var>B</var> = 0, so Δ<var>W</var> = 0 at the start. <strong>Scaling.</strong> Δ<var>W</var><var>x</var> is scaled by α/<var>r</var>; with Adam, tuning α is roughly like tuning the learning rate, so the authors set α to the first <var>r</var> they try and do not tune it, which reduces the need to retune when <var>r</var> changes. <strong>Generality.</strong> As <var>r</var> approaches the rank of <var>W</var><sub>0</sub>, LoRA recovers the expressiveness of full fine-tuning; adapter- and prefix-based methods instead converge to a smaller model or one that cannot take long inputs. <strong>No inference latency.</strong> Deploy <var>W</var> = <var>W</var><sub>0</sub> + <var>BA</var>; switch tasks by subtracting <var>BA</var> and adding <var>B</var>′<var>A</var>′.</p>
+    <p><strong>Where to apply it (§4.2).</strong> Only self-attention weights <var>W<sub>q</sub></var>, <var>W<sub>k</sub></var>, <var>W<sub>v</sub></var>, <var>W<sub>o</sub></var> are considered, each treated as a single <var>d</var><sub>model</sub> × <var>d</var><sub>model</sub> matrix even though the output is split into heads; MLP layers, LayerNorm and biases are frozen. Most experiments adapt only <var>W<sub>q</sub></var> and <var>W<sub>v</sub></var>. The trainable count is |Θ| = 2 × <var>L̂</var><sub>LoRA</sub> × <var>d</var><sub>model</sub> × <var>r</var>, with <var>L̂</var><sub>LoRA</sub> the number of adapted matrices (§5.1).</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn on" data-m="q" aria-pressed="true">W_q</button><button class="btn" data-m="k" aria-pressed="false">W_k</button><button class="btn on" data-m="v" aria-pressed="true">W_v</button><button class="btn" data-m="o" aria-pressed="false">W_o</button>
+      <label>Rank <var>r</var> <input type="range" id="g3-r" min="1" max="64" step="1" value="4"><output id="g3-r-o">4</output></label>
+    </div>
+    <div class="svgbox wide"><svg id="g3" viewBox="0 0 640 220" role="img" aria-label="Trainable parameters and checkpoint size for LoRA on GPT-3"></svg></div>
+    <p class="readout" id="g3-rr"></p>
+    <figcaption>GPT-3 175B: 96 layers, <var>d</var><sub>model</sub> = 12,288. |Θ| = 2 × (96 × matrices per layer) × 12,288 × <var>r</var>; checkpoint size assumes 2 bytes per parameter (16-bit). Bars on a log scale. Check: <var>W<sub>q</sub></var>, <var>W<sub>v</sub></var> at <var>r</var> = 1 gives Table 4's 4.7M; at <var>r</var> = 8 it gives 37.7M; at <var>r</var> = 4, about 18.9M parameters or roughly 38 MB, the "35MB" checkpoint the paper quotes in §4.2.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §5 · Tables 2–4</p>
+  <h2>Results</h2>
+  <div class="prose"><p><strong>GLUE (Table 2).</strong> Average scores: RoBERTa-base FT 86.4 vs LoRA (0.3M trainable) 87.2; RoBERTa-large FT 88.9 vs LoRA (0.8M) 89.0; DeBERTa XXL FT 91.1 vs LoRA (4.7M) 91.3. GPT-2 medium and large on E2E NLG, WebNLG and DART (Table 3) generally favour LoRA over adapters and prefix methods at similar or larger budgets.</p></div>
+  <div class="tablebox"><table>
+    <thead><tr><th>GPT-3 175B (Table 4)</th><th>Trainable</th><th>WikiSQL acc.</th><th>MNLI-m acc.</th><th>SAMSum R1/R2/RL</th></tr></thead>
+    <tbody>
+      <tr><td>Fine-tune</td><td class="num">175,255.8M</td><td class="num">73.8</td><td class="num">89.5</td><td class="num">52.0/28.0/44.5</td></tr>
+      <tr><td>BitFit</td><td class="num">14.2M</td><td class="num">71.3</td><td class="num">91.0</td><td class="num">51.3/27.4/43.5</td></tr>
+      <tr><td>PreEmbed</td><td class="num">3.2M</td><td class="num">63.1</td><td class="num">88.6</td><td class="num">48.3/24.2/40.5</td></tr>
+      <tr><td>PreLayer</td><td class="num">20.2M</td><td class="num">70.1</td><td class="num">89.5</td><td class="num">50.8/27.3/43.5</td></tr>
+      <tr><td>Adapter<sup>H</sup></td><td class="num">7.1M</td><td class="num">71.9</td><td class="num">89.8</td><td class="num">53.0/28.9/44.8</td></tr>
+      <tr><td>Adapter<sup>H</sup></td><td class="num">40.1M</td><td class="num">73.2</td><td class="num">91.5</td><td class="num">53.2/29.0/45.1</td></tr>
+      <tr><td>LoRA</td><td class="num">4.7M</td><td class="num">73.4</td><td class="num">91.7</td><td class="num">53.8/29.8/45.9</td></tr>
+      <tr><td>LoRA</td><td class="num">37.7M</td><td class="num">74.0</td><td class="num">91.6</td><td class="num">53.4/29.2/45.1</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose"><p>Efficiency (§4.2): training VRAM 1.2 TB → 350 GB; checkpoint ≈ 350 GB → 35 MB (<var>r</var> = 4, <var>W<sub>q</sub></var>, <var>W<sub>v</sub></var>); about 25% faster training on GPT-3 175B (43.1 vs 32.5 tokens/s per V100). The paper also notes that prefix-based methods degrade when given too many special tokens (Fig. 2), whereas LoRA scales well with more trainable parameters.</p></div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §7 · Tables 5–7 · Figs. 3–4</p>
+  <h2>Understanding the low-rank updates</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Which matrices (Table 5).</strong> With a fixed budget of 18M parameters on GPT-3: putting it all in <var>W<sub>q</sub></var> (<var>r</var> = 8) gives 70.4 WikiSQL / 91.0 MNLI; <var>W<sub>k</sub></var> 70.0 / 90.8; <var>W<sub>v</sub></var> 73.0 / 91.0; <var>W<sub>o</sub></var> 73.2 / 91.3; <var>W<sub>q</sub></var> + <var>W<sub>v</sub></var> (<var>r</var> = 4) 73.7 / 91.3; all four (<var>r</var> = 2) 73.7 / 91.7. Spreading rank across more matrices beats concentrating it.</li>
+      <li><strong>Which rank (Table 6).</strong> <var>W<sub>q</sub></var> + <var>W<sub>v</sub></var> on WikiSQL: 73.4, 73.3, 73.7, 73.8, 73.5 for <var>r</var> = 1, 2, 4, 8, 64; MNLI 91.3, 91.4, 91.3, 91.6, 91.4. Adapting <var>W<sub>q</sub></var> alone benefits more from higher rank.</li>
+      <li><strong>Subspace similarity (Eq. 4, Fig. 3).</strong> With <var>U</var><sub><var>A</var></sub><sup><var>i</var></sup> the top-<var>i</var> right singular vectors of a learned <var>A</var>, φ(<var>A</var><sub><var>r</var>=8</sub>, <var>A</var><sub><var>r</var>=64</sub>, <var>i</var>, <var>j</var>) = ‖<var>U</var><sup><var>i</var>⊤</sup><sub><var>A</var>8</sub><var>U</var><sup><var>j</var></sup><sub><var>A</var>64</sub>‖<sub>F</sub><sup>2</sup>/min(<var>i</var>, <var>j</var>) ∈ [0, 1]. The top singular direction overlaps strongly (φ &gt; 0.5), the rest much less, so the extra directions at <var>r</var> = 64 are mostly noise. Across random seeds (Fig. 4), Δ<var>W<sub>q</sub></var> shares more directions than Δ<var>W<sub>v</sub></var>, suggesting a higher intrinsic rank for Δ<var>W<sub>q</sub></var>.</li>
+      <li><strong>Relation to <var>W</var> (Table 7).</strong> Project <var>W<sub>q</sub></var> onto the <var>r</var>-dimensional subspace of Δ<var>W<sub>q</sub></var>, ‖<var>U</var><sup>⊤</sup><var>W<sub>q</sub></var><var>V</var><sup>⊤</sup>‖<sub>F</sub>. At layer 48 with <var>r</var> = 4 this is 0.32, versus 21.67 for <var>W<sub>q</sub></var>'s own top-4 directions and 0.02 for random ones, while ‖Δ<var>W<sub>q</sub></var>‖<sub>F</sub> = 6.91 and ‖<var>W<sub>q</sub></var>‖<sub>F</sub> = 61.95. So Δ<var>W</var> is correlated with <var>W</var> more than chance, but amplifies directions that <var>W</var> does <em>not</em> emphasise, by a factor of about 6.91/0.32 ≈ 21.5. The authors read this as LoRA amplifying task-specific features already latent in the pretrained model.</li>
+    </ul>
+    <p>The figure below reproduces the qualitative rank result on a toy regression: a frozen random <var>W</var><sub>0</sub>, a target <var>W</var>* = <var>W</var><sub>0</sub> + Δ with a true rank-3 Δ, and LoRA trained with <var>B</var> = 0, Gaussian <var>A</var>, Adam and α/<var>r</var> scaling.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="tr-go">Train (300 steps)</button><label>True rank of Δ <input type="range" id="tr-k" min="1" max="8" step="1" value="3"><output id="tr-k-o">3</output></label></div>
+    <div class="svgbox wide"><svg id="tr" viewBox="0 0 640 260" role="img" aria-label="Training loss curves for LoRA at several ranks"></svg></div>
+    <p class="readout" id="tr-r"></p>
+    <figcaption>Linear map with <var>d</var> = 24, 256 random inputs, mean squared error on log scale. Curves for <var>r</var> = 1, 2, 4, 8 (darker = larger <var>r</var>, amber = the first <var>r</var> ≥ true rank). Each run uses α = <var>r</var>, i.e. scale 1, Adam with learning rate 0.02 and cosine decay. Once <var>r</var> reaches the true rank of Δ, the error collapses; extra rank adds nothing. In GPT-3 the useful rank of the task update was found to be as low as 1–2 for <var>W<sub>q</sub></var>, <var>W<sub>v</sub></var>. Toy, not a transformer.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §4.2, §8 · lineage</p>
+  <h2>Limitations and what came next</h2>
+  <div class="prose"><ul>
+    <li><strong>Batching tasks.</strong> Merged weights serve one task; batching inputs for different tasks with different <var>A</var>, <var>B</var> in one forward pass is not straightforward (§4.2). Unmerged multi-adapter serving systems (e.g. S-LoRA, Punica) later addressed this.</li>
+    <li><strong>Heuristic choices.</strong> Which matrices to adapt and which rank to use are set by hand; the paper only studies attention matrices and leaves MLP, LayerNorm and bias adaptation to future work (§8). Practice later moved to adapting all linear layers, including the MLP.</li>
+    <li><strong>Scaling.</strong> α/<var>r</var> makes the update magnitude shrink with <var>r</var> at fixed learning rate; rsLoRA (Kalajdzievski, 2023) argues for α/√<var>r</var> so higher ranks actually help. LoRA+ (Hayou et al., 2024) uses a larger learning rate for <var>B</var> than <var>A</var>.</li>
+    <li><strong>Capacity.</strong> Biderman et al. (2024, "LoRA learns less and forgets less") found LoRA underperforms full fine-tuning on large continued-pretraining-style shifts (code, maths), with full fine-tuning learning updates of much higher rank, while LoRA better preserves the base model's other abilities.</li>
+    <li><strong>Descendants.</strong> AdaLoRA (adaptive rank allocation), <a href="qlora.html">QLoRA</a> (4-bit NF4 frozen base, paged optimisers), DoRA (magnitude/direction decomposition), VeRA (shared random matrices with trainable scalings).</li>
+  </ul></div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does LoRA reduce GPU memory by about 3× rather than by 10,000×?</dt>
+    <dd>The frozen weights and the activations still have to be in memory for forward and backward passes. What disappears is the optimiser state and gradients for the frozen weights, which for Adam are several times the size of the weights themselves.</dd>
+    <dt>Table 5 shows <var>W<sub>q</sub></var> + <var>W<sub>v</sub></var> at <var>r</var> = 4 beating <var>W<sub>q</sub></var> alone at <var>r</var> = 8 for the same budget. What does that suggest?</dt>
+    <dd>That a small rank per matrix is already enough, so the budget is better spent touching more weight types than adding rank to one.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Rank <var>r</var></dt><dd>Inner dimension of <var>BA</var>; upper bound on the rank of Δ<var>W</var>.</dd>
+    <dt>α</dt><dd>Constant in the α/<var>r</var> scaling of the update.</dd>
+    <dt>Intrinsic dimension</dt><dd>Smallest subspace dimension in which fine-tuning reaches a target performance (Aghajanyan et al., 2020).</dd>
+    <dt>Adapter</dt><dd>Small bottleneck layer inserted into each block; adds sequential computation.</dd>
+    <dt>Prefix tuning</dt><dd>Training continuous vectors prepended to the input or every layer's activations.</dd>
+    <dt>BitFit</dt><dd>Fine-tuning only bias vectors.</dd>
+    <dt>Merge</dt><dd>Computing <var>W</var><sub>0</sub> + <var>BA</var> once so inference uses a single matrix.</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+function lg(x){ return Math.log(x)/Math.LN10; }
+function nice(x){ if (x>=1e9) return fmt(x/1e9,1)+'B'; if (x>=1e6) return fmt(x/1e6,1)+'M'; if (x>=1e3) return fmt(x/1e3,1)+'k'; return String(Math.round(x)); }
+(function(){ // param counter
+  var svg=$('#pc'), d=12288, r=4;
+  function draw(){ clear(svg); var s=200/d;
+    S('rect',{x:40,y:30,width:200,height:200,'class':'box-wire'},svg); S('text',{x:140,y:134,'class':'t-h mid'},svg,'W (frozen)'); S('text',{x:140,y:250,'class':'t-s mid'},svg,d+' × '+d);
+    var bw=Math.max(2,r*s);
+    S('rect',{x:330,y:30,width:bw,height:200,'class':'box-fire'},svg); S('text',{x:330+bw/2,y:250,'class':'t-s mid'},svg,'B');
+    S('text',{x:330+bw+14,y:134,'class':'t mid'},svg,'×');
+    S('rect',{x:360+bw,y:30,width:200,height:bw,'class':'box-fire'},svg); S('text',{x:460+bw,y:30+bw+16,'class':'t-s mid'},svg,'A ('+r+' × '+d+')');
+    S('text',{x:285,y:134,'class':'t mid'},svg,'+');
+    var full=d*d, lo=2*d*r;
+    $('#pc-r-r').innerHTML='Full change: <b>'+nice(full)+'</b> numbers. LoRA: <b>'+nice(lo)+'</b> numbers (<b>'+fmt(100*lo/full,lo/full<0.001?3:2)+'%</b>, '+fmt(full/lo,0)+'× fewer).'; }
+  bindRange('pc-d',function(v){ d=v; draw(); }); bindRange('pc-r',function(v){ r=v; draw(); });
+})();
+function svdTop(M,k){ // returns [sigmas, us, vs] via power iteration with deflation
+  var n=M.length, m=M[0].length, R=M.map(function(row){ return row.slice(); }), out=[];
+  for (var c=0;c<k;c++){ var v=[]; for (var j=0;j<m;j++) v.push(Math.sin(j*1.3+c*0.7)+0.5);
+    for (var it=0;it<200;it++){ var u=R.map(function(row){ var s=0; for (var j=0;j<m;j++) s+=row[j]*v[j]; return s; }); var nv=[]; for (var j=0;j<m;j++){ var s=0; for (var i=0;i<n;i++) s+=R[i][j]*u[i]; nv.push(s); } var nn=Math.sqrt(nv.reduce(function(a,b){return a+b*b;},0))||1; v=nv.map(function(x){return x/nn;}); }
+    var u=R.map(function(row){ var s=0; for (var j=0;j<m;j++) s+=row[j]*v[j]; return s; }), sg=Math.sqrt(u.reduce(function(a,b){return a+b*b;},0))||1e-12; u=u.map(function(x){return x/sg;});
+    for (var i=0;i<n;i++) for (var j=0;j<m;j++) R[i][j]-=sg*u[i]*v[j]; out.push([sg,u,v]); }
+  return out; }
+(function(){ // low rank approx
+  var svg=$('#lr'), r=1, noise=0.15, n=16;
+  function target(){ var R=rng(9), M=[]; var pats=[[1.0,function(i){return Math.sin(i/2.5);},function(j){return Math.cos(j/3);}],[0.6,function(i){return i<8?1:-1;},function(j){return (j%4<2)?1:-1;}],[0.35,function(i){return Math.cos(i*0.9);},function(j){return j/8-1;}]];
+    for (var i=0;i<n;i++){ var row=[]; for (var j=0;j<n;j++){ var s=0; pats.forEach(function(p){ s+=p[0]*p[1](i)*p[2](j); }); row.push(s+noise*gauss(R)); } M.push(row); } return M; }
+  function heat(M,x0,title){ var sz=10; for (var i=0;i<n;i++) for (var j=0;j<n;j++){ var v=M[i][j]; S('rect',{x:x0+j*sz,y:40+i*sz,width:sz,height:sz,'class':v>=0?'f-fire':'f-wire','fill-opacity':Math.min(1,Math.abs(v)/1.2)},svg); }
+    S('rect',{x:x0,y:40,width:n*sz,height:n*sz,'class':'area'},svg); S('text',{x:x0+n*sz/2,y:28,'class':'t-h mid'},svg,title); }
+  function draw(){ clear(svg); var M=target(), comps=svdTop(M,8), A=M.map(function(row){ return row.map(function(){ return 0; }); });
+    for (var c=0;c<r;c++){ var s=comps[c]; for (var i=0;i<n;i++) for (var j=0;j<n;j++) A[i][j]+=s[0]*s[1][i]*s[2][j]; }
+    var Rm=M.map(function(row,i){ return row.map(function(v,j){ return v-A[i][j]; }); });
+    heat(M,30,'update ΔW'); heat(A,220,'rank-'+r+' version'); heat(Rm,410,'left over');
+    var tot=0, res=0; M.forEach(function(row,i){ row.forEach(function(v,j){ tot+=v*v; res+=Rm[i][j]*Rm[i][j]; }); });
+    S('text',{x:300,y:230,'class':'t-s mid'},svg,'singular values: '+comps.map(function(c){ return fmt(c[0],1); }).join('  '));
+    S('text',{x:300,y:248,'class':'t-s mid'},svg,'(each is the strength of one pattern; LoRA with rank r keeps the r largest)');
+    $('#lr-rr').innerHTML='Rank '+r+' captures <b>'+fmt(100*(1-res/tot),1)+'%</b> of the update (squared size). Numbers needed: <b>'+(2*n*r)+'</b> instead of '+(n*n)+'.'; }
+  bindRange('lr-r',function(v){ r=v; draw(); }); bindRange('lr-n',function(v){ noise=v; draw(); });
+})();
+(function(){ // GPT-3 calculator
+  var svg=$('#g3'), r=4, on={q:true,k:false,v:true,o:false};
+  function draw(){ clear(svg); var mats=Object.keys(on).filter(function(k){return on[k];}).length, P=2*96*mats*12288*r, full=175255.8e6;
+    function X(v){ return 150+lg(Math.max(v,1))/12*400; }
+    var rows=[['Full fine-tune',full,'f-wire'],['LoRA (this setting)',P,'f-fire'],['Table 4 LoRA small',4.7e6,'f-muted'],['Table 4 LoRA large',37.7e6,'f-muted']];
+    rows.forEach(function(rw,i){ var y=20+i*42; S('text',{x:144,y:y+18,'class':'t end'},svg,rw[0]); S('rect',{x:150,y:y,width:Math.max(2,X(rw[1])-150),height:26,'class':rw[2]},svg); S('text',{x:X(rw[1])+6,y:y+18,'class':'t-s'},svg,nice(rw[1])); });
+    [1e3,1e6,1e9].forEach(function(t){ S('line',{x1:X(t),y1:16,x2:X(t),y2:190,'class':'grid'},svg); S('text',{x:X(t),y:206,'class':'t-s mid'},svg,nice(t)); });
+    $('#g3-rr').innerHTML='Adapting <b>'+mats+'</b> matrix type'+(mats===1?'':'s')+' × 96 layers at r = '+r+': <b>'+nice(P)+'</b> trainable parameters, <b>'+fmt(P*2/1e6,1)+' MB</b> at 16-bit, <b>'+fmt(full/Math.max(P,1),0)+'×</b> fewer than full fine-tuning.'; }
+  $$('[data-m]').forEach(function(b){ b.onclick=function(){ var k=b.getAttribute('data-m'); on[k]=!on[k]; b.classList.toggle('on',on[k]); b.setAttribute('aria-pressed',on[k]); draw(); }; });
+  bindRange('g3-r',function(v){ r=v; draw(); });
+})();
+(function(){ // toy LoRA training
+  var svg=$('#tr'), k=3, d=24, results=null;
+  function setup(seed){ var R=rng(seed), W0=[], U=[], V=[], X=[]; for (var i=0;i<d;i++){ var row=[]; for (var j=0;j<d;j++) row.push(gauss(R)/Math.sqrt(d)); W0.push(row); }
+    for (var c=0;c<8;c++){ var u=[], v=[]; for (var i=0;i<d;i++){ u.push(gauss(R)); v.push(gauss(R)); } U.push(u); V.push(v); }
+    for (var s=0;s<256;s++){ var x=[]; for (var i=0;i<d;i++) x.push(gauss(R)); X.push(x); }
+    var Dl=[]; for (var i=0;i<d;i++){ var row=[]; for (var j=0;j<d;j++){ var s2=0; for (var c=0;c<k;c++) s2+=U[c][i]*V[c][j]*(1-0.15*c); row.push(s2/d); } Dl.push(row); }
+    return {W0:W0,Dl:Dl,X:X}; }
+  function train(P,r,seed){ var R=rng(seed), A=[], B=[], mA=[], vA=[], mB=[], vB=[], hist=[];
+    for (var a=0;a<r;a++){ var row=[], z=[]; for (var j=0;j<d;j++){ row.push(gauss(R)/Math.sqrt(d)); z.push(0); } A.push(row); mA.push(z.slice()); vA.push(z.slice()); }
+    for (var i=0;i<d;i++){ var row=[], z=[]; for (var a=0;a<r;a++){ row.push(0); z.push(0); } B.push(row); mB.push(z.slice()); vB.push(z.slice()); }
+    // loss = mean over samples ||(BA - Dl) x||^2 / d ; gradient via M = BA - Dl, G = M Σ where Σ = X^T X / n
+    var n=P.X.length, Sig=[]; for (var i=0;i<d;i++){ var row=[]; for (var j=0;j<d;j++){ var s=0; for (var t=0;t<n;t++) s+=P.X[t][i]*P.X[t][j]; row.push(s/n); } Sig.push(row); }
+    var lr0=0.02, b1=0.9, b2=0.999;
+    for (var step=1;step<=300;step++){
+      var M=[]; for (var i=0;i<d;i++){ var row=[]; for (var j=0;j<d;j++){ var s=0; for (var a=0;a<r;a++) s+=B[i][a]*A[a][j]; row.push(s-P.Dl[i][j]); } M.push(row); }
+      var G=[], L=0; for (var i=0;i<d;i++){ var row=[]; for (var j=0;j<d;j++){ var s=0; for (var l=0;l<d;l++) s+=M[i][l]*Sig[l][j]; row.push(2*s/d); L+=M[i][j]*s/d; } G.push(row); }
+      hist.push(L);
+      var gB=[], gA=[]; for (var i=0;i<d;i++){ var row=[]; for (var a=0;a<r;a++){ var s=0; for (var j=0;j<d;j++) s+=G[i][j]*A[a][j]; row.push(s); } gB.push(row); }
+      for (var a=0;a<r;a++){ var row=[]; for (var j=0;j<d;j++){ var s=0; for (var i=0;i<d;i++) s+=B[i][a]*G[i][j]; row.push(s); } gA.push(row); }
+      var c1=1-Math.pow(b1,step), c2=1-Math.pow(b2,step), lr=lr0*0.5*(1+Math.cos(Math.PI*step/300));
+      for (var i=0;i<d;i++) for (var a=0;a<r;a++){ mB[i][a]=b1*mB[i][a]+(1-b1)*gB[i][a]; vB[i][a]=b2*vB[i][a]+(1-b2)*gB[i][a]*gB[i][a]; B[i][a]-=lr*(mB[i][a]/c1)/(Math.sqrt(vB[i][a]/c2)+1e-8); }
+      for (var a=0;a<r;a++) for (var j=0;j<d;j++){ mA[a][j]=b1*mA[a][j]+(1-b1)*gA[a][j]; vA[a][j]=b2*vA[a][j]+(1-b2)*gA[a][j]*gA[a][j]; A[a][j]-=lr*(mA[a][j]/c1)/(Math.sqrt(vA[a][j]/c2)+1e-8); }
+    }
+    return hist; }
+  function draw(){ clear(svg); var x0=60,x1=600,y0=220,y1=30;
+    S('line',{x1:x0,y1:y0,x2:x1,y2:y0,'class':'axis'},svg); S('line',{x1:x0,y1:y0,x2:x0,y2:y1,'class':'axis'},svg);
+    S('text',{x:330,y:250,'class':'t-s mid'},svg,'training step (0 to 300)'); S('text',{x:x0+6,y:y1-14,'class':'t-s'},svg,'error (log scale)');
+    if (!results){ S('text',{x:330,y:120,'class':'t-s mid'},svg,'Press Train'); return; }
+    var all=[]; results.forEach(function(h){ all=all.concat(h[1]); }); var hi=lg(Math.max.apply(null,all)), lo=Math.max(hi-9, lg(Math.max(1e-12,Math.min.apply(null,all))))-0.3;
+    function Y(v){ return y0-(lg(Math.max(v,1e-12))-lo)/(hi-lo)*(y0-y1); }
+    [Math.ceil(lo),Math.floor(hi)].forEach(function(e){ S('text',{x:x0-6,y:Y(Math.pow(10,e))+4,'class':'t-s end'},svg,'1e'+e); });
+    var firstOk=results.filter(function(h){ return h[0]>=k; })[0];
+    var used=[]; results.forEach(function(h,i){ var d2=''; h[1].forEach(function(v,t){ d2+=(t?'L':'M')+fmt(x0+t/299*(x1-x0),1)+','+fmt(Math.max(y1,Math.min(y0,Y(v))),1); });
+      S('path',{d:d2,'class':h===firstOk?'w-fire':'w','stroke-opacity':0.35+0.2*i},svg);
+      var last=h[1][h[1].length-1]; used.push([Math.max(y1+10,Math.min(y0-4,Y(last)-5)),h]); });
+    used.sort(function(p,q){ return p[0]-q[0]; }); for (var u=1;u<used.length;u++) if (used[u][0]-used[u-1][0]<13) used[u][0]=used[u-1][0]+13;
+    used.forEach(function(u){ S('text',{x:x1-4,y:u[0],'class':u[1]===firstOk?'t-fire end':'t-s end'},svg,'r = '+u[1][0]); });
+    $('#tr-r').innerHTML=results.map(function(h){ return 'r = '+h[0]+': final error <b>'+h[1][299].toExponential(1)+'</b>'; }).join('; ')+' (true rank '+k+').'; }
+  bindRange('tr-k',function(v){ k=v; results=null; draw(); });
+  $('#tr-go').onclick=function(){ $('#tr-r').textContent='Training…'; setTimeout(function(){ var P=setup(4); results=[1,2,4,8].map(function(r){ return [r,train(P,r,10+r)]; }); draw(); },20); };
+  var P0=setup(4); results=[1,2,4,8].map(function(r){ return [r,train(P0,r,10+r)]; }); draw();
+})();
+</script>

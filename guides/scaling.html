@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scaling laws (2020) study guide</title>
+<meta name="description" content="If you make a language model bigger, give it more text, or train it with more computing power, how much better does it get? This paper measured it across seven orders of magnitude and found startlingly simple answers: the error falls along smooth power laws, so the result of a huge, expensive traini">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Machine learning &amp; training</b> · 2020</p>
+  <h1>Scaling Laws for Neural Language Models</h1>
+  <p class="cite">Jared Kaplan et al. · arXiv</p>
+  <p class="lede">If you make a language model bigger, give it more text, or train it with more computing power, how much better does it get? This paper measured it across seven orders of magnitude and found startlingly simple answers: the error falls along smooth power laws, so the result of a huge, expensive training run can be predicted from cheap small ones. Its advice on how to split a budget between model size and data was later revised by <a href="chinchilla.html">Chinchilla</a>, but the idea of planning AI training with scaling laws stuck.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/2001.08361">Read the paper (free)</a> <a href="https://lovespark.love/papers-worth-reading/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, separate AI review (also by Claude), but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>The authors trained hundreds of transformer language models, from tiny (about a thousand adjustable numbers) to large (1.5 billion), on different amounts of text and with different amounts of computing power, and measured how well each predicts the next word.</p>
+  <p>The prediction error fell along remarkably straight lines when plotted on logarithmic axes, a pattern called a power law, separately for model size, data size and compute, as long as none of the three was holding the others back.</p>
+  <p>Details such as the model's exact shape (deep and narrow versus shallow and wide) mattered far less than its total size.</p>
+  <p>Because bigger models learn more from each word they read, the paper concluded that with a fixed budget you should build a much bigger model and stop training it early, growing model size much faster than data; <a href="chinchilla.html">Chinchilla</a> later showed data should grow about as fast as model size.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1</p>
+  <h2>Why you would want to predict a training run</h2>
+  <div class="prose">
+    <p>A <strong>language model</strong> is trained to guess the next word (more precisely, the next <strong>token</strong>, a word or piece of a word) given the text so far. Its score is the <strong>loss</strong>: roughly, how surprised it is by the actual next token, averaged over a lot of text. Lower is better.</p>
+    <p>Training a big model costs a great deal of money and months of computer time. Before you start, you have to decide how big to make it, how much text to feed it and how long to train. Get it wrong and you waste the budget. The authors asked whether the loss can be predicted in advance from three numbers: <strong>N</strong>, the model's size (its count of adjustable parameters), <strong>D</strong>, the amount of training text in tokens, and <strong>C</strong>, the total computation used.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Engineers testing ship designs build small models and drag them through a water tank, then use known scaling rules to predict how the full-size ship will behave. This paper found the equivalent rules for language models.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The goal is to predict a model's quality from its size, its data and its compute before paying for the run.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §1.2 · Fig. 1 · Eqs. 1.1–1.3</p>
+  <h2>Straight lines on log paper</h2>
+  <div class="prose">
+    <p>The answer is a <strong>power law</strong>. Make the model 10 times bigger and the loss is multiplied by a fixed factor, always the same factor, whether you go from 1 million to 10 million parameters or from 100 million to a billion. For model size, that factor is about 0.84: each tenfold increase cuts the loss by about 16%.</p>
+    <p>Plotted on ordinary axes, a power law is a curve that drops steeply and then flattens, and it is hard to see whether it will keep going. Plotted with both axes on a <strong>logarithmic scale</strong> (where each step along the axis means "10 times more"), it becomes a straight line, and you can extend it with a ruler. The paper found the same kind of straight line for data and for compute too.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn on" data-ax="log">Log–log axes</button><button class="btn" data-ax="lin">Ordinary axes</button>
+      <label>Model size <input type="range" id="pl-n" min="3" max="12" step="0.1" value="9" data-fmt="1"><output id="pl-n-o">9.0</output></label>
+    </div>
+    <div class="svgbox"><svg id="pl" viewBox="0 0 600 270" role="img" aria-label="Loss against model size, as a curve or straight line depending on the axes"></svg></div>
+    <p class="readout" id="pl-r"></p>
+    <figcaption>The paper's fitted law for model size, Eq. 1.1: loss = (8.8 × 10<sup>13</sup> / <var>N</var>)<sup>0.076</sup>, in nats per token (a unit of surprise), for models trained to near convergence on plenty of data. The slider sets <var>N</var> as a power of 10 (9.0 means 10<sup>9</sup> = one billion). The paper measured from about 10<sup>3</sup> to 1.5 × 10<sup>9</sup> parameters; beyond that the line is an extrapolation.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Loss falls as a power law in model size, data and compute: a straight line on log–log axes, which is what makes it predictable.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>If the exponent is 0.076, roughly how much bigger must a model be to halve its loss?</dt>
+    <dd>You need 10 to the power (log 2 / 0.076) ≈ 10<sup>4</sup>, so about 9,000 times more parameters, with enough data and compute. Gains are steady but expensive.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §1.1 · §3</p>
+  <h2>Predicting the big run from small ones</h2>
+  <div class="prose">
+    <p>Here is why the straight line matters in practice. Train a handful of small, cheap models, plot them, draw the line, and read off where a model 100 times larger should land. Below, the circles are small "experiments", generated from the paper's law with a little random noise. Choose how many of them you are allowed to use, and see how well the fitted line predicts a model far beyond them.</p>
+    <p>The paper also found that the details of a model's shape hardly matter: for a fixed number of parameters, changing the ratio of depth to width by a factor of 40 changed the loss only slightly. And a model's loss on other kinds of text (books, Wikipedia) tracked its loss on its training text, just with a constant offset.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Use models up to 10^ <input type="range" id="pr-max" min="4" max="9" step="0.5" value="6" data-fmt="1"><output id="pr-max-o">6.0</output></label>
+      <label>Noise <input type="range" id="pr-noise" min="0" max="0.06" step="0.01" value="0.02" data-fmt="2"><output id="pr-noise-o">0.02</output></label>
+    </div>
+    <div class="svgbox"><svg id="pr" viewBox="0 0 600 270" role="img" aria-label="Fitting a power law to small models and extrapolating"></svg></div>
+    <p class="readout" id="pr-r"></p>
+    <figcaption>Log–log axes. Filled circles: the small models you are allowed to fit; hollow circles: larger runs you have not done yet. Amber line: the straight-line fit, extended to 10<sup>11</sup> parameters. Dashed: the "true" law used to generate the data (Eq. 1.1). With no noise any range of small models predicts perfectly. With noise, a small error in the fitted slope is magnified by the long extrapolation, so a wider range of small models, reaching closer to the target, gives a much better forecast. Illustrative: real deviations from a power law are what this cannot show.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Because the trend is a straight line on log axes, a few cheap runs let you forecast an expensive one, and the forecast mostly ignores architectural details.</p>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §5–6 · Figs. 2–3 · Eq. 1.6</p>
+  <h2>Bigger models learn faster, so stop early</h2>
+  <div class="prose">
+    <p>A striking finding is that larger models are more <strong>sample-efficient</strong>: they reach a given loss after seeing fewer tokens, and in fewer training steps, than small models. A big model gets more out of every sentence it reads.</p>
+    <p>That changes how to spend a fixed computing budget. Each step of a big model costs more, so you can afford fewer steps. But because big models improve so fast per step, the paper found the best use of a budget is a model much larger than you might expect, trained for a relatively short time and stopped well before it has finished improving. Below, each curve is a model size; the horizontal axis is computing spent. Slide the budget and see which size is lowest at that point.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Compute budget 10^ <input type="range" id="lc-c" min="-5" max="2" step="0.1" value="-1" data-fmt="1"><output id="lc-c-o">-1.0</output></label>
+      <span class="mono">PF-days</span>
+    </div>
+    <div class="svgbox"><svg id="lc" viewBox="0 0 600 280" role="img" aria-label="Learning curves for several model sizes against compute"></svg></div>
+    <p class="readout" id="lc-r"></p>
+    <figcaption>Learning curves from the paper's Eq. 1.6, <var>L</var>(<var>N</var>, <var>S</var>) = (<var>N<sub>c</sub></var>/<var>N</var>)<sup>0.077</sup> + (<var>S<sub>c</sub></var>/<var>S</var>)<sup>0.76</sup>, with the constants of its Table 3, for six model sizes. Compute is 6 × <var>N</var> × batch × steps; for simplicity a fixed batch of 0.5 million tokens is assumed, whereas the paper's <var>S</var> counts steps at the ideal batch size. One PF-day is 8.64 × 10<sup>19</sup> operations. The vertical line is your budget; the highlighted model is the best one for that budget. Notice that bigger budgets favour bigger models that have not yet levelled off.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Large models learn more per token, so for a fixed budget Kaplan et al. recommend a bigger model trained for less time than you would naively choose.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is it not wasteful to stop training a model before it has converged?</dt>
+    <dd>The last stretch of training improves the loss very slowly. The same compute spent on a larger model, even one trained for fewer steps, buys more improvement.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §6.1 · Fig. 3</p>
+  <h2>The advice that was later revised</h2>
+  <div class="prose">
+    <p>Putting it together, the paper recommended that when your compute grows tenfold, most of it should go into model size (about 5.4 times bigger) and relatively little into more data (about 1.9 times more tokens). This guided the giant models of 2020–2021: <a href="gpt3.html">GPT-3</a> had 175 billion parameters but was trained on only about 300 billion tokens.</p>
+    <p>The paper also warned that its laws must break down somewhere: extrapolated far enough, they contradict each other, at around a trillion parameters and loss of about 1.7. The authors flagged their estimate of that point as highly uncertain.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span><a href="chinchilla.html">Hoffmann et al. (2022)</a> redid the analysis with learning-rate schedules matched to each run's length and with larger models, and found data should grow about as fast as model size, roughly 20 tokens per parameter. Their 70-billion-parameter Chinchilla, trained on 1.4 trillion tokens, beat the 280-billion-parameter Gopher on the same compute. Later analyses traced most of the disagreement to Kaplan et al.'s counting of parameters without embeddings, their focus on small models, and details such as warmup length and optimiser tuning; Hoffmann et al.'s own explanation, the fixed learning-rate schedule, turned out to matter less. The power-law idea itself held up and is now used to plan essentially every large model.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The paper's method (fit power laws on small runs, extrapolate) became standard; its specific split of compute between size and data did not survive.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Empirical scaling laws for language-model performance on cross-entropy loss: the loss scales as a power law with model size, dataset size and training compute, with trends spanning more than seven orders of magnitude. Other architectural details such as width or depth have minimal effect within a wide range. Simple equations govern the dependence of overfitting on model and dataset size, and the dependence of training speed on model size. These relationships determine the optimal allocation of a fixed compute budget. Larger models are significantly more sample-efficient, so optimally compute-efficient training involves training very large models on a relatively modest amount of data and stopping significantly before convergence. Kaplan, McCandlish, Henighan, Brown, Chess, Child, Gray, Radford, Wu &amp; Amodei (OpenAI), arXiv 2001.08361, 2020.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2 · Eq. 2.1</p>
+  <h2>Setup and notation</h2>
+  <div class="prose">
+    <p>Decoder-only transformers trained on <strong>WebText2</strong> (an extended WebText; about 2.29 × 10<sup>10</sup> tokens, 6.6 × 10<sup>8</sup> held out for test), byte-pair encoding with vocabulary 50,257, context 1024. Loss <var>L</var> is the cross-entropy in nats per token, averaged over the context. Training default: Adam for 2.5 × 10<sup>5</sup> steps with batch 512 sequences × 1024 tokens; models above 1B parameters used Adafactor; 3000-step linear warmup then cosine decay to zero.</p>
+    <p><var>N</var> counts <em>non-embedding</em> parameters, N ≈ 2<var>d</var><sub>model</sub><var>n</var><sub>layer</sub>(2<var>d</var><sub>attn</sub> + <var>d</var><sub>ff</sub>) = 12<var>n</var><sub>layer</sub><var>d</var><sub>model</sub><sup>2</sup> for the standard <var>d</var><sub>attn</sub> = <var>d</var><sub>ff</sub>/4 = <var>d</var><sub>model</sub>. Excluding embeddings is what makes the trends clean across depths; including them makes small shallow models look anomalous. Compute is estimated as <var>C</var> ≈ 6<var>NBS</var> (forward plus backward, ignoring the context-dependent attention term), quoted in PF-days (1 PF-day = 8.64 × 10<sup>19</sup> FLOPs). Model sizes ranged from 768 to 1.5 × 10<sup>9</sup> non-embedding parameters, datasets from 2.2 × 10<sup>7</sup> to 2.3 × 10<sup>10</sup> tokens.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §1.2 · Eqs. 1.1–1.6</p>
+  <h2>The laws and their constants</h2>
+  <div class="prose"><p>Each single-variable law holds when the other two factors are not bottlenecks:</p></div>
+  <div class="eq"><var>L</var>(<var>N</var>) = (<var>N<sub>c</sub></var>/<var>N</var>)<sup>α<sub>N</sub></sup>, &nbsp; α<sub>N</sub> ≈ 0.076, &nbsp; <var>N<sub>c</sub></var> ≈ 8.8 × 10<sup>13</sup> <span class="n">(1.1)</span></div>
+  <div class="eq"><var>L</var>(<var>D</var>) = (<var>D<sub>c</sub></var>/<var>D</var>)<sup>α<sub>D</sub></sup>, &nbsp; α<sub>D</sub> ≈ 0.095, &nbsp; <var>D<sub>c</sub></var> ≈ 5.4 × 10<sup>13</sup> tokens <span class="n">(1.2)</span></div>
+  <div class="eq"><var>L</var>(<var>C</var><sub>min</sub>) = (<var>C</var><sub><var>c</var></sub><sup>min</sup>/<var>C</var><sub>min</sub>)<sup>α<sub>C</sub><sup>min</sup></sup>, &nbsp; α<sub>C</sub><sup>min</sup> ≈ 0.050, &nbsp; <var>C</var><sub><var>c</var></sub><sup>min</sup> ≈ 3.1 × 10<sup>8</sup> PF-days <span class="n">(1.3)</span></div>
+  <div class="eq"><var>B</var><sub>crit</sub>(<var>L</var>) = <var>B</var><sub>*</sub>/<var>L</var><sup>1/α<sub>B</sub></sup>, &nbsp; <var>B</var><sub>*</sub> ≈ 2 × 10<sup>8</sup> tokens, &nbsp; α<sub>B</sub> ≈ 0.21 <span class="n">(1.4)</span></div>
+  <div class="eq"><var>L</var>(<var>N</var>, <var>D</var>) = [ (<var>N<sub>c</sub></var>/<var>N</var>)<sup>α<sub>N</sub>/α<sub>D</sub></sup> + <var>D<sub>c</sub></var>/<var>D</var> ]<sup>α<sub>D</sub></sup> <span class="n">(1.5)</span></div>
+  <div class="eq"><var>L</var>(<var>N</var>, <var>S</var>) = (<var>N<sub>c</sub></var>/<var>N</var>)<sup>α<sub>N</sub></sup> + (<var>S<sub>c</sub></var>/<var>S</var><sub>min</sub>)<sup>α<sub>S</sub></sup>, &nbsp; <var>S<sub>c</sub></var> ≈ 2.1 × 10<sup>3</sup>, α<sub>S</sub> ≈ 0.76 <span class="n">(1.6)</span></div>
+  <div class="prose">
+    <p><var>C</var><sub>min</sub> and <var>S</var><sub>min</sub> are the compute and steps the run would need at the critical batch size (§5.1), which the paper estimates from the gradient noise scale; training at <var>B</var> ≫ <var>B</var><sub>crit</sub> wastes compute, at <var>B</var> ≪ <var>B</var><sub>crit</sub> wastes steps. Refitting Eq. 1.5 jointly gives α<sub>N</sub> = 0.076, α<sub>D</sub> = 0.103, <var>N<sub>c</sub></var> = 6.4 × 10<sup>13</sup>, <var>D<sub>c</sub></var> = 1.8 × 10<sup>13</sup> (Table 2), and Eq. 1.6 uses α<sub>N</sub> = 0.077, <var>N<sub>c</sub></var> = 6.5 × 10<sup>13</sup> (Table 3). The form of Eq. 1.5 was chosen so that the loss depends on overfitting only through <var>N</var><sup>α<sub>N</sub>/α<sub>D</sub></sup>/<var>D</var> (Fig. 9) and so that <var>L</var> → <var>L</var>(<var>N</var>) as <var>D</var> → ∞. Note it has no irreducible-loss term: the laws describe the reducible part above whatever entropy natural text has, a choice later work changed.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>log<sub>10</sub> <var>N</var> <input type="range" id="nd-n" min="5" max="11" step="0.1" value="8" data-fmt="1"><output id="nd-n-o">8.0</output></label>
+      <label>log<sub>10</sub> <var>D</var> <input type="range" id="nd-d" min="7" max="12" step="0.1" value="9.5" data-fmt="1"><output id="nd-d-o">9.5</output></label>
+    </div>
+    <div class="svgbox wide"><svg id="nd" viewBox="0 0 640 270" role="img" aria-label="Loss as a function of dataset size for several model sizes under Eq. 1.5"></svg></div>
+    <p class="readout" id="nd-r"></p>
+    <figcaption>Eq. 1.5 with the Table 2 constants. Each line is the loss of an early-stopped model of fixed <var>N</var> as the dataset grows; thin lines are <var>N</var> = 10<sup>5</sup>…10<sup>11</sup>, the amber line is your <var>N</var>. The dot is (your <var>D</var>, your <var>N</var>). Each curve flattens at its <var>L</var>(<var>N</var>) floor; the dashed line is the data-limited <var>L</var>(<var>D</var>). The green tick marks Eq. 4.4's data requirement, <var>D</var> ≳ 5 × 10<sup>3</sup> <var>N</var><sup>0.74</sup>, beyond which the overfitting penalty is within about 0.02 of the infinite-data loss.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §4, §3.2</p>
+  <h2>Overfitting, shape, and transfer</h2>
+  <div class="prose"><ul>
+    <li><strong>Overfitting (§4.2).</strong> Under Eq. 1.5 the overfitting penalty depends on <var>N</var> and <var>D</var> only through <var>N</var><sup>α<sub>N</sub>/α<sub>D</sub></sup>/<var>D</var> ≈ <var>N</var><sup>0.74</sup>/<var>D</var>. Keeping it below about 0.02 nats, roughly seed-to-seed variance, requires</li>
+  </ul></div>
+  <div class="eq"><var>D</var> ≳ (5 × 10<sup>3</sup>) <var>N</var><sup>0.74</sup> <span class="n">(4.4)</span></div>
+  <div class="prose"><ul>
+    <li>so an 8× larger model needs only about 5× more data to avoid overfitting. By this rule, WebText2's 22 billion tokens would suffice for models of roughly 10<sup>9</sup> parameters.</li>
+    <li><strong>Shape (§3.1, Fig. 5).</strong> At fixed <var>N</var>, the loss varies only a few per cent over wide ranges of aspect ratio <var>d</var><sub>model</sub>/<var>n</var><sub>layer</sub> (a factor of 40 changes it only slightly), feed-forward ratio and attention head dimension.</li>
+    <li><strong>Transfer (§3.2.2).</strong> Loss on other distributions (Books, Common Crawl, Wikipedia, Internet Books) improves in parallel with WebText2 validation loss, with a roughly constant offset: generalisation depends almost entirely on in-distribution validation loss, not on training duration or proximity to convergence.</li>
+    <li><strong>LSTMs (§3.2.1).</strong> Transformers beat LSTMs on per-token loss, especially later in the context, while LSTMs plateau after about 100 tokens.</li>
+  </ul></div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §6 · Eqs. 1.7–1.8, 6.1–6.2 · Fig. 14</p>
+  <h2>Compute-efficient allocation</h2>
+  <div class="prose"><p>Choosing <var>N</var>, <var>B</var> and <var>S</var> to minimise <var>L</var> at fixed <var>C</var>, using Eq. 1.6 and <var>B</var> = <var>B</var><sub>crit</sub>, gives</p></div>
+  <div class="eq"><var>N</var> ∝ <var>C</var><sub>min</sub><sup>α<sub>C</sub><sup>min</sup>/α<sub>N</sub></sup>, &nbsp; <var>B</var> ∝ <var>C</var><sub>min</sub><sup>α<sub>C</sub><sup>min</sup>/α<sub>B</sub></sup>, &nbsp; <var>S</var> ∝ <var>C</var><sub>min</sub><sup>α<sub>C</sub><sup>min</sup>/α<sub>S</sub></sup>, &nbsp; α<sub>C</sub><sup>min</sup> = 1/(1/α<sub>S</sub> + 1/α<sub>B</sub> + 1/α<sub>N</sub>) <span class="n">(1.7–1.8)</span></div>
+  <div class="prose"><p>The predicted α<sub>C</sub><sup>min</sup> ≈ 0.054 is close to the direct fit 0.050. Empirically (Fig. 14), <var>N</var>(<var>C</var><sub>min</sub>) ≈ (1.3 × 10<sup>9</sup>) <var>C</var><sub>min</sub><sup>0.73</sup> and <var>S</var><sub>min</sub> ≈ (5.4 × 10<sup>3</sup>) <var>C</var><sub>min</sub><sup>0.03</sup> with <var>C</var><sub>min</sub> in PF-days, and <var>B</var> ∝ <var>C</var><sup>0.24</sup>; hence data processed grows as <var>D</var> = <var>BS</var> ∝ <var>C</var><sup>0.27</sup>. Serial steps barely increase; almost all extra compute goes into bigger models and bigger batches. Fig. 12 adds that models between 0.6× and 2.2× the optimal size need only about 20% more compute, so the optimum is broad.</p>
+  <p>The calculator below takes these fits at face value and compares them with the <a href="chinchilla.html">Chinchilla</a> rule of thumb (about 20 tokens per parameter, <var>C</var> ≈ 6<var>ND</var>).</p></div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Compute 10^ <input type="range" id="al-c" min="-2" max="6" step="0.1" value="3.6" data-fmt="1"><output id="al-c-o">3.6</output></label><span class="mono">PF-days</span>
+    </div>
+    <div class="svgbox wide"><svg id="al" viewBox="0 0 640 260" role="img" aria-label="Kaplan and Chinchilla compute-optimal model size and data compared"></svg></div>
+    <p class="readout" id="al-r"></p>
+    <figcaption>Log–log. Amber: Kaplan's <var>N</var> = 1.3 × 10<sup>9</sup> <var>C</var><sup>0.73</sup> (non-embedding parameters), with <var>D</var> = <var>C</var>/(6<var>N</var>). Green: <var>N</var> = √(<var>C</var>/120), <var>D</var> = 20<var>N</var>, which approximates Chinchilla's Table 3. Grey dots mark the published (<var>N</var>, tokens) of GPT-3 (175B, 300B) and Chinchilla (70B, 1.4T). At about 3,600 PF-days (GPT-3's scale) the two prescriptions differ by about a factor of ten in model size. Caveat: Kaplan's <var>C</var><sub>min</sub> is an idealised compute at the critical batch size and excludes embeddings, so the comparison is approximate.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §6.3 · Fig. 15 · lineage</p>
+  <h2>The contradiction, and what replaced the allocation</h2>
+  <div class="prose">
+    <p><strong>Breakdown (§6.3).</strong> Compute-efficient training uses data <var>D</var> ∝ <var>C</var><sup>0.27</sup>, but Eq. 1.2 says loss in the data-limited regime falls only as <var>D</var><sup>−0.095</sup>, about <var>C</var><sup>−0.03</sup>, slower than <var>L</var>(<var>C</var><sub>min</sub>) ∝ <var>C</var><sup>−0.050</sup>. The two trends must cross, which the authors estimate at <var>C</var>* ~ 10<sup>4</sup> PF-days, <var>N</var>* ~ 10<sup>12</sup> parameters, <var>D</var>* ~ 10<sup>12</sup> tokens and <var>L</var>* ~ 1.7 nats/token, with an uncertainty of an order of magnitude either way. They conjecture <var>L</var>* may approximate the entropy of natural language, so the laws must change before then.</p>
+    <p><strong>Learning-rate schedule (App. D.6).</strong> The paper reports that the schedule is mostly irrelevant provided the total summed learning rate is large enough and it decays to near zero, and it used one fixed schedule length for all runs. Hoffmann et al. (2022) argued this mattered, since a model evaluated partway through a cosine schedule tuned for a longer run looks worse than a model whose schedule ends at that point, though Porian et al. (2024) later found the schedule was not the main source of the discrepancy.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span><a href="chinchilla.html">Hoffmann et al. (2022)</a>, with schedules matched to run length and models up to 16B, found <var>N</var><sub>opt</sub> ∝ <var>C</var><sup>0.50</sup> and <var>D</var><sub>opt</sub> ∝ <var>C</var><sup>0.50</sup> instead of 0.73/0.27. Reconciliation studies (Pearce &amp; Song, 2024; Porian et al., 2024) attribute the gap to counting non-embedding parameters and the small-scale regime, warmup duration, the omitted last-layer compute and untuned optimiser settings; Porian et al. found careful learning-rate decay was not essential. Kaplan's power-law methodology, sample-efficiency finding and critical-batch-size analysis remain standard; deployment-aware scaling (Sardana &amp; Frankle, 2023) and models like <a href="llama.html">LLaMA</a> deliberately train smaller models far past the compute-optimal point because inference is cheaper.</div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does excluding embedding parameters from <var>N</var> matter for the fitted exponent?</dt>
+    <dd>For small models the embedding matrix is a large fraction of all parameters. Counting it or not changes the apparent size of the small models much more than the large ones, which tilts the fitted lines and therefore the inferred optimal allocation.</dd>
+    <dt>Kaplan says an 8× larger model needs about 5× more data to avoid overfitting. Why is that not the same as the compute-optimal data ratio?</dt>
+    <dd>Eq. 4.4 is about when overfitting starts to hurt a converged model. Compute-optimal allocation is about what minimises loss for a fixed number of FLOPs when training stops early, a different question.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt><var>N</var></dt><dd>Non-embedding parameter count.</dd>
+    <dt><var>D</var></dt><dd>Dataset size in tokens.</dd>
+    <dt><var>C</var>, PF-day</dt><dd>Training compute ≈ 6<var>NBS</var>; 1 PF-day = 10<sup>15</sup> FLOP/s × 1 day.</dd>
+    <dt><var>B</var><sub>crit</sub></dt><dd>Critical batch size, beyond which larger batches give diminishing returns in steps.</dd>
+    <dt><var>S</var><sub>min</sub>, <var>C</var><sub>min</sub></dt><dd>Steps and compute needed at the critical batch size.</dd>
+    <dt>Power law</dt><dd><var>y</var> = <var>a</var><var>x</var><sup>−<var>k</var></sup>: a straight line of slope −<var>k</var> on log–log axes.</dd>
+    <dt>Nats</dt><dd>Natural-log units of cross-entropy; 1 nat ≈ 1.44 bits.</dd>
+    <dt>Sample efficiency</dt><dd>Loss reached per token processed.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Led to:</strong> <a href="chinchilla.html">Chinchilla (2022)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> (<a href="https://lovespark.love/papers-worth-reading/#scaling">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+function lg(x){ return Math.log(x)/Math.LN10; }
+function sup(e){ return '10<sup>'+fmt(e,1)+'</sup>'; }
+function big(x){ if (x>=1e12) return fmt(x/1e12,1)+'T'; if (x>=1e9) return fmt(x/1e9,1)+'B'; if (x>=1e6) return fmt(x/1e6,1)+'M'; if (x>=1e3) return fmt(x/1e3,1)+'k'; return fmt(x,0); }
+(function(){ // power law axes
+  var svg=$('#pl'), mode='log', n=9;
+  function L(N){ return Math.pow(8.8e13/N,0.076); }
+  function draw(){ clear(svg); var x0=60,x1=570,y0=230,y1=30, lo=3, hi=12, Lmax=L(1e3), Lmin=L(1e12);
+    function X(e){ return mode==='log' ? x0+(e-lo)/(hi-lo)*(x1-x0) : x0+(Math.pow(10,e)-Math.pow(10,lo))/(Math.pow(10,hi)-Math.pow(10,lo))*(x1-x0); }
+    function Y(l){ return mode==='log' ? y0-(lg(l)-lg(Lmin))/(lg(Lmax)-lg(Lmin))*(y0-y1) : y0-(l-0)/(Lmax)*(y0-y1); }
+    S('line',{x1:x0,y1:y0,x2:x1,y2:y0,'class':'axis'},svg); S('line',{x1:x0,y1:y0,x2:x0,y2:y1-5,'class':'axis'},svg);
+    var d=''; for (var e=lo;e<=hi+1e-9;e+=0.02) d+=(d?'L':'M')+fmt(X(e),1)+','+fmt(Y(L(Math.pow(10,e))),1); S('path',{d:d,'class':'w-fire'},svg);
+    if (mode==='log'){ for (var e=3;e<=12;e+=3){ S('text',{x:X(e),y:y0+16,'class':'t-s mid'},svg,'10^'+e); S('line',{x1:X(e),y1:y0,x2:X(e),y2:y0+4,'class':'axis'},svg); } [2,3,4,5].forEach(function(l){ if (l<=Lmax&&l>=Lmin){ S('text',{x:x0-6,y:Y(l)+4,'class':'t-s end'},svg,l); } }); S('rect',{x:X(lg(1.5e9)),y:y1,width:X(12)-X(lg(1.5e9)),height:y0-y1,'class':'f-rule','fill-opacity':0.35},svg); S('text',{x:X(12)-4,y:y1+14,'class':'t-s end'},svg,'extrapolated'); }
+    else { S('text',{x:x0,y:y0+16,'class':'t-s mid'},svg,'0'); S('text',{x:x1,y:y0+16,'class':'t-s mid'},svg,'10^12'); S('text',{x:X(lg(5e11)),y:y0+16,'class':'t-s mid'},svg,'5×10^11'); [0,2,4,6].forEach(function(l){ if (l<=Lmax) S('text',{x:x0-6,y:Y(l)+4,'class':'t-s end'},svg,l); }); }
+    var N=Math.pow(10,n); S('circle',{cx:X(n),cy:Y(L(N)),r:6,'class':'u-on'},svg);
+    S('text',{x:315,y:258,'class':'t-s mid'},svg,'parameters N'+(mode==='log'?' (log scale)':' (ordinary scale)')); S('text',{x:x0+6,y:y1-8,'class':'t-s'},svg,'loss (nats/token)');
+    $('#pl-r').innerHTML='N = <b>'+big(N)+'</b> parameters → loss <b>'+fmt(L(N),3)+'</b>. Ten times bigger → <b>'+fmt(L(N*10),3)+'</b> (×'+fmt(Math.pow(0.1,0.076),3)+').'; }
+  $$('[data-ax]').forEach(function(b){ b.onclick=function(){ $$('[data-ax]').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); mode=b.getAttribute('data-ax'); draw(); }; });
+  bindRange('pl-n',function(v){ n=v; draw(); });
+})();
+(function(){ // extrapolation
+  var svg=$('#pr'), mx=6, noise=0.02, pts=[];
+  var r=rng(5), base=[]; for (var e=3;e<=9.01;e+=0.5) base.push([e, gauss(r)]);
+  function L(N){ return Math.pow(8.8e13/N,0.076); }
+  function draw(){ clear(svg); var x0=60,x1=570,y0=225,y1=25, lo=3, hi=11; var Lmax=L(1e3)*1.12, Lmin=L(1e11)*0.88;
+    function X(e){ return x0+(e-lo)/(hi-lo)*(x1-x0); } function Y(l){ return y0-(lg(l)-lg(Lmin))/(lg(Lmax)-lg(Lmin))*(y0-y1); }
+    S('line',{x1:x0,y1:y0,x2:x1,y2:y0,'class':'axis'},svg); S('line',{x1:x0,y1:y0,x2:x0,y2:y1,'class':'axis'},svg);
+    for (var e=3;e<=11;e+=2) S('text',{x:X(e),y:y0+16,'class':'t-s mid'},svg,'10^'+e);
+    [2,3,4,5].forEach(function(l){ if (l<=Lmax&&l>=Lmin) S('text',{x:x0-6,y:Y(l)+4,'class':'t-s end'},svg,l); });
+    var d=''; for (var e=lo;e<=hi;e+=0.05) d+=(d?'L':'M')+fmt(X(e),1)+','+fmt(Y(L(Math.pow(10,e))),1); S('path',{d:d,'class':'w-dash'},svg);
+    var use=[]; base.forEach(function(b){ var l=L(Math.pow(10,b[0]))*Math.exp(noise*b[1]); var on=b[0]<=mx+1e-9; if (on) use.push([b[0],lg(l)]); S('circle',{cx:X(b[0]),cy:Y(l),r:5,'class':on?'u-on':'u'},svg); });
+    var n=use.length, sx=0,sy=0,sxx=0,sxy=0; use.forEach(function(p){ sx+=p[0]; sy+=p[1]; sxx+=p[0]*p[0]; sxy+=p[0]*p[1]; });
+    var slope=(n*sxy-sx*sy)/(n*sxx-sx*sx), icpt=(sy-slope*sx)/n;
+    S('line',{x1:X(lo),y1:Y(Math.pow(10,icpt+slope*lo)),x2:X(hi),y2:Y(Math.pow(10,icpt+slope*hi)),'class':'w-fire'},svg);
+    var pred=Math.pow(10,icpt+slope*11), tru=L(1e11);
+    S('line',{x1:X(11),y1:y1,x2:X(11),y2:y0,'class':'grid'},svg); S('text',{x:X(11)-4,y:y1+12,'class':'t-s end'},svg,'target: 10^11');
+    S('text',{x:315,y:256,'class':'t-s mid'},svg,'parameters N (log scale)');
+    $('#pr-r').innerHTML='Fitted on <b>'+n+'</b> models up to '+sup(mx)+'. Fitted exponent <b>'+fmt(-slope,3)+'</b> (true 0.076). Predicted loss at 10<sup>11</sup>: <b>'+fmt(pred,3)+'</b> vs true <b>'+fmt(tru,3)+'</b> (error '+fmt(100*(pred-tru)/tru,1)+'%).'; }
+  bindRange('pr-max',function(v){ mx=v; draw(); }); bindRange('pr-noise',function(v){ noise=v; draw(); });
+})();
+(function(){ // learning curves vs compute (Eq 1.6)
+  var svg=$('#lc'), c=-1, Bt=5e5, PF=8.64e19;
+  var Ns=[1e6,1e7,1e8,1e9,1e10,1e11];
+  function L(N,S){ return Math.pow(6.5e13/N,0.077)+Math.pow(2.1e3/S,0.76); }
+  function draw(){ clear(svg); var x0=60,x1=545,y0=230,y1=30, lo=-6, hi=3, Lhi=7, Llo=1.5;
+    function X(e){ return x0+(e-lo)/(hi-lo)*(x1-x0); } function Y(l){ return y0-(lg(Math.min(Lhi,Math.max(Llo,l)))-lg(Llo))/(lg(Lhi)-lg(Llo))*(y0-y1); }
+    S('line',{x1:x0,y1:y0,x2:x1,y2:y0,'class':'axis'},svg); S('line',{x1:x0,y1:y0,x2:x0,y2:y1,'class':'axis'},svg);
+    for (var e=-6;e<=3;e+=3) S('text',{x:X(e),y:y0+16,'class':'t-s mid'},svg,'10^'+e);
+    [2,3,4,6].forEach(function(l){ S('text',{x:x0-6,y:Y(l)+4,'class':'t-s end'},svg,l); });
+    var C=Math.pow(10,c)*PF, best=-1, bl=1e9;
+    Ns.forEach(function(N,k){ var Sat=C/(6*N*Bt); var l=Sat>=1?L(N,Sat):1e9; if (l<bl){ bl=l; best=k; } });
+    Ns.forEach(function(N,k){ var d=''; for (var e=lo;e<=hi;e+=0.04){ var st=Math.pow(10,e)*PF/(6*N*Bt); if (st<1 || L(N,st)>Lhi) continue; d+=(d?'L':'M')+fmt(X(e),1)+','+fmt(Y(L(N,st)),1); }
+      if (d) S('path',{d:d,'class':k===best?'w-fire':'w-faint'},svg);
+      var Sx=Math.pow(10,hi)*PF/(6*N*Bt); S('text',{x:x1+2,y:Y(L(N,Sx))+4,'class':k===best?'t-fire':'t-s'},svg,big(N)); });
+    S('line',{x1:X(c),y1:y1,x2:X(c),y2:y0,'class':'w-dash'},svg);
+    S('text',{x:320,y:256,'class':'t-s mid'},svg,'compute used so far, PF-days (log scale)'); S('text',{x:x0+6,y:y1-10,'class':'t-s'},svg,'loss');
+    var N=Ns[best], St=C/(6*N*Bt);
+    $('#lc-r').innerHTML='Budget '+sup(c)+' PF-days: best of these sizes is <b>'+big(N)+'</b> parameters at loss <b>'+fmt(bl,2)+'</b>, after <b>'+big(St)+'</b> steps (<b>'+big(St*Bt)+'</b> tokens). Its own converged loss would be '+fmt(Math.pow(6.5e13/N,0.077),2)+': it is stopped early.'; }
+  bindRange('lc-c',function(v){ c=v; draw(); });
+})();
+(function(){ // L(N,D) explorer
+  var svg=$('#nd'), n=8, dd=9.5, aN=0.076, aD=0.103, Nc=6.4e13, Dc=1.8e13;
+  function L(N,D){ return Math.pow(Math.pow(Nc/N,aN/aD)+Dc/D,aD); }
+  function draw(){ clear(svg); var x0=60,x1=560,y0=225,y1=20, lo=7, hi=12, Lhi=6, Llo=1.6;
+    function X(e){ return x0+(e-lo)/(hi-lo)*(x1-x0); } function Y(l){ return y0-(lg(Math.min(Lhi,Math.max(Llo,l)))-lg(Llo))/(lg(Lhi)-lg(Llo))*(y0-y1); }
+    S('line',{x1:x0,y1:y0,x2:x1,y2:y0,'class':'axis'},svg); S('line',{x1:x0,y1:y0,x2:x0,y2:y1,'class':'axis'},svg);
+    for (var e=7;e<=12;e++) S('text',{x:X(e),y:y0+16,'class':'t-s mid'},svg,'10^'+e);
+    [2,3,4,5].forEach(function(l){ S('text',{x:x0-6,y:Y(l)+4,'class':'t-s end'},svg,l); });
+    var dl=''; for (var e=lo;e<=hi;e+=0.05) dl+=(dl?'L':'M')+fmt(X(e),1)+','+fmt(Y(Math.pow(Dc/Math.pow(10,e),aD)),1); S('path',{d:dl,'class':'w-dash'},svg);
+    for (var ne=5;ne<=11;ne++){ var d=''; for (var e=lo;e<=hi;e+=0.05) d+=(d?'L':'M')+fmt(X(e),1)+','+fmt(Y(L(Math.pow(10,ne),Math.pow(10,e))),1); S('path',{d:d,'class':'w-faint'},svg); S('text',{x:x1+4,y:Y(L(Math.pow(10,ne),1e12))+4,'class':'t-s'},svg,'10^'+ne); }
+    var N=Math.pow(10,n), D=Math.pow(10,dd), d=''; for (var e=lo;e<=hi;e+=0.05) d+=(d?'L':'M')+fmt(X(e),1)+','+fmt(Y(L(N,Math.pow(10,e))),1); S('path',{d:d,'class':'w-fire'},svg);
+    var need=5e3*Math.pow(N,0.74); if (lg(need)>=lo&&lg(need)<=hi) S('line',{x1:X(lg(need)),y1:Y(L(N,need))-10,x2:X(lg(need)),y2:Y(L(N,need))+10,'class':'w-ok'},svg);
+    S('circle',{cx:X(dd),cy:Y(L(N,D)),r:6,'class':'u-on'},svg);
+    S('text',{x:310,y:254,'class':'t-s mid'},svg,'dataset size D, tokens (log scale)'); S('text',{x:x0+6,y:y1+4,'class':'t-s'},svg,'loss');
+    var LN=Math.pow(Nc/N,aN);
+    $('#nd-r').innerHTML='L(N, D) = <b>'+fmt(L(N,D),3)+'</b>; infinite-data L(N) = <b>'+fmt(LN,3)+'</b>; overfitting penalty <b>'+fmt(L(N,D)-LN,3)+'</b>. Eq. 4.4 asks for D ≳ <b>'+big(need)+'</b> tokens: '+(D>=need?'satisfied.':'<b>not satisfied</b>, so this model is data-limited.'); }
+  bindRange('nd-n',function(v){ n=v; draw(); }); bindRange('nd-d',function(v){ dd=v; draw(); });
+})();
+(function(){ // allocation calculator
+  var svg=$('#al'), c=3.6, PF=8.64e19;
+  function kap(Cpf){ var N=1.3e9*Math.pow(Cpf,0.73); return [N, Cpf*PF/(6*N)]; }
+  function chin(Cpf){ var N=Math.sqrt(Cpf*PF/120); return [N,20*N]; }
+  function draw(){ clear(svg); var x0=60,x1=600,y0=225,y1=20, lo=-2, hi=6, ylo=6, yhi=15;
+    function X(e){ return x0+(e-lo)/(hi-lo)*(x1-x0); } function Y(v){ return y0-(lg(v)-ylo)/(yhi-ylo)*(y0-y1); }
+    S('line',{x1:x0,y1:y0,x2:x1,y2:y0,'class':'axis'},svg); S('line',{x1:x0,y1:y0,x2:x0,y2:y1,'class':'axis'},svg);
+    for (var e=-2;e<=6;e+=2) S('text',{x:X(e),y:y0+16,'class':'t-s mid'},svg,'10^'+e);
+    for (var v=6;v<=15;v+=3) S('text',{x:x0-6,y:Y(Math.pow(10,v))+4,'class':'t-s end'},svg,'10^'+v);
+    function curve(fn,i,cls,dash){ var d=''; for (var e=lo;e<=hi;e+=0.05){ var val=fn(Math.pow(10,e))[i]; if (lg(val)<ylo||lg(val)>yhi) continue; d+=(d?'L':'M')+fmt(X(e),1)+','+fmt(Y(val),1); } var a={d:d,'class':cls}; if (dash) a['stroke-dasharray']='6 4'; S('path',a,svg); }
+    curve(kap,0,'w-fire'); curve(kap,1,'w-fire',true); curve(chin,0,'w-ok'); curve(chin,1,'w-ok',true);
+    [[175e9,300e9,'GPT-3'],[70e9,1.4e12,'Chinchilla']].forEach(function(m){ var Cpf=6*m[0]*m[1]/PF; S('circle',{cx:X(lg(Cpf)),cy:Y(m[0]),r:4,'class':'f-muted'},svg); S('circle',{cx:X(lg(Cpf)),cy:Y(m[1]),r:4,'class':'f-muted'},svg); S('text',{x:X(lg(Cpf))+(m[2]==='GPT-3'?-8:8),y:Y(m[1])+(m[2]==='GPT-3'?14:-6),'class':m[2]==='GPT-3'?'t-s end':'t-s'},svg,m[2]); });
+    S('line',{x1:X(c),y1:y1,x2:X(c),y2:y0,'class':'grid'},svg);
+    S('text',{x:x0+8,y:y1+12,'class':'t-s'},svg,'solid: parameters N   dashed: tokens D');
+    S('text',{x:330,y:254,'class':'t-s mid'},svg,'compute, PF-days');
+    var C=Math.pow(10,c), k=kap(C), h=chin(C);
+    $('#al-r').innerHTML='At '+sup(c)+' PF-days ('+(C*PF).toExponential(1)+' FLOPs): Kaplan <b>'+big(k[0])+'</b> params on <b>'+big(k[1])+'</b> tokens ('+fmt(k[1]/k[0],2)+' tokens/param); Chinchilla-style <b>'+big(h[0])+'</b> params on <b>'+big(h[1])+'</b> tokens (20 tokens/param).'; }
+  bindRange('al-c',function(v){ c=v; draw(); });
+})();
+</script>
+
+</body>
+</html>

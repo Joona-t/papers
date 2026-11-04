@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Artificial neuron (1943) study guide</title>
+<meta name="description" content="A neurophysiologist and a teenage logician ask what a brain could compute if each nerve cell were a simple on/off switch. Their answer is the first artificial neuron, and a proof that networks of them can carry out any logical rule you can write down.">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Neural networks</b> · 1943</p>
+  <h1>A Logical Calculus of the Ideas Immanent in Nervous Activity</h1>
+  <p class="cite">Warren McCulloch, Walter Pitts · Bulletin of Mathematical Biophysics</p>
+  <p class="lede">A neurophysiologist and a teenage logician ask what a brain could compute if each nerve cell were a simple on/off switch. Their answer is the first artificial neuron, and a proof that networks of them can carry out any logical rule you can write down.</p>
+  <p class="paperlinks"><a href="https://papers.baulab.info/papers/McCullochPitts-1943.pdf">Read the paper (free)</a> <a href="https://lovespark.love/papers-worth-reading/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, separate AI review (also by Claude), but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>A nerve cell either fires or it doesn't. McCulloch and Pitts treat that as a yes/no statement, like a light that is on or off.</p>
+  <p>A model neuron fires when enough of its "go" inputs are on at once and none of its "stop" inputs are. The number it needs is its threshold.</p>
+  <p>By wiring such neurons together you can build AND, OR and NOT, and from those any logical rule, including rules about time ("this happened, then that").</p>
+  <p>Loops of neurons can hold a signal, which gives the network memory. The weak spot: the wiring is fixed, so this neuron cannot learn. That came 15 years later with the <a href="perceptron.html">perceptron</a>.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · Introduction</p>
+  <h2>A nerve cell is a yes-or-no switch</h2>
+  <div class="prose">
+    <p>In 1943 scientists already knew a key fact about nerve cells (neurons): a neuron does not fire "a little". Either the electrical pulse travels down it at full strength, or nothing happens. Biologists call this <em>all-or-none</em>.</p>
+    <p>Warren McCulloch, a doctor studying the brain, and Walter Pitts, a self-taught logician who was still a teenager, noticed that "all-or-none" sounds a lot like "true or false". If a firing neuron means "true", then a brain is a machine that combines true/false statements. That is exactly what logic studies.</p>
+    <p>So they asked a precise question: if neurons are switches, what can a network of them work out?</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Think of a neuron as a doorbell that only rings if enough people press their buttons at the same moment, and nobody is holding the "do not disturb" switch.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Because a neuron fires fully or not at all, its state can be read as a true/false statement, and the brain can be studied with logic.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What does "all-or-none" mean for a neuron?</dt>
+    <dd>It either sends its full pulse or none at all. There is no half-strength firing.</dd>
+    <dt>Why did that make logic a good tool?</dt>
+    <dd>Logic deals with statements that are either true or false, which matches a neuron that is either firing or not.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · Assumptions</p>
+  <h2>The model neuron: count the votes</h2>
+  <div class="prose">
+    <p>Their neuron has two kinds of incoming wires. <strong>Excitatory</strong> wires vote "fire". <strong>Inhibitory</strong> wires are a veto. Each moment, the neuron counts how many excitatory wires are active. If the count reaches its <strong>threshold</strong> and no inhibitory wire is active, it fires in the next moment.</p>
+    <p>That is the whole model. There are no shades of grey, no strengths: every "go" wire counts the same, and one veto beats any number of votes. Try it below.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl" id="n1-ctl">
+      <button class="btn" data-in="0" aria-pressed="false">Input A</button>
+      <button class="btn" data-in="1" aria-pressed="false">Input B</button>
+      <button class="btn" data-in="2" aria-pressed="false">Input C</button>
+      <button class="btn" data-in="3" aria-pressed="false">Veto</button>
+      <label>Threshold <input type="range" id="n1-th" min="1" max="3" step="1" value="2"><output id="n1-th-o">2</output></label>
+    </div>
+    <div class="svgbox"><svg id="n1" viewBox="0 0 560 230" role="img" aria-label="A model neuron with three excitatory inputs and one inhibitory input"></svg></div>
+    <p class="readout" id="n1-r"></p>
+    <figcaption>Click the inputs to switch them on. The neuron fires when the number of active "go" inputs reaches the threshold and the veto is off.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>A McCulloch–Pitts neuron fires when at least <em>threshold</em> excitatory inputs are on and no inhibitory input is on.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>With threshold 2, inputs A and B on, and the veto on, does it fire?</dt>
+    <dd>No. In this model a single active inhibitory input blocks firing completely.</dd>
+    <dt>Do some excitatory inputs count more than others?</dt>
+    <dd>No. In the 1943 model every excitatory input counts the same. Weighted inputs came with later models.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · Nets without circles</p>
+  <h2>Three settings give you AND, OR and NOT</h2>
+  <div class="prose">
+    <p>Change only the threshold and the same neuron behaves like different logic words. With two inputs and threshold 2, both must be on: that is <strong>AND</strong>. With threshold 1, either one is enough: that is <strong>OR</strong>. And a neuron that is kept firing by a steady input, unless the veto stops it, gives <strong>NOT</strong>.</p>
+    <p>AND, OR and NOT are enough to build any logical rule at all. This is the same fact that makes computer chips possible: every chip is, at bottom, a huge pile of these three operations. McCulloch and Pitts showed neurons could do it in 1943, before the first general-purpose electronic computers were built.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl" id="g-ctl">
+      <button class="btn on" data-g="and">AND</button>
+      <button class="btn" data-g="or">OR</button>
+      <button class="btn" data-g="not">NOT</button>
+    </div>
+    <div class="svgbox"><svg id="g" viewBox="0 0 560 200" role="img" aria-label="Truth table for the selected gate built from a single neuron"></svg></div>
+    <figcaption>Pick a gate. The table shows every combination of inputs and whether the neuron fires. Fire = true, silent = false.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>One kind of neuron, with different thresholds and vetoes, can act as AND, OR or NOT, which is enough to build any logic.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>A neuron with two inputs fires when either is on. What is its threshold?</dt>
+    <dd>1. That makes it an OR gate.</dd>
+    <dt>Why is NOT the odd one out?</dt>
+    <dd>It needs the veto. The neuron is kept firing by a steady input, and the input you want to negate is wired in as the inhibitory one.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · Expository figures</p>
+  <h2>Time matters: why a cold touch can feel hot</h2>
+  <div class="prose">
+    <p>Each neuron takes one tick of time to pass its signal on. So a network doesn't only combine signals; it also combines signals from <em>different moments</em>. That lets it detect patterns in time, like "cold for one tick, then nothing".</p>
+    <p>The paper's favourite example is a real illusion: if something very cold touches your skin for just a moment and is removed, you can briefly feel heat. Their small network explains how. A "cold" feeling needs the cold signal to last two ticks in a row. A brief cold touch fails that test, and the same wiring routes it to the "hot" feeling instead.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl" id="h-ctl">
+      <button class="btn" data-p="brief">Brief cold touch</button>
+      <button class="btn" data-p="long">Long cold touch</button>
+      <button class="btn" data-p="heat">Heat</button>
+      <button class="btn" data-p="clear">Clear</button>
+    </div>
+    <div class="svgbox wide"><svg id="h" viewBox="0 0 640 240" role="img" aria-label="Timeline of receptor inputs and the resulting hot and cold sensations"></svg></div>
+    <p class="readout" id="h-r"></p>
+    <figcaption>Click any square in the top two rows to switch a receptor on at that tick, or pick a preset. The bottom rows show what the network reports. Rules, from the paper: feel hot at tick t if the heat receptor fired at t−1, or the cold receptor fired at t−3 but not at t−2. Feel cold at t if the cold receptor fired at both t−2 and t−1.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Because signals take time to travel, networks of simple neurons can recognise patterns over time, and this can explain real illusions.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does a brief cold touch produce "hot" here?</dt>
+    <dd>"Cold" needs two ticks of cold in a row. A single tick fails that, and the rule for "hot" includes "cold at t−3 but not at t−2", which a single tick of cold satisfies.</dd>
+    <dt>Why is the hot feeling delayed compared with the heat receptor?</dt>
+    <dd>Every neuron in the chain adds one tick of delay.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · Nets with circles</p>
+  <h2>Loops give a network memory</h2>
+  <div class="prose">
+    <p>If you wire a neuron so that its output comes back to its own input, one pulse is enough to keep it firing tick after tick. The network now remembers that something happened, even after the input is gone.</p>
+    <p>McCulloch and Pitts called these "nets with circles". They argued that with loops, plus something like an outside tape to read and write, such a network could compute anything Alan Turing's imaginary machine could compute. That is a big claim: in principle, a brain built from simple switches is as powerful as any computer.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="m-pulse">Send one pulse</button><button class="btn" id="m-stop">Send veto</button><button class="btn" id="m-step">Next tick</button><button class="btn" id="m-play" aria-pressed="false">Play</button></div>
+    <div class="svgbox"><svg id="m" viewBox="0 0 560 190" role="img" aria-label="A neuron whose output loops back to itself, holding one bit of memory"></svg></div>
+    <p class="readout" id="m-r"></p>
+    <figcaption>Send one pulse, then advance time. The loop keeps the neuron firing with no further input until a veto stops it. This is one bit of memory.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Loops let a signal circulate, so the network can remember the past. With loops and outside storage, the authors argued, neurons could compute whatever a Turing machine can.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What does a self-loop remember?</dt>
+    <dd>That a pulse arrived at some point in the past. It keeps firing until something inhibits it.</dd>
+    <dt>Can this 1943 network learn from experience?</dt>
+    <dd>No. Its wiring and thresholds are fixed. Learning from examples arrived with Rosenblatt's perceptron in 1958.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s6">
+  <p class="eyebrow"><b>Idea</b> · Why it lasted</p>
+  <h2>What this paper started, and what it got wrong</h2>
+  <div class="prose">
+    <p>Real neurons turned out to be messier than on/off switches: their inputs have different strengths, their timing is not in neat ticks, and inhibition usually weakens firing instead of cancelling it. So this is not an accurate picture of the brain.</p>
+    <p>But as an idea it was enormously productive. John von Neumann used these neurons to describe the logic of early computers. The mathematician Stephen Kleene studied what these networks can recognise, which led to "regular expressions", still used in every text search today. And the basic unit, "add up inputs, compare with a threshold, fire or not", is the ancestor of every artificial neuron in modern AI.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>The missing piece was learning. Rosenblatt's <a href="perceptron.html">perceptron</a> (1958) gave each input an adjustable strength (a weight) and a rule for changing it from examples.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The 1943 neuron was too simple for biology but just right for computing: it is the starting point of artificial neural networks.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Assume neurons are all-or-none threshold elements with a fixed synaptic delay, absolute inhibition and invariant structure. Then the behaviour of any net can be described by a sentence of a temporal propositional logic, and conversely.</p>
+  <p>For nets without circles (acyclic), the realisable behaviours are exactly the <em>temporal propositional expressions</em> (TPEs). Nets with circles additionally express quantification over the indefinite past, and the authors connect them to Turing computability.</p>
+  <p>Sections: 1 Introduction · 2 The theory: nets without circles · 3 The theory: nets with circles · 4 Consequences · Expository figures. <em>Bull. Math. Biophys.</em> 5 (1943), 115–133.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §1</p>
+  <h2>The five physical assumptions</h2>
+  <div class="prose">
+    <p>The model rests on five assumptions, stated explicitly in the introduction:</p>
+    <ol>
+      <li>The activity of the neuron is an all-or-none process.</li>
+      <li>A certain fixed number of synapses must be excited within the period of latent addition to excite a neuron at any time, and this number is independent of previous activity and position on the neuron.</li>
+      <li>The only significant delay within the nervous system is synaptic delay.</li>
+      <li>The activity of any inhibitory synapse absolutely prevents excitation of the neuron at that time.</li>
+      <li>The structure of the net does not change with time.</li>
+    </ol>
+    <p>Assumption 2 makes all excitatory synapses equally weighted and the threshold an integer count. Assumption 3 gives discrete time with the synaptic delay as the unit. Assumption 4 makes inhibition a veto, not a subtraction. Assumption 5 excludes learning by structural change, though the Introduction and Theorems V–VII of §2 argue that extinction, facilitation and learning can be imitated by fixed nets (Theorem VII: alterable synapses can be replaced by circles).</p>
+  </div>
+  <div class="eq">N<sub>i</sub>(<var>t</var>) &nbsp;≡&nbsp; [ Σ<sub><var>j</var> ∈ E<sub>i</sub></sub> N<sub><var>j</var></sub>(<var>t</var>−1) ≥ θ<sub><var>i</var></sub> ] &nbsp;∧&nbsp; ¬ ⋁<sub><var>k</var> ∈ I<sub>i</sub></sub> N<sub><var>k</var></sub>(<var>t</var>−1)<span class="n">(modern restatement)</span></div>
+  <div class="prose"><p>Here N<sub><var>i</var></sub>(<var>t</var>) is the proposition "neuron <var>i</var> fires at time <var>t</var>", E<sub><var>i</var></sub> and I<sub><var>i</var></sub> are its excitatory and inhibitory afferents, and θ<sub><var>i</var></sub> its threshold. The paper itself writes this with Carnap's Language II and a functor S for one-step delay, S P(<var>t</var>) ≡ P(<var>t</var>−1), in notation notoriously hard to read.</p></div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Which assumption rules out weighted synapses?</dt>
+    <dd>Assumption 2: excitation needs a fixed number of synapses, independent of position on the neuron, so each excitatory synapse contributes equally.</dd>
+    <dt>How does absolute inhibition differ from a negative weight?</dt>
+    <dd>A negative weight subtracts from the sum and can be overcome by more excitation. Absolute inhibition forces the output to zero regardless of excitation.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §2</p>
+  <h2>Nets without circles compute exactly the TPEs</h2>
+  <div class="prose">
+    <p>Distinguish <em>peripheral afferents</em> (input neurons with no afferents inside the net) from the rest. A <strong>temporal propositional expression</strong> (TPE) is built from atomic propositions N<sub><var>j</var></sub>(<var>t</var>) about peripheral afferents using ∨, ∧, ∧¬ and the delay operator S, applied finitely often. Each N<sub><var>i</var></sub> of an acyclic net is equivalent to a TPE over the inputs at bounded earlier times, and conversely:</p>
+    <ul>
+      <li><strong>Theorem I</strong> (paraphrased): every net of order zero (no circles) can be solved in terms of TPEs.</li>
+      <li><strong>Theorem II</strong>: every TPE is realisable by a net of order zero.</li>
+    </ul>
+    <p>One subtlety: expressions like ¬N<sub>1</sub>(<var>t</var>−1) alone are not realisable, because a neuron with no active input never fires. A realisable TPE must contain at least one un-negated atom to "carry" the excitation, which is why ∧¬ appears as the primitive instead of bare ¬. In practice NOT is built as A ∧ ¬B with A a steady source.</p>
+    <p>Further theorems in §2 show equivalence between alternative assumptions: relative (subtractive) inhibition and extinction can be replaced by absolute inhibition (Theorems IV–V), facilitation by spatial summation (Theorem VI), and alterable synapses by circles (Theorem VII).</p>
+  </div>
+  <figure class="live">
+    <div class="ctl" id="tg-ctl">
+      <label>θ <input type="range" id="tg-th" min="1" max="3" step="1" value="2"><output id="tg-th-o">2</output></label>
+      <label><input type="checkbox" id="tg-inh"> 3rd input inhibitory</label>
+    </div>
+    <div class="svgbox"><svg id="tg" viewBox="0 0 560 250" role="img" aria-label="Truth table of a three-input McCulloch-Pitts neuron"></svg></div>
+    <p class="readout" id="tg-r"></p>
+    <figcaption>All eight input patterns for a three-input unit. With all inputs excitatory, θ = 1, 2, 3 give OR, majority, AND. Making x₃ inhibitory gives (x₁ ∨ x₂) ∧ ¬x₃ or x₁ ∧ x₂ ∧ ¬x₃. Note that no single unit computes XOR or parity: those need a two-layer net.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is ∧¬ primitive instead of ¬?</dt>
+    <dd>A unit fires only if some excitatory input fires, so a purely negated expression has no excitation to carry it. Negation must be relative to a positive term.</dd>
+    <dt>Can one MP unit compute x₁ XOR x₂?</dt>
+    <dd>No. XOR is not a threshold function. It needs two layers, e.g. (x₁ ∧¬x₂) ∨ (x₂ ∧¬x₁).</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · Expository figures</p>
+  <h2>A worked net: the heat illusion</h2>
+  <div class="prose">
+    <p>Figure 1 of the paper includes a net for the illusion that a brief cold stimulus is felt as heat. With N<sub>1</sub> the heat receptor, N<sub>2</sub> the cold receptor, N<sub>3</sub> "heat felt" and N<sub>4</sub> "cold felt", the net realises:</p>
+  </div>
+  <div class="eq">N<sub>3</sub>(<var>t</var>) :≡ N<sub>1</sub>(<var>t</var>−1) ∨ [ N<sub>2</sub>(<var>t</var>−3) ∧ ¬N<sub>2</sub>(<var>t</var>−2) ]</div>
+  <div class="eq">N<sub>4</sub>(<var>t</var>) :≡ N<sub>2</sub>(<var>t</var>−2) ∧ N<sub>2</sub>(<var>t</var>−1)</div>
+  <div class="prose"><p>Two internal neurons implement the delays: one relays N<sub>2</sub> for one step, and another computes N<sub>2</sub>(<var>t</var>−2) ∧ ¬N<sub>2</sub>(<var>t</var>−1) by inhibition and relays it to N<sub>3</sub>. The example shows the paper's real point: once the delay operator is available, a logical description of a net is also a description of a temporal pattern detector, and the net's behaviour can be "solved" by reading off the TPE. The interactive timeline on the Plain English tab simulates exactly these two equations.</p></div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What is the minimum depth (in synaptic delays) from N<sub>2</sub> to N<sub>3</sub>?</dt>
+    <dd>Three, which is why the brief-cold route reaches N<sub>3</sub> later than the direct heat route (one delay).</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §3</p>
+  <h2>Nets with circles, and Turing</h2>
+  <div class="prose">
+    <p>Once a net has cycles, a neuron's state can depend on inputs arbitrarily far in the past, so its behaviour needs expressions with quantifiers over past time ("there was some <var>s</var> &lt; <var>t</var> such that…"). The authors characterise the class of such expressions and claim each is realisable by a net with circles. They then remark that such a net, if furnished with a tape, scanners and effectors, can compute exactly the numbers a Turing machine can.</p>
+    <p>Section 3 is the weakest part of the paper. Its proofs are compressed and, as later readers found, contain errors. Stephen Kleene's "Representation of events in nerve nets and finite automata" (RAND memo 1951, published 1956) reworked it from scratch, showing that the events (input histories) a finite McCulloch–Pitts net can recognise are exactly what he called <em>regular events</em>, the origin of regular expressions and of the equivalence between such nets and finite automata. The Turing-completeness claim depends on the unbounded external tape; a finite net alone is a finite-state machine.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="tm-x">Input x = 1 this tick</button><button class="btn" id="tm-step">Advance</button><button class="btn" id="tm-reset">Reset</button></div>
+    <div class="svgbox wide"><svg id="tm" viewBox="0 0 640 170" role="img" aria-label="Trace of a net with a circle computing 'x has fired at some time in the past'"></svg></div>
+    <figcaption>A one-neuron net with a circle (self-excitation, θ = 1) computes M(<var>t</var>) ≡ ∃<var>s</var> &lt; <var>t</var>. x(<var>s</var>): "x has fired at some earlier time". No net without circles can, because any TPE looks back only a bounded number of steps.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why can't an acyclic net compute "x ever fired"?</dt>
+    <dd>Its output at <var>t</var> depends only on inputs within a fixed window of depth equal to the longest path. Any finite window misses earlier events.</dd>
+    <dt>Is a finite MP net Turing-complete on its own?</dt>
+    <dd>No. It is a finite automaton. The Turing equivalence needs an unbounded external memory such as a tape.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §4 and legacy</p>
+  <h2>Consequences and later refinements</h2>
+  <div class="prose">
+    <p>In §4 the authors draw epistemological conclusions: because many different past input histories map to the same present state, knowledge of the world from the state of the net is necessarily incomplete, and "both the formal and the final aspects of that activity which we are wont to call mental are rigorously deduceable from present neurophysiology" (spelling as printed). They also argue that psychological phenomena like illusions, learning and even some psychiatric symptoms can in principle be described this way.</p>
+    <p>What changed afterwards:</p>
+    <ul>
+      <li><strong>Computing.</strong> Von Neumann's <em>First Draft of a Report on the EDVAC</em> (1945) uses MP neurons as the notation for the logic of a stored-program computer.</li>
+      <li><strong>Automata theory.</strong> Kleene (1956) cleaned up §3 into regular events; Minsky and others developed the equivalence with finite automata.</li>
+      <li><strong>Learning.</strong> Hebb (1949) proposed synaptic change with use. Rosenblatt's <a href="perceptron.html">perceptron</a> (1958) introduced adjustable real-valued weights and a reinforcement procedure, dropping assumption 5. Modern units also drop assumptions 2 and 4: weights are real numbers and inhibition is a negative weight.</li>
+      <li><strong>Biology.</strong> Real neurons show graded synaptic strengths, dendritic computation, continuous time and shunting inhibition; the MP model is now read as an abstraction, not a description.</li>
+    </ul>
+  </div>
+  <div class="later"><span class="label">Modern form</span>The threshold unit survives as <var>y</var> = H(<b>w</b>·<b>x</b> − θ) with Heaviside step H. Replacing H with a differentiable function (sigmoid, later ReLU) made gradient training possible, see <a href="backprop.html">backpropagation</a> (1986).</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>All-or-none</dt><dd>A neuron's output is binary: a full spike or nothing.</dd>
+    <dt>Threshold θ</dt><dd>Number of simultaneously active excitatory inputs needed to fire.</dd>
+    <dt>Absolute inhibition</dt><dd>Any active inhibitory input prevents firing, whatever the excitation.</dd>
+    <dt>Synaptic delay</dt><dd>The unit of time; a neuron's output at <var>t</var> depends on inputs at <var>t</var>−1.</dd>
+    <dt>Peripheral afferent</dt><dd>An input neuron receiving no connections from within the net.</dd>
+    <dt>TPE</dt><dd>Temporal propositional expression: built from input atoms with ∨, ∧, ∧¬ and the delay S.</dd>
+    <dt>Net with circles</dt><dd>A net containing a directed cycle; gives memory of the indefinite past.</dd>
+    <dt>Regular event</dt><dd>Kleene's term for an input history recognisable by a finite net; the root of regular expressions.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Led to:</strong> <a href="perceptron.html">Perceptron (1958)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> (<a href="https://lovespark.love/papers-worth-reading/#mcculloch-pitts">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // single neuron
+  var svg = $('#n1'), st = [0,0,0,0], th = 2;
+  var ins = [{n:'A',y:40},{n:'B',y:90},{n:'C',y:140},{n:'Veto',y:195}];
+  function draw(){
+    clear(svg);
+    var cnt = st[0]+st[1]+st[2], fire = cnt >= th && !st[3];
+    ins.forEach(function(p,i){
+      var on = st[i], inh = i === 3;
+      S('circle',{cx:60,cy:p.y,r:14,'class':on?(inh?'u-wire':'u-on'):'u'},svg);
+      S('text',{x:28,y:p.y+4,'class':'t end'},svg,p.n);
+      S('path',{d:'M74,'+p.y+' L330,115','class':on?(inh?'w-inh':'w-fire'):'w-faint','marker-end':inh?'url(#bar)':'url(#af)'},svg);
+    });
+    S('circle',{cx:370,cy:115,r:42,'class':fire?'u-on':'u'},svg);
+    S('text',{x:370,y:110,'class':'t mid'},svg,'count '+cnt);
+    S('text',{x:370,y:126,'class':'t-s mid'},svg,'need '+th);
+    S('path',{d:'M412,115 H500','class':fire?'w-fire':'w-ink','marker-end':'url(#ai)'},svg);
+    S('text',{x:520,y:110,'class':fire?'t-fire mid':'t-s mid'},svg,fire?'FIRES':'silent');
+    $('#n1-r').innerHTML = st[3] ? 'Veto is on, so the neuron stays <b>silent</b> no matter how many inputs are on.' :
+      cnt + ' of 3 "go" inputs on, threshold ' + th + ': ' + (fire ? '<b>fires</b>.' : 'stays <b>silent</b>.');
+  }
+  $$('#n1-ctl .btn').forEach(function(b){ b.addEventListener('click', function(){ var i=+b.dataset.in; st[i]^=1; b.setAttribute('aria-pressed', !!st[i]); draw(); }); });
+  bindRange('n1-th', function(v){ th = v; draw(); });
+})();
+(function(){ // gates
+  var svg = $('#g'), g = 'and';
+  var defs = {
+    and:{th:2,txt:'two inputs, threshold 2',rows:[[0,0],[0,1],[1,0],[1,1]],f:function(a,b){return a&&b;}},
+    or:{th:1,txt:'two inputs, threshold 1',rows:[[0,0],[0,1],[1,0],[1,1]],f:function(a,b){return a||b;}},
+    not:{th:1,txt:'steady "on" input, x wired as the veto',rows:[[0],[1]],f:function(a){return !a;}}
+  };
+  function draw(){
+    clear(svg); var d = defs[g];
+    S('text',{x:20,y:24,'class':'t-h'},svg,g.toUpperCase()+' neuron: '+d.txt);
+    var cols = d.rows[0].length === 2 ? ['A','B','fires?'] : ['x','fires?'];
+    cols.forEach(function(c,i){ S('text',{x:60+i*110,y:58,'class':'t-s mid'},svg,c); });
+    d.rows.forEach(function(r,j){
+      var y = 70 + j*30, out = d.f.apply(null,r);
+      r.forEach(function(v,i){ S('rect',{x:40+i*110,y:y,width:40,height:22,'class':v?'box-fire':'box'},svg); S('text',{x:60+i*110,y:y+15,'class':'t mid'},svg,v); });
+      var ox = 40+r.length*110;
+      S('circle',{cx:ox+20,cy:y+11,r:10,'class':out?'u-on':'u'},svg);
+      S('text',{x:ox+40,y:y+15,'class':out?'t-fire':'t-s'},svg,out?'yes':'no');
+    });
+  }
+  $$('#g-ctl .btn').forEach(function(b){ b.addEventListener('click', function(){ g=b.dataset.g; $$('#g-ctl .btn').forEach(function(x){x.classList.toggle('on',x===b);}); draw(); }); });
+  draw();
+})();
+(function(){ // heat illusion timeline
+  var svg = $('#h'), T = 12, heat = [], cold = [];
+  function reset(){ heat = new Array(T).fill(0); cold = new Array(T).fill(0); }
+  reset();
+  function at(a,t){ return t>=0 && t<T ? a[t] : 0; }
+  function draw(){
+    clear(svg);
+    var x0 = 130, w = 40, rows = [['heat receptor',heat,true],['cold receptor',cold,true]];
+    var hot = [], cld = [];
+    for (var t=0;t<T;t++){ hot[t] = at(heat,t-1) || (at(cold,t-3) && !at(cold,t-2)) ? 1:0; cld[t] = at(cold,t-2) && at(cold,t-1) ? 1:0; }
+    rows.push(['feels HOT',hot,false],['feels COLD',cld,false]);
+    for (var t=0;t<T;t++) S('text',{x:x0+t*w+w/2-4,y:20,'class':'t-s mid'},svg,t);
+    S('text',{x:x0-8,y:20,'class':'t-s end'},svg,'tick');
+    rows.forEach(function(r,i){
+      var y = 34 + i*48 + (i>1?14:0);
+      S('text',{x:x0-8,y:y+22,'class':i>1?'t-h end':'t end'},svg,r[0]);
+      for (var t=0;t<T;t++){
+        var on = r[1][t], cls = on ? (i===3||i===1 ? 'box-wire' : 'box-fire') : 'box';
+        var rc = S('rect',{x:x0+t*w+2,y:y,width:w-8,height:32,'class':cls+(r[2]?' clickable':'')},svg);
+        if (on && !r[2]) S('text',{x:x0+t*w+w/2-4,y:y+21,'class':'t mid'},svg,i===2?'hot':'cold');
+        if (r[2]) (function(arr,tt){ rc.addEventListener('click',function(){ arr[tt]^=1; draw(); }); })(r[1],t);
+      }
+    });
+    S('line',{x1:20,y1:131,x2:620,y2:131,'class':'grid'},svg);
+    var hs = hot.reduce(function(a,b){return a+b;},0), cs = cld.reduce(function(a,b){return a+b;},0), cin = cold.reduce(function(a,b){return a+b;},0);
+    $('#h-r').innerHTML = cin && !cs && hs && !heat.some(Boolean) ? 'Cold went in, but the network reports <b>heat</b>: the illusion.' : 'Network reports: hot on <b>'+hs+'</b> tick(s), cold on <b>'+cs+'</b> tick(s).';
+  }
+  $$('#h-ctl .btn').forEach(function(b){ b.addEventListener('click', function(){
+    reset(); var p = b.dataset.p;
+    if (p==='brief') cold[2]=1; if (p==='long') { cold[2]=cold[3]=cold[4]=cold[5]=1; } if (p==='heat') { heat[2]=heat[3]=1; }
+    draw(); }); });
+  cold[2]=1; draw();
+})();
+(function(){ // memory loop
+  var svg = $('#m'), on = 0, pend = 0, veto = 0, t = 0, timer = null;
+  function draw(){
+    clear(svg);
+    S('circle',{cx:70,cy:110,r:16,'class':pend?'u-on':'u'},svg); S('text',{x:70,y:150,'class':'t-s mid'},svg,'input');
+    S('circle',{cx:70,cy:40,r:12,'class':veto?'u-wire':'u'},svg); S('text',{x:100,y:30,'class':'t-s'},svg,'veto');
+    S('path',{d:'M86,110 H246','class':pend?'w-fire':'w-faint','marker-end':'url(#af)'},svg);
+    S('path',{d:'M82,48 L254,98','class':veto?'w-inh':'w-faint','marker-end':'url(#bar)'},svg);
+    S('circle',{cx:290,cy:110,r:36,'class':on?'u-on':'u'},svg); S('text',{x:290,y:115,'class':'t mid'},svg,on?'ON':'off');
+    S('path',{d:'M318,88 C380,20 200,20 266,84','class':on?'w-fire':'w-faint','marker-end':'url(#af)'},svg);
+    S('text',{x:290,y:28,'class':'t-s mid'},svg,'loop back to itself');
+    S('path',{d:'M326,110 H450','class':on?'w-fire':'w-ink','marker-end':'url(#ai)'},svg);
+    S('text',{x:470,y:105,'class':'t'},svg,'remembers:');
+    S('text',{x:470,y:122,'class':on?'t-fire':'t-s'},svg,on?'"a pulse came"':'nothing');
+    $('#m-r').innerHTML = 'Tick ' + t + '. Neuron is ' + (on ? '<b>on</b>, held by its own loop.' : 'off.');
+  }
+  function step(){ var next = (pend || on) && !veto ? 1 : 0; on = next; pend = 0; veto = 0; t++; draw(); }
+  $('#m-pulse').onclick = function(){ pend = 1; draw(); };
+  $('#m-stop').onclick = function(){ veto = 1; draw(); };
+  $('#m-step').onclick = step;
+  $('#m-play').onclick = function(){ var b=this; if (timer){ clearInterval(timer); timer=null; b.setAttribute('aria-pressed','false'); b.textContent='Play'; } else { timer=setInterval(step,700); b.setAttribute('aria-pressed','true'); b.textContent='Pause'; } };
+  draw();
+})();
+(function(){ // tech truth table
+  var svg = $('#tg'), th = 2, inh = false;
+  function draw(){
+    clear(svg); var fired = [];
+    ['x₁','x₂','x₃','fires'].forEach(function(c,i){ S('text',{x:50+i*70,y:22,'class':'t-s mid'},svg,c); });
+    for (var k=0;k<8;k++){
+      var x=[k>>2&1,k>>1&1,k&1], y=32+k*26;
+      var exc = x[0]+x[1]+(inh?0:x[2]), out = exc>=th && !(inh&&x[2]);
+      x.forEach(function(v,i){ S('rect',{x:34+i*70,y:y,width:32,height:20,'class':v?(i===2&&inh?'box-wire':'box-fire'):'box'},svg); S('text',{x:50+i*70,y:y+14,'class':'t mid'},svg,v); });
+      S('circle',{cx:260,cy:y+10,r:9,'class':out?'u-on':'u'},svg);
+      if (out) fired.push(x.join(''));
+    }
+    var names = inh ? {1:'(x₁ ∨ x₂) ∧ ¬x₃',2:'x₁ ∧ x₂ ∧ ¬x₃',3:'never fires (only two excitatory inputs)'} : {1:'x₁ ∨ x₂ ∨ x₃',2:'majority of three',3:'x₁ ∧ x₂ ∧ x₃'};
+    S('text',{x:310,y:120,'class':'t-h'},svg,'This unit computes:');
+    S('text',{x:310,y:144,'class':'t-fire'},svg,names[th]);
+    $('#tg-r').innerHTML = 'Fires on ' + fired.length + ' of 8 patterns.';
+  }
+  bindRange('tg-th', function(v){ th=v; draw(); });
+  $('#tg-inh').addEventListener('change', function(){ inh=this.checked; draw(); });
+})();
+(function(){ // circle trace
+  var svg = $('#tm'), xs = [], cur = 0;
+  function M(t){ for (var s=0;s<t;s++) if (xs[s]) return 1; return 0; }
+  function draw(){
+    clear(svg); var T = 14;
+    S('text',{x:100,y:52,'class':'t end'},svg,'x(t)'); S('text',{x:100,y:110,'class':'t end'},svg,'M(t)');
+    for (var t=0;t<T;t++){
+      var X = 112+t*36;
+      S('text',{x:X+14,y:22,'class':t===cur?'t-fire mid':'t-s mid'},svg,t);
+      if (t<=cur){
+        S('rect',{x:X,y:34,width:28,height:26,'class':xs[t]?'box-fire':'box'},svg);
+        S('rect',{x:X,y:92,width:28,height:26,'class':M(t)?'box-wire':'box'},svg);
+      } else { S('rect',{x:X,y:34,width:28,height:26,'class':'area'},svg); S('rect',{x:X,y:92,width:28,height:26,'class':'area'},svg); }
+    }
+    S('text',{x:112,y:150,'class':'t-s'},svg,'M(t) ≡ ∃s<t. x(s)   realised by one unit with a self-loop');
+  }
+  $('#tm-x').onclick = function(){ xs[cur] = 1; draw(); };
+  $('#tm-step').onclick = function(){ if (cur<13) cur++; draw(); };
+  $('#tm-reset').onclick = function(){ xs=[]; cur=0; draw(); };
+  draw();
+})();
+</script>
+
+</body>
+</html>

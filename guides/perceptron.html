@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perceptron (1958) study guide</title>
+<meta name="description" content="Rosenblatt asks how a brain could store what it sees and use it to recognise things later. His answer is a randomly wired network of simple cells that learns from experience by strengthening the cells that were active when it got the answer right: the first machine that learns to classify patterns f">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Neural networks</b> · 1958</p>
+  <h1>The Perceptron: A Probabilistic Model for Information Storage and Organization in the Brain</h1>
+  <p class="cite">Frank Rosenblatt · Psychological Review</p>
+  <p class="lede">Rosenblatt asks how a brain could store what it sees and use it to recognise things later. His answer is a randomly wired network of simple cells that learns from experience by strengthening the cells that were active when it got the answer right: the first machine that learns to classify patterns from examples.</p>
+  <p class="paperlinks"><a href="https://homepages.math.uic.edu/~lreyzin/papers/rosenblatt58.pdf">Read the paper (free)</a> <a href="https://lovespark.love/papers-worth-reading/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, separate AI review (also by Claude), but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Your memory of a face is not a stored photo. It is a change in connections, so that the same kind of input comes to produce the same reaction.</p>
+  <p>Rosenblatt's machine has three layers: light sensors, a crowd of randomly wired "association" cells, and a few answer cells that compete to respond.</p>
+  <p>Learning means making the association cells that were active during a correct answer count for more next time.</p>
+  <p>Shown random patterns, it can only memorise. Shown real categories (squares vs circles), it learns to recognise new examples too. What it cannot grasp are relations, like "the thing to the left of the square".</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · pp. 386–388</p>
+  <h2>Memory is connections, not copies</h2>
+  <div class="prose">
+    <p>How does the brain remember a face? One view says it keeps a copy, like a photo in a drawer, and compares each new face to the drawer. Rosenblatt takes the other view: nothing is stored as a picture. Instead, experience changes how strongly cells connect, and a familiar face simply flows down the strengthened paths to the right reaction. Recognising <em>is</em> the flowing; there is no separate look-up step.</p>
+    <p>He also has a practical point. Fifteen years earlier, <a href="mcculloch-pitts.html">McCulloch and Pitts</a> described brains as exact logic circuits. Real brains are messy and partly random. So Rosenblatt builds his machine with random wiring on purpose, and studies it with probability instead of logic.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A path across a lawn. Nobody draws a map of where people walk. The grass just wears down where people go most, and new walkers follow the worn path without thinking.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>In a perceptron, memory lives in connection strengths, not in stored copies of what was seen.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why did Rosenblatt use random wiring?</dt>
+    <dd>Because real brains are not wired exactly. He wanted to show learning could work even without a precise design, and he analysed it with probability.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · pp. 389–392 · Figs. 1–3</p>
+  <h2>Sensors, a random crowd, and competing answers</h2>
+  <div class="prose">
+    <p>The machine looks at a small grid of light sensors, its "retina". Each sensor is on if light hits it. Behind the retina sits a crowd of <strong>association cells</strong>. Each one is wired to a handful of randomly chosen sensors, and it switches on if enough of its sensors are lit. Behind the crowd are two <strong>answer cells</strong>, say "Answer 1" and "Answer 2". Each answer cell listens to its own random group of association cells, and the louder group wins.</p>
+    <p>The random wiring never changes. What changes is how much each association cell's voice counts. Rosenblatt calls this its <em>value</em>. When you tell the machine "that was Answer 1", every association cell that was on and belongs to Answer 1's group gets a bit louder. Next time a similar picture lights up many of the same cells, Answer 1 wins.</p>
+    <p>Try it: draw a shape, train it, then test it on a shifted or slightly different shape.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn" data-pre="v">Vertical bar</button><button class="btn" data-pre="h">Horizontal bar</button><button class="btn" data-pre="v2">Vertical, shifted</button><button class="btn" data-pre="h2">Horizontal, shifted</button><button class="btn" data-pre="0">Clear</button>
+    </div>
+    <div class="svgbox"><svg id="pc" viewBox="0 0 640 330" role="img" aria-label="A retina grid feeding random association cells that vote for two answers"></svg></div>
+    <div class="ctl">
+      <button class="btn" id="pc-r1">Reinforce Answer 1</button><button class="btn" id="pc-r2">Reinforce Answer 2</button><button class="btn" id="pc-reset">Forget everything</button>
+    </div>
+    <p class="readout" id="pc-r"></p>
+    <figcaption>Click squares on the retina to draw. Amber association cells are on. Each answer adds up the values of its own active cells (left column: Answer 1's group; right column: Answer 2's). Try: load "Vertical bar", reinforce Answer 1; load "Horizontal bar", reinforce Answer 2; repeat twice; then test the shifted bars. A small simulation in the spirit of the paper, not its exact parameters.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Random fixed wiring turns a picture into a pattern of active cells. Learning only adjusts how much each cell counts toward each answer.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Which part of the perceptron learns?</dt>
+    <dd>Only the "values" of the association cells, that is, how strongly they push on the answers. The sensor-to-association wiring stays random and fixed.</dd>
+    <dt>Why can it recognise a shifted bar it never saw?</dt>
+    <dd>A shifted bar still lights up many of the same association cells as the trained bar, because each cell samples scattered sensors. Shared active cells carry the learned values over.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · pp. 396–402</p>
+  <h2>Real categories make generalising possible</h2>
+  <div class="prose">
+    <p>Rosenblatt runs two thought experiments. In the first, the pictures are pure noise, random dots, and you label half "1" and half "2" for no reason. The machine can memorise some of them, but the more it learns, the more it forgets, and on new noise it guesses at chance. There is nothing to generalise <em>from</em>.</p>
+    <p>In the second, pictures come in real groups, like squares and circles. Now the members of a group light up overlapping cells, and learning one square helps with the next. The machine gets new examples right as often as old ones, and adding more association cells pushes it toward 100%.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Memorising a phone book teaches you nothing about the next number. Learning that dogs bark and cats meow lets you guess right about a dog you have never met.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>A learning machine can only generalise if the data has real structure: things in the same category must look more alike than things in different ones.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What happens on random, meaningless labels?</dt>
+    <dd>It memorises a bit, then gets worse as it learns more, and does no better than chance on new examples.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · Later form (1962)</p>
+  <h2>The learning rule as it is taught today</h2>
+  <div class="prose">
+    <p>The 1958 paper describes learning in terms of cells gaining value. The tidy version every textbook now shows came from Rosenblatt's 1962 book: give each input a <strong>weight</strong>; add up weight × input; answer "yes" if the total is above zero. When the answer is wrong, nudge the weights toward the right answer. When it is right, leave them alone.</p>
+    <p>Geometrically, the weights draw a straight line through the data, and every mistake tilts the line. Press "Step" to watch it learn. Then switch to the "crossed" data, where no straight line can separate the two colours: the line keeps tilting forever. That limitation became the subject of a famous 1969 book.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn on" data-ds="lin">Separable data</button><button class="btn" data-ds="xor">Crossed data</button>
+      <button class="btn" id="pl-step">Step</button><button class="btn" id="pl-run" aria-pressed="false">Run</button><button class="btn" id="pl-reset">Reset</button>
+      <label>Learning rate <input type="range" id="pl-eta" min="0.05" max="1" step="0.05" value="0.3" data-fmt="2"><output id="pl-eta-o">0.30</output></label>
+    </div>
+    <div class="svgbox"><svg id="pl" viewBox="0 0 560 320" role="img" aria-label="Two classes of points and a perceptron's decision line"></svg></div>
+    <p class="readout" id="pl-r"></p>
+    <figcaption>Each step shows one point (circled). If it is on the wrong side, the weights move by η(target − guess)·input and the line tilts. On separable data the mistakes stop. On crossed data they never do.</figcaption>
+  </figure>
+  <div class="later"><span class="label">Later refinement</span>This error-correcting rule, w ← w + η(y − ŷ)x, is the textbook form from Rosenblatt's <em>Principles of Neurodynamics</em> (1962), not the 1958 paper. The 1962 book also proved that it always finds a separating line if one exists (the perceptron convergence theorem).</div>
+  <p class="takeaway"><span class="label">Takeaway</span>A perceptron draws one straight boundary and fixes it by nudging after each mistake. It succeeds when a straight boundary exists and fails forever when one doesn't.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>When does the perceptron change its weights?</dt>
+    <dd>Only after a mistake. Correct answers leave the weights unchanged.</dd>
+    <dt>Why can't it learn the crossed data?</dt>
+    <dd>No single straight line separates the colours. Every fix for one point breaks another.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · pp. 404–405</p>
+  <h2>Where it stops: relations</h2>
+  <div class="prose">
+    <p>Rosenblatt is honest about the limits. His perceptron can learn "say <em>square</em> when you see a square". It cannot learn "name the object to the left of the square", or "point to whatever came before the circle". Those answers depend on a relationship between things, not on which cells light up.</p>
+    <p>He concludes that recognising relations would need a system "more advanced in principle". That turned out to be right: it took networks with several learning layers, trained by <a href="backprop.html">backpropagation</a>, to learn their own internal features.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>A single layer of learning handles concrete patterns. Relations in space and time need more.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Memory is a change in connection effectiveness that biases responses, not a stored representation (the connectionist position of Hebb and Hayek).</p>
+  <p>A photo-perceptron maps a retina of S-points through randomly connected association units (A-units) to mutually inhibiting response units (R-units). Learning raises the "value" V of A-units active when a response is reinforced.</p>
+  <p>Because wiring is random, performance is predicted from two probabilities: P<sub>a</sub>, the expected fraction of A-units a stimulus activates, and P<sub>c</sub>, the conditional probability that an A-unit active for one stimulus is active for another.</p>
+  <p>In an "ideal" (random) environment the system memorises but cannot generalise. In a "differentiated" environment recall and generalisation converge to an asymptote above chance that approaches 1 as N<sub>A</sub> grows, provided P<sub>c12</sub> &lt; P<sub>a</sub> &lt; P<sub>c11</sub>. <em>Psychological Review</em> 65(6), 386–408.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · pp. 388–392 · Figs. 1–3</p>
+  <h2>Organisation and dynamics</h2>
+  <div class="prose">
+    <p>The general photo-perceptron has a retina of S-points; a projection area A<sub>I</sub> whose units take origin points from local clusters on the retina (connections falling off with distance); an association area A<sub>II</sub> whose units take origin points at random from A<sub>I</sub>; and responses R<sub>1</sub>…R<sub>n</sub>, each receiving from a random <em>source-set</em> of A-units. Everything is feed-forward except the last stage, where responses feed back, in most of the analysis by inhibiting the A-units outside their own source-set (and hence rival responses).</p>
+    <p>An A-unit with <var>x</var> excitatory and <var>y</var> inhibitory origin points fires when the algebraic sum of its inputs reaches threshold: <var>a</var> = <var>e</var> + <var>i</var> ≥ θ. For the analysis Rosenblatt drops A<sub>I</sub> (the "simplified perceptron"), so A-units sample the retina directly and respond to overlapping lit area rather than contour.</p>
+    <p>A response proceeds in two phases (Fig. 3): a brief <em>predominant</em> phase in which scattered A-units in all source-sets fire, then a <em>postdominant</em> phase in which one response wins and suppresses the others' source-sets. Winner selection is by the sum (Σ-system) or mean (μ-system) of the values of active units in each source-set.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · pp. 391–392 · Table 1</p>
+  <h2>Value dynamics: α, β and γ systems</h2>
+  <div class="prose"><p>The value V of an A-unit (amplitude, frequency, latency or transmission probability: the only new hypothetical construct) changes with reinforcement under one of three rules:</p></div>
+  <div class="tablebox"><table>
+    <thead><tr><th>System</th><th>Active A-units</th><th>Inactive A-units</th><th>Total value</th></tr></thead>
+    <tbody>
+      <tr><td>α uncompensated gain</td><td>+1 per unit time active, retained</td><td>unchanged</td><td>grows with each reinforcement</td></tr>
+      <tr><td>β constant feed</td><td>each source-set receives K per unit time, shared in proportion to activity</td><td>share too</td><td>grows steadily</td></tr>
+      <tr><td>γ parasitic gain</td><td>gain value…</td><td>…drawn from inactive units of the same source-set</td><td>constant</td></tr>
+    </tbody></table></div>
+  <div class="prose"><p>μ-systems generally beat Σ-systems because means are robust to random differences in source-set size; in the γ-system the two coincide. The γ-system performs best (Fig. 10); β worst, since uncontrolled growth amplifies chance differences.</p></div>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · pp. 392–394 · Eqs. 1–2 · Figs. 4–6</p>
+  <h2>P<sub>a</sub> and P<sub>c</sub></h2>
+  <div class="prose">
+    <p>P<sub>a</sub> is computed by summing over the binomial (in the paper, Poisson-approximated) counts of excitatory and inhibitory origin points that fall inside a stimulus of area <var>R</var>, keeping terms with <var>e</var> − <var>i</var> ≥ θ. P<sub>c</sub> conditions further on overlap with a second stimulus. Qualitatively: raising θ or <var>y</var> lowers P<sub>a</sub> and lowers P<sub>c</sub> more sharply; balanced excitation and inhibition makes P<sub>a</sub> nearly independent of stimulus size; and P<sub>c</sub> &gt; 0 even for disjoint stimuli because one A-unit can collect origin points in both.</p>
+    <p>The figure estimates both quantities by Monte Carlo for a 20×20 retina, two square stimuli and adjustable overlap.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>θ <input type="range" id="pa-th" min="1" max="6" step="1" value="2"><output id="pa-th-o">2</output></label>
+      <label><var>x</var> <input type="range" id="pa-x" min="2" max="12" step="1" value="6"><output id="pa-x-o">6</output></label>
+      <label><var>y</var> <input type="range" id="pa-y" min="0" max="8" step="1" value="2"><output id="pa-y-o">2</output></label>
+      <label>overlap <input type="range" id="pa-ov" min="0" max="100" step="10" value="50"><output id="pa-ov-o">50</output>%</label>
+    </div>
+    <div class="svgbox"><svg id="pa" viewBox="0 0 560 220" role="img" aria-label="Bar chart of estimated Pa and Pc"></svg></div>
+    <p class="readout" id="pa-r"></p>
+    <figcaption>4,000 random A-units, each with <var>x</var> excitatory and <var>y</var> inhibitory origin points on a 20×20 retina; stimuli are 8×8 squares displaced to give the chosen pixel overlap. P<sub>c</sub> is P(A active for S<sub>2</sub> | A active for S<sub>1</sub>). Watch P<sub>c</sub> fall faster than P<sub>a</sub> as θ rises.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · pp. 394–402 · Eq. 4 · Figs. 7–11</p>
+  <h2>Recall, generalisation and the two environments</h2>
+  <div class="prose"><p>After a learning series the system is frozen and tested. P<sub>r</sub> is the probability of the reinforced response to a previously seen stimulus; P<sub>g</sub> the probability of the correct class response to a new member of a learned class. Both take the form</p></div>
+  <div class="eq">P = P(N<sub>ar</sub> &gt; 0) · Φ(Z), &nbsp;&nbsp; P(N<sub>ar</sub> &gt; 0) = 1 − (1 − P<sub>a</sub>)<sup>N<sub>e</sub></sup>, &nbsp;&nbsp; Z = (c<sub>1</sub>n<sub>sr</sub> + c<sub>2</sub>) / √(c<sub>3</sub>n<sub>sr</sub><sup>2</sup> + c<sub>4</sub>n<sub>sr</sub>)<span class="n">Eq. 4</span></div>
+  <div class="prose">
+    <p>with <var>n</var><sub>sr</sub> stimuli learned per response, N<sub>e</sub> the A-units not shared with the rival source-set, and c<sub>2</sub> = 0 for P<sub>g</sub>. In the <strong>ideal environment</strong> (random stimuli, arbitrary labels) c<sub>1</sub> = 0: Z → 0 as <var>n</var><sub>sr</sub> grows, so P<sub>r</sub> decays toward 0.5 and P<sub>g</sub> = 0.5 throughout. In a <strong>differentiated environment</strong> c<sub>1</sub> &gt; 0 and P<sub>r</sub>, P<sub>g</sub> converge to a common asymptote, above chance if P<sub>c12</sub> &lt; P<sub>a</sub> &lt; P<sub>c11</sub>, approaching 1 as N<sub>A</sub> increases.</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does P<sub>r</sub> decay in the ideal environment?</dt>
+    <dd>Each new random association adds value changes uncorrelated with earlier ones; with c<sub>1</sub> = 0 the signal term stops growing while variance grows, so Z → 0 and Φ(Z) → 0.5.</dd>
+    <dt>State the generalisation condition in words.</dt>
+    <dd>Within-class pairs must share more active A-units than a random stimulus activates, and between-class pairs fewer.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · pp. 402–405</p>
+  <h2>Extensions and limits</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Binary coding:</strong> replace <var>n</var> mutually exclusive responses with log<sub>2</sub><var>n</var> response pairs (100 classes → 7 pairs).</li>
+      <li><strong>Bivalent reinforcement:</strong> values can fall as well as rise, enabling trial-and-error (reward/punishment) learning; simulated on an IBM 704 consistent with theory.</li>
+      <li><strong>Spontaneous concept formation:</strong> with value decay proportional to magnitude and reinforcement of whatever response occurs, the system partitions two dissimilar classes without supervision.</li>
+      <li><strong>Distributed memory:</strong> removing A-units degrades all associations mildly rather than deleting particular ones.</li>
+      <li><strong>Limit:</strong> relational judgements ("the object left of the square") are beyond statistical separability.</li>
+    </ul>
+    <p>Rosenblatt's methodological claim: performance is predicted from six measurable physical parameters (<var>x</var>, <var>y</var>, θ, ω, N<sub>A</sub>, N<sub>R</sub>), giving parsimony, falsifiability and generality compared with Hull-style learning theories.</p>
+  </div>
+</section>
+
+<section class="kp" id="t6">
+  <p class="eyebrow"><b>Section</b> · Beyond the paper</p>
+  <h2>Modern reading and later refinements</h2>
+  <div class="prose">
+    <p>The simplified perceptron is a layer of fixed random threshold features followed by a trained linear readout, close in spirit to later random-feature methods and extreme learning machines. Only the readout learns.</p>
+    <p>The error-correction rule and the convergence theorem are from <em>Principles of Neurodynamics</em> (1962); Block (1962) and Novikoff (1962) gave convergence proofs. Novikoff's bound: if the data are separable with margin γ and ‖<b>x</b>‖ ≤ R, the number of mistakes is at most (R/γ)<sup>2</sup>.</p>
+  </div>
+  <div class="eq"><b>w</b> ← <b>w</b> + η (<var>y</var> − ŷ) <b>x</b>, &nbsp;&nbsp; ŷ = H(<b>w</b>·<b>x</b> + <var>b</var>)</div>
+  <div class="later"><span class="label">What came next</span><a href="perceptrons-book.html">Minsky and Papert (1969)</a> proved that single-layer perceptrons with locally limited A-units cannot compute parity or connectedness. Learning the hidden features themselves, via <a href="backprop.html">backpropagation</a> (1986), removed that limitation.</div>
+</section>
+
+<section class="kp" id="t7" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>S-point</dt><dd>Retinal sensory unit, all-or-none.</dd>
+    <dt>A-unit</dt><dd>Association unit; fires if excitatory minus inhibitory input ≥ θ.</dd>
+    <dt>R-unit</dt><dd>Response unit; receives from its source-set and inhibits rivals.</dd>
+    <dt>Source-set</dt><dd>The A-units connected to a given response.</dd>
+    <dt>Value V</dt><dd>Effectiveness of an A-unit's output; the only learned quantity.</dd>
+    <dt>α, β, γ</dt><dd>Value-change rules: unlimited gain, constant feed per source-set, gain at inactive units' expense.</dd>
+    <dt>Σ / μ system</dt><dd>Winner chosen by sum vs mean of active values.</dd>
+    <dt>P<sub>a</sub>, P<sub>c</sub></dt><dd>Fraction of A-units activated; conditional co-activation for two stimuli.</dd>
+    <dt>P<sub>r</sub>, P<sub>g</sub></dt><dd>Probability of correct recall; of correct generalisation.</dd>
+    <dt>Bivalent</dt><dd>Reinforcement that can raise or lower values.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="mcculloch-pitts.html">Artificial neuron (1943)</a></p>
+  <p><strong>Led to:</strong> <a href="perceptrons-book.html">Perceptrons (book) (1969)</a>, <a href="backprop.html">Backpropagation (1986)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> (<a href="https://lovespark.love/papers-worth-reading/#perceptron">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // photo-perceptron toy
+  var svg = $('#pc'), N = 8, R = rng(20), px = new Array(N*N).fill(0), A = [], NA = 64;
+  // Each association cell samples 6 random sensors near a random centre (fixed, never learned).
+  for (var k=0;k<NA;k++){ var c=Math.floor(R()*N*N), cx=c%N, cy=Math.floor(c/N), e=[];
+    for (var j=0;j<6;j++){ var xx=Math.min(N-1,Math.max(0,cx+Math.floor(R()*3)-1)), yy=Math.min(N-1,Math.max(0,cy+Math.floor(R()*3)-1)); e.push(yy*N+xx); }
+    A.push({e:e,i:[],set:k<NA/2?0:1,v:0}); }
+  var TH = 2;
+  function act(a){ var s=0; a.e.forEach(function(p){ s+=px[p]; }); a.i.forEach(function(p){ s-=px[p]; }); return s>=TH; }
+  function draw(){
+    clear(svg);
+    S('text',{x:20,y:18,'class':'t-s'},svg,'retina (click to draw)');
+    for (var y=0;y<N;y++) for (var x=0;x<N;x++){ (function(idx){ var r=S('rect',{x:20+x*26,y:28+y*26,width:24,height:24,'class':(px[idx]?'box-fire':'box')+' clickable'},svg); r.addEventListener('click',function(){ px[idx]^=1; draw(); }); })(y*N+x); }
+    var sums=[0,0], cnt=[0,0];
+    S('text',{x:300,y:18,'class':'t-s mid'},svg,'Answer 1 group');
+    S('text',{x:420,y:18,'class':'t-s mid'},svg,'Answer 2 group');
+    A.forEach(function(a,k){ var on=act(a), col=a.set, row=k%(NA/2); var cx=260+col*120+(row%4)*26, cy=36+Math.floor(row/4)*36;
+      if (on){ sums[col]+=a.v; cnt[col]++; }
+      S('circle',{cx:cx,cy:cy,r:9,'class':on?'u-on':'u-off'},svg);
+      if (a.v) S('text',{x:cx,y:cy+22,'class':'t-s mid'},svg,'+'+a.v);
+    });
+    var win = sums[0]===sums[1] ? -1 : (sums[0]>sums[1]?0:1);
+    [0,1].forEach(function(c){ var y = 80+c*120;
+      S('rect',{x:510,y:y,width:110,height:56,rx:4,'class':win===c?'box-fire':'box'},svg);
+      S('text',{x:565,y:y+22,'class':'t mid'},svg,'Answer '+(c+1));
+      S('text',{x:565,y:y+42,'class':win===c?'t-fire mid':'t-s mid'},svg,'total '+sums[c]);
+    });
+    var lit = px.reduce(function(a,b){return a+b;},0);
+    $('#pc-r').innerHTML = !lit ? 'Draw something or load a shape.' : (cnt[0]+cnt[1]) + ' association cells on. ' + (win<0 ? 'Tie: the machine has no preference yet.' : 'Answer <b>' + (win+1) + '</b> wins (' + sums[0] + ' vs ' + sums[1] + ').');
+  }
+  function pre(p){ px.fill(0); var c = {v:[3,1,6],h:[3,1,6],v2:[4,1,6],h2:[4,1,6]}[p]; if(!c) return;
+    for (var t=c[1];t<=c[2];t++){ if (p[0]==='v') px[t*N+c[0]] = 1; else px[c[0]*N+t] = 1; } }
+  $$('[data-pre]').forEach(function(b){ b.addEventListener('click',function(){ pre(b.dataset.pre); draw(); }); });
+  function reinf(c){ A.forEach(function(a){ if (a.set===c && act(a)) a.v++; }); draw(); }
+  $('#pc-r1').onclick=function(){ reinf(0); }; $('#pc-r2').onclick=function(){ reinf(1); };
+  $('#pc-reset').onclick=function(){ A.forEach(function(a){ a.v=0; }); draw(); };
+  pre('v'); draw();
+})();
+(function(){ // perceptron learning rule
+  var svg = $('#pl'), ds = 'lin', w, b, i, pts, mist, epochMist, timer = null, eta = 0.3, epochs;
+  function make(){ var r = rng(11); pts = [];
+    if (ds==='lin'){ for (var k=0;k<24;k++){ var x=r()*2-1, y=r()*2-1; if (Math.abs(0.6*x - y + 0.1) < 0.15) { k--; continue; } pts.push([x,y, y > 0.6*x+0.1 ? 1 : 0]); } }
+    else { for (var k=0;k<24;k++){ var x=r()*1.6-0.8, y=r()*1.6-0.8; if (Math.abs(x)<0.12||Math.abs(y)<0.12){k--;continue;} pts.push([x,y,(x>0)!==(y>0)?1:0]); } }
+    w=[0.2,-0.6]; b=0.3; i=-1; mist=0; epochMist=0; epochs=0; }
+  function X(x){ return 280 + x*130; } function Y(y){ return 160 - y*130; }
+  function draw(){
+    clear(svg);
+    S('rect',{x:X(-1),y:Y(1),width:260,height:260,'class':'area'},svg);
+    // line w0 x + w1 y + b = 0
+    if (Math.abs(w[1])>1e-6){ var y1=(-b-w[0]*-1)/w[1], y2=(-b-w[0]*1)/w[1]; S('line',{x1:X(-1),y1:Y(y1),x2:X(1),y2:Y(y2),'class':'w-fire'},svg); }
+    else if (Math.abs(w[0])>1e-6){ var xx=-b/w[0]; S('line',{x1:X(xx),y1:Y(-1),x2:X(xx),y2:Y(1),'class':'w-fire'},svg); }
+    svg.appendChild(S('rect',{x:0,y:0,width:150,height:320,'class':'f-card'}));
+    svg.appendChild(S('rect',{x:410,y:0,width:150,height:320,'class':'f-card'}));
+    pts.forEach(function(p,k){ var g = (w[0]*p[0]+w[1]*p[1]+b)>0?1:0;
+      if (p[2]) S('circle',{cx:X(p[0]),cy:Y(p[1]),r:6,'class':'u-on'},svg); else S('rect',{x:X(p[0])-5,y:Y(p[1])-5,width:10,height:10,'class':'u-wire'},svg);
+      if (g!==p[2]) S('text',{x:X(p[0])+9,y:Y(p[1])-6,'class':'t-inh'},svg,'✗');
+      if (k===i) S('circle',{cx:X(p[0]),cy:Y(p[1]),r:12,'class':'w-ink'},svg);
+    });
+    S('text',{x:20,y:40,'class':'t-h'},svg,'weights'); S('text',{x:20,y:62,'class':'t'},svg,'w₁ = '+fmt(w[0])); S('text',{x:20,y:80,'class':'t'},svg,'w₂ = '+fmt(w[1])); S('text',{x:20,y:98,'class':'t'},svg,'b  = '+fmt(b));
+    S('text',{x:20,y:140,'class':'t-h'},svg,'mistakes'); S('text',{x:20,y:162,'class':'t'},svg,'total '+mist); S('text',{x:20,y:180,'class':'t'},svg,'passes '+epochs);
+    S('circle',{cx:430,cy:40,r:6,'class':'u-on'},svg); S('text',{x:444,y:44,'class':'t'},svg,'class 1');
+    S('rect',{x:425,y:58,width:10,height:10,'class':'u-wire'},svg); S('text',{x:444,y:67,'class':'t'},svg,'class 0');
+    var wrong = pts.filter(function(p){ return ((w[0]*p[0]+w[1]*p[1]+b)>0?1:0)!==p[2]; }).length;
+    $('#pl-r').innerHTML = wrong ? '<b>'+wrong+'</b> point(s) currently on the wrong side.' : 'All points on the correct side: learning has <b>converged</b>.';
+    return wrong;
+  }
+  function step(){ i=(i+1)%pts.length; if (i===0){ epochs++; } var p=pts[i]; var g=(w[0]*p[0]+w[1]*p[1]+b)>0?1:0, d=p[2]-g;
+    if (d){ mist++; w[0]+=eta*d*p[0]; w[1]+=eta*d*p[1]; b+=eta*d; } var wr = draw(); if (!wr && timer) toggle(); }
+  function toggle(){ var bt=$('#pl-run'); if (timer){ clearInterval(timer); timer=null; bt.setAttribute('aria-pressed','false'); bt.textContent='Run'; } else { timer=setInterval(step,120); bt.setAttribute('aria-pressed','true'); bt.textContent='Pause'; } }
+  $('#pl-step').onclick=step; $('#pl-run').onclick=toggle; $('#pl-reset').onclick=function(){ make(); draw(); };
+  $$('[data-ds]').forEach(function(bt){ bt.addEventListener('click',function(){ ds=bt.dataset.ds; $$('[data-ds]').forEach(function(x){x.classList.toggle('on',x===bt);}); make(); draw(); }); });
+  bindRange('pl-eta', function(v){ eta=v; });
+  make(); draw();
+})();
+(function(){ // Pa / Pc Monte Carlo
+  var svg = $('#pa'), th=2, x=6, y=2, ov=50;
+  function run(){
+    var r = rng(3), N=20, M=4000, s1=new Uint8Array(400), s2=new Uint8Array(400);
+    // S1 at (2,6) 8x8; S2 shifted horizontally so pixel overlap ≈ ov%
+    var shift = Math.round(8*(1-ov/100));
+    for (var yy=6;yy<14;yy++) for (var xx=2;xx<10;xx++){ s1[yy*N+xx]=1; s2[yy*N+xx+shift]=1; }
+    var a1=0,a2=0,both=0;
+    for (var m=0;m<M;m++){ var e1=0,e2=0;
+      for (var k=0;k<x;k++){ var p=Math.floor(r()*400); e1+=s1[p]; e2+=s2[p]; }
+      for (k=0;k<y;k++){ var p=Math.floor(r()*400); e1-=s1[p]; e2-=s2[p]; }
+      var f1=e1>=th, f2=e2>=th; a1+=f1; a2+=f2; both+=f1&&f2; }
+    return {pa:a1/M, pc: a1? both/a1 : 0};
+  }
+  function draw(){ var res = run(); clear(svg);
+    S('line',{x1:60,y1:190,x2:540,y2:190,'class':'axis'},svg);
+    [0,0.25,0.5,0.75,1].forEach(function(v){ var yy=190-v*160; S('line',{x1:60,y1:yy,x2:540,y2:yy,'class':'grid'},svg); S('text',{x:52,y:yy+4,'class':'t-s end'},svg,v); });
+    [['Pa',res.pa,'f-wire'],['Pc',res.pc,'f-fire']].forEach(function(b,k){ var X=140+k*200, h=b[1]*160;
+      S('rect',{x:X,y:190-h,width:120,height:Math.max(h,0.5),'class':b[2]},svg); S('text',{x:X+60,y:184-h,'class':'t mid'},svg,fmt(b[1],3)); S('text',{x:X+60,y:208,'class':'t mid'},svg,b[0]); });
+    $('#pa-r').innerHTML = 'P<sub>a</sub> ≈ <b>'+fmt(res.pa,3)+'</b>, P<sub>c</sub> ≈ <b>'+fmt(res.pc,3)+'</b>' + (res.pa<0.002?' (almost no A-units respond: threshold too high for these settings)':'');
+  }
+  bindRange('pa-th',function(v){th=v;draw();}); bindRange('pa-x',function(v){x=v;draw();}); bindRange('pa-y',function(v){y=v;draw();}); bindRange('pa-ov',function(v){ov=v;draw();});
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QLoRA (2023) study guide</title>
+<meta name="description" content="Fine-tuning a large language model normally needs a rack of expensive GPUs, because every number in the model has to sit in memory at full precision. QLoRA stores the frozen model in just 4 bits per number and trains only small add-on &quot;adapters&quot;, so a 65-billion-parameter model can be fine">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Machine learning &amp; training</b> · 2023</p>
+  <h1>QLoRA: Efficient Finetuning of Quantized LLMs</h1>
+  <p class="cite">Tim Dettmers, Artidoro Pagnoni, Ari Holtzman, Luke Zettlemoyer · NeurIPS 2023</p>
+  <p class="lede">Fine-tuning a large language model normally needs a rack of expensive GPUs, because every number in the model has to sit in memory at full precision. QLoRA stores the frozen model in just 4 bits per number and trains only small add-on "adapters", so a 65-billion-parameter model can be fine-tuned on a single 48 GB GPU with no measurable loss in quality on the benchmarks the authors tested.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/2305.14314">Read the paper (free)</a> <a href="https://lovespark.love/papers-worth-reading/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, separate AI review (also by Claude), but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Fine-tuning a 65-billion-parameter model the ordinary way needs more than 780 GB of GPU memory, far beyond any single card.</p>
+  <p>QLoRA freezes the original model, squeezes each of its numbers into 4 bits using a clever set of 16 allowed values ("NormalFloat"), and trains only small LoRA adapters bolted on top, which stay at higher precision.</p>
+  <p>Two extra tricks, compressing the compression's own bookkeeping ("double quantization") and spilling memory spikes over to ordinary computer RAM ("paged optimizers"), bring the 65B model under 48 GB.</p>
+  <p>Models trained this way match 16-bit fine-tuning on the benchmarks tested, and the resulting chatbot, Guanaco, scored 99.3% of ChatGPT's level on the Vicuna benchmark after about a day on one GPU.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1–2</p>
+  <h2>The memory wall</h2>
+  <div class="prose">
+    <p>A language model is, at heart, a huge list of numbers called <strong>parameters</strong> (or weights). LLaMA-65B has about 65 billion of them. Each one is normally stored in 16 bits, which is 2 bytes, so just holding the model takes about 130 GB.</p>
+    <p><strong>Fine-tuning</strong> means continuing to train a model on new examples so it learns a new skill, such as following instructions politely. Ordinary fine-tuning needs much more than the model itself: for every parameter you also store its <em>gradient</em> (which way to nudge it) and the optimiser's running averages. The paper puts the total for the 65B model at more than 780 GB. The biggest single GPUs of the time had 80 GB.</p>
+    <p>So fine-tuning big models was something only well-funded labs could do. QLoRA's goal is to make it possible on one card.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Model size <input type="range" id="mem-n" min="0" max="3" step="1" value="3"><output id="mem-n-o">65B</output></label>
+    </div>
+    <div class="svgbox"><svg id="mem" viewBox="0 0 600 270" role="img" aria-label="GPU memory needed by three fine-tuning methods compared with GPU sizes"></svg></div>
+    <p class="readout" id="mem-r"></p>
+    <figcaption>Bars use a log scale. "Full 16-bit fine-tuning" assumes about 12 bytes per parameter, which reproduces the paper's figure of over 780 GB for 65B. "LoRA, 16-bit model" counts only the frozen 16-bit weights (2 bytes per parameter), so its real total is a bit higher. The QLoRA bars are the paper's own measured totals (Appendix G, Fig. 6: 6.9, 11.3, 24.7 and 45.0 GB). Dashed lines mark common GPU sizes.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>You want to annotate a 20-volume encyclopaedia, but your desk only fits two volumes. QLoRA's answer: shrink the encyclopaedia into a pocket edition you will never write in, and keep your notes on a thin pad beside it.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Fine-tuning needs several times the memory of the model itself. For a 65B model that meant hundreds of gigabytes, which QLoRA cuts to under 48.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does fine-tuning need much more memory than just running the model?</dt>
+    <dd>Because training also stores, for every trainable parameter, its gradient and the optimiser's extra state, and keeps intermediate results from the forward pass for the backward pass.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §2 "Low-rank Adapters"</p>
+  <h2>Freeze the giant, train a small add-on</h2>
+  <div class="prose">
+    <p>QLoRA builds on <a href="lora.html">LoRA</a> (2021). Instead of changing all 65 billion numbers, LoRA freezes them and adds a pair of thin extra matrices next to each layer. Only those small "adapters" are trained. Their output is simply added to the frozen layer's output.</p>
+    <p>Because the adapters hold well under 1% as many numbers as the model, their gradients and optimiser state are tiny. That removes most of the 780 GB. But one big cost remains: the frozen model itself still has to sit in GPU memory, and at 16 bits that is 130 GB for LLaMA-65B. QLoRA's contribution is shrinking that frozen part.</p>
+    <p>One finding surprised the authors (§4). The original LoRA paper often added adapters only to two of the attention matrices. QLoRA found that to match full fine-tuning you need adapters on <em>every</em> linear layer of every transformer block, while the adapters' size (their "rank") barely mattered.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>LoRA already made the training part small. What was left was the frozen model's own size, and that is what QLoRA attacks.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>If the base model is frozen, why can it be stored at low precision?</dt>
+    <dd>Because it is never updated. You only need to read it during the forward and backward passes, so small rounding errors are a fixed, one-off cost rather than something that accumulates during training. The adapters, which are trained, stay at 16-bit precision.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §3 "4-bit NormalFloat" · Appendix E</p>
+  <h2>Sixteen well-placed values</h2>
+  <div class="prose">
+    <p>Storing a number in 4 bits means it can only take one of 2<sup>4</sup> = 16 possible values. This is called <strong>quantization</strong>: every real weight gets rounded to the nearest allowed value. The question is which 16 values to allow.</p>
+    <p>The simple choice is evenly spaced values, like marks on a ruler. But the weights of a trained network are not spread evenly. Most are close to zero and only a few are large, in a bell-shaped curve (a normal distribution). Evenly spaced marks waste many of their 16 slots on the rare large values and leave the crowded middle under-served.</p>
+    <p>QLoRA's <strong>4-bit NormalFloat (NF4)</strong> places the 16 values so that each one is responsible for roughly the same number of weights, assuming the bell shape. They are packed tightly near zero and spaced out at the edges. Exactly one of them is zero, so a weight that is truly zero stays exactly zero.</p>
+    <p>Each group ("block") of 64 weights is first divided by its largest absolute value, so it fits between −1 and 1, then rounded. Try both rulers below.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="nf-int" aria-pressed="false">Evenly spaced (Int4)</button><button class="btn on" id="nf-nf" aria-pressed="true">NormalFloat (NF4)</button><button class="btn" id="nf-new">New random weights</button></div>
+    <div class="svgbox"><svg id="nf" viewBox="0 0 600 270" role="img" aria-label="Histogram of normalised weights with the 16 allowed 4-bit values marked"></svg></div>
+    <p class="readout" id="nf-r"></p>
+    <figcaption>3,200 random bell-shaped weights in blocks of 64, each block scaled to [−1, 1]. Grey bars: how the weights are spread. Vertical lines: the allowed values (NF4 uses the 16 values listed in the paper's Appendix E; Int4 uses 15 evenly spaced steps of 1/7). The coloured strip at the bottom shows how many weights round to each value. The error is measured after scaling back, and NF4's is consistently lower.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>A shoe shop can only stock 16 sizes. Stocking sizes evenly from tiny to enormous means lots of empty shelves at the extremes and long queues in the middle. Stocking more sizes near the common ones serves far more customers well.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>NF4 spends its 16 values where the weights actually are, so 4-bit rounding loses less information than evenly spaced 4-bit numbers.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does NF4 put its values close together near zero?</dt>
+    <dd>Because that is where most weights are. Closely spaced values there mean most weights are rounded by only a small amount.</dd>
+    <dt>Why scale each block of 64 weights to [−1, 1] first?</dt>
+    <dd>So one fixed set of 16 values can serve every block, whatever its overall size. Only one scale number per block has to be stored to undo it.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §3 "Double Quantization", "Paged Optimizers"</p>
+  <h2>Compressing the bookkeeping, and an overflow shelf</h2>
+  <div class="prose">
+    <p>Each block of 64 weights carries one scale number, stored at 32 bits. That works out to an extra half a bit per weight, which sounds small but is about 4 GB for a 65B model. <strong>Double quantization</strong> applies the same trick to the scale numbers themselves: they are rounded to 8 bits in groups of 256, with one 32-bit scale per group. The overhead falls from 0.5 to about 0.127 bits per weight, saving roughly 3 GB on the 65B model.</p>
+    <p>The second trick deals with sudden spikes. Training on an unusually long example can briefly need more memory than the GPU has, which normally crashes the run. <strong>Paged optimizers</strong> use an NVIDIA feature called unified memory to move the optimiser's state out to the computer's ordinary RAM when the GPU fills up, and bring it back when needed. The authors report this rarely kicks in, and when it doesn't, training runs at full speed.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Double quantization is like noticing that your shipping labels take up a lot of space and printing them smaller too. Paged optimizers are an overflow shelf in the hallway for the odd day a delivery is too big for the desk.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Small savings on the scale numbers and a safety valve for memory spikes are what push the 65B model from "almost fits" to "fits" on a 48 GB card.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §4–5 · Tables 1, 4, 6</p>
+  <h2>Does it lose quality? And Guanaco</h2>
+  <div class="prose">
+    <p>The authors trained over 1,000 models to check. On standard tests, 4-bit QLoRA with NF4 scored the same as 16-bit fine-tuning: for example, on the MMLU knowledge test across LLaMA sizes from 7B to 65B, the averages were 53.1 for NF4 versus 53.0 for 16-bit (Table 4). They did not run the full 16-bit comparison at 33B and 65B because it was too expensive, and they say so.</p>
+    <p>They then trained a family of chatbots called <strong>Guanaco</strong> on OASST1, a dataset of only about 9,000 human-written conversations. With GPT-4 acting as judge, Guanaco-65B scored 99.3% of ChatGPT's level on the Vicuna benchmark (Table 6), using 41 GB of memory.</p>
+    <p>Two lessons came out of this. First, <strong>data quality beat data quantity</strong>: the 9,000 carefully written OASST1 examples made a much better chatbot than 450,000 examples from FLAN v2. Second, the benchmarks disagreed: FLAN v2 gave better MMLU scores but worse chat. The authors warn that chatbot benchmarks of the time were not fully trustworthy.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" id="elo-a" aria-pressed="true">Elo, GPT-4 as judge (Table 1)</button><button class="btn" id="elo-b" aria-pressed="false">% of ChatGPT, Vicuna benchmark (Table 6)</button></div>
+    <div class="svgbox"><svg id="elo" viewBox="0 0 600 270" role="img" aria-label="Bar chart of chatbot ratings from the paper"></svg></div>
+    <p class="readout" id="elo-r"></p>
+    <figcaption>Real numbers from the paper. Elo is a chess-style rating built from many head-to-head comparisons judged by GPT-4 (averaged over 10,000 random orderings). Guanaco models are amber. Note how the judge matters: the paper also ran human raters, and both are imperfect measures.</figcaption>
+  </figure>
+  <div class="later"><span class="label">Later refinement</span>NF4 and QLoRA became a default in open-source tools (the bitsandbytes and Hugging Face PEFT libraries), which is how many hobbyists and small labs fine-tune models today. Later work such as LoftQ and QA-LoRA tried to start the adapters in a way that compensates for the rounding error, or to make the final merged model itself 4-bit.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>4-bit storage plus adapters matched 16-bit fine-tuning on the tests run, and a small, high-quality dataset produced a chatbot close to ChatGPT on that era's benchmark.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What does it mean that FLAN v2 scored better on MMLU but worse as a chatbot?</dt>
+    <dd>That a model's score on one benchmark does not predict how good it is at another kind of task, so "best model" depends on how you measure.</dd>
+  </dl></details>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>QLoRA backpropagates gradients through a frozen, 4-bit quantized pretrained model into Low-Rank Adapters, reducing memory enough to fine-tune a 65B-parameter model on a single 48 GB GPU while preserving full 16-bit fine-tuning task performance. Three innovations save memory without sacrificing performance: 4-bit NormalFloat (NF4), an information-theoretically motivated data type for normally distributed weights; Double Quantization of the quantization constants; and Paged Optimizers for memory spikes. Over 1,000 models are fine-tuned across 8 instruction datasets, LLaMA and T5 families and scales up to 65B. The Guanaco family reaches 99.3% of ChatGPT on the Vicuna benchmark after 24 hours on one GPU. Findings: small high-quality data can give state-of-the-art results; GPT-4 evaluation is a cheap, reasonable alternative to human evaluation; current chatbot benchmarks are unreliable. Dettmers, Pagnoni, Holtzman, Zettlemoyer, NeurIPS 2023 (arXiv 2305.14314).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2</p>
+  <h2>Background: block-wise quantization, LoRA, memory</h2>
+  <div class="prose"><p><strong>Block-wise absmax quantization.</strong> Quantizing a 32-bit tensor to Int8 rescales by its absolute maximum:</p></div>
+  <div class="eq"><var>X</var><sup>Int8</sup> = round( (127 / absmax(<var>X</var><sup>FP32</sup>)) · <var>X</var><sup>FP32</sup> ) = round(<var>c</var><sup>FP32</sup> · <var>X</var><sup>FP32</sup>), &nbsp;&nbsp; dequant(<var>c</var>, <var>X</var><sup>Int8</sup>) = <var>X</var><sup>Int8</sup> / <var>c</var> <span class="n">(1–2)</span></div>
+  <div class="prose">
+    <p>A single outlier in the tensor wastes most of the quantization bins, so the flattened tensor is split into <var>n</var> = (<var>b</var>×<var>h</var>)/<var>B</var> contiguous blocks, each with its own constant <var>c<sub>i</sub></var>.</p>
+    <p><strong>LoRA.</strong> For a projection <var>XW</var> with <var>X</var> ∈ ℝ<sup><var>b</var>×<var>h</var></sup>, <var>W</var> ∈ ℝ<sup><var>h</var>×<var>o</var></sup>, LoRA adds a scaled low-rank path with <var>L</var><sub>1</sub> ∈ ℝ<sup><var>h</var>×<var>r</var></sup>, <var>L</var><sub>2</sub> ∈ ℝ<sup><var>r</var>×<var>o</var></sup>:</p>
+  </div>
+  <div class="eq"><var>Y</var> = <var>XW</var> + <var>s</var> <var>X</var> <var>L</var><sub>1</sub> <var>L</var><sub>2</sub> <span class="n">(3)</span></div>
+  <div class="prose">
+    <p><strong>Where memory goes.</strong> The paper's 7B accounting (batch 1, sequence 512, gradient checkpointing): the 4-bit base model takes 5,048 MB, LoRA parameters 26 MB, and LoRA input gradients 567 MB, which drops to about 18 MB per sequence with checkpointing. The point: once the base model is 4-bit, activation gradients rather than adapter parameters dominate the remaining training memory, so the number of adapters can be increased almost for free.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3 · Eq. 4 · Appendix E</p>
+  <h2>4-bit NormalFloat</h2>
+  <div class="prose">
+    <p>NF4 builds on <strong>quantile quantization</strong>, which is information-theoretically optimal in the sense that each bin receives an equal expected number of values. Exact quantiles are expensive to estimate per tensor, but pretrained weights are approximately zero-centred normal with some σ. Rescaling each block to [−1, 1] lets a single fixed codebook, built from the quantiles of N(0, 1), serve all blocks:</p>
+  </div>
+  <div class="eq"><var>q<sub>i</sub></var> = ½ ( <var>Q<sub>X</sub></var>( <var>i</var> / (2<sup><var>k</var></sup> + 1) ) + <var>Q<sub>X</sub></var>( (<var>i</var> + 1) / (2<sup><var>k</var></sup> + 1) ) ) <span class="n">(4)</span></div>
+  <div class="prose">
+    <p>Here <var>Q<sub>X</sub></var> is the standard normal quantile function. A symmetric k-bit construction would have no exact zero. NF4 is therefore built asymmetrically: 2<sup><var>k</var>−1</sup> = 8 quantiles for the negative half and 2<sup><var>k</var>−1</sup> + 1 = 9 for the positive half, unified with one duplicate zero removed, giving 16 values with an exact 0 (useful for padding and other zero elements). The resulting codebook from Appendix E is:</p>
+  </div>
+  <pre class="algo">−1.0000  −0.6962  −0.5251  −0.3949  −0.2844  −0.1848  −0.0911   0.0000
+ 0.0796   0.1609   0.2461   0.3379   0.4407   0.5626   0.7230   1.0000</pre>
+  <div class="prose"><p>The same machinery explains why block-wise scaling matters. A block's absmax sets its grid; one large outlier stretches the grid and every other value in the block is rounded coarsely. Smaller blocks isolate outliers but store more constants. Explore the trade-off:</p></div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Block size <input type="range" id="bs-b" min="0" max="6" step="1" value="2"><output id="bs-b-o">64</output></label>
+      <label>Outlier size (×σ) <input type="range" id="bs-o" min="0" max="40" step="1" value="20"><output id="bs-o-o">20</output></label>
+    </div>
+    <div class="svgbox"><svg id="bs" viewBox="0 0 600 260" role="img" aria-label="Quantization error and constant overhead as a function of block size"></svg></div>
+    <p class="readout" id="bs-r"></p>
+    <figcaption>A 4,096-element N(0, 1) tensor with one outlier every 512 elements, NF4-quantized per block. Amber: RMS error relative to σ (left axis). Blue: overhead of one FP32 constant per block, 32/<var>B</var> bits per parameter (right axis). Illustrative. Smaller blocks keep shrinking the error, but the overhead doubles with each halving; the paper's <var>B</var> = 64 is a compromise at 0.5 bits, which double quantization then cuts further. Set the outlier to 0 to see that block size matters much less for clean Gaussian data.</figcaption>
+  </figure>
+  <div class="prose"><p><strong>Evidence.</strong> Mean Pile Common Crawl perplexity over OPT, BLOOM, LLaMA and Pythia models from 125M to 13B (Table 2):</p></div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Data type</th><th>Mean perplexity</th></tr></thead>
+    <tbody>
+      <tr><td>Int4</td><td class="num">34.34</td></tr>
+      <tr><td>Float4 (E2M1)</td><td class="num">31.07</td></tr>
+      <tr><td>Float4 (E3M0)</td><td class="num">29.48</td></tr>
+      <tr><td>NFloat4 + DQ</td><td class="num">27.41</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose"><p>Mean zero-shot accuracy on Winogrande, HellaSwag, PiQA, Arc-Easy and Arc-Challenge (Fig. 3) tells the same story: NF4 beats FP4 and double quantization costs nothing measurable.</p></div>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §3 · Eqs. 5–6</p>
+  <h2>Double quantization, paged optimizers, and the QLoRA layer</h2>
+  <div class="prose">
+    <p><strong>Double Quantization (DQ).</strong> With block size 64 and FP32 constants, the constants cost 32/64 = 0.5 bits per parameter. DQ treats the first-level constants <var>c</var><sub>2</sub><sup>FP32</sup> as a new tensor and quantizes them to 8-bit floats with block size 256, subtracting their mean first (they are positive) so symmetric quantization can be used. This yields second-level constants <var>c</var><sub>1</sub><sup>FP32</sup>. The cost becomes 8/64 + 32/(64·256) = 0.127 bits per parameter, a saving of 0.373 bits per parameter, about 3 GB for a 65B model.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Weight block <input type="range" id="dq-b1" min="0" max="4" step="1" value="2"><output id="dq-b1-o">64</output></label>
+      <label>Constant block <input type="range" id="dq-b2" min="0" max="4" step="1" value="2"><output id="dq-b2-o">256</output></label>
+      <label>Parameters <input type="range" id="dq-p" min="7" max="70" step="1" value="65"><output id="dq-p-o">65</output>B</label>
+    </div>
+    <div class="svgbox"><svg id="dq" viewBox="0 0 600 200" role="img" aria-label="Bits per parameter for 4-bit weights with and without double quantization"></svg></div>
+    <p class="readout" id="dq-r"></p>
+    <figcaption>Exact arithmetic from §3: storage bits per parameter = 4 + 32/<var>B</var><sub>1</sub> without DQ, or 4 + 8/<var>B</var><sub>1</sub> + 32/(<var>B</var><sub>1</sub>·<var>B</var><sub>2</sub>) with DQ. Gigabytes are for the quantized weights only (10<sup>9</sup> bytes). The paper's setting is 64 and 256.</figcaption>
+  </figure>
+  <div class="prose">
+    <p><strong>Paged Optimizers.</strong> Optimizer states are allocated in NVIDIA unified memory, which pages automatically between CPU RAM and GPU when the GPU runs out, for instance on a mini-batch with long sequences while using gradient checkpointing. The paper reports no hard timing measurements but notes that for 65B models on 48 GB GPUs at batch size 16 the paged optimizers ran at the same speed as regular ones, since paging is rare.</p>
+    <p><strong>The QLoRA layer.</strong> With storage type NF4 and computation type BFloat16:</p>
+  </div>
+  <div class="eq"><var>Y</var><sup>BF16</sup> = <var>X</var><sup>BF16</sup> doubleDequant(<var>c</var><sub>1</sub><sup>FP32</sup>, <var>c</var><sub>2</sub><sup><var>k</var>-bit</sup>, <var>W</var><sup>NF4</sup>) + <var>X</var><sup>BF16</sup> <var>L</var><sub>1</sub><sup>BF16</sup> <var>L</var><sub>2</sub><sup>BF16</sup> <span class="n">(5)</span></div>
+  <div class="eq">doubleDequant(<var>c</var><sub>1</sub><sup>FP32</sup>, <var>c</var><sub>2</sub><sup><var>k</var>-bit</sup>, <var>W</var><sup><var>k</var>-bit</sup>) = dequant(dequant(<var>c</var><sub>1</sub><sup>FP32</sup>, <var>c</var><sub>2</sub><sup><var>k</var>-bit</sup>), <var>W</var><sup>4bit</sup>) = <var>W</var><sup>BF16</sup> <span class="n">(6)</span></div>
+  <div class="prose">
+    <p>Weights are dequantized on the fly, block by block, for both forward and backward passes. Gradients are computed with respect to the adapter weights only (∂<var>E</var>/∂<var>L<sub>i</sub></var>); ∂<var>E</var>/∂<var>W</var> is never needed, although backpropagating to earlier layers still passes through the dequantized <var>W</var>. Quantization error in <var>W</var> is therefore a fixed perturbation that the adapters can partially compensate for during fine-tuning.</p>
+  </div>
+  <pre class="algo"><span class="c"># Guanaco settings (Appendix B, OASST1 rows)</span>
+LoRA on all linear layers of every transformer block
+r = 64, α = 16, dropout 0.1 (7B, 13B) / 0.05 (33B, 65B)
+lr 2e-4 (7B, 13B) / 1e-4 (33B, 65B), constant schedule
+batch 16, 1,875 steps, Adam β2 = 0.999, max grad norm 0.3</pre>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is the overhead after DQ 8/64 + 32/(64·256) rather than 8/64?</dt>
+    <dd>Each 64-weight block now stores an 8-bit constant (8/64 bits per weight), and every 256 such constants share one FP32 second-level constant, which is spread over 64·256 weights.</dd>
+    <dt>Why does NF4 need an asymmetric construction?</dt>
+    <dd>An even number of symmetric quantiles has no value at exactly 0. Using 8 negative and 9 positive quantiles, sharing one zero, gives 16 values including an exact zero.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §4–5 · Tables 3–6, Table 1</p>
+  <h2>Experiments</h2>
+  <div class="prose">
+    <p><strong>Matching 16-bit fine-tuning (§4).</strong> Two hyperparameter findings come first. Adapters only on query and value projections, as in many LoRA setups, did not match full fine-tuning for large base models; adapters on all linear transformer-block layers did, and the rank <var>r</var> had no clear effect. Then, with that setup, Table 3 compares against full fine-tuning on GLUE (RoBERTa-large) and Super-NaturalInstructions (T5 80M–11B). For example, RougeL for T5-3B is 54.3 (full BF16), 55.4 (LoRA BF16) and 55.3 (QLoRA NF4 + DQ). Table 4, 5-shot MMLU after fine-tuning LLaMA on Alpaca or FLAN v2:</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Data type</th><th>7B</th><th>13B</th><th>33B</th><th>65B</th><th>Mean</th></tr></thead>
+    <tbody>
+      <tr><td>BFloat16</td><td class="num">38.4 / 45.6</td><td class="num">47.2 / 50.6</td><td class="num">57.7 / 60.5</td><td class="num">61.8 / 62.5</td><td class="num">53.0</td></tr>
+      <tr><td>Float4</td><td class="num">37.2 / 44.0</td><td class="num">47.3 / 50.0</td><td class="num">55.9 / 58.5</td><td class="num">61.3 / 63.3</td><td class="num">52.2</td></tr>
+      <tr><td>NFloat4 + DQ</td><td class="num">39.0 / 44.5</td><td class="num">47.5 / 50.7</td><td class="num">57.3 / 59.2</td><td class="num">61.8 / 63.9</td><td class="num">53.1</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>Each cell is Alpaca / FLAN v2. Note that the 16-bit baseline in Table 4 is 16-bit LoRA-style fine-tuning of the same configuration, not full fine-tuning; the full-fine-tuning equivalence was established at smaller scale only.</p>
+    <p><strong>Guanaco (§5).</strong> Trained on OASST1 (about 9k samples). Vicuna benchmark, GPT-4 judged, % of ChatGPT score with 95% CI (Table 6): Guanaco 65B 99.3 ± 4.4 (41 GB), 33B 97.8 ± 4.4 (21 GB), 13B 90.4 ± 5.2 (10 GB), 7B 87.0 ± 5.4 (5 GB), against Vicuna 13B 94.9 ± 4.5 (26 GB, 16-bit) and Bard 94.8 ± 4.1. Elo with GPT-4 as judge (Table 1): GPT-4 1348, Guanaco-65B 1022, Guanaco-33B 992, Vicuna-13B 974, ChatGPT 966, Guanaco-13B 916, Bard 902, Guanaco-7B 879.</p>
+    <p><strong>Data over size.</strong> On the Vicuna benchmark, LLaMA fine-tuned on FLAN v2 scores 44.8%, 47.0% and 38.0% at 7B, 13B and 33B, versus 87.0%, 90.4% and 97.8% with OASST1; yet FLAN v2 is better on MMLU at every size (e.g. 44.5 vs 36.6 at 7B, Table 5). Dataset suitability, not size, determines chatbot quality, and MMLU and chatbot performance are largely decoupled.</p>
+    <p><strong>Evaluation.</strong> The authors compare GPT-4 judgements with human raters, find moderate agreement at the system level but notable disagreements at the example level, and observe a position bias in GPT-4 (favouring the first response shown).</p>
+  </div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §8 and later work</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Scale of the equivalence claim.</strong> The authors did not establish that QLoRA matches full 16-bit fine-tuning at 33B and 65B, because of cost; equivalence is shown at smaller scale and against 16-bit adapter baselines at large scale.</li>
+      <li><strong>Benchmarks.</strong> Evaluation covers MMLU, the Vicuna benchmark and OA; BigBench, RAFT and HELM were not tested. Performance appears to depend on how similar the fine-tuning data is to the benchmark.</li>
+      <li><strong>Responsible AI.</strong> Only limited evaluation. On CrowS bias, Guanaco-65B scores lower (better) than raw LLaMA-65B on average (43.5 vs 66.6), but other bias types were not assessed.</li>
+      <li><strong>Untested variants.</strong> Other bit widths (e.g. 3-bit) and other adapter methods were not evaluated.</li>
+      <li><strong>Speed.</strong> Dequantizing on every pass makes QLoRA steps slower in practice than 16-bit LoRA steps on the same hardware; the method trades compute for memory.</li>
+    </ul>
+  </div>
+  <div class="later"><span class="label">Later refinements</span>QLoRA's main legacy is practical: NF4 via bitsandbytes and adapters via PEFT became the standard low-budget fine-tuning recipe. Follow-ups target its weak points. LoftQ (2023) initialises the LoRA factors to approximate the quantization residual <var>W</var> − <var>Q</var>(<var>W</var>), reducing the initial mismatch; QA-LoRA (2023) makes the merged model itself low-bit for inference. Post-training quantizers such as GPTQ and AWQ, which the paper cites or which followed, address inference rather than fine-tuning. Builds directly on <a href="lora.html">LoRA</a>; the alignment methods it is often combined with include <a href="dpo.html">DPO</a>.</div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>QLoRA saves memory. What does it cost?</dt>
+    <dd>Extra compute per step to dequantize weights block by block, a fixed quantization error in the base model, and (at the paper's time) the absence of a large-scale check against full fine-tuning.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Quantization</dt><dd>Mapping values to a small set of representable values (a codebook) to save memory.</dd>
+    <dt>Absmax</dt><dd>Scaling a block by its largest absolute value so it fits the codebook's range.</dd>
+    <dt>Block size <var>B</var></dt><dd>Number of contiguous values sharing one quantization constant (64 for weights in QLoRA).</dd>
+    <dt>NF4</dt><dd>4-bit NormalFloat: a 16-value codebook from normal quantiles with an exact zero.</dd>
+    <dt>DQ</dt><dd>Double Quantization: quantizing the quantization constants (8-bit, block 256).</dd>
+    <dt>Storage vs compute type</dt><dd>NF4 in memory, dequantized to BF16 for matrix multiplication.</dd>
+    <dt>LoRA rank <var>r</var></dt><dd>Inner dimension of the adapter factors <var>L</var><sub>1</sub><var>L</var><sub>2</sub>.</dd>
+    <dt>Paged optimizer</dt><dd>Optimizer state in unified memory that can spill to CPU RAM under memory pressure.</dd>
+    <dt>Vicuna benchmark</dt><dd>80 prompts; responses rated relative to ChatGPT by GPT-4.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="lora.html">LoRA (2021)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> (<a href="https://lovespark.love/papers-worth-reading/#qlora">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+var NF4=[-1.0,-0.6961928009986877,-0.5250730514526367,-0.39491748809814453,-0.28444138169288635,-0.18477343022823334,-0.09105003625154495,0.0,0.07958029955625534,0.16093020141124725,0.24611230194568634,0.33791524171829224,0.44070982933044434,0.5626170039176941,0.7229568362236023,1.0];
+var INT4=[]; for (var k=-7;k<=7;k++) INT4.push(k/7);
+function nearest(L,x){ var b=0, d=1e9; for (var i=0;i<L.length;i++){ var e=Math.abs(L[i]-x); if (e<d){ d=e; b=i; } } return b; }
+(function(){ // memory calculator
+  var svg=$('#mem'), sizes=[7,13,33,65], qm=[6.9,11.3,24.7,45.0], names=['7B','13B','33B','65B'];
+  function Y(gb){ return 230 - (Math.log(gb)/Math.LN10 - 0)/3*200; } // 1 GB .. 1000 GB
+  function draw(i){ clear(svg); var n=sizes[i];
+    [1,10,100,1000].forEach(function(g){ S('line',{x1:70,y1:Y(g),x2:590,y2:Y(g),'class':'grid'},svg); S('text',{x:62,y:Y(g)+4,'class':'t-s end'},svg,g>=1000?'1000 GB':g+' GB'); });
+    [[24,'24 GB'],[48,'48 GB'],[80,'80 GB']].forEach(function(p){ S('line',{x1:70,y1:Y(p[0]),x2:590,y2:Y(p[0]),'class':'w-dash'},svg); S('text',{x:588,y:Y(p[0])-4,'class':'t-s end'},svg,p[1]); });
+    var bars=[['Full 16-bit fine-tuning',n*12,'f-inh'],['LoRA, 16-bit model',n*2,'f-wire'],['QLoRA (measured)',qm[i],'f-fire']];
+    bars.forEach(function(b,k){ var x=110+k*150, y=Y(b[1]); S('rect',{x:x,y:y,width:90,height:230-y,'class':b[2]},svg);
+      S('text',{x:x+45,y:y-6,'class':'t mid'},svg,(b[1]>=100?Math.round(b[1]):fmt(b[1],1))+' GB'); S('text',{x:x+45,y:250,'class':'t-s mid'},svg,b[0]); });
+    var fit=function(g){ return g<=24?'a 24 GB consumer card':g<=48?'one 48 GB card':g<=80?'one 80 GB card':'no single GPU ('+Math.ceil(g/80)+'+ × 80 GB)'; };
+    $('#mem-r').innerHTML='LLaMA-'+names[i]+': full fine-tuning needs <b>'+fit(n*12)+'</b>; QLoRA fits on <b>'+fit(qm[i])+'</b>.'+(i===2?' (The paper notes 33B just misses 24 GB without paged optimizers.)':'');
+  }
+  var r=$('#mem-n'), o=$('#mem-n-o'); r.addEventListener('input',function(){ o.textContent=names[+r.value]; draw(+r.value); }); o.textContent=names[3]; draw(3);
+})();
+(function(){ // NF4 vs Int4 histogram
+  var svg=$('#nf'), useNF=true, seed=3, W=[];
+  function gen(){ var r=rng(seed++); W=[]; for (var b=0;b<50;b++){ var xs=[],m=0; for (var i=0;i<64;i++){ var g=gauss(r); xs.push(g); m=Math.max(m,Math.abs(g)); } xs.forEach(function(x){ W.push([x/m,m]); }); } }
+  function X(v){ return 40+(v+1)/2*520; }
+  function draw(){ clear(svg); var L=useNF?NF4:INT4, bins=[], nb=50, i, mx=0;
+    for (i=0;i<nb;i++) bins.push(0);
+    W.forEach(function(w){ var k=Math.min(nb-1,Math.floor((w[0]+1)/2*nb)); bins[k]++; });
+    bins.forEach(function(c){ mx=Math.max(mx,c); });
+    bins.forEach(function(c,k){ var h=c/mx*150; S('rect',{x:X(-1+2*k/nb)+1,y:190-h,width:520/nb-2,height:h,'class':'f-rule'},svg); });
+    var use=L.map(function(){return 0;}), err=0;
+    W.forEach(function(w){ var j=nearest(L,w[0]); use[j]++; var d=(w[0]-L[j])*w[1]; err+=d*d; });
+    err=Math.sqrt(err/W.length);
+    L.forEach(function(v,j){ S('line',{x1:X(v),y1:30,x2:X(v),y2:192,'class':v===0?'w-ok':'w-fire'},svg); });
+    var umax=Math.max.apply(null,use);
+    L.forEach(function(v,j){ var lo=j?(L[j-1]+v)/2:-1, hi=j<L.length-1?(L[j+1]+v)/2:1;
+      S('rect',{x:X(lo),y:204,width:Math.max(1,X(hi)-X(lo)-1),height:18,'class':'f-fire','fill-opacity':0.12+0.88*use[j]/umax},svg); });
+    S('line',{x1:40,y1:192,x2:560,y2:192,'class':'axis'},svg);
+    [-1,-0.5,0,0.5,1].forEach(function(v){ S('text',{x:X(v),y:240,'class':'t-s mid'},svg,v); });
+    S('text',{x:40,y:20,'class':'t-s'},svg,(useNF?'NF4':'Int4')+': '+L.length+' allowed values (green = exactly zero)');
+    S('text',{x:300,y:258,'class':'t-s mid'},svg,'weight ÷ block maximum');
+    var busy=0, quiet=0; use.forEach(function(u){ if (u>W.length*0.1) busy++; if (u<W.length*0.01) quiet++; });
+    $('#nf-r').innerHTML=(useNF?'NF4':'Int4')+': RMS rounding error <b>'+fmt(err,4)+'</b> (in units of the weights’ spread). Values used by fewer than 1% of weights: <b>'+quiet+'</b> of '+L.length+'.';
+  }
+  function set(nf){ useNF=nf; $('#nf-nf').classList.toggle('on',nf); $('#nf-int').classList.toggle('on',!nf); $('#nf-nf').setAttribute('aria-pressed',nf); $('#nf-int').setAttribute('aria-pressed',!nf); draw(); }
+  $('#nf-nf').onclick=function(){ set(true); }; $('#nf-int').onclick=function(){ set(false); }; $('#nf-new').onclick=function(){ gen(); draw(); };
+  gen(); draw();
+})();
+(function(){ // Elo / Vicuna chart
+  var svg=$('#elo'), mode=0;
+  var A=[['GPT-4',1348,0],['Guanaco 65B',1022,1],['Guanaco 33B',992,1],['Vicuna 13B',974,0],['ChatGPT',966,0],['Guanaco 13B',916,1],['Bard',902,0],['Guanaco 7B',879,1]];
+  var B=[['GPT-4',114.5,0],['Guanaco 65B',99.3,1],['Guanaco 33B',97.8,1],['Vicuna 13B',94.9,0],['OA 33B',94.9,0],['Bard',94.8,0],['Guanaco 13B',90.4,1],['Guanaco 7B',87.0,1]];
+  function draw(){ clear(svg); var D=mode?B:A, lo=mode?80:850, hi=mode?120:1400;
+    D.forEach(function(d,i){ var y=18+i*29, w=(d[1]-lo)/(hi-lo)*380; S('text',{x:120,y:y+15,'class':'t end'},svg,d[0]);
+      S('rect',{x:130,y:y,width:Math.max(2,w),height:20,'class':d[2]?'f-fire':'f-wire'},svg); S('text',{x:136+w,y:y+15,'class':'t-s'},svg,mode?fmt(d[1],1)+'%':d[1]); });
+    if (mode){ var x100=130+(100-lo)/(hi-lo)*380; S('line',{x1:x100,y1:12,x2:x100,y2:252,'class':'w-dash'},svg); S('text',{x:x100+4,y:262,'class':'t-s'},svg,'ChatGPT = 100%'); }
+    else S('text',{x:130,y:262,'class':'t-s'},svg,'axis starts at Elo 850');
+    $('#elo-r').innerHTML=mode?'Vicuna benchmark relative to ChatGPT; the 95% intervals are about ±4–5 points, so Guanaco 65B and ChatGPT are statistically tied.':'In this tournament Guanaco 65B and 33B rank above ChatGPT, but the ±1 shown in the paper covers ordering only, not judge bias.';
+  }
+  function set(m){ mode=m; $('#elo-a').classList.toggle('on',!m); $('#elo-b').classList.toggle('on',!!m); $('#elo-a').setAttribute('aria-pressed',!m); $('#elo-b').setAttribute('aria-pressed',!!m); draw(); }
+  $('#elo-a').onclick=function(){ set(0); }; $('#elo-b').onclick=function(){ set(1); }; draw();
+})();
+(function(){ // block size vs error
+  var svg=$('#bs'), Bs=[16,32,64,128,256,1024,4096], bi=2, out=20, base=[];
+  var r=rng(11); for (var i=0;i<4096;i++) base.push(gauss(r));
+  function rms(B,o){ var x=base.slice(); for (var i=0;i<x.length;i+=512) x[i]=o||x[i]; var e=0;
+    for (var s=0;s<x.length;s+=B){ var m=0, j; for (j=s;j<s+B;j++) m=Math.max(m,Math.abs(x[j])); for (j=s;j<s+B;j++){ if (o && j%512===0) continue; var q=NF4[nearest(NF4,x[j]/m)]*m; e+=(x[j]-q)*(x[j]-q); } }
+    return Math.sqrt(e/(x.length-(o?x.length/512:0))); }
+  function X(k){ return 70+k/6*460; }
+  function draw(){ clear(svg); var errs=Bs.map(function(B){ return rms(B,out); }), emax=Math.max(0.6,Math.max.apply(null,errs));
+    S('line',{x1:70,y1:210,x2:530,y2:210,'class':'axis'},svg); S('line',{x1:70,y1:20,x2:70,y2:210,'class':'axis'},svg); S('line',{x1:530,y1:20,x2:530,y2:210,'class':'axis'},svg);
+    Bs.forEach(function(B,k){ S('text',{x:X(k),y:226,'class':'t-s mid'},svg,B); });
+    S('text',{x:300,y:248,'class':'t-s mid'},svg,'block size B (values per constant)');
+    [0,0.2,0.4,0.6].forEach(function(v){ if (v<=emax){ S('text',{x:64,y:210-v/emax*180+4,'class':'t-fire end'},svg,fmt(v,1)); } });
+    [0,1,2].forEach(function(v){ S('text',{x:536,y:210-v/2*180+4,'class':'t-wire'},svg,v+' bit'); });
+    var d1='',d2=''; Bs.forEach(function(B,k){ d1+=(k?'L':'M')+X(k)+','+(210-errs[k]/emax*180); d2+=(k?'L':'M')+X(k)+','+(210-Math.min(2,32/B)/2*180); });
+    S('path',{d:d1,'class':'w-fire'},svg); S('path',{d:d2,'class':'w'},svg);
+    S('circle',{cx:X(bi),cy:210-errs[bi]/emax*180,r:6,'class':'u-on'},svg); S('circle',{cx:X(bi),cy:210-Math.min(2,32/Bs[bi])/2*180,r:5,'class':'u-wire'},svg);
+    S('text',{x:80,y:16,'class':'t-fire'},svg,'RMS error / σ'); S('text',{x:520,y:16,'class':'t-wire end'},svg,'constant overhead');
+    $('#bs-r').innerHTML='B = <b>'+Bs[bi]+'</b>: RMS error <b>'+fmt(errs[bi],3)+'</b>σ on the non-outlier values, constants cost <b>'+fmt(32/Bs[bi],3)+'</b> bits per parameter.';
+  }
+  var rb=$('#bs-b'), ob=$('#bs-b-o'); rb.addEventListener('input',function(){ bi=+rb.value; ob.textContent=Bs[bi]; draw(); });
+  bindRange('bs-o',function(v){ out=v; draw(); });
+})();
+(function(){ // double quantization calculator
+  var svg=$('#dq'), B1s=[16,32,64,128,256], B2s=[64,128,256,512,1024], b1=64, b2=256, P=65;
+  function draw(){ clear(svg); var no=32/b1, dq=8/b1+32/(b1*b2);
+    var rows=[['Without DQ',no],['With DQ',dq]];
+    rows.forEach(function(rw,k){ var y=40+k*70, sc=75; S('text',{x:110,y:y+22,'class':'t end'},svg,rw[0]);
+      S('rect',{x:120,y:y,width:4*sc,height:34,'class':'box-wire'},svg); S('text',{x:128,y:y+22,'class':'t'},svg,'4 bits: NF4 weight code');
+      var w=rw[1]*sc; S('rect',{x:120+4*sc,y:y,width:Math.max(1,w),height:34,'class':'f-fire'},svg);
+      S('text',{x:120+4*sc,y:y-6,'class':'t-fire'},svg,'+'+fmt(rw[1],3)+' bits for constants'); });
+    S('text',{x:120,y:186,'class':'t-s'},svg,'bar length = bits stored per parameter');
+    var gb=function(bits){ return P*1e9*bits/8/1e9; };
+    $('#dq-r').innerHTML='Overhead '+fmt(no,3)+' → <b>'+fmt(dq,3)+'</b> bits/param; saves <b>'+fmt(no-dq,3)+'</b> bits/param = <b>'+fmt(gb(no-dq),2)+' GB</b> on '+P+'B parameters. Weights total '+fmt(gb(4+no),1)+' → <b>'+fmt(gb(4+dq),1)+' GB</b>.';
+  }
+  var r1=$('#dq-b1'), o1=$('#dq-b1-o'), r2=$('#dq-b2'), o2=$('#dq-b2-o');
+  r1.addEventListener('input',function(){ b1=B1s[+r1.value]; o1.textContent=b1; draw(); });
+  r2.addEventListener('input',function(){ b2=B2s[+r2.value]; o2.textContent=b2; draw(); });
+  bindRange('dq-p',function(v){ P=v; draw(); });
+})();
+</script>
+
+</body>
+</html>

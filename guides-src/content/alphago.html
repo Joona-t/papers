@@ -1,0 +1,242 @@
+<!--LEDE-->
+Go was the board game computers could not crack: too many possible moves to search and no good way to tell who is winning. AlphaGo trained one network to suggest promising moves and another to judge positions, and used them to steer a tree search. It beat the European champion Fan Hui 5–0 in October 2015, the first time a program beat a professional on a full board without handicap, a feat many expected to be at least a decade away.
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>In Go there are about 250 legal moves per turn and games last about 150 moves, so looking ahead through every possibility is hopeless, and judging a position by eye is notoriously hard.</p>
+  <p>AlphaGo first trains a "policy network" to predict expert moves from 30 million positions, then improves it by playing against earlier versions of itself, and trains a "value network" to predict the winner from any position.</p>
+  <p>During a game it runs a lookahead search that only considers moves the policy network likes, and judges where each line leads by combining the value network's opinion with quick simulated play-outs to the end of the game.</p>
+  <p>The result won 494 of 495 games against the strongest Go programs and beat a professional player 5–0.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · Introduction</p>
+  <h2>Why Go was so hard</h2>
+  <div class="prose">
+    <p>Game programs traditionally <strong>search</strong>: imagine each possible move, then each reply, and so on, and pick the move whose future looks best. The number of lines to consider grows as (moves per turn) multiplied by itself once per turn of lookahead. The paper puts chess at about 35 moves per turn over about 80 turns, and Go at about 250 moves per turn over about 150 turns.</p>
+    <p>Two things make the search manageable. You can cut the <strong>breadth</strong> by only looking at sensible moves, and you can cut the <strong>depth</strong> by stopping early and estimating who is ahead. Chess programs had good hand-written estimates (count the material, check king safety). In Go, nobody could write a reliable rule for "who is winning" in the middle of the game. AlphaGo replaces both cuts with learned neural networks.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn" id="sz-chess">Chess</button><button class="btn" id="sz-go">Go</button><button class="btn" id="sz-ag">Go, narrowed and cut short</button>
+      <label>Moves considered per turn <input type="range" id="sz-b" min="2" max="300" step="1" value="250"><output id="sz-b-o">250</output></label>
+      <label>Turns of lookahead <input type="range" id="sz-d" min="1" max="200" step="1" value="150"><output id="sz-d-o">150</output></label>
+    </div>
+    <div class="svgbox"><svg id="sz" viewBox="0 0 600 170" role="img" aria-label="Size of a brute-force search tree on a logarithmic scale"></svg></div>
+    <p class="readout" id="sz-r"></p>
+    <figcaption>Number of move sequences in a full search, breadth<sup>depth</sup>, shown as a power of ten. Chess and Go use the paper's figures (b ≈ 35, d ≈ 80; b ≈ 250, d ≈ 150). The third preset is purely illustrative: 10 candidate moves and 20 turns of lookahead, the kind of narrowing a move-suggesting network and a position-judging network make possible. For scale, 10<sup>80</sup> is a commonly quoted estimate of the atoms in the observable universe.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Search explodes as breadth to the power of depth. Go needs both cut, and neither cut could be hand-written well.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · Supervised learning of policy networks</p>
+  <h2>Step 1: learn to guess what an expert would play</h2>
+  <div class="prose">
+    <p>A Go board is a 19 × 19 grid, so it can be fed to a network like a small image. AlphaGo's <strong>policy network</strong> is a 13-layer convolutional network (the same kind that recognises pictures; see <a href="alexnet.html">AlexNet</a>) that takes the board and outputs a probability for every point: "how likely is a strong player to play here?"</p>
+    <p>It was trained on 30 million positions from games on the KGS Go server and learned to predict the expert's actual move 57% of the time, against 44.4% for the best earlier attempts. That sounds modest, but there are around 250 legal moves to choose from, and often several good ones.</p>
+    <p>A second, much smaller <strong>rollout policy</strong> does the same job far more crudely (24.2% accuracy) but about a thousand times faster: 2 microseconds per move instead of 3 milliseconds. It is used to play quick games to the end during search.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A strong player glancing at a board "just sees" the two or three moves worth thinking about. The policy network is a learned version of that glance.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The policy network narrows the search: it tells the program which few moves deserve attention.</p>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · Reinforcement learning of policy and value networks</p>
+  <h2>Step 2: practise against yourself, then learn to judge</h2>
+  <div class="prose">
+    <p>Imitating humans only gets you human habits. So a copy of the policy network then played games against randomly chosen earlier versions of itself, and was nudged towards moves from games it won and away from moves in games it lost. This <strong>reinforcement learning</strong> stage produced a policy that beat the imitation-only version in more than 80% of games, and beat Pachi, a strong open-source Go program that runs 100,000 simulated games per move, in 85% of games while doing no search at all.</p>
+    <p>Then came the piece that had been missing in Go for decades: a <strong>value network</strong>, which looks at a position and predicts the probability of winning. It was trained on 30 million positions, each taken from a different self-play game. (Taking many positions from the same game made it memorise games instead of learning to judge, because neighbouring positions in a game share the same final result.) One glance from the value network was nearly as accurate as playing out many quick games with the strong policy, at 15,000 times less computation.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Self-play turns an imitator into a stronger player, and its games teach a value network to judge positions, which cuts the depth of search.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why use only one position from each self-play game to train the value network?</dt>
+    <dd>Positions from one game are very similar and share the same outcome, so the network can memorise the game rather than learn general judgement. One position per game removes that shortcut.</dd>
+    <dt>Which network cuts the breadth of search, and which cuts the depth?</dt>
+    <dd>The policy network cuts breadth (which moves to try); the value network cuts depth (stop and estimate instead of playing to the end).</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · Searching with policy and value networks · Fig. 3</p>
+  <h2>Step 3: search, guided by intuition</h2>
+  <div class="prose">
+    <p>At game time, AlphaGo runs <strong>Monte Carlo tree search</strong>. It repeatedly walks down a tree of possible moves from the current position. At each step it picks the move that balances two things: how well that move has done in earlier walks, and an exploration bonus that is large for moves the policy network likes and shrinks as a move gets tried more. When it reaches a position not yet in the tree, it adds it and judges it by mixing the value network's guess with the result of one fast rollout game. That result is passed back up the path, updating the averages.</p>
+    <p>After thousands of walks, it plays the move that was <em>visited</em> most often. Below, the same kind of search plays a tiny game: from a pile of sticks, players take 1, 2 or 3 in turn, and whoever takes the last stick wins. (The winning trick is to leave your opponent a multiple of 4.) Here every move gets an equal prior and leaves are judged only by random play-outs, so you can watch search alone find the answer.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Sticks in the pile <input type="range" id="ns-n" min="5" max="21" step="1" value="13"><output id="ns-n-o">13</output></label>
+      <button class="btn" id="ns-1">+1 walk</button><button class="btn" id="ns-10">+10</button><button class="btn" id="ns-200">+200</button><button class="btn" id="ns-rst">Reset</button>
+    </div>
+    <div class="svgbox"><svg id="ns" viewBox="0 0 600 250" role="img" aria-label="Search statistics for each of the three possible first moves"></svg></div>
+    <p class="readout" id="ns-r"></p>
+    <figcaption>Monte Carlo tree search with AlphaGo's selection rule (average result + bonus ∝ prior × √total visits / (1 + visits)), uniform priors and random-play-out evaluation. Bars: visits to each first move; the label gives its average win rate for the player choosing it. With 13 sticks the right move is to take 1 (leaving 12). With few walks the counts are noisy; with a few hundred the search concentrates on the winning move. When the pile is already a multiple of 4, every move loses against perfect play.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>The search spends its effort where the policy network points and where earlier walks found good results, and plays the move it explored most.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · Evaluating the playing strength · Fig. 6</p>
+  <h2>Beating a professional, and what came next</h2>
+  <div class="prose">
+    <p>Against the strongest commercial and open-source Go programs, the single-machine version of AlphaGo won 494 of 495 games. The distributed version ran on 1,202 CPUs and 176 GPUs. In October 2015 it played Fan Hui, a professional 2 dan and European champion in 2013, 2014 and 2015, and won the formal match 5–0 (the informal faster games went 3–2). It was the first time a computer program had beaten a professional player in an even game on the full 19 × 19 board.</p>
+    <p>A striking detail: during the match AlphaGo evaluated thousands of times fewer positions than Deep Blue did against Kasparov in chess. It searched less, but much more selectively.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>In March 2016 an improved AlphaGo beat Lee Sedol, one of the best players in the world, 4–1. In 2017 <strong>AlphaGo Zero</strong> removed the human data, the hand-crafted input features and the rollouts entirely: a single network with a policy head and a value head, trained only by self-play, beat the earlier versions. <a href="alphazero.html">AlphaZero</a> then applied the same algorithm to chess and shogi as well, and MuZero (2019) learned without even being told the rules.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Learned intuition plus selective search reached professional strength years ahead of predictions, and the next versions showed the human data was not needed at all.</p>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Go has long been viewed as the most challenging classic game for AI because of its enormous search space and the difficulty of evaluating positions and moves. Value networks evaluate positions and policy networks select moves; they are trained by supervised learning from human expert games and reinforcement learning from self-play. Without lookahead, the networks play at the level of state-of-the-art Monte Carlo tree search programs that simulate thousands of random games. Combined with MCTS in a new search algorithm, AlphaGo achieved a 99.8% win rate against other Go programs and defeated the European Go champion 5–0, the first time a computer program defeated a human professional in the full-sized game. <em>Nature</em> 529, 484–489 (28 January 2016).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · Fig. 1 · Eqs. 1–3 · Methods</p>
+  <h2>The training pipeline</h2>
+  <div class="prose">
+    <p><strong>SL policy network <var>p</var><sub>σ</sub>.</strong> Input: a 19 × 19 × 48 stack of feature planes (stone colour, liberties, ladder status, move history and so on). Architecture: first layer 5 × 5 convolutions with <var>k</var> filters, then 3 × 3 layers, 13 layers in all, ending in a softmax over board points; the match version used <var>k</var> = 192. Trained on 30 million KGS positions (29.4 million in Methods) by stochastic gradient ascent on log-likelihood of the human move:</p>
+  </div>
+  <div class="eq">Δσ ∝ ∂ log <var>p</var><sub>σ</sub>(<var>a</var> | <var>s</var>) / ∂σ <span class="n">(1)</span></div>
+  <div class="prose"><p>Test accuracy 57.0% with all features (55.7% with raw board and history only) versus a previous state of the art of 44.4%; training took about 3 weeks for 340 million steps on 50 GPUs. Small accuracy gains translated into large gains in playing strength (Fig. 2a). The <strong>rollout policy</strong> <var>p</var><sub>π</sub> is a linear softmax over fast, local pattern features: 24.2% accuracy, 2 μs per move versus 3 ms.</p>
+    <p><strong>RL policy network <var>p</var><sub>ρ</sub>.</strong> Initialised to σ; plays against an opponent drawn at random from a pool of earlier iterations (to avoid overfitting to the current policy), with terminal reward <var>z<sub>t</sub></var> = ±1 and REINFORCE:</p></div>
+  <div class="eq">Δρ ∝ ∂ log <var>p</var><sub>ρ</sub>(<var>a<sub>t</sub></var> | <var>s<sub>t</sub></var>) / ∂ρ · <var>z<sub>t</sub></var> <span class="n">(2)</span></div>
+  <div class="prose"><p>10,000 minibatches of 128 games on 50 GPUs for one day. <var>p</var><sub>ρ</sub> wins more than 80% against <var>p</var><sub>σ</sub>, and 85% against Pachi with no search (the previous best supervised network won 11% against Pachi).</p>
+    <p><strong>Value network <var>v</var><sub>θ</sub>(<var>s</var>) ≈ <var>v</var><sup><var>p</var><sub>ρ</sub></sup>(<var>s</var>).</strong> Same architecture as the policy network but with a single tanh output, trained by regression to the game outcome:</p></div>
+  <div class="eq">Δθ ∝ ∂<var>v</var><sub>θ</sub>(<var>s</var>) / ∂θ · (<var>z</var> − <var>v</var><sub>θ</sub>(<var>s</var>)) <span class="n">(3)</span></div>
+  <div class="prose"><p>Trained naively on full KGS games it overfitted (MSE 0.19 train, 0.37 test) because successive positions are strongly correlated. The fix: 30 million distinct positions, each from a separate self-play game, generated by playing <var>U</var> ∼ unif{1, 450} moves with <var>p</var><sub>σ</sub>, one uniformly random move, then <var>p</var><sub>ρ</sub> to the end; MSE 0.226 train, 0.234 test. A single evaluation approaches the accuracy of Monte Carlo rollouts with <var>p</var><sub>ρ</sub> using 15,000 times less computation (Fig. 2b).</p></div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · Fig. 3 · Eqs. 4–5 · Methods: search algorithm</p>
+  <h2>Asynchronous policy and value MCTS</h2>
+  <div class="prose"><p>Each edge (<var>s</var>, <var>a</var>) stores an action value <var>Q</var>, visit count <var>N</var> and prior probability <var>P</var>. Each simulation descends from the root choosing</p></div>
+  <div class="eq"><var>a<sub>t</sub></var> = argmax<sub><var>a</var></sub> ( <var>Q</var>(<var>s<sub>t</sub></var>, <var>a</var>) + <var>u</var>(<var>s<sub>t</sub></var>, <var>a</var>) ), &nbsp; <var>u</var>(<var>s</var>, <var>a</var>) = <var>c</var><sub>puct</sub> <var>P</var>(<var>s</var>, <var>a</var>) √(Σ<sub><var>b</var></sub> <var>N</var>(<var>s</var>, <var>b</var>)) / (1 + <var>N</var>(<var>s</var>, <var>a</var>))</div>
+  <div class="prose"><p>a variant of PUCT, with <var>c</var><sub>puct</sub> = 5. The bonus is proportional to the prior but decays with repeated visits, so search begins by following the policy and gradually prefers moves with high value. At a new leaf <var>s<sub>L</sub></var>, priors are set from <var>p</var><sub>σ</sub>(<var>a</var>|<var>s<sub>L</sub></var>) (computed asynchronously on GPU), and the leaf is evaluated by mixing</p></div>
+  <div class="eq"><var>V</var>(<var>s<sub>L</sub></var>) = (1 − λ) <var>v</var><sub>θ</sub>(<var>s<sub>L</sub></var>) + λ <var>z<sub>L</sub></var>, &nbsp; λ = 0.5</div>
+  <div class="prose">
+    <p>where <var>z<sub>L</sub></var> is the outcome of one fast rollout with <var>p</var><sub>π</sub>. Backup: <var>N</var>(<var>s</var>, <var>a</var>) counts the simulations through the edge and <var>Q</var>(<var>s</var>, <var>a</var>) is the mean of <var>V</var>(<var>s<sub>L</sub></var>) over them. The move played is the most visited at the root. Many CPU threads search in parallel; a <strong>virtual loss</strong> (<var>n</var><sub>vl</sub> = 3) temporarily discourages threads from exploring the same line.</p>
+    <p><strong>A surprise:</strong> the SL network <var>p</var><sub>σ</sub> worked better than the stronger RL network <var>p</var><sub>ρ</sub> as the source of priors, presumably because humans select a diverse beam of promising moves whereas RL optimises for the single best move. The value network trained from <var>p</var><sub>ρ</sub>'s games, however, was better than one derived from <var>p</var><sub>σ</sub>.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn" id="ab-p" aria-pressed="true">Policy network priors</button><button class="btn" id="ab-v" aria-pressed="true">Value network</button><button class="btn" id="ab-r" aria-pressed="true">Rollouts</button>
+    </div>
+    <div class="svgbox"><svg id="ab" viewBox="0 0 600 300" role="img" aria-label="Elo ratings of AlphaGo variants with components switched on or off"></svg></div>
+    <p class="readout" id="ab-r-out"></p>
+    <figcaption>Elo ratings from Extended Data Table 7 (single machine, 5 s per move, BayesElo), with programs from Extended Data Table 6 for reference. Toggle components to see the matching variant. Without the policy network, the search uses placeholder priors from a simpler tree policy. Policy network alone does no search at all. The value-only and rollout-only variants use λ = 0 and λ = 1; mixing both uses λ = 0.5.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · Fig. 4 · Fig. 6 · Extended Data Tables 6–8</p>
+  <h2>Playing strength</h2>
+  <div class="tablebox"><table>
+    <thead><tr><th>Program</th><th>Elo (Ext. Data Table 6)</th></tr></thead>
+    <tbody>
+      <tr><td>AlphaGo, distributed (1,202 CPUs, 176 GPUs)</td><td class="num">3140</td></tr>
+      <tr><td>AlphaGo, single machine (48 CPUs, 8 GPUs)</td><td class="num">2890</td></tr>
+      <tr><td>Crazy Stone</td><td class="num">1929</td></tr>
+      <tr><td>Zen</td><td class="num">1888</td></tr>
+      <tr><td>Pachi</td><td class="num">1298</td></tr>
+      <tr><td>Fuego</td><td class="num">1148</td></tr>
+      <tr><td>GnuGo</td><td class="num">431</td></tr>
+    </tbody></table></div>
+  <div class="prose">
+    <p>Single-machine AlphaGo won 494 of 495 games (99.8%) in an internal tournament against these programs. Even with four handicap stones given to the opponent it won 77%, 86% and 99% against Crazy Stone, Zen and Pachi. The distributed version won 77% against single-machine AlphaGo.</p>
+    <p><strong>Fan Hui (Fig. 6).</strong> 5–9 October 2015, five formal games (1 hour main time plus byoyomi) won 5–0, and five informal shorter games won 3–2. Fan Hui is a professional 2 dan and won the European championship in 2013, 2014 and 2015. During the match AlphaGo evaluated thousands of times fewer positions than Deep Blue did against Kasparov, compensating with selection by the policy network and evaluation by the value network.</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does mixing value network and rollouts (λ = 0.5) beat either alone?</dt>
+    <dd>They are complementary: the value network approximates the outcome of play by the strong but slow <var>p</var><sub>ρ</sub>, while rollouts give a noisy but exact-to-the-end result from the weak fast <var>p</var><sub>π</sub>. Their errors differ, so averaging helps.</dd>
+    <dt>Why are the root's visit counts, not its Q-values, used to pick the move?</dt>
+    <dd>Visits are a robust summary: a move's Q can be high by chance after few visits, but a move visited most often has been repeatedly preferred by the search after accounting for exploration.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · Discussion and lineage</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose"><ul>
+    <li><strong>Human data and features.</strong> The SL stage depends on a large corpus of expert games, and the inputs include hand-crafted Go features (liberties, ladders).</li>
+    <li><strong>Heterogeneous pipeline.</strong> Four separately trained components (SL, rollout, RL policy, value) with different roles; the RL policy is not even used in play.</li>
+    <li><strong>Compute.</strong> Training used tens of GPUs for weeks, and the strongest version ran on 1,202 CPUs and 176 GPUs.</li>
+    <li><strong>Opponent strength.</strong> Fan Hui was a 2-dan professional; the match against a top player came later.</li>
+  </ul></div>
+  <div class="later"><span class="label">Later refinements</span>AlphaGo Lee beat Lee Sedol 4–1 in March 2016. AlphaGo Zero (Silver et al., <em>Nature</em> 2017) learned tabula rasa: one residual network with policy and value heads, raw board input, no rollouts, trained only from self-play by using MCTS visit counts as policy targets; it beat AlphaGo Lee 100–0. <a href="alphazero.html">AlphaZero</a> (2017/2018) generalised that algorithm to chess and shogi; MuZero (Schrittwieser et al., 2020) learned a model for planning without being given the rules. The network-guided-search recipe also informs later work on search over reasoning steps in language models.</div>
+</section>
+
+<section class="kp" id="t5" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt><var>p</var><sub>σ</sub>, <var>p</var><sub>ρ</sub>, <var>p</var><sub>π</sub></dt><dd>SL policy, RL policy and fast rollout policy.</dd>
+    <dt><var>v</var><sub>θ</sub></dt><dd>Value network predicting the outcome from a position.</dd>
+    <dt>MCTS</dt><dd>Monte Carlo tree search: repeated simulations that grow a search tree and average results.</dd>
+    <dt>PUCT</dt><dd>Selection rule adding a prior-weighted exploration bonus to each move's mean value.</dd>
+    <dt>Rollout</dt><dd>A fast simulated game to the end, used to evaluate a leaf.</dd>
+    <dt>λ</dt><dd>Mixing weight between value network and rollout result.</dd>
+    <dt>Virtual loss</dt><dd>Temporary penalty on a line being searched by one thread, to spread threads out.</dd>
+    <dt>Elo</dt><dd>Rating scale where a 200-point gap corresponds to about a 76% expected score.</dd>
+    <dt>Dan</dt><dd>Go rank; professional ranks run from 1 to 9 dan.</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+(function(){ // search size
+  var svg=$('#sz'), b=250, d=150;
+  function draw(){ clear(svg); var e=d*Math.log10(b), X=function(v){ return 30+Math.min(v,400)/400*540; };
+    S('line',{x1:X(0),y1:90,x2:X(400),y2:90,'class':'axis'},svg);
+    [0,80,200,300,400].forEach(function(t){ S('line',{x1:X(t),y1:85,x2:X(t),y2:95,'class':'axis'},svg); S('text',{x:X(t),y:112,'class':'t-s mid'},svg,'10^'+t); });
+    S('line',{x1:X(80),y1:60,x2:X(80),y2:95,'class':'w-dash'},svg); S('text',{x:X(80),y:54,'class':'t-s mid'},svg,'atoms in universe');
+    S('rect',{x:X(0),y:76,width:Math.max(2,X(e)-X(0)),height:14,'class':'f-fire','fill-opacity':0.8},svg);
+    S('text',{x:Math.min(560,X(e)),y:140,'class':'t-big mid'},svg,'10^'+fmt(e,0));
+    $('#sz-r').innerHTML=b+' moves per turn, '+d+' turns: about <b>10<sup>'+fmt(e,0)+'</sup></b> sequences'+(e>80?', more than the atoms in the observable universe.':'.'); }
+  var rb=bindRange('sz-b',function(v){ b=v; draw(); }), rd=bindRange('sz-d',function(v){ d=v; draw(); });
+  function set(x,y){ rb.value=x; rd.value=y; rb.dispatchEvent(new Event('input')); rd.dispatchEvent(new Event('input')); }
+  $('#sz-chess').onclick=function(){ set(35,80); }; $('#sz-go').onclick=function(){ set(250,150); }; $('#sz-ag').onclick=function(){ set(10,20); };
+})();
+(function(){ // Nim MCTS
+  var svg=$('#ns'), N0=13, T, r=rng(7), sims=0;
+  function reset(){ T={}; sims=0; draw(); }
+  function rollout(n){ var me=true; while (n>0){ var k=1+Math.floor(r()*Math.min(3,n)); n-=k; if (n===0) return me?1:-1; me=!me; } return -1; }
+  function sim(n){ if (n===0) return -1; var nd=T[n];
+    if (!nd){ T[n]={N:[0,0,0],W:[0,0,0]}; return rollout(n); }
+    var L=Math.min(3,n), tot=nd.N[0]+nd.N[1]+nd.N[2], best=0, bs=-1e9;
+    for (var i=0;i<L;i++){ var q=nd.N[i]?nd.W[i]/nd.N[i]:0, u=q+1.5*(1/L)*Math.sqrt(tot+1)/(1+nd.N[i]); if (u>bs){ bs=u; best=i; } }
+    var v=-sim(n-best-1); nd.N[best]++; nd.W[best]+=v; return v; }
+  function run(k){ for (var i=0;i<k;i++){ sim(N0); sims++; } draw(); }
+  function draw(){ clear(svg); var nd=T[N0]||{N:[0,0,0],W:[0,0,0]}, mx=Math.max(1,Math.max.apply(null,nd.N));
+    for (var s=0;s<N0;s++) S('rect',{x:20+s*12,y:20,width:6,height:36,'class':'f-fire'},svg);
+    S('text',{x:24+N0*12,y:44,'class':'t-s'},svg,N0+' sticks, your move');
+    for (var i=0;i<3;i++){ var y=80+i*52, legal=i<N0, w=nd.N[i]/mx*300, win=((N0-i-1)%4===0);
+      S('text',{x:120,y:y+22,'class':'t end'},svg,'take '+(i+1)+(legal?' → '+(N0-i-1)+' left':''));
+      S('rect',{x:130,y:y,width:Math.max(1,w),height:32,'class':win?'f-ok':'f-wire','fill-opacity':0.85},svg);
+      S('text',{x:136+Math.max(1,w),y:y+14,'class':'t-s'},svg,nd.N[i]+' visits');
+      if (nd.N[i]) S('text',{x:136+Math.max(1,w),y:y+28,'class':'t-s'},svg,'win rate '+fmt(50*(1+nd.W[i]/nd.N[i]),0)+'%'); }
+    S('text',{x:130,y:244,'class':'t-s'},svg,'green bar = the move that leaves a multiple of 4 (the winning move)');
+    var b=nd.N.indexOf(Math.max.apply(null,nd.N)), any=nd.N[0]+nd.N[1]+nd.N[2];
+    $('#ns-r').innerHTML= any ? 'Walks: <b>'+sims+'</b>. Most visited: <b>take '+(b+1)+'</b>'+(N0%4===0?' (no winning move exists from a multiple of 4).':(((N0-b-1)%4===0)?', the winning move.':', not the winning move yet; keep searching.')) : 'Press a button to start searching.'; }
+  bindRange('ns-n',function(v){ N0=v; reset(); });
+  $('#ns-1').onclick=function(){ run(1); }; $('#ns-10').onclick=function(){ run(10); }; $('#ns-200').onclick=function(){ run(200); }; $('#ns-rst').onclick=reset; run(30);
+})();
+(function(){ // ablation Elo
+  var svg=$('#ab'), on={p:true,v:true,r:true};
+  var V={'pvr':['AlphaGo (all three)',2890],'pv':['policy + value, no rollouts',2177],'pr':['policy + rollouts, no value net',2416],'vr':['value + rollouts, no policy net',2077],'v':['value net only',1655],'r':['rollouts only',1457],'p':['policy net only (no search)',1517]};
+  var ref=[['Crazy Stone',1929],['Zen',1888],['Pachi',1298],['Fuego',1148],['GnuGo',431]];
+  function key(){ return (on.p?'p':'')+(on.v?'v':'')+(on.r?'r':''); }
+  function draw(){ clear(svg); var k=key(), cur=V[k], X=function(e){ return 170+e/3200*400; };
+    var rows=ref.slice(); if (cur) rows.push([cur[0],cur[1],1]); rows.sort(function(a,b){ return b[1]-a[1]; });
+    rows.forEach(function(rw,i){ var y=20+i*40; S('text',{x:160,y:y+18,'class':(rw[2]?'t-fire':'t')+' end'},svg,rw[0].length>26?rw[0].slice(0,24)+'…':rw[0]);
+      S('rect',{x:170,y:y,width:X(rw[1])-170,height:26,'class':rw[2]?'f-fire':'f-muted','fill-opacity':rw[2]?0.9:0.45},svg);
+      S('text',{x:X(rw[1])+6,y:y+18,'class':'t-s'},svg,String(rw[1])); });
+    if (!cur) S('text',{x:300,y:270,'class':'t-s mid'},svg,'(no components: nothing to play with)');
+    $('#ab-r-out').innerHTML = cur ? '<b>'+cur[0]+'</b>: Elo <b>'+cur[1]+'</b>.'+(k==='pvr'?' Every component removed costs hundreds of Elo.':'') : 'Switch at least one component on.';
+    ['p','v','r'].forEach(function(c){ $('#ab-'+c).setAttribute('aria-pressed',on[c]); }); }
+  ['p','v','r'].forEach(function(c){ $('#ab-'+c).onclick=function(){ on[c]=!on[c]; draw(); }; });
+  draw();
+})();
+</script>

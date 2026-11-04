@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Make your own study guide</title>
+<meta name="description" content="How to ask Claude or another AI to make a study guide, video or flashcards for a research paper, tailored to you, and how to check it.">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+<style>figure.prompt{gap:8px} figure.prompt pre{white-space:pre-wrap}</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guides · <b>Do it yourself</b></p>
+  <h1>Make your own study guide with AI</h1>
+  <p class="lede">The guides in this archive were written for a general reader. An AI model such as Claude can make one shaped around you instead: your background, your goal, the format you learn best from. This page shows how to ask, and how to check what you get back.</p>
+  <p class="paperlinks"><a href="index.html">All study guides</a> <a href="https://lovespark.love/papers-worth-reading/">The archive</a></p>
+</header>
+
+<section class="kp" id="why">
+  <h2>Why make your own?</h2>
+  <div class="prose">
+    <p>A ready-made guide has to guess who is reading. Yours doesn't. You can ask for explanations that start from what you already know ("I'm a nurse", "I know Python but no calculus"), analogies from things you care about, more depth on the part that confused you, and a format that suits how you learn. You can also keep asking follow-up questions, which no static page can answer.</p>
+  </div>
+</section>
+
+<section class="kp" id="ask">
+  <h2>What to put in your request</h2>
+  <div class="prose">
+    <ol>
+      <li><strong>The paper.</strong> Paste the link from this archive, or upload the PDF. Ask the AI to read the paper itself, not to work from memory.</li>
+      <li><strong>Who you are.</strong> What you already know, and what you don't. "Assume no maths beyond school algebra" or "I've trained small neural nets before" changes the whole guide.</li>
+      <li><strong>Why you're reading it.</strong> General curiosity, an exam, a job interview, building something with the idea, or deciding whether a news story is right.</li>
+      <li><strong>The format.</strong> See the list below. You can ask for more than one.</li>
+      <li><strong>How to keep it honest.</strong> Ask for section or page references for every key claim, and for the AI to say plainly when it is unsure or when a later paper changed the idea.</li>
+    </ol>
+  </div>
+</section>
+
+<section class="kp" id="formats">
+  <h2>Formats you can ask for</h2>
+  <div class="tablebox"><table>
+    <thead><tr><th>Ask for</th><th>Good for</th></tr></thead>
+    <tbody>
+      <tr><td>An interactive HTML page</td><td>Diagrams you can play with, like these guides. Claude can build one as an Artifact right in the chat, and you can download it.</td></tr>
+      <tr><td>A short explainer in plain words</td><td>A first read before you open the paper.</td></tr>
+      <tr><td>Flashcards or a quiz</td><td>Remembering it a week later. Ask for an export you can import into a flashcard app such as Anki (often a CSV file).</td></tr>
+      <tr><td>A slide deck</td><td>Presenting the paper to a study group or team.</td></tr>
+      <tr><td>A video or animation</td><td>Seeing a process move. Some AI tools can produce a narrated video overview directly. An AI coding agent (such as Claude Code) can also write and render an animation for you, for example with Manim, the open-source library made for maths explainer videos.</td></tr>
+      <tr><td>An audio script or podcast-style dialogue</td><td>Listening on a walk. Some tools can turn a paper into an audio overview for you.</td></tr>
+      <tr><td>A worked example or tiny code demo</td><td>Understanding by doing: "show me attention on a 3-word sentence with real numbers".</td></tr>
+      <tr><td>A "steelman and critique"</td><td>Seeing the paper's strongest case and its known weaknesses side by side.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="kp" id="prompts">
+  <h2>Prompts to copy and adapt</h2>
+  <div class="prose"><p>Replace the parts in square brackets. Each box has a copy button.</p></div>
+  <figure class="prompt"><pre class="algo" id="p1">Here is a research paper: [link or attached PDF]. Please read the paper itself.
+
+Make me an interactive HTML study guide for it. About me: [your background, e.g. "I work in marketing and have no maths beyond school algebra"]. I want to understand [the main idea / how it works / why it mattered].
+
+Include: a plain-language summary, 2–3 diagrams I can interact with, an everyday analogy for each key idea, and 5 check-yourself questions with answers. Give a section or page reference for every key claim, say clearly when you are unsure, and note if a later paper improved or replaced the idea.</pre><button class="btn" data-copy="p1">Copy prompt</button></figure>
+  <figure class="prompt"><pre class="algo" id="p2">I'm reading [paper title, link]. I already know [what you know]. Explain only the part I'm stuck on: [quote the sentence, equation or figure]. Use a small worked example with real numbers, then ask me two questions to check I understood.</pre><button class="btn" data-copy="p2">Copy prompt</button></figure>
+  <figure class="prompt"><pre class="algo" id="p3">Turn [paper title, link] into 20 flashcards for spaced repetition, as a CSV with columns Front and Back. Mix definitions, "why" questions and one or two numbers worth remembering. Base every card on the paper itself and include the section it comes from on the back.</pre><button class="btn" data-copy="p3">Copy prompt</button></figure>
+  <figure class="prompt"><pre class="algo" id="p4">Make a 3-minute explainer video plan for [paper title, link] aimed at [audience]: a scene-by-scene script with narration and what is shown on screen. [If you are an agent that can run code:] then build it as an animation with Manim and render it to MP4.</pre><button class="btn" data-copy="p4">Copy prompt</button></figure>
+  <figure class="prompt"><pre class="algo" id="p5">Here is a study guide that an AI wrote: [paste or attach it]. Here is the paper: [link]. Fact-check the guide against the paper. List every claim that is wrong, unsupported or out of date, quote the paper's own words as evidence, and suggest a correction.</pre><button class="btn" data-copy="p5">Copy prompt</button></figure>
+</section>
+
+<section class="kp" id="check">
+  <h2>Check what you get</h2>
+  <div class="prose">
+    <p>AI models can be confidently wrong, especially about exact numbers, who invented what, and papers newer than their training. A few habits catch most problems:</p>
+    <ul>
+      <li><strong>Spot-check the references.</strong> Open the paper at two or three of the cited sections and confirm they say what the guide claims.</li>
+      <li><strong>Be wary of precise numbers.</strong> Benchmark scores, dataset sizes and hyperparameters are where errors hide. Find them in the paper's tables.</li>
+      <li><strong>Get a second opinion.</strong> Paste the guide into a fresh chat (or a different AI) with the last prompt above and ask it to fact-check.</li>
+      <li><strong>Read the abstract and conclusion yourself.</strong> If the guide's headline doesn't match them, trust the paper.</li>
+      <li><strong>Ask "what came after?".</strong> Many ideas in this archive were later refined. The archive's "Led to" links are a good place to look.</li>
+    </ul>
+  </div>
+  <p class="takeaway"><span class="label">Rule of thumb</span>Use the AI to understand the paper, and the paper to check the AI.</p>
+</section>
+
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a>. <a href="index.html">All study guides</a>. This page was written with Claude.</p>
+</footer>
+</div>
+<script>
+document.querySelectorAll('[data-copy]').forEach(function(b){
+  b.addEventListener('click', function(){
+    var t = document.getElementById(b.dataset.copy).textContent;
+    function done(ok){ b.textContent = ok ? 'Copied' : 'Select the text and copy it'; setTimeout(function(){ b.textContent = 'Copy prompt'; }, 1800); }
+    try { navigator.clipboard.writeText(t).then(function(){ done(true); }, function(){ done(false); }); } catch (e) { done(false); }
+  });
+});
+</script>
+
+</body>
+</html>

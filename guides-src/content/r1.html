@@ -1,0 +1,290 @@
+<!--LEDE-->
+Can a language model learn to reason, rather than just imitate worked examples, if you only tell it whether its final answer was right? DeepSeek-R1 says yes: pure reinforcement learning on a strong base model, rewarded for correct answers and a simple format, produced long, self-checking chains of thought on its own (R1-Zero), and a short supervised warm-up plus further training stages made that reasoning readable (R1).
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>The team took a large pretrained model and trained it with reinforcement learning on maths, coding and logic problems, rewarding it only when its final answer was correct and its reasoning was placed inside &lt;think&gt; tags.</p>
+  <p>Without ever being shown how to reason, this model, R1-Zero, learned to think for longer and longer, to re-check its work and to try other approaches, and its score on the AIME 2024 maths competition rose from 15.6% to 71.0% (77.9% in the revised version of the paper).</p>
+  <p>Its reasoning was hard to read and switched between languages, so the full DeepSeek-R1 adds a small set of readable example solutions first, then more rounds of reinforcement learning and fine-tuning, reaching performance comparable to OpenAI's o1 on reasoning tests.</p>
+  <p>Finally, R1's reasoning traces were used to train much smaller models, which beat the same small models trained with reinforcement learning directly.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1</p>
+  <h2>Can reasoning be rewarded into existence?</h2>
+  <div class="prose">
+    <p>Large language models solve harder problems when they write out their reasoning step by step, an idea popularised by <a href="cot.html">chain-of-thought prompting</a>. In 2024 OpenAI's o1 showed that training a model to produce long reasoning before answering helps even more, but did not say how.</p>
+    <p>The usual way to teach a model to reason is to show it many human-written worked solutions. That is expensive, and it limits the model to reasoning the way people wrote it down. DeepSeek asked whether a model could discover good reasoning by itself if it were only rewarded for getting the answer right.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Teaching chess by only saying "you won" or "you lost" at the end of each game, never explaining moves. It sounds hopeless for a beginner, but a player who already knows a lot can work out, over thousands of games, which habits lead to wins.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The paper tests whether reasoning can emerge from outcome rewards alone, without examples of how to reason.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §2.1–2.2 · Table 1</p>
+  <h2>A reward a computer can check</h2>
+  <div class="prose">
+    <p>Reinforcement learning needs a score for each attempt. Many systems use a second neural network, a "reward model", to score answers, but a model being trained hard will find tricks that fool it (called <strong>reward hacking</strong>). DeepSeek avoided this for reasoning tasks by using simple rules a computer can check exactly:</p>
+    <ul>
+      <li><strong>Accuracy reward:</strong> is the final answer correct? For maths the answer must be in a set format so it can be compared; for code, the program is run against test cases.</li>
+      <li><strong>Format reward:</strong> is the reasoning placed between &lt;think&gt; and &lt;/think&gt; tags?</li>
+    </ul>
+    <p>The prompt template only says to think first and then answer; it says nothing about <em>how</em> to think. Training uses <a href="grpo.html">GRPO</a>: for each problem, sample a group of answers (16 in the revised paper) and reward each one by how it compares with the group's average. Click the answers below.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><span>Problem: "What is 7 × 8 + 4?" (correct answer 60). Click a response to inspect it.</span></div>
+    <div class="svgbox wide"><svg id="rw" viewBox="0 0 640 300" role="img" aria-label="Six responses with their rule-based rewards and group-relative advantages"></svg></div>
+    <p class="readout" id="rw-r"></p>
+    <figcaption>A made-up group of six responses scored with the paper's two rules (accuracy and format, weighted equally, as in Eq. 4 of the revised paper). The right column is each response's GRPO advantage: its reward minus the group average, divided by the group's standard deviation. Correct, well-formatted answers get the biggest push. The rule never looks at the reasoning itself.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>R1-Zero's only teachers are two checkable rules: right final answer, reasoning inside the tags.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why not use a neural network to judge whether the reasoning is good?</dt>
+    <dd>Because during long, intense training the model tends to find outputs that fool a learned judge without actually being better. A rule that checks the final answer is much harder to game.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §2.3 · Fig. 1(b), Table 2 (revised) / Fig. 3, Table 3 (v1)</p>
+  <h2>Thinking longer, on its own</h2>
+  <div class="prose">
+    <p>As training went on, R1-Zero's responses grew steadily longer, from hundreds to thousands of reasoning tokens. Nobody asked for length. Longer reasoning simply led to more correct answers, so it was rewarded. Along with length came new behaviours: checking intermediate results, noticing mistakes, and trying a different approach.</p>
+    <p>The authors highlight an "aha moment" in which an intermediate checkpoint, partway through a solution, writes "Wait, wait. Wait. That's an aha moment I can flag here." and goes back to re-evaluate its steps. They report a sharp rise in the use of the word "wait" during training.</p>
+    <p>The toy below shows why length can emerge. A "model" chooses how many checking steps to take before answering; each extra check gives another chance to catch an error. It is rewarded only for correct answers.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Chance one pass is right <input type="range" id="ln-q" min="0.05" max="0.6" step="0.05" value="0.2" data-fmt="2"><output id="ln-q-o">0.20</output></label>
+      <button class="btn" id="ln-go" aria-pressed="false">Train</button><button class="btn" id="ln-reset">Reset</button>
+    </div>
+    <div class="svgbox wide"><svg id="ln" viewBox="0 0 640 250" role="img" aria-label="Average reasoning length and accuracy rising during toy RL training"></svg></div>
+    <p class="readout" id="ln-r"></p>
+    <figcaption>Illustrative toy, not the paper's experiment. The policy picks a number of checking steps from 0 to 12; an answer with <var>k</var> checks is right with probability 1 − (1 − <var>q</var>)<sup><var>k</var>+1</sup>. Training uses GRPO with groups of 16 and a correct/incorrect reward only. Left: how likely each length is now. Right: average length (amber) and accuracy (green) over training. Harder problems (small <var>q</var>) drive the model to think longer.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Long, self-correcting reasoning was not taught; it was the behaviour that earned reward, so it grew.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>In the toy, why does nothing stop the length from growing?</dt>
+    <dd>There is no penalty for length, only a reward for correctness, and more checks never hurt. The real paper notes the same side effect: R1 can "overthink" easy questions.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §2.3–3 (revised) / §2.3 (v1)</p>
+  <h2>From R1-Zero to R1: making it readable</h2>
+  <div class="prose">
+    <p>R1-Zero reasoned well but wrote badly: its chains of thought were hard to follow and mixed English and Chinese in the same answer. It was also trained only on checkable problems, so it was not a good general assistant.</p>
+    <p>DeepSeek-R1 adds stages around the reinforcement learning:</p>
+    <ol>
+      <li><strong>Cold start:</strong> fine-tune on thousands of long, readable example solutions, so reasoning starts out in a human-friendly style.</li>
+      <li><strong>Reasoning RL:</strong> the same rule-based reinforcement learning, plus a reward for keeping the reasoning in one language.</li>
+      <li><strong>Rejection sampling and fine-tuning:</strong> generate many answers, keep only good ones (about 600,000 reasoning examples), add about 200,000 examples of ordinary tasks like writing and factual questions, and fine-tune on them.</li>
+      <li><strong>Final RL:</strong> train on all kinds of prompts, using rule-based rewards for reasoning and learned reward models for helpfulness and harmlessness.</li>
+    </ol>
+    <p>The result performed about on par with OpenAI's o1 (December 2024 version) on maths and coding benchmarks: for example 79.8% on AIME 2024 against o1's 79.2%, and 97.3% on the MATH-500 test against 96.4%.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A self-taught prodigy who solves problems brilliantly but whose notes are illegible. You first show them a few tidy worked examples, let them keep practising, collect their best solutions, and finally polish their manners for general conversation.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>R1 keeps R1-Zero's reinforcement learning at its core, and adds a little supervised data before and after to make it readable and generally useful.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §2.4, §4.1 (v1) · Tables 5–6</p>
+  <h2>Teaching small models by example</h2>
+  <div class="prose">
+    <p>The team took about 800,000 of R1's reasoning and general examples and used them to fine-tune smaller open models from the Qwen and Llama families, with no reinforcement learning at all. This is called <strong>distillation</strong>: a big model's outputs become a small model's textbook.</p>
+    <p>The distilled 7-billion-parameter model scored 55.5% on AIME 2024. And in a direct comparison on a 32B model, distillation beat running large-scale reinforcement learning on the small model itself (72.6% vs 47.0% on AIME). The authors' conclusion: reasoning patterns found by a large model transfer well, and discovering them from scratch needs a strong base model.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>R1 was released openly in January 2025, with its weights, and sparked many replications of "R1-Zero-style" training. The paper was later published in <em>Nature</em> (2025) in revised form, which this guide cites as "revised". Follow-up studies questioned how much RL adds beyond what the base model can already do when sampled many times, refined GRPO's details (Dr. GRPO, DAPO), and worked on reducing "overthinking" on easy questions.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>A big model's discovered reasoning can be cheaply handed to small models, more effectively than letting the small models discover it themselves.</p>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>General reasoning in LLMs has relied on human-annotated demonstrations. This work shows reasoning abilities can be incentivised through pure reinforcement learning, without human-labelled reasoning trajectories. The RL framework facilitates emergent reasoning patterns such as self-reflection, verification and dynamic strategy adaptation; the trained model achieves superior performance on verifiable tasks such as mathematics, coding competitions and STEM fields, surpassing counterparts trained by supervised learning on human demonstrations; and the emergent patterns can be used to guide and enhance smaller models. DeepSeek-AI, arXiv 2501.12948 (v1 January 2025; revised version corresponding to the <em>Nature</em> 2025 publication). Where the versions differ, both are given.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2.1–2.2 (revised) · Eqs. 1–4 · Table 1</p>
+  <h2>R1-Zero: GRPO with rule-based rewards</h2>
+  <div class="prose"><p>Base model: DeepSeek-V3-Base (a 671B-parameter mixture-of-experts, 37B active). Optimiser: <a href="grpo.html">GRPO</a>. For question <var>q</var>, sample {<var>o</var><sub>1</sub>, …, <var>o<sub>G</sub></var>} from π<sub>θ<sub>old</sub></sub> and maximise</p></div>
+  <div class="eq">𝒥(θ) = 𝔼 [ (1/<var>G</var>) Σ<sub><var>i</var></sub> ( min( ρ<sub><var>i</var></sub> <var>A<sub>i</sub></var>, clip(ρ<sub><var>i</var></sub>, 1 − ε, 1 + ε) <var>A<sub>i</sub></var> ) − β 𝔻<sub>KL</sub>(π<sub>θ</sub> ‖ π<sub>ref</sub>) ) ], &nbsp; ρ<sub><var>i</var></sub> = π<sub>θ</sub>(<var>o<sub>i</sub></var>|<var>q</var>) / π<sub>θ<sub>old</sub></sub>(<var>o<sub>i</sub></var>|<var>q</var>) <span class="n">(1)</span></div>
+  <div class="eq">𝔻<sub>KL</sub>(π<sub>θ</sub> ‖ π<sub>ref</sub>) = π<sub>ref</sub>(<var>o<sub>i</sub></var>|<var>q</var>)/π<sub>θ</sub>(<var>o<sub>i</sub></var>|<var>q</var>) − log ( π<sub>ref</sub>(<var>o<sub>i</sub></var>|<var>q</var>)/π<sub>θ</sub>(<var>o<sub>i</sub></var>|<var>q</var>) ) − 1 <span class="n">(2)</span></div>
+  <div class="eq"><var>A<sub>i</sub></var> = ( <var>r<sub>i</sub></var> − mean({<var>r</var><sub>1</sub>, …, <var>r<sub>G</sub></var>}) ) / std({<var>r</var><sub>1</sub>, …, <var>r<sub>G</sub></var>}) <span class="n">(3)</span></div>
+  <div class="eq">Reward<sub>rule</sub> = Reward<sub>acc</sub> + Reward<sub>format</sub> <span class="n">(4)</span></div>
+  <div class="prose">
+    <p><strong>Rewards.</strong> Accuracy: deterministic answer checking (boxed final answer for maths, compiler and test cases for code). Format: reasoning enclosed in &lt;think&gt;…&lt;/think&gt;. No neural outcome or process reward model is used for reasoning, because "neural reward models are susceptible to reward hacking during large-scale reinforcement learning", and retraining them adds cost and complexity.</p>
+    <p><strong>Template (Table 1).</strong> The system prompt describes a conversation in which the assistant first thinks about the reasoning process and then provides the answer, with the two enclosed in &lt;think&gt; and &lt;answer&gt; tags. The constraint is deliberately limited to structure, to avoid content-specific biases such as mandating reflection or particular strategies, so that the natural progression under RL can be observed.</p>
+  </div>
+  <pre class="algo"><span class="c"># R1-Zero settings (revised paper, §2.1)</span>
+learning rate 3e-6, KL coefficient β = 0.001, rollout temperature 1
+G = 16 samples per question, 32 questions per step (batch 512)
+max length 32,768 tokens, raised to 65,536 after step 8.2k
+10,400 steps (~1.6 epochs); π_ref reset to current policy every 400 steps
+each rollout: 8,192 outputs split into 16 mini-batches, one inner epoch</pre>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §2.3 · Fig. 1, Table 2 (revised); §2.2, Table 2, Fig. 2–3 (v1)</p>
+  <h2>R1-Zero results and emergent behaviour</h2>
+  <div class="prose">
+    <p><strong>AIME 2024.</strong> Pass@1 rises from 15.6% at the start of RL to 71.0% at the end in v1, and to 77.9% in the revised paper's longer run; with majority voting it reaches 86.7% (cons@64 in v1; the revised paper labels it cons@16). In v1's Table 2, R1-Zero is compared with OpenAI's o1-0912: AIME pass@1 71.0 vs 74.4 (cons@64 86.7 vs 83.3), MATH-500 95.9 vs 94.8, GPQA Diamond 73.3 vs 77.3, LiveCodeBench 50.0 vs 63.4, Codeforces rating 1444 vs 1843.</p>
+    <p><strong>Self-evolution.</strong> Average response length grows steadily through training (revised Fig. 1b, v1 Fig. 3), from hundreds to thousands of reasoning tokens, i.e. the model learns to allocate more test-time compute. Reflection and exploration of alternatives appear without being specified. The revised paper links the "aha moment" (Table 2) to a sudden increase in the use of "wait" during reflections (Supplementary Fig. 9b).</p>
+    <p><strong>Drawbacks.</strong> Poor readability and language mixing (mainly English and Chinese in one chain of thought), and a narrow focus on verifiable tasks.</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does the format reward exist if the accuracy reward is what matters?</dt>
+    <dd>It forces a separation between reasoning and answer, which makes answers extractable for checking and makes the emergent reasoning observable, without constraining its content.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §3 (revised) · §2.3 (v1)</p>
+  <h2>The DeepSeek-R1 pipeline</h2>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" id="ps-0" aria-pressed="true">1 · Cold start</button><button class="btn" id="ps-1" aria-pressed="false">2 · Reasoning RL</button><button class="btn" id="ps-2" aria-pressed="false">3 · Rejection sampling + SFT</button><button class="btn" id="ps-3" aria-pressed="false">4 · RL, all scenarios</button></div>
+    <div class="svgbox wide"><svg id="ps" viewBox="0 0 640 175" role="img" aria-label="The four training stages of DeepSeek-R1"></svg></div>
+    <p class="readout" id="ps-r"></p>
+    <figcaption>Stage details combine v1 §2.3 and the revised §3 / Supplementary B. Counts are as reported (Table 5 of the revised supplementary gives 804,745 SFT samples).</figcaption>
+  </figure>
+  <div class="prose">
+    <p>The language consistency reward is the proportion of target-language words in the chain of thought, added to the accuracy reward. The v1 ablation found it slightly degrades benchmark performance, a cost accepted for readability. In the revised paper, the final RL stage runs 1,700 steps, with general instruction and preference-based rewards used only in the last 400 steps, a guard against reward hacking of learned reward models.</p>
+  </div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §3 Tables 4–6 (v1); Table 3 (revised)</p>
+  <h2>Results and distillation</h2>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" id="bm-0" aria-pressed="true">R1 vs o1-1217</button><button class="btn" id="bm-1" aria-pressed="false">Distilled models (AIME)</button><button class="btn" id="bm-2" aria-pressed="false">Distill vs RL at 32B</button></div>
+    <div class="svgbox"><svg id="bm" viewBox="0 0 600 270" role="img" aria-label="Benchmark results from the paper"></svg></div>
+    <p class="readout" id="bm-r"></p>
+    <figcaption>Real numbers from v1 Tables 4, 5 and 6 (pass@1 % unless stated; Codeforces as percentile). The R1 numbers are also those of the revised paper's Table 3. Distilled models are fine-tuned only (no RL) on ~800k R1-generated samples. R1-Zero-Qwen-32B is Qwen2.5-32B-Base trained with large-scale RL (over 10K steps) directly.</figcaption>
+  </figure>
+  <div class="prose">
+    <p>R1 is weaker than o1-1217 on GPQA Diamond (71.5 vs 75.7) and slightly on MMLU (90.8 vs 91.8) and Codeforces percentile (96.3 vs 96.6). Distillation from a stronger model beats RL on the small model by a wide margin (AIME 72.6 vs 47.0 at 32B), and the authors note that pushing beyond this may still require more powerful base models and larger-scale RL.</p>
+    <p><strong>Unsuccessful attempts (v1 §4.2).</strong> Process reward models: hard to define fine-grained steps in general reasoning, hard to judge intermediate correctness, model-based annotation invites reward hacking, and retraining adds cost; useful for reranking but not worth it for large-scale RL here. Monte Carlo Tree Search: the token-level search space is vastly larger than in games, per-node extension limits lead to local optima, and training a fine-grained value model to guide search is hard, so iterative self-improvement via search did not work out.</p>
+  </div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §6 (revised), §5 (v1) and later work</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Structured output and tool use</strong> lag behind existing models.</li>
+      <li><strong>Token efficiency.</strong> Overthinking on simple questions.</li>
+      <li><strong>Language mixing</strong> for languages other than Chinese and English.</li>
+      <li><strong>Prompt sensitivity.</strong> Few-shot prompting degrades performance; zero-shot with a clear format is recommended.</li>
+      <li><strong>Software engineering.</strong> Limited gains over DeepSeek-V3, because long evaluation times make large-scale RL on such tasks expensive.</li>
+      <li><strong>Reward hacking</strong> remains the obstacle for tasks without reliable verifiers, such as writing.</li>
+    </ul>
+  </div>
+  <div class="later"><span class="label">Later refinements</span>R1 built on <a href="grpo.html">GRPO</a> from DeepSeekMath and on <a href="cot.html">chain-of-thought</a> prompting; it follows OpenAI's undisclosed o1 and appeared alongside Kimi k1.5, which reported similar RL-on-verifiable-rewards findings. Open replications (e.g. on smaller Qwen bases) followed quickly. Analyses such as "Understanding R1-Zero-like training" (Liu et al., 2025, introducing Dr. GRPO) argued part of the length growth comes from GRPO's length normalisation bias, and DAPO (Yu et al., 2025) reworked clipping and sampling for stability. Yue et al. (2025) found RL-trained models often do not exceed their base models' Pass@<var>K</var> at large <var>K</var>, echoing DeepSeekMath's earlier observation that RL mainly sharpens existing abilities. Compare the RLHF pipeline of <a href="instructgpt.html">InstructGPT</a>, whose learned reward model R1 replaces with rules for reasoning tasks.</div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What does the distillation result imply about where R1's gains come from?</dt>
+    <dd>That the reasoning patterns themselves, once discovered by a large model, are transferable data; small models struggle to discover them by RL, so base-model capacity matters for discovery, not for use.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>R1-Zero</dt><dd>DeepSeek-V3-Base trained with RL only, no SFT.</dd>
+    <dt>Cold start</dt><dd>Small SFT set of long, readable CoT examples before RL.</dd>
+    <dt>Rule-based reward</dt><dd>Programmatic correctness and format checks.</dd>
+    <dt>Pass@1</dt><dd>Accuracy of a single sample (estimated by averaging several samples).</dd>
+    <dt>cons@64</dt><dd>Accuracy of the majority answer over 64 samples.</dd>
+    <dt>Rejection sampling</dt><dd>Generating many outputs and keeping only those that pass a check.</dd>
+    <dt>Distillation</dt><dd>Training a smaller model on a larger model's outputs.</dd>
+    <dt>PRM</dt><dd>Process reward model, scoring intermediate steps.</dd>
+    <dt>MCTS</dt><dd>Monte Carlo Tree Search over partial solutions.</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+function softmaxR(t){ var m=Math.max.apply(null,t), e=t.map(function(v){return Math.exp(v-m);}), z=e.reduce(function(a,b){return a+b;},0); return e.map(function(v){return v/z;}); }
+(function(){ // rule-based reward
+  var svg=$('#rw'), sel=0;
+  var R=[['<think>7×8 = 56, plus 4 is 60. Check: 60−4 = 56 = 7×8.</think> <answer>60</answer>',1,1],
+         ['<think>7×8 = 54… so 54+4 = 58.</think> <answer>58</answer>',0,1],
+         ['The answer is 60.',1,0],
+         ['<think>8+4 = 12, then 7×12 = 84.</think> <answer>84</answer>',0,1],
+         ['<think>7×8 = 56. Wait, add 4 first? No: multiply first. 56+4 = 60.</think> <answer>60</answer>',1,1],
+         ['<answer>60</answer> because I am confident',1,0]];
+  var rs=R.map(function(x){ return x[1]+x[2]; }), m=rs.reduce(function(a,b){return a+b;},0)/rs.length, sd=Math.sqrt(rs.reduce(function(a,b){return a+(b-m)*(b-m);},0)/rs.length);
+  function draw(){ clear(svg);
+    S('text',{x:16,y:18,'class':'t-s'},svg,'response'); S('text',{x:472,y:18,'class':'t-s mid'},svg,'acc'); S('text',{x:512,y:18,'class':'t-s mid'},svg,'format'); S('text',{x:560,y:18,'class':'t-s mid'},svg,'total'); S('text',{x:610,y:18,'class':'t-s mid'},svg,'adv.');
+    R.forEach(function(x,i){ var y=28+i*44, g=S('g',{'class':'clickable'},svg), a=(rs[i]-m)/sd;
+      S('rect',{x:8,y:y,width:624,height:38,rx:3,'class':i===sel?'box-fire':'box'},g);
+      var txt=x[0].length>56?x[0].slice(0,55)+'…':x[0]; S('text',{x:16,y:y+23,'class':'t'},g,txt);
+      S('text',{x:472,y:y+23,'class':x[1]?'t-ok mid':'t-inh mid'},g,x[1]); S('text',{x:512,y:y+23,'class':x[2]?'t-ok mid':'t-inh mid'},g,x[2]); S('text',{x:560,y:y+23,'class':'t mid'},g,rs[i]);
+      S('text',{x:610,y:y+23,'class':a>0?'t-fire mid':'t-wire mid'},g,(a>0?'+':'')+fmt(a,2));
+      g.addEventListener('click',function(){ sel=i; draw(); }); });
+    var x=R[sel];
+    $('#rw-r').innerHTML='Selected: “'+x[0].replace(/</g,'&lt;')+'” → accuracy <b>'+x[1]+'</b>, format <b>'+x[2]+'</b>. Group mean '+fmt(m,2)+', std '+fmt(sd,2)+'. '+(sel===1||sel===3?'Well formatted but wrong: still pushed down.':(sel===2||sel===5?'Right answer, but no &lt;think&gt; block: only half the reward.':'Right and well formatted: pushed up the most, whatever the reasoning says.'));
+  }
+  draw();
+})();
+(function(){ // length emergence toy
+  var svg=$('#ln'), q=0.2, N=13, th, hist, it, rr, timer=null;
+  function pc(k){ return 1-Math.pow(1-q,k+1); }
+  function reset(){ th=[]; for (var k=0;k<N;k++) th.push(k<3?1.5:0); hist=[]; it=0; rr=rng(13); draw(); }
+  function stats(){ var p=softmaxR(th), L=0, A=0; p.forEach(function(x,k){ L+=x*k; A+=x*pc(k); }); return [L,A]; }
+  function step(){ var p=softmaxR(th), G=16, acts=[], rew=[];
+    for (var i=0;i<G;i++){ var u=rr(), a=0, c=p[0]; while (u>c && a<N-1){ a++; c+=p[a]; } acts.push(a); rew.push(rr()<pc(a)?1:0); }
+    var m=rew.reduce(function(s,x){return s+x;},0)/G, sd=Math.sqrt(rew.reduce(function(s,x){return s+(x-m)*(x-m);},0)/G);
+    if (sd>0){ var g=th.map(function(){return 0;}); acts.forEach(function(a,i){ var A=(rew[i]-m)/sd; for (var k=0;k<N;k++) g[k]+=A*((k===a?1:0)-p[k])/G; }); th=th.map(function(t,k){ return t+0.4*g[k]; }); }
+    it++; hist.push(stats()); }
+  function draw(){ clear(svg); var p=softmaxR(th), st=stats();
+    S('line',{x1:20,y1:200,x2:300,y2:200,'class':'axis'},svg);
+    p.forEach(function(x,k){ var h=x*170; S('rect',{x:24+k*21,y:200-h,width:17,height:Math.max(1,h),'class':'f-fire'},svg); if (k%2===0) S('text',{x:32+k*21,y:216,'class':'t-s mid'},svg,k); });
+    S('text',{x:160,y:236,'class':'t-s mid'},svg,'checking steps chosen (probability)');
+    var X=function(i){ return 360+i/Math.max(300,hist.length)*260; }, YL=function(v){ return 200-v/12*170; }, YA=function(v){ return 200-v*170; };
+    S('line',{x1:360,y1:200,x2:620,y2:200,'class':'axis'},svg); S('line',{x1:360,y1:30,x2:360,y2:200,'class':'axis'},svg);
+    S('text',{x:366,y:24,'class':'t-fire'},svg,'avg length (0–12)'); S('text',{x:618,y:24,'class':'t-ok end'},svg,'accuracy (0–1)');
+    S('text',{x:490,y:220,'class':'t-s mid'},svg,'training steps');
+    if (hist.length>1){ var d1='',d2=''; hist.forEach(function(h,i){ d1+=(i?'L':'M')+X(i)+','+YL(h[0]); d2+=(i?'L':'M')+X(i)+','+YA(h[1]); }); S('path',{d:d1,'class':'w-fire'},svg); S('path',{d:d2,'class':'w-ok'},svg); }
+    $('#ln-r').innerHTML='Step <b>'+it+'</b>. Average checking steps <b>'+fmt(st[0],2)+'</b>; expected accuracy <b>'+fmt(st[1],3)+'</b>.';
+  }
+  bindRange('ln-q',function(v){ q=v; if (!timer) reset(); });
+  $('#ln-reset').onclick=function(){ if (timer){ clearInterval(timer); timer=null; $('#ln-go').textContent='Train'; $('#ln-go').setAttribute('aria-pressed','false'); } reset(); };
+  $('#ln-go').onclick=function(){ var b=this; if (timer){ clearInterval(timer); timer=null; b.textContent='Train'; b.setAttribute('aria-pressed','false'); return; }
+    b.textContent='Pause'; b.setAttribute('aria-pressed','true');
+    timer=setInterval(function(){ for (var k=0;k<3;k++) step(); draw(); if (it>=600){ clearInterval(timer); timer=null; b.textContent='Train'; b.setAttribute('aria-pressed','false'); } },40); };
+})();
+(function(){ // pipeline stages
+  var svg=$('#ps'), st=0;
+  var S4=[['Cold start','SFT on thousands of long, readable CoT examples (few-shot prompting with long CoT, cleaned R1-Zero outputs, human post-processing). Gives a readable output format with a summary at the end.'],
+          ['Reasoning RL','GRPO on maths, code, science and logic with rule-based accuracy rewards plus a language consistency reward (share of target-language words in the CoT).'],
+          ['Rejection sampling + SFT','From the RL checkpoint, sample and keep correct, readable responses: ~600k reasoning samples (some judged by DeepSeek-V3). Add ~200k non-reasoning samples (writing, factual QA, self-cognition, translation). Fine-tune DeepSeek-V3-Base on ~800k for two epochs.'],
+          ['RL, all scenarios','Second RL stage over diverse prompts: rule-based rewards for reasoning; reward models for helpfulness (judged on the final summary) and harmlessness (judged on the whole response).']];
+  function draw(){ clear(svg);
+    S4.forEach(function(s,i){ var x=10+i*158; S('rect',{x:x,y:30,width:146,height:50,rx:4,'class':i===st?'box-fire':(i<st?'box-ok':'box')},svg); S('text',{x:x+73,y:52,'class':'t mid'},svg,(i+1)+'. '+s[0].split(' ')[0]); S('text',{x:x+73,y:68,'class':'t-s mid'},svg,s[0].split(' ').slice(1).join(' ')||' ');
+      if (i<3) S('line',{x1:x+146,y1:55,x2:x+157,y2:55,'class':'w','marker-end':'url(#aw)'},svg); });
+    S('text',{x:10,y:18,'class':'t-s'},svg,'DeepSeek-V3-Base → … → DeepSeek-R1');
+    var words=S4[st][1].split(' '), lines=[], cur=''; words.forEach(function(w){ if ((cur+' '+w).length>84){ lines.push(cur); cur=w; } else cur=cur?cur+' '+w:w; }); lines.push(cur);
+    lines.forEach(function(l,k){ S('text',{x:14,y:110+k*18,'class':'t'},svg,l); });
+    $('#ps-r').innerHTML='Stage <b>'+(st+1)+'</b> of 4: '+S4[st][0]+'.';
+  }
+  [0,1,2,3].forEach(function(k){ $('#ps-'+k).onclick=function(){ st=k; [0,1,2,3].forEach(function(j){ $('#ps-'+j).classList.toggle('on',j===k); $('#ps-'+j).setAttribute('aria-pressed',j===k); }); draw(); }; });
+  draw();
+})();
+(function(){ // benchmarks
+  var svg=$('#bm'), mode=0;
+  var D=[
+    {t:'DeepSeek-R1 (amber) vs OpenAI-o1-1217 (blue)', rows:[['AIME 2024',79.8,79.2],['MATH-500',97.3,96.4],['Codeforces pct.',96.3,96.6],['GPQA Diamond',71.5,75.7],['MMLU',90.8,91.8]], two:true, note:'R1 matches o1-1217 on maths, trails on GPQA Diamond.'},
+    {t:'AIME 2024 pass@1 of distilled models (SFT only)', rows:[['Qwen-1.5B',28.9],['Qwen-7B',55.5],['Llama-8B',50.4],['Qwen-14B',69.7],['Qwen-32B',72.6],['Llama-70B',70.0]], two:false, note:'Even the 7B distilled model scores 55.5%. MATH-500 for these models ranges from 83.9 (1.5B) to 94.5 (Llama-70B).'},
+    {t:'Qwen-32B: distilled from R1 (amber) vs RL directly (blue)', rows:[['AIME 2024',72.6,47.0],['MATH-500',94.3,91.6],['GPQA Diamond',62.1,55.0],['LiveCodeBench',57.2,40.2]], two:true, note:'Distillation beats >10K steps of RL on the same base model on every benchmark.'}];
+  function draw(){ clear(svg); var d=D[mode], n=d.rows.length, h=Math.min(44,220/n);
+    S('text',{x:10,y:16,'class':'t-s'},svg,d.t);
+    d.rows.forEach(function(r,i){ var y=28+i*h, bw=d.two?(h-10)/2:h-10; S('text',{x:130,y:y+h/2,'class':'t end'},svg,r[0]);
+      S('rect',{x:140,y:y,width:r[1]*4,height:bw,'class':'f-fire'},svg); S('text',{x:146+r[1]*4,y:y+bw-3,'class':'t-s'},svg,fmt(r[1],1));
+      if (d.two){ S('rect',{x:140,y:y+bw+2,width:r[2]*4,height:bw,'class':'f-wire'},svg); S('text',{x:146+r[2]*4,y:y+2*bw-1,'class':'t-s'},svg,fmt(r[2],1)); } });
+    S('line',{x1:140,y1:24,x2:140,y2:252,'class':'axis'},svg); [0,25,50,75,100].forEach(function(v){ S('text',{x:140+v*4,y:266,'class':'t-s mid'},svg,v); });
+    $('#bm-r').textContent=d.note; }
+  [0,1,2].forEach(function(k){ $('#bm-'+k).onclick=function(){ mode=k; [0,1,2].forEach(function(j){ $('#bm-'+j).classList.toggle('on',j===k); $('#bm-'+j).setAttribute('aria-pressed',j===k); }); draw(); }; });
+  draw();
+})();
+</script>

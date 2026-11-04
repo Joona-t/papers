@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AlexNet (2012) study guide</title>
+<meta name="description" content="Could a neural network learn to recognise objects in ordinary photographs, across a thousand categories, better than the carefully engineered systems of the day? This paper trained a much larger convolutional network than anyone had before, on two graphics cards, and cut the error in the 2012 ImageN">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Computer vision</b> · 2012</p>
+  <h1>ImageNet Classification with Deep Convolutional Neural Networks</h1>
+  <p class="cite">Alex Krizhevsky, Ilya Sutskever, Geoffrey Hinton · NeurIPS 2012</p>
+  <p class="lede">Could a neural network learn to recognise objects in ordinary photographs, across a thousand categories, better than the carefully engineered systems of the day? This paper trained a much larger convolutional network than anyone had before, on two graphics cards, and cut the error in the 2012 ImageNet challenge from 26.2% to 15.3%. The margin was so large that computer vision switched to deep learning almost overnight.</p>
+  <p class="paperlinks"><a href="https://papers.nips.cc/paper_files/paper/2012/hash/c399862d3b9d6b76c8436e924a68c45b-Abstract.html">Read the paper (free)</a> <a href="https://lovespark.love/papers-worth-reading/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, separate AI review (also by Claude), but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>ImageNet offered 1.2 million labelled photos in 1,000 categories, enough data, for the first time, to train a really big network without it simply memorising the examples.</p>
+  <p>The authors built a convolutional network with 60 million adjustable numbers, used a very simple on/off-style switch in each unit (the ReLU) so it trained much faster, and split the work across two graphics cards.</p>
+  <p>To stop it memorising, they showed it shifted, mirrored and recoloured copies of each photo, and randomly switched off half the units in its final layers during training ("dropout").</p>
+  <p>It won the 2012 ImageNet competition with 15.3% top-5 error against 26.2% for the next best entry, a gap that convinced the field.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1–2 · §6</p>
+  <h2>A big test, and a big win</h2>
+  <div class="prose">
+    <p>For years, computers were tested on recognising objects in small collections of photos: tens of thousands of images at most. <strong>ImageNet</strong> changed that. Its yearly competition (ILSVRC) used about 1.2 million training photos, each labelled with one of 1,000 categories: many breeds of dog, types of mushroom, cars, boats, tools and so on.</p>
+    <p>The main score is <strong>top-5 error</strong>: the system may give five guesses, and it counts as wrong only if the correct label is not among them. This is fair because many photos contain several objects, or categories that even people confuse.</p>
+    <p>In 2012 the team's network scored 15.3% top-5 error. The second-best team, which used the best hand-engineered approach of the time, scored 26.2%. In a competition where improvements had come a point or two at a time, this was a leap.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Imagine a quiz where you name the object in a photo and may give five answers. The previous champion missed about one photo in four. The newcomer missed about one in seven.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>With enough labelled data and enough computing power, a learned network beat decades of hand-designed vision features by a wide margin.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does ImageNet use top-5 error rather than only counting the single best guess?</dt>
+    <dd>Photos often contain several objects, and some categories are very similar, so a sensible second or third guess should not count as a failure.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §3.1 · Fig. 1</p>
+  <h2>A simpler switch that learns faster</h2>
+  <div class="prose">
+    <p>Each unit in a neural network adds up its inputs and then passes the total through an <strong>activation function</strong>. The common choice was a smooth S-shaped curve (tanh) that flattens out for large inputs. Once a unit is far out on a flat part, small changes to its input barely change its output, so the learning signal that tells it how to improve becomes tiny.</p>
+    <p>AlexNet used the <strong>rectified linear unit</strong>, or ReLU: output the input if it is positive, otherwise output zero. For positive inputs it never flattens out. The paper's Fig. 1 shows a small four-layer network with ReLUs reaching a target training error on a smaller image dataset (CIFAR-10) about six times faster than the same network with tanh.</p>
+    <p>Move the slider to change a unit's total input and compare how much of a small nudge each function passes on.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Unit's input <input type="range" id="rl-x" min="-4" max="4" step="0.1" value="2.5" data-fmt="1"><output id="rl-x-o">2.5</output></label><label>Layers in a row <input type="range" id="rl-n" min="1" max="8" step="1" value="4"><output id="rl-n-o">4</output></label></div>
+    <div class="svgbox"><svg id="rl" viewBox="0 0 600 250" role="img" aria-label="tanh and ReLU curves with their slopes at the chosen input"></svg></div>
+    <p class="readout" id="rl-r"></p>
+    <figcaption>The slope (dashed tangent line) is how much a small change in input changes the output, which is what learning relies on. "Layers in a row" multiplies the slope across that many units with the same input, a rough picture of a learning signal travelling back through a deep network. Illustrative: in a real network each unit has its own input.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>ReLUs keep the learning signal strong wherever they are active, which made training a large network fast enough to be practical.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>A tanh unit has an input of 3. Why does it learn slowly?</dt>
+    <dd>tanh is almost flat there (slope about 0.01), so changes to its weights barely change its output and the error signal reaching it is tiny.</dd>
+    <dt>What is the ReLU's weak spot?</dt>
+    <dd>For negative inputs its slope is zero, so a unit that is always "off" gets no learning signal at all.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §3.2 · §3.5 · Fig. 2</p>
+  <h2>Big network, two graphics cards</h2>
+  <div class="prose">
+    <p>The network has eight learned layers: five convolutional layers (the sliding pattern detectors introduced by <a href="lenet.html">LeNet</a>) and three ordinary fully connected layers, ending in 1,000 outputs, one per category. It has about 60 million adjustable numbers and 650,000 units.</p>
+    <p>That was too big for one graphics card of the day, which had 3 GB of memory. So the authors split the network down the middle: half the feature maps on each card, and the two halves only exchange information at certain layers. Graphics cards (GPUs) are built to do thousands of simple multiplications at once, which is exactly what a convolutional network needs. Training still took five to six days.</p>
+  </div>
+  <figure>
+    <div class="svgbox wide"><svg viewBox="0 0 640 210" role="img" aria-label="AlexNet split across two GPUs">
+      <text x="10" y="20" class="t-s">GPU 1</text><text x="10" y="196" class="t-s">GPU 2</text>
+      <rect x="14" y="80" width="46" height="46" class="box"/><text x="37" y="146" class="t-s mid">image</text>
+      <g><rect x="90" y="30" width="54" height="50" class="box-wire"/><rect x="90" y="126" width="54" height="50" class="box-wire"/><text x="117" y="60" class="t mid">conv1</text><text x="117" y="156" class="t mid">conv1</text></g>
+      <g><rect x="170" y="30" width="54" height="50" class="box-wire"/><rect x="170" y="126" width="54" height="50" class="box-wire"/><text x="197" y="60" class="t mid">conv2</text><text x="197" y="156" class="t mid">conv2</text></g>
+      <g><rect x="250" y="30" width="54" height="50" class="box-fire"/><rect x="250" y="126" width="54" height="50" class="box-fire"/><text x="277" y="60" class="t mid">conv3</text><text x="277" y="156" class="t mid">conv3</text></g>
+      <g><rect x="330" y="30" width="54" height="50" class="box-wire"/><rect x="330" y="126" width="54" height="50" class="box-wire"/><text x="357" y="60" class="t mid">conv4</text><text x="357" y="156" class="t mid">conv4</text></g>
+      <g><rect x="410" y="30" width="54" height="50" class="box-wire"/><rect x="410" y="126" width="54" height="50" class="box-wire"/><text x="437" y="60" class="t mid">conv5</text><text x="437" y="156" class="t mid">conv5</text></g>
+      <g><rect x="490" y="30" width="34" height="50" class="box-fire"/><rect x="490" y="126" width="34" height="50" class="box-fire"/><text x="507" y="60" class="t-s mid">fc6</text><text x="507" y="156" class="t-s mid">fc6</text></g>
+      <g><rect x="540" y="30" width="34" height="50" class="box-fire"/><rect x="540" y="126" width="34" height="50" class="box-fire"/><text x="557" y="60" class="t-s mid">fc7</text><text x="557" y="156" class="t-s mid">fc7</text></g>
+      <rect x="590" y="78" width="40" height="50" class="box-ok"/><text x="610" y="107" class="t-s mid">1000</text>
+      <path d="M60,96 L88,56 M60,110 L88,150" class="w" marker-end="url(#aw)"/>
+      <path d="M144,55 L168,55 M144,151 L168,151 M304,55 L328,55 M304,151 L328,151 M384,55 L408,55 M384,151 L408,151" class="w" marker-end="url(#aw)"/>
+      <path d="M224,55 L248,55 M224,151 L248,151 M224,62 L248,140 M224,144 L248,66" class="w-fire" marker-end="url(#af)"/>
+      <path d="M464,55 L488,55 M464,151 L488,151 M464,62 L488,140 M464,144 L488,66 M524,55 L538,55 M524,151 L538,151 M524,62 L538,140 M524,144 L538,66" class="w-fire" marker-end="url(#af)"/>
+      <path d="M574,58 L588,96 M574,148 L588,112" class="w-fire" marker-end="url(#af)"/>
+      <text x="357" y="108" class="t-fire mid">amber: halves exchange</text>
+    </svg></div>
+    <figcaption>Redrawn after Fig. 2. Each GPU holds half of every layer. Communication happens into conv3 and in the fully connected layers; conv2, conv4 and conv5 only see maps on their own GPU.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Graphics cards made a network this size trainable in days rather than months, and that, as much as any new idea, is what made 2012 different.</p>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §4.1 · §4.2</p>
+  <h2>Two ways to stop memorising</h2>
+  <div class="prose">
+    <p>A network with 60 million adjustable numbers and "only" 1.2 million photos is at risk of <strong>overfitting</strong>: learning the quirks of the training photos instead of what a dog actually looks like. The paper used two defences.</p>
+    <p><strong>Data augmentation.</strong> Every photo is stored at 256 by 256 pixels, but the network is shown a random 224 by 224 piece of it, sometimes mirrored left to right. Each photo therefore turns into many slightly different training examples, all with the same correct label. The colours are also jittered slightly. Try it:</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="cr-go">New random crop</button><button class="btn" id="cr-flip" aria-pressed="false">Mirror</button></div>
+    <div class="svgbox"><svg id="cr" viewBox="0 0 600 250" role="img" aria-label="A 256 by 256 image with a 224 by 224 crop window, and the cropped result"></svg></div>
+    <p class="readout" id="cr-r"></p>
+    <figcaption>Left: the stored 256×256 image with the random 224×224 window. Right: what the network sees. There are 32 × 32 = 1,024 window positions (the paper's count), each with or without mirroring: 2,048 versions of every photo. The drawing is a stand-in for a photo.</figcaption>
+  </figure>
+  <div class="prose">
+    <p><strong>Dropout.</strong> During training, in the first two fully connected layers, each unit is switched off at random with probability one half, freshly for every example. No unit can rely on a particular partner being there, so each must learn something useful on its own. At test time all units are on, and their outputs are halved to keep the totals at the right scale.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="do-next">Next training example</button><button class="btn" id="do-test" aria-pressed="false">Test time</button></div>
+    <div class="svgbox"><svg id="do" viewBox="0 0 600 245" role="img" aria-label="A small network with half its hidden units randomly switched off"></svg></div>
+    <p class="readout" id="do-r"></p>
+    <figcaption>A miniature with 8 + 8 hidden units (AlexNet's fully connected layers have 4,096 each). Crossed-out units are dropped for this example. Each press samples a different "thinned" network, so training effectively averages a huge family of networks that share weights.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>A team where any member might be off sick on a given day learns to spread knowledge around, rather than depend on one star. Dropout forces that kind of resilience on the network.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Showing many varied copies of each photo, and randomly removing units during training, let a huge network learn general patterns instead of memorising.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why mirror left to right but not upside down?</dt>
+    <dd>A mirrored dog is still a realistic photo of a dog; an upside-down one mostly is not, so it would teach the network about images it will never see.</dd>
+    <dt>Why halve the outputs at test time when using dropout?</dt>
+    <dd>During training only about half the units were on, so the next layer is used to receiving about half the total. Halving keeps the scale the same when all are on.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §6.1 · §7 · Figs. 3–4</p>
+  <h2>What it learned, and why depth mattered</h2>
+  <div class="prose">
+    <p>The paper looks inside. The first layer's 96 detectors (Fig. 3) turned out to be edge detectors at various angles and spacings, plus blobs of colour, much like what neuroscientists find early in animal vision. Curiously, the detectors on one graphics card were mostly colourless and those on the other mostly coloured, which happened on every run.</p>
+    <p>Near the top, photos that the network represents similarly are similar in meaning, even when the pixels are very different: elephants in different poses end up near each other (Fig. 4). And removing any one of the middle convolutional layers made results about 2% worse, which the authors took as evidence that depth itself matters.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>Within a few years, networks got deeper and simpler. VGG (2014) used only small 3×3 filters and 16 to 19 layers. <a href="resnet.html">ResNet</a> (2015) added shortcut connections and reached 152 layers, with top-5 error near 3.6% on the same challenge. Some AlexNet details were dropped: the special "local response normalisation" layer was replaced by <a href="batchnorm.html">batch normalisation</a>, and splitting across GPUs became an engineering choice rather than part of the design. ReLUs, dropout, data augmentation and GPU training all stayed.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The network learned sensible visual features on its own, from edges upward, and its success made deep learning the default way to do computer vision.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>A large deep convolutional network was trained to classify the 1.2 million high-resolution images of the ILSVRC-2010 contest into 1,000 classes, reaching top-1 and top-5 test error of 37.5% and 17.0%, considerably better than the previous state of the art. The network has 60 million parameters and 650,000 neurons, with five convolutional layers (some followed by max-pooling) and three fully connected layers ending in a 1,000-way softmax. Training used non-saturating neurons and an efficient GPU implementation of convolution; overfitting in the fully connected layers was reduced with dropout. A variant entered in ILSVRC-2012 achieved a winning top-5 test error of 15.3%, against 26.2% for the second-best entry. NeurIPS 2012.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2 · §3.5 · Fig. 2</p>
+  <h2>Data and architecture</h2>
+  <div class="prose"><p><strong>Data (§2).</strong> ILSVRC uses roughly 1.2 M training, 50,000 validation and 150,000 test images in 1,000 classes. Images are rescaled so the shorter side is 256, centre-cropped to 256 × 256, and the mean training pixel is subtracted; there is no other preprocessing, so the net trains on (centred) raw RGB.</p></div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Layer</th><th>Kernels</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>conv1</td><td class="num">96 × 11×11×3, stride 4</td><td>on the 224×224×3 input; ReLU, LRN, max-pool</td></tr>
+      <tr><td>conv2</td><td class="num">256 × 5×5×48</td><td>sees only its own GPU's 48 maps; ReLU, LRN, max-pool</td></tr>
+      <tr><td>conv3</td><td class="num">384 × 3×3×256</td><td>connected to all conv2 maps across both GPUs</td></tr>
+      <tr><td>conv4</td><td class="num">384 × 3×3×192</td><td>own GPU only</td></tr>
+      <tr><td>conv5</td><td class="num">256 × 3×3×192</td><td>own GPU only; max-pool</td></tr>
+      <tr><td>fc6, fc7</td><td class="num">4,096 each</td><td>dropout 0.5</td></tr>
+      <tr><td>fc8</td><td class="num">1,000</td><td>softmax</td></tr>
+    </tbody></table></div>
+  <div class="prose"><p>Spatial sizes follow (<var>W</var> − <var>F</var> + 2<var>P</var>)/<var>S</var> + 1. Note that with the stated 224 × 224 input, conv1 gives (224 − 11)/4 + 1 = 54.25, not an integer; the 55 × 55 output drawn in Fig. 2 requires an effective input of 227 (or extra padding), which is what most reimplementations use. Check it below.</p></div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Input <var>W</var> <input type="range" id="os-w" min="200" max="260" step="1" value="224"><output id="os-w-o">224</output></label>
+      <label>Kernel <var>F</var> <input type="range" id="os-f" min="1" max="13" step="1" value="11"><output id="os-f-o">11</output></label>
+      <label>Stride <var>S</var> <input type="range" id="os-s" min="1" max="6" step="1" value="4"><output id="os-s-o">4</output></label>
+      <label>Pad <var>P</var> <input type="range" id="os-p" min="0" max="4" step="1" value="0"><output id="os-p-o">0</output></label>
+    </div>
+    <div class="svgbox"><svg id="os" viewBox="0 0 600 200" role="img" aria-label="A 1-D strip of input pixels with kernel windows placed at each stride"></svg></div>
+    <p class="readout" id="os-r"></p>
+    <figcaption>One row of the input, with each kernel placement drawn as a bracket. If the last window does not end exactly at the edge, the leftover pixels are never covered and the formula gives a fraction. Set <var>W</var> = 227 to get AlexNet's 55.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3.1 · §3.3 · §3.4</p>
+  <h2>ReLU, local response normalisation, overlapping pooling</h2>
+  <div class="prose">
+    <p><strong>ReLU (§3.1).</strong> <var>f</var>(<var>x</var>) = max(0, <var>x</var>). Following Nair and Hinton, the paper calls these non-saturating; on CIFAR-10 a four-layer convnet with ReLUs reached 25% training error six times faster than with tanh (Fig. 1). They note that Jarrett et al. had used |tanh| on the small Caltech-101 dataset, where the concern was overfitting; on ImageNet-scale data the gain that matters is faster fitting.</p>
+    <p><strong>Local response normalisation (§3.3).</strong> ReLUs need no input normalisation to avoid saturation, but the authors found a form of lateral inhibition across channels helped. With <var>a</var><sup><var>i</var></sup><sub><var>x</var>,<var>y</var></sub> the ReLU output of kernel <var>i</var> at position (<var>x</var>, <var>y</var>) and <var>N</var> kernels in the layer:</p>
+  </div>
+  <div class="eq"><var>b</var><sup><var>i</var></sup><sub><var>x</var>,<var>y</var></sub> = <var>a</var><sup><var>i</var></sup><sub><var>x</var>,<var>y</var></sub> / ( <var>k</var> + α Σ<sub><var>j</var>=max(0, <var>i</var>−<var>n</var>/2)</sub><sup>min(<var>N</var>−1, <var>i</var>+<var>n</var>/2)</sup> (<var>a</var><sup><var>j</var></sup><sub><var>x</var>,<var>y</var></sub>)<sup>2</sup> )<sup>β</sup></div>
+  <div class="prose"><p>with <var>k</var> = 2, <var>n</var> = 5, α = 10<sup>−4</sup>, β = 0.75, chosen on validation data. It is applied after ReLU in conv1 and conv2, and reduced top-1 and top-5 error by 1.4% and 1.2%. Explore what it does to one spatial position's channel vector:</p></div>
+  <figure class="live">
+    <div class="ctl"><label>Activation scale <input type="range" id="lr-s" min="1" max="120" step="1" value="60"><output id="lr-s-o">60</output></label><label>Boost channel 6 <input type="range" id="lr-b" min="1" max="5" step="0.5" value="1" data-fmt="1"><output id="lr-b-o">1.0</output></label></div>
+    <div class="svgbox"><svg id="lr" viewBox="0 0 600 240" role="img" aria-label="Activations across 12 neighbouring channels before and after local response normalisation"></svg></div>
+    <p class="readout" id="lr-r"></p>
+    <figcaption>Twelve channels at one position (fixed random pattern × scale). Grey bars: ReLU outputs <var>a</var>. Amber bars: normalised <var>b</var>, rescaled for display by <var>k</var><sup>β</sup> ≈ 1.68 so the two agree when α Σ <var>a</var><sup>2</sup> is negligible. With the paper's α = 10<sup>−4</sup>, normalisation only bites once activations are in the tens; then a strong channel suppresses its neighbours.</figcaption>
+  </figure>
+  <div class="prose"><p><strong>Overlapping pooling (§3.4).</strong> Max-pooling with window <var>z</var> = 3 and stride <var>s</var> = 2 (so windows overlap) instead of <var>z</var> = <var>s</var> = 2 reduced top-1/top-5 error by 0.4%/0.3%, and the authors observed it made the model slightly harder to overfit.</p></div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is LRN called "brightness normalisation" rather than contrast normalisation in the paper?</dt>
+    <dd>It divides by local channel energy without subtracting a mean activity, so it rescales but does not re-centre.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §4</p>
+  <h2>Reducing overfitting</h2>
+  <div class="prose">
+    <p><strong>Translations and reflections (§4.1).</strong> Random 224 × 224 patches and their horizontal reflections from the 256 × 256 images increase the training set by a factor of 2,048 (though the samples are highly dependent). At test time the network averages its softmax over ten patches: the four corners and centre, and their reflections. Without this test-time averaging, ILSVRC-2010 error is 39.0% top-1 and 18.3% top-5.</p>
+    <p><strong>PCA colour augmentation.</strong> PCA is computed on the RGB values of all training pixels. To each pixel of a training image is added</p>
+  </div>
+  <div class="eq">[<b>p</b><sub>1</sub>, <b>p</b><sub>2</sub>, <b>p</b><sub>3</sub>] [α<sub>1</sub>λ<sub>1</sub>, α<sub>2</sub>λ<sub>2</sub>, α<sub>3</sub>λ<sub>3</sub>]<sup>T</sup>, &nbsp; α<sub><var>i</var></sub> ∼ 𝒩(0, 0.1<sup>2</sup>)</div>
+  <div class="prose">
+    <p>where <b>p</b><sub><var>i</var></sub> and λ<sub><var>i</var></sub> are the eigenvectors and eigenvalues of the 3 × 3 RGB covariance, with α drawn once per image per presentation. It encodes the idea that object identity is invariant to changes in illumination intensity and colour, and it reduced top-1 error by over 1%.</p>
+    <p><strong>Dropout (§4.2).</strong> Each hidden unit in fc6 and fc7 outputs zero with probability 0.5 during training; at test time all units are used and outputs are multiplied by 0.5, a cheap approximation to the geometric mean of the exponentially many dropout networks' predictions. Without dropout the network overfits substantially; with it, convergence takes roughly twice as many iterations.</p>
+  </div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §5 · §6 · Tables 1–2</p>
+  <h2>Training and results</h2>
+  <div class="prose"><p>SGD with batch 128, momentum 0.9 and weight decay 0.0005, which the authors found reduces training error, not just regularises:</p></div>
+  <div class="eq"><var>v</var><sub><var>i</var>+1</sub> = 0.9 <var>v<sub>i</sub></var> − 0.0005 ε <var>w<sub>i</sub></var> − ε ⟨∂<var>L</var>/∂<var>w</var> |<sub><var>w<sub>i</sub></var></sub>⟩<sub><var>D<sub>i</sub></var></sub>, &nbsp;&nbsp; <var>w</var><sub><var>i</var>+1</sub> = <var>w<sub>i</sub></var> + <var>v</var><sub><var>i</var>+1</sub></div>
+  <div class="prose"><p>Weights start from 𝒩(0, 0.01<sup>2</sup>); biases are 1 in conv2, conv4, conv5 and the fully connected hidden layers (giving ReLUs positive inputs early) and 0 elsewhere. The learning rate starts at 0.01 and is divided by 10 when validation error stops improving, three times in total. About 90 epochs over 1.2 M images took five to six days on two NVIDIA GTX 580 3 GB GPUs.</p></div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" data-ax="5">Top-5 error</button><button class="btn" data-ax="1">Top-1 error</button></div>
+    <div class="svgbox wide"><svg id="rs" viewBox="0 0 640 300" role="img" aria-label="Reported error rates on ILSVRC-2010 and ILSVRC-2012"></svg></div>
+    <p class="readout" id="rs-r"></p>
+    <figcaption>Values from Table 1 (ILSVRC-2010 test) and Table 2 (ILSVRC-2012; validation unless marked test). "*" marks models pre-trained on the whole Fall 2011 ImageNet release (15 M images, 22 K categories) and fine-tuned. The 15.3% winner averages seven CNNs: five plain CNNs and two pre-trained ones. The second-place entry did not report top-1.</figcaption>
+  </figure>
+  <div class="prose"><p>The GPU split itself also helped: compared with a one-GPU net with half as many kernels in most convolutional layers, the two-GPU net cut top-1 and top-5 error by 1.7% and 1.2% (§3.2). The one-GPU net kept the last convolutional and fully connected layers full size, so it is more than half as large, which the authors note biases the comparison in its favour. On Fall 2009 ImageNet (10,184 categories), top-1/top-5 error was 67.4%/40.9% against the best published 78.1%/60.9%.</p></div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §7 · lineage</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Depth evidence is anecdotal.</strong> Removing any middle convolutional layer costs about 2% top-1 (§7), but there is no systematic depth study.</li>
+      <li><strong>Architecture shaped by hardware.</strong> The two-GPU split, with restricted connectivity, is a memory workaround; its colour-agnostic/colour-specific specialisation (Fig. 3) is a by-product.</li>
+      <li><strong>Hand-tuned pieces.</strong> LRN constants, overlapping pooling, and the learning-rate schedule (divided by hand when validation stalled) are empirical choices with small gains.</li>
+      <li><strong>No unsupervised pre-training.</strong> The authors say they expected it to help with more compute; in the event, supervised scaling won.</li>
+    </ul>
+  </div>
+  <div class="later"><span class="label">Later refinements</span>Precursors: <a href="lenet.html">LeNet</a> for the architecture; GPU convnets by Cireşan et al. (2011); ReLUs from Nair &amp; Hinton (2010); dropout from Hinton et al. (2012), fully written up as <a href="dropout.html">Srivastava et al. (2014)</a>. Successors: ZFNet (2013) retuned the first layers using visualisation; VGG (2014) found LRN gave no improvement and went to 16–19 layers of 3×3 convolutions; GoogLeNet (2014) used Inception modules; <a href="batchnorm.html">BatchNorm</a> (2015) replaced LRN; <a href="resnet.html">ResNet</a> (2015) reached 152 layers and 3.57% top-5. AlexNet's fully connected layers (most of its 60 M parameters) were largely replaced by global average pooling. Its features also became the standard "off-the-shelf" representation for transfer learning, a role later taken by ResNets, <a href="vit.html">ViTs</a> and <a href="clip.html">CLIP</a>.</div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Where do most of AlexNet's 60 M parameters live?</dt>
+    <dd>In the fully connected layers: fc6 alone connects a 6×6×256 = 9,216-dimensional input to 4,096 units, about 37.7 M weights.</dd>
+    <dt>Why initialise some biases to 1?</dt>
+    <dd>So the ReLUs start with positive inputs and pass gradient, which the authors found accelerates the early stages of learning.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>ILSVRC</dt><dd>ImageNet Large Scale Visual Recognition Challenge; 1,000-class classification.</dd>
+    <dt>Top-k error</dt><dd>Fraction of test images whose true label is not among the model's k highest-scoring classes.</dd>
+    <dt>ReLU</dt><dd>max(0, x): a non-saturating activation.</dd>
+    <dt>LRN</dt><dd>Local response normalisation across adjacent channels.</dd>
+    <dt>Overlapping pooling</dt><dd>Pooling windows larger than the stride (z = 3, s = 2).</dd>
+    <dt>Dropout</dt><dd>Randomly zeroing hidden units in training to prevent co-adaptation.</dd>
+    <dt>Data augmentation</dt><dd>Label-preserving transformations that enlarge the training set.</dd>
+    <dt>Weight decay</dt><dd>An L2 penalty on weights, implemented as a shrinkage term in the update.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="lenet.html">LeNet (1998)</a></p>
+  <p><strong>Led to:</strong> <a href="resnet.html">ResNet (2015)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> (<a href="https://lovespark.love/papers-worth-reading/#alexnet">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // ReLU vs tanh
+  var svg=$('#rl'), x=2.5, n=4;
+  function tanhd(v){ var t=Math.tanh(v); return 1-t*t; }
+  function panel(ox,title,f,df,lo,hi,vs){ vs=vs||1; var X=function(v){ return ox+20+(v+4)/8*240; }, Y=function(v){ return 120-(v-lo)/(hi-lo)*0+(-(v)*(90/hi)); };
+    var y0=130, sc=90/hi, YY=function(v){ return y0-v*sc; };
+    S('line',{x1:ox+20,y1:y0,x2:ox+260,y2:y0,'class':'grid'},svg); S('line',{x1:X(0),y1:y0-100,x2:X(0),y2:y0+100,'class':'grid'},svg);
+    var d=''; for (var v=-4;v<=4.001;v+=0.1){ d+=(d?'L':'M')+X(v)+','+YY(f(v)); } S('path',{d:d,'class':'w-ink'},svg);
+    var s=df(x), fx=f(x), sd=s*vs; S('line',{x1:X(x-1.2),y1:YY(fx-1.2*sd),x2:X(x+1.2),y2:YY(fx+1.2*sd),'class':'w-dash'},svg);
+    S('circle',{cx:X(x),cy:YY(fx),r:6,'class':'u-on'},svg);
+    S('text',{x:ox+20,y:22,'class':'t-h'},svg,title); S('text',{x:ox+260,y:22,'class':'t-fire end'},svg,'slope '+fmt(s,3));
+    return s; }
+  function draw(){ clear(svg);
+    var st=panel(0,'tanh',Math.tanh,tanhd,-1,1.2), sr=panel(300,'ReLU',function(v){ return Math.max(0,v)/3.4; },function(v){ return v>0?1:0; },-1,1.2,1/3.4);
+    S('text',{x:560,y:236,'class':'t-s end'},svg,'ReLU drawn at 1/3.4 height to fit; its slope is 1 for positive input');
+    $('#rl-r').innerHTML='One unit: tanh passes on <b>'+fmt(st*100,1)+'%</b> of a nudge, ReLU <b>'+(sr*100)+'%</b>. Through '+n+' such units: tanh <b>'+(Math.pow(st,n)<1e-4?Math.pow(st,n).toExponential(1):fmt(Math.pow(st,n)*100,2)+'%')+'</b>, ReLU <b>'+(Math.pow(sr,n)*100)+'%</b>.'; }
+  bindRange('rl-x',function(v){ x=v; draw(); }); bindRange('rl-n',function(v){ n=v; draw(); });
+})();
+(function(){ // random crop
+  var svg=$('#cr'), cx=16, cy=16, flip=false, r=rng(11);
+  function scene(g){ S('rect',{x:0,y:0,width:256,height:256,'class':'f-card'},g); S('rect',{x:0,y:170,width:256,height:86,'class':'f-ok','fill-opacity':0.35},g);
+    S('circle',{cx:200,cy:52,r:24,'class':'f-fire'},g); S('rect',{x:46,y:110,width:96,height:80,'class':'f-wire'},g); S('path',{d:'M36,112 L94,62 L152,112 Z','class':'f-inh'},g);
+    S('rect',{x:84,y:146,width:22,height:44,'class':'f-card'},g); S('rect',{x:176,y:120,width:12,height:60,'class':'f-muted'},g); S('circle',{cx:182,cy:110,r:26,'class':'f-ok'},g);
+    S('text',{x:128,y:240,'class':'t mid'},g,'HOUSE'); }
+  function draw(){ clear(svg);
+    var L=S('svg',{x:20,y:20,width:210,height:210,viewBox:'0 0 256 256'},svg); scene(L); S('rect',{x:cx,y:cy,width:224,height:224,'class':'w-fire','stroke-width':4},L);
+    S('text',{x:125,y:246,'class':'t-s mid'},svg,'stored 256 × 256');
+    var R=S('svg',{x:330,y:20,width:210,height:210,viewBox:cx+' '+cy+' 224 224'},svg); var g=S('g',flip?{transform:'translate('+(2*cx+224)+',0) scale(-1,1)'}:{},R); scene(g);
+    S('rect',{x:330,y:20,width:210,height:210,'class':'w-fire','fill':'none'},svg); S('text',{x:435,y:246,'class':'t-s mid'},svg,'network input 224 × 224'+(flip?', mirrored':''));
+    S('path',{d:'M250,125 L318,125','class':'w-fire','marker-end':'url(#af)'},svg);
+    $('#cr-r').innerHTML='Window offset (<b>'+cx+'</b>, <b>'+cy+'</b>) of 0–31 each way'+(flip?', mirrored':'')+'. 32 × 32 × 2 = <b>2,048</b> possible versions of this one photo.'; }
+  $('#cr-go').onclick=function(){ cx=Math.floor(r()*32); cy=Math.floor(r()*32); flip=r()<0.5; $('#cr-flip').setAttribute('aria-pressed',flip); draw(); };
+  $('#cr-flip').onclick=function(){ flip=!flip; this.setAttribute('aria-pressed',flip); draw(); };
+  draw();
+})();
+(function(){ // dropout
+  var svg=$('#do'), r=rng(5), test=false, mask=[], count=0;
+  var cols=[[4,80],[8,230],[8,380],[3,530]];
+  function sample(){ mask=[[],[]]; for (var l=0;l<2;l++) for (var i=0;i<8;i++) mask[l].push(r()<0.5); count++; }
+  function pos(l,i){ var c=cols[l], n=c[0]; return [c[1],115+(i-(n-1)/2)*26]; }
+  function on(l,i){ return l===0||l===3||test||!mask[l-1][i]; }
+  function draw(){ clear(svg);
+    for (var l=0;l<3;l++) for (var i=0;i<cols[l][0];i++) for (var j=0;j<cols[l+1][0];j++){ var a=pos(l,i), b=pos(l+1,j), live=on(l,i)&&on(l+1,j); S('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],'class':live?'w':'w-faint','opacity':live?(test?0.55:0.9):0.12},svg); }
+    for (var l=0;l<4;l++) for (var i=0;i<cols[l][0];i++){ var p=pos(l,i), o=on(l,i); S('circle',{cx:p[0],cy:p[1],r:9,'class':o?(l===1||l===2?'u-on':'u'):'u-off'},svg);
+      if (!o){ S('path',{d:'M'+(p[0]-7)+','+(p[1]-7)+' L'+(p[0]+7)+','+(p[1]+7)+' M'+(p[0]+7)+','+(p[1]-7)+' L'+(p[0]-7)+','+(p[1]+7),'class':'w-inh'},svg); } }
+    S('text',{x:80,y:238,'class':'t-s mid'},svg,'input'); S('text',{x:230,y:238,'class':'t-s mid'},svg,'fc6 (mini)'); S('text',{x:380,y:238,'class':'t-s mid'},svg,'fc7 (mini)'); S('text',{x:530,y:238,'class':'t-s mid'},svg,'output');
+    var k=mask[0].concat(mask[1]).filter(function(x){ return !x; }).length;
+    $('#do-r').innerHTML = test ? 'Test time: all 16 hidden units on, each output multiplied by <b>0.5</b>.' : 'Example <b>'+count+'</b>: <b>'+k+'</b> of 16 hidden units active. This miniature has 2<sup>16</sup> = <b>65,536</b> possible thinned networks; AlexNet\'s fc6 and fc7 have 2<sup>8192</sup>.'; }
+  $('#do-next').onclick=function(){ test=false; $('#do-test').setAttribute('aria-pressed','false'); sample(); draw(); };
+  $('#do-test').onclick=function(){ test=!test; this.setAttribute('aria-pressed',test); draw(); };
+  sample(); draw();
+})();
+(function(){ // output size
+  var svg=$('#os'), W=224, F=11, Sd=4, P=0;
+  function draw(){ clear(svg); var tot=W+2*P, sc=560/tot, x0=20, out=(W-F+2*P)/Sd+1, nwin=Math.floor(out);
+    S('rect',{x:x0,y:40,width:tot*sc,height:24,'class':'box'},svg); if (P) { S('rect',{x:x0,y:40,width:P*sc,height:24,'class':'f-rule'},svg); S('rect',{x:x0+(W+P)*sc,y:40,width:P*sc,height:24,'class':'f-rule'},svg); }
+    var shown=Math.min(nwin,60);
+    for (var k=0;k<nwin;k++){ if (nwin>60 && k>10 && k<nwin-10) continue; var a=x0+k*Sd*sc, b=a+F*sc, y=74+(k%4)*12; S('path',{d:'M'+a+','+y+' L'+a+','+(y+6)+' L'+b+','+(y+6)+' L'+b+','+y,'class':k===nwin-1?'w-fire':'w'},svg); }
+    var end=(nwin-1)*Sd+F, left=tot-end;
+    if (left>0) S('rect',{x:x0+end*sc,y:40,width:left*sc,height:24,'class':'f-inh','fill-opacity':0.45},svg);
+    S('text',{x:x0,y:30,'class':'t-s'},svg,'one row: '+W+' pixels'+(P?' + '+P+' padding each side':''));
+    S('text',{x:x0,y:150,'class':'t'},svg,'(W − F + 2P)/S + 1 = ('+W+' − '+F+' + '+2*P+')/'+Sd+' + 1 = '+(out%1?fmt(out,2):out));
+    S('text',{x:x0,y:176,'class':out%1?'t-inh':'t-ok'},svg,out%1?'Not an integer: '+left+' pixel(s) at the right edge are never covered (shaded).':'Integer: windows tile the row exactly. Output width '+out+'.');
+    $('#os-r').innerHTML='Output width <b>'+(out%1?fmt(out,2):out)+'</b>; '+nwin+' window placements'+(nwin>60?' (middle ones hidden)':'')+'.'; }
+  bindRange('os-w',function(v){ W=v; draw(); }); bindRange('os-f',function(v){ F=v; draw(); }); bindRange('os-s',function(v){ Sd=v; draw(); }); bindRange('os-p',function(v){ P=v; draw(); });
+})();
+(function(){ // LRN
+  var svg=$('#lr'), sc=60, boost=1, base=[0.35,0.8,0.2,0.6,0.45,1.0,0.3,0.55,0.15,0.7,0.4,0.25];
+  var k=2,n=5,al=1e-4,be=0.75, kb=Math.pow(k,be);
+  function draw(){ clear(svg); var a=base.map(function(v,i){ return v*sc*(i===5?boost:1); }), N=a.length;
+    var b=a.map(function(v,i){ var s=0; for (var j=Math.max(0,i-2);j<=Math.min(N-1,i+2);j++) s+=a[j]*a[j]; return v/Math.pow(k+al*s,be); });
+    var mx=Math.max.apply(null,a);
+    S('line',{x1:30,y1:200,x2:590,y2:200,'class':'axis'},svg);
+    a.forEach(function(v,i){ var x=40+i*46, ha=v/mx*170, hb=b[i]*kb/mx*170; S('rect',{x:x,y:200-ha,width:18,height:ha,'class':'f-muted','fill-opacity':0.5},svg); S('rect',{x:x+20,y:200-hb,width:18,height:hb,'class':'f-fire'},svg);
+      S('text',{x:x+19,y:216,'class':i===5?'t-fire mid':'t-s mid'},svg,'ch '+(i+1)); S('text',{x:x+19,y:232,'class':'t-s mid'},svg,fmt(b[i]*kb/v*100,0)+'%'); });
+    S('text',{x:30,y:18,'class':'t-s'},svg,'grey: a (before)   amber: b × k^β (after)   % = kept fraction');
+    var r5=b[5]*kb/a[5], r4=b[4]*kb/a[4];
+    $('#lr-r').innerHTML='Largest activation <b>'+fmt(mx,0)+'</b>. Channel 6 keeps <b>'+fmt(r5*100,0)+'%</b>; its neighbour channel 5 keeps <b>'+fmt(r4*100,0)+'%</b> (relative to the k-only denominator).'; }
+  bindRange('lr-s',function(v){ sc=v; draw(); }); bindRange('lr-b',function(v){ boost=v; draw(); });
+})();
+(function(){ // results
+  var svg=$('#rs'), ax=5;
+  var D=[['2010','Sparse coding',47.1,28.2,0],['2010','SIFT + FVs',45.7,25.7,0],['2010','CNN',37.5,17.0,1],
+    ['2012','SIFT + FVs (2nd place, test)',null,26.2,0],['2012','1 CNN',40.7,18.2,1],['2012','5 CNNs',38.1,16.4,1],['2012','1 CNN*',39.0,16.6,1],['2012','7 CNNs*',36.7,15.4,1],['2012','7 CNNs* (test, winner)',null,15.3,1]];
+  function draw(){ clear(svg); var x0=220, W=380, mx=50;
+    for (var g=0;g<=50;g+=10){ var x=x0+g/mx*W; S('line',{x1:x,y1:10,x2:x,y2:270,'class':'grid'},svg); S('text',{x:x,y:288,'class':'t-s mid'},svg,g+'%'); }
+    var y=14; D.forEach(function(d,i){ if (i===3){ S('text',{x:10,y:y+8,'class':'t-s'},svg,'ILSVRC-2012'); y+=16; } if (i===0){ S('text',{x:10,y:y+8,'class':'t-s'},svg,'ILSVRC-2010 test'); y+=16; }
+      var v=ax===5?d[3]:d[2]; S('text',{x:x0-6,y:y+12,'class':'t end'},svg,d[1]);
+      if (v==null) S('text',{x:x0+4,y:y+12,'class':'t-s'},svg,'not reported');
+      else { S('rect',{x:x0,y:y+2,width:v/mx*W,height:14,'class':d[4]?'f-fire':'f-wire'},svg); S('text',{x:x0+v/mx*W+5,y:y+13,'class':'t-s'},svg,fmt(v,1)+'%'); }
+      y+=22; });
+    $('#rs-r').innerHTML = ax===5 ? 'Top-5: <b>15.3%</b> for the winning ensemble against <b>26.2%</b> for second place, a relative reduction of about 42%.' : 'Top-1 on ILSVRC-2010 test: <b>37.5%</b> against 45.7% for the best earlier method.'; }
+  $$('[data-ax]').forEach(function(b){ b.addEventListener('click',function(){ ax=+b.dataset.ax; $$('[data-ax]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }); });
+  draw();
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,323 @@
+<!--LEDE-->
+"Abliteration" strips refusals from an open-weight chat model by deleting one direction from its internal activations. This paper asks whether a model can be trained so that this cut does less damage to its safety. The answer is a surprisingly simple yes: teach the model to refuse with an explanation rather than a stock "I'm sorry, I can't", and after abliteration it still refuses over 90% of harmful requests, compared with under 21% for the same models trained the usual way.
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Abliteration works because standard refusals are short and nearly identical ("I'm sorry, but I can't help with that"), so the model's decision to refuse sits in one tidy direction that can be found and deleted.</p>
+  <p>The authors fine-tune models on 4,289 harmful prompts answered with <strong>extended refusals</strong>: a neutral overview of the topic, an explicit refusal, and a short ethical reason.</p>
+  <p>After abliteration, ordinary versions of three models fall to between 14% and 21% refusal on harmful questions, while the extended-refusal versions keep 91% to 97%.</p>
+  <p>The defence costs a little general ability, and more for the smallest model after it is attacked, but it shows that <em>how</em> a model refuses changes how easily the refusal can be removed.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1, §3.1</p>
+  <h2>The attack being defended against</h2>
+  <div class="prose">
+    <p>A chat model is a large network whose internal state, for each word, is a long list of numbers that can be pictured as an arrow. In 2024, <a href="refusal.html">Arditi and colleagues</a> found that the decision to refuse a harmful request is largely carried by one <strong>direction</strong> among those arrows. If that direction is projected out of the model's weights, a cheap one-off edit known as <strong>abliteration</strong>, the model stops refusing while staying fluent.</p>
+    <p>Anyone who can download a model's weights can perform this edit, so it is a serious problem for openly released models. Earlier defences mostly targeted attacks through the prompt, such as cleverly worded jailbreaks. This paper targets the weight edit itself.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Abliteration removes refusals by deleting one internal direction; the question is how to make a model whose safety does not hang on one direction.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §3.2 · Figs. 1–2</p>
+  <h2>Why a short "no" is fragile</h2>
+  <div class="prose">
+    <p>The authors' key observation, in their words: "Abliteration exploits the fact that standard refusals are brief and stylistically uniform." When a model has been trained to answer every harmful request with near-identical boilerplate, the internal difference between "about to refuse" and "about to help" is concentrated: one tidy direction captures nearly all of it.</p>
+    <p>Their fix is to change the shape of the refusal. Each harmful request in their training data is answered in three parts:</p>
+    <ol>
+      <li>a <strong>neutral overview</strong> of the topic, saying what the thing is without giving any harmful detail;</li>
+      <li>an <strong>explicit refusal</strong>;</li>
+      <li>a short <strong>ethical rationale</strong> explaining why.</li>
+    </ol>
+    <p>In the paper's own example (Fig. 1), a request about phishing gets a short description of what email spoofing is, then "I'm sorry, but I cannot provide techniques for spoofing email addresses or conducting phishing attacks", then a reason. The hypothesis is that producing this richer answer involves the model's understanding of the topic, of harm and of ethics, so the refusal gets tied to many internal features rather than to one switch.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Number of directions sharing the refusal <input type="range" id="sp-k" min="1" max="8" step="1" value="1"><output id="sp-k-o">1</output></label>
+      <button class="btn" id="sp-ab" aria-pressed="false">Abliterate (remove the top direction)</button>
+    </div>
+    <div class="svgbox"><svg id="sp" viewBox="0 0 600 250" role="img" aria-label="A refusal signal spread over several directions, before and after removing the strongest"></svg></div>
+    <p class="readout" id="sp-r"></p>
+    <figcaption>Illustrative toy, not the paper's model. The same total refusal signal is shared among 1 to 8 internal directions; the first is always the largest, as a difference-in-means direction would be. The toy refuses when the remaining signal passes the dashed line. With one direction (a terse, uniform refusal style) the cut removes everything; spread over several (the extended-refusal hypothesis), most of the signal survives.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>If a door is held shut by a single bolt, one tool opens it. If it is held by a bolt, a chain, a latch and someone leaning on it, removing the bolt changes little. Extended refusals are meant to give the model's "no" several independent fastenings.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Uniform one-line refusals concentrate the refusal decision in one direction; richer, explained refusals are hypothesised to spread it across many.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does the overview in an extended refusal have to be "neutral"?</dt>
+    <dd>It must engage with the topic without giving harmful detail; otherwise the "refusal" would itself leak what it refuses to provide.</dd>
+    <dt>In the toy, why does spreading help even though the total signal is the same?</dt>
+    <dd>Abliteration only removes one direction. The more evenly the signal is shared, the smaller the share that one direction carries.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §4.1–4.2 · Table 1</p>
+  <h2>The result: refusals survive the cut</h2>
+  <div class="prose">
+    <p>They fine-tune three open models (Llama-2-7B-Chat, Qwen2.5-3B-Instruct and Qwen2.5-1.5B-Instruct) on 10,000 examples: the 4,289 harmful prompts with extended refusals, plus 5,711 ordinary helpful examples so the models stay useful. Then they abliterate both the original and the fine-tuned version of each model and test on 550 harmful questions (CatQA), with another model judging whether each answer is a refusal.</p>
+    <p>The ordinary models lose 70 to 80 percentage points of refusal. The extended-refusal models lose at most about 9 points.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn on" data-er="0">Standard models</button>
+      <button class="btn" data-er="1">Extended-refusal models</button>
+    </div>
+    <div class="svgbox"><svg id="er" viewBox="0 0 600 260" role="img" aria-label="Refusal rate before and after abliteration for three models"></svg></div>
+    <p class="readout" id="er-r"></p>
+    <figcaption>Refusal score (%) on CatQA before and after abliteration, from Table 1 of the paper. Grey: before; amber: after. Switch between the models as released and the same models fine-tuned on extended refusals.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>After abliteration, standard models refuse 14–21% of harmful questions; extended-refusal models still refuse 91–97%.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Before any attack, the Qwen extended-refusal models refuse 100% while the originals refuse about 93–94%. Why does that matter when reading the result?</dt>
+    <dd>Part of the gap after the attack comes from a higher starting point. The fairer comparison is the size of the drop: about 3 to 9 points versus about 78 to 80.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §4.3, Limitations</p>
+  <h2>What it costs</h2>
+  <div class="prose">
+    <p>Nothing here is free. Fine-tuning on extended refusals slightly lowers general knowledge scores (MMLU) before any attack, by up to about a point. After abliteration, the defended models also lose more general ability than the undefended ones: the defended Llama-2 drops to 41.8 on MMLU from 46.4, and the defended Qwen 1.5B's perplexity (how surprised it is by ordinary text; lower is better) roughly doubles. In a sense the defence works because the attacker can no longer remove refusal <em>cleanly</em>: to strip it, they would have to damage the model.</p>
+    <p>The authors also list practical limits: extended refusals are wordier, which some users will find annoying; the method is not claimed to stop other jailbreaks, such as manipulating the context of a conversation; and it is meant to be combined with other safeguards, such as external moderation.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>The defence costs a little capability, and abliterating a defended model costs the attacker more capability, which is the point.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §4.4 · Context</p>
+  <h2>Where it fits</h2>
+  <div class="prose">
+    <p>This paper turns an interpretability finding into a design principle: if safety behaviour is concentrated in one place, it can be cut out, so train it to be spread out. It fits with <a href="cones.html">Wollschläger et al. (2025)</a>, who showed that refusal can already involve several directions; extended refusals seem to make use of more of them.</p>
+    <p>It is a first step rather than a complete answer. The updated version of the paper also tries seven ready-made prompt jailbreak collections, and the extended-refusal models resisted all of them better than the originals. A further test found that training on the refusal sentence alone gives no protection: the explanation and justification do the work. But only three fairly small models were tested, and a more determined attacker could remove several directions at once or simply fine-tune the safety away. Still, it shows that the style of a model's refusals is not cosmetic: it shapes how robust they are.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span><a href="abl-compare.html">Young (2025)</a> compared four public abliteration tools and found that the damage to other skills depends heavily on the model. That is the same lever this defence pulls: a model whose refusal is entangled with useful skills cannot be abliterated without visible harm.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>How a model is taught to say no affects how hard that "no" is to remove.</p>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>LLMs are aligned to refuse harmful instructions through safety fine-tuning. Abliteration isolates and suppresses the single latent direction most responsible for refusals, letting the model generate harmful content. The authors propose a defence that changes how models produce refusals: an extended-refusal dataset in which responses to harmful prompts give detailed justifications, distributing the refusal signal across multiple token positions and representational dimensions. Fine-tuning Llama-2-7B-Chat and Qwen2.5-Instruct (1.5B and 3B) on it, refusal rates under abliteration drop by at most 10%, versus 70–80% for the base models, and general performance is largely preserved. Abu Shairah, Hammoud, Ghanem &amp; Turkiyyah (KAUST), arXiv:2505.19056 (v1 May 2025; this guide follows v2, 7 October 2025).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §3.1 · Eqs. 1–5</p>
+  <h2>Threat model: refusal-direction abliteration</h2>
+  <div class="prose">
+    <p>The attack follows <a href="refusal.html">Arditi et al. (2024)</a>. For each layer <var>l</var> and post-instruction position <var>i</var>, compute mean residual activations on harmful (<var>μ</var>) and harmless (<var>ν</var>) prompts; each difference <var>r</var> = <var>μ</var> − <var>ν</var> is a candidate (Eqs. 1–2). The candidate that most reduces refusal is selected (Eq. 3), normalised to <var>r̂</var>, and projected out of each output matrix:</p>
+  </div>
+  <div class="eq"><var>W</var><sub>out</sub>′ = (<var>I</var> − <var>r̂</var><var>r̂</var><sup>⊤</sup>) <var>W</var><sub>out</sub> <span class="n">(4–5)</span></div>
+  <div class="prose">
+    <p>A detail that matters for the defence: the authors consider only directions whose abliterated model keeps judged coherence of at least 70% (§4.1, §4.3; v2 Figs. 2–3). Without such a constraint, an "attack" could reach zero refusal simply by destroying the model, which would not be a meaningful break.</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does the coherence threshold make the defence's numbers more meaningful?</dt>
+    <dd>It forces the attacker to choose among directions that leave a usable model. A defended model then counts as robust if no usable abliteration removes its refusals, rather than merely because every edit breaks it.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3.2, §4.1 · Figs. 1–3</p>
+  <h2>Extended-refusal data and evaluation</h2>
+  <div class="prose">
+    <p><strong>Data.</strong> 4,289 harmful prompts merged from BeaverTails, AdvBench, StrongREJECT and TDC-2023. Responses generated with GPT-4o in a fixed three-part structure: neutral topic overview, explicit refusal, ethical rationale. To preserve utility, 5,711 benign instruction–response pairs from Alpaca-GPT4-en are added, giving 𝒟<sub>FT</sub> of 10,000 examples (§3.2; §4.1 of v2 gives 4,268 and 5,732 instead, with the same total). Fine-tuning: 3 epochs at learning rate 1×10<sup>−6</sup> (v2 §3.2).</p>
+    <p><strong>Models.</strong> Llama-2-7B-Chat, Qwen2.5-3B-Instruct, Qwen2.5-1.5B-Instruct; each with an extended-refusal (ER) variant.</p>
+    <p><strong>Metrics.</strong> Refusal score on CatQA (550 harmful questions) judged by Qwen-2.5-14B, cross-checked with Llama-Guard-3-8B (App. A). Utility: MMLU accuracy, perplexity on 1,000 C4 passages, and judged coherence.</p>
+  </div>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §4.2–4.3 · Table 1 · App. A</p>
+  <h2>Results and their cost</h2>
+  <div class="prose">
+    <p>Table 1 reports each model before and after abliteration. Undefended models fall by 78.0 to 80.2 points of refusal (the text summarises this as 70–80). ER models fall by 3.3 to 9.1 points. Coherence of abliterated ER models is 89.1–98.7%, against 100% for abliterated base models, a sign that the attacker must accept some damage. The Llama-Guard-3-8B cross-check (App. A) differs from the LLM judge by about 2 to 7 points: 90.4, 94.6 and 89.3 versus 92.7, 90.9 and 96.7.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn on" data-ut="ref">Refusal</button>
+      <button class="btn" data-ut="coh">Coherence</button>
+      <button class="btn" data-ut="mmlu">MMLU</button>
+      <button class="btn" data-ut="ppl">Perplexity</button>
+    </div>
+    <div class="svgbox"><svg id="ut" viewBox="0 0 600 280" role="img" aria-label="Table 1 metrics for standard and extended-refusal models before and after abliteration"></svg></div>
+    <p class="readout" id="ut-r"></p>
+    <figcaption>All twelve rows of Table 1. For each model: standard (blue) and extended-refusal (amber), each before (light) and after (solid) abliteration. Perplexity is lower-is-better; the others higher-is-better.</figcaption>
+  </figure>
+  <div class="prose">
+    <p>The utility picture is less rosy than the paper's conclusion ("minimal" impact) suggests. Before attack, ER fine-tuning costs 0.6–1.3 MMLU points and raises perplexity by 2–2.6. After attack, the ER Llama-2 loses 4.6 MMLU points (46.4 → 41.8) and the ER Qwen 1.5B's perplexity jumps from 26.7 to 49.5, whereas abliteration moves the undefended models' MMLU by under 2 points (their perplexity does rise, most for Llama-2, from 14.1 to 18.5). Read charitably, this is the defence working: refusal is now entangled with general capability, so it cannot be removed surgically.</p>
+  </div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §4.4 · Fig. 4 (v2)</p>
+  <h2>Feature-space analysis</h2>
+  <div class="prose">
+    <p>To test the "distributed signal" hypothesis, the authors take final hidden states for harmful and benign prompts, reduce them with PCA, and measure the Euclidean distance between the two class centroids, before and after abliteration. A large drop means abliteration has collapsed the distinction the model uses to decide to refuse.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn on" data-cz="0">Qwen2.5-1.5B</button>
+      <button class="btn" data-cz="1">Qwen2.5-3B</button>
+      <button class="btn" data-cz="2">Llama-2-7B</button>
+    </div>
+    <div class="svgbox"><svg id="cz" viewBox="0 0 600 240" role="img" aria-label="Harmful-benign centroid distance before and after abliteration"></svg></div>
+    <p class="readout" id="cz-r"></p>
+    <figcaption>Centroid distances as tabulated in v1 (Table 2); v2 shows them as Fig. 4 and quotes the same reductions. Each pair of dots is the harmful centroid (amber) and benign centroid (blue), drawn at the reported distance; faint dots are before abliteration, solid dots after. The distances are in the PCA space, so only within-model comparisons are meaningful.</figcaption>
+  </figure>
+  <div class="prose">
+    <p>Abliteration shrinks the separation by 28.7–33.9 units in standard models but only 7.7–13.7 in ER models; for Qwen 1.5B, 37.8% versus 13.4%. The authors read this as abliteration failing to collapse a representation that ER training has spread across many dimensions. Note that ER models start with a <em>smaller</em> separation for Qwen 3B and Llama-2 (79.6 vs 100.9, 74.6 vs 112.0), so the claim rests on robustness of the separation, not its size.</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Does this analysis prove the refusal signal is spread over many directions?</dt>
+    <dd>No. It shows the class separation survives removing one direction, which is consistent with a distributed signal. A direct test would, for example, count how many directions must be removed to suppress refusal, as in <a href="cones.html">the concept-cones paper</a>.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t5b">
+  <p class="eyebrow"><b>Section</b> · §4.5–4.6 · Tables 2–3 (v2)</p>
+  <h2>Other jailbreaks, and which part of the refusal matters</h2>
+  <div class="prose">
+    <p>Version 2 of the paper adds two experiments. <strong>More jailbreaks (§4.5, Table 2).</strong> Base and ER models are attacked with seven prompt-level jailbreak suites (DAN, HarmBench, three WildGuard test splits, WildJailbreak and TrustLLM's jailbreak set), with success judged by WildGuard. ER models have lower attack success on every suite; the gains are largest for the Qwen models, whose baselines were weakest (Qwen2.5-3B on WildJailbreak: 93.8% to 41%).</p>
+    <p><strong>Component ablation (§4.6, Table 3).</strong> Qwen2.5-3B is fine-tuned on each part of the extended refusal alone and then abliterated. Training on the bare refusal sentence leaves only 17.8% refusal after abliteration, 73.1 points below the full ER model's 90.9; the explanation (topic overview) alone keeps 81.1% and the justification alone 86.2%. The protection comes from the explanatory parts, not from refusing as such, which supports the paper's account.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn on" data-jb="comp">Table 3: components (Qwen2.5-3B)</button>
+      <button class="btn" data-jb="q3">Table 2: Qwen2.5-3B</button>
+      <button class="btn" data-jb="q15">Qwen2.5-1.5B</button>
+      <button class="btn" data-jb="l2">Llama-2-7B</button>
+    </div>
+    <div class="svgbox"><svg id="jb" viewBox="0 0 600 270" role="img" aria-label="Refusal after abliteration by training component, and jailbreak success rates for base and extended models"></svg></div>
+    <p class="readout" id="jb-r"></p>
+    <figcaption>From Tables 2 and 3 of v2 (October 2025). Components view: refusal score after abliteration (higher is safer) for Qwen2.5-3B fine-tuned on the full extended refusal or on one part. Jailbreak views: attack success rate (%) judged by WildGuard, lower is safer; grey = base model, amber = extended-refusal model.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What does the 17.8% result for the refusal-only model tell us?</dt>
+    <dd>That fine-tuning on refusals alone, without explanation, leaves refusal just as removable as in the original model; the defence depends on the model producing explanatory content.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · Limitations · Lineage</p>
+  <h2>Limitations and open questions</h2>
+  <div class="prose"><ul>
+    <li><strong>Attack coverage.</strong> The weight-level attack is single-direction abliteration only; v2 adds seven prompt-level jailbreak suites (Table 2). Multi-direction ablation (e.g. removing several representationally independent directions, as in <a href="cones.html">Wollschläger et al.</a>), adaptive selection of directions on the defended model, or ordinary fine-tuning attacks are not tested.</li>
+    <li><strong>Scale and breadth.</strong> Three models of 1.5B–7B parameters; the component ablation (Table 3) is run on Qwen2.5-3B only.</li>
+    <li><strong>Reporting gaps.</strong> No comparison against other alignment-hardening defences, inconsistent dataset counts between §3.2 and §4.1 of v2, and a minor mismatch between "at most 10%" (abstract) and the 9.1-point maximum in the results.</li>
+    <li><strong>User experience.</strong> The authors note longer refusals may be unwelcome and suggest work on conciseness and combining with external moderation.</li>
+  </ul></div>
+  <div class="later"><span class="label">Related directions</span>Other work on tamper resistance aims at the same goal (safety that survives weight access) through adversarial training against representation edits or fine-tuning. In the archive, <a href="abl-compare.html">Young (2025)</a> suggests multi-stage alignment may also spread safety representations more widely, a hypothesis in the same spirit as this paper.</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Abliteration</dt><dd>Projecting a refusal direction out of a model's weights.</dd>
+    <dt>Extended refusal</dt><dd>Overview + explicit refusal + ethical rationale.</dd>
+    <dt>CatQA</dt><dd>550 harmful questions across categories, used for the refusal score.</dd>
+    <dt>Perplexity</dt><dd>Exponentiated average negative log-likelihood on text; lower means the model predicts ordinary text better.</dd>
+    <dt>Coherence</dt><dd>Share of outputs judged coherent by an LLM judge.</dd>
+    <dt>Centroid distance</dt><dd>Distance between mean harmful and mean benign hidden states after PCA.</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+(function(){ // spread toy
+  var svg=$("#sp"), k=1, ab=false, TOT=10, TH=5;
+  function shares(){ var w=[], s=0; for (var i=0;i<k;i++){ var v=Math.pow(0.82,i); w.push(v); s+=v; } return w.map(function(v){ return v/s*TOT; }); }
+  function draw(){ clear(svg); var w=shares(), rem=0;
+    w.forEach(function(v,i){ if (!(ab && i===0)) rem+=v; });
+    var x0=40, sc=48, y=70;
+    S('text',{x:x0,y:30,'class':'t-h'},svg,'refusal signal, by direction');
+    var x=x0; w.forEach(function(v,i){ var cut=ab&&i===0; S('rect',{x:x,y:y,width:v*sc-2,height:40,'class':cut?'u-off':(i%2?'f-fire':'f-wire')},svg);
+      if (v*sc>30) S('text',{x:x+v*sc/2,y:y+25,'class':'t mid'},svg,cut?'cut':String(i+1)); x+=v*sc; });
+    S('text',{x:x0,y:y+60,'class':'t-s'},svg,'total before: '+TOT.toFixed(1));
+    var yy=170; S('text',{x:x0,y:yy-10,'class':'t-s'},svg,'remaining after '+(ab?'abliteration':'(no attack yet)'));
+    S('rect',{x:x0,y:yy,width:rem*sc,height:30,'class':rem>=TH?'f-ok':'f-inh'},svg);
+    S('line',{x1:x0+TH*sc,y1:yy-20,x2:x0+TH*sc,y2:yy+44,'class':'w-dash'},svg); S('text',{x:x0+TH*sc+4,y:yy+44,'class':'t-s'},svg,'refuses above this line');
+    var refuse=rem>=TH;
+    $('#sp-r').innerHTML=(ab?'After removing the top direction, <b>'+Math.round(rem/TOT*100)+'%</b> of the signal remains: the toy model ':'Signal shared among <b>'+k+'</b> direction'+(k>1?'s':'')+'; the top one carries <b>'+Math.round(w[0]/TOT*100)+'%</b>. The model ')+'<b>'+(refuse?'still refuses':'complies')+'</b>.'; }
+  bindRange('sp-k',function(v){ k=v; draw(); });
+  $('#sp-ab').onclick=function(){ ab=!ab; this.setAttribute('aria-pressed',ab); this.classList.toggle('on',ab); this.textContent=ab?'Undo':'Abliterate (remove the top direction)'; draw(); };
+})();
+var ABLD={names:['Llama-2-7B-Chat','Qwen2.5-3B-Instruct','Qwen2.5-1.5B-Instruct'],
+  // [before, after] for standard then extended: refusal, coherence, mmlu, ppl
+  ref:[[[100.0,20.7],[100.0,92.7]],[[93.1,15.1],[100.0,90.9]],[[93.8,13.6],[100.0,96.7]]],
+  coh:[[[100.0,100.0],[100.0,89.1]],[[100.0,100.0],[100.0,98.7]],[[100.0,100.0],[100.0,96.2]]],
+  mmlu:[[[47.5,46.8],[46.4,41.8]],[[65.6,64.0],[65.0,64.5]],[[60.9,59.6],[59.6,54.4]]],
+  ppl:[[[14.1,18.5],[16.7,20.1]],[[21.6,22.4],[23.7,25.4]],[[24.1,24.7],[26.7,49.5]]]};
+(function(){ // refusal before/after
+  var svg=$('#er'), m=0;
+  function draw(){ clear(svg); var base=210, sc=1.7;
+    S('line',{x1:30,y1:base,x2:580,y2:base,'class':'axis'},svg);
+    [0,50,100].forEach(function(t){ S('line',{x1:30,y1:base-t*sc,x2:580,y2:base-t*sc,'class':'grid'},svg); S('text',{x:26,y:base-t*sc+4,'class':'t-s end'},svg,t); });
+    var drops=[];
+    ABLD.names.forEach(function(n,i){ var v=ABLD.ref[i][m], x=70+i*180;
+      S('rect',{x:x,y:base-v[0]*sc,width:50,height:v[0]*sc,'class':'f-rule'},svg); S('text',{x:x+25,y:base-v[0]*sc-6,'class':'t-s mid'},svg,fmt(v[0],1));
+      S('rect',{x:x+56,y:base-v[1]*sc,width:50,height:v[1]*sc,'class':'f-fire'},svg); S('text',{x:x+81,y:base-v[1]*sc-6,'class':'t-s mid'},svg,fmt(v[1],1));
+      S('text',{x:x+53,y:base+18,'class':'t-s mid'},svg,'before   after'); S('text',{x:x+53,y:base+36,'class':'t mid'},svg,n); drops.push(v[0]-v[1]); });
+    $('#er-r').innerHTML=(m?'Extended-refusal models':'Standard models')+': refusal falls by <b>'+drops.map(function(d){return fmt(d,1);}).join('</b>, <b>')+'</b> points.'; }
+  $$('[data-er]').forEach(function(b){ b.addEventListener('click',function(){ m=+b.dataset.er; $$('[data-er]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }); });
+  draw();
+})();
+(function(){ // utility table
+  var svg=$('#ut'), key='ref';
+  var lab={ref:'Refusal score (%)',coh:'Coherence (%)',mmlu:'MMLU (%)',ppl:'Perplexity on C4 (lower is better)'};
+  function draw(){ clear(svg); var D=ABLD[key], mx=key==='ppl'?55:100, base=225, sc=180/mx;
+    S('text',{x:30,y:20,'class':'t-s'},svg,lab[key]);
+    S('line',{x1:30,y1:base,x2:580,y2:base,'class':'axis'},svg);
+    ABLD.names.forEach(function(n,i){ var x0=50+i*180;
+      [[D[i][0],'f-wire'],[D[i][1],'f-fire']].forEach(function(p,j){ p[0].forEach(function(v,t){ var x=x0+j*76+t*36;
+        S('rect',{x:x,y:base-v*sc,width:32,height:v*sc,'class':p[1],'fill-opacity':t?1:0.35},svg);
+        S('text',{x:x+16,y:base-v*sc-5,'class':'t-s mid','font-size':10},svg,fmt(v,1)); }); });
+      S('text',{x:x0+34,y:base+16,'class':'t-s mid'},svg,'standard'); S('text',{x:x0+110,y:base+16,'class':'t-s mid'},svg,'extended');
+      S('text',{x:x0+72,y:base+36,'class':'t mid'},svg,n); });
+    var msg={ref:'Abliteration removes most refusals from standard models and few from extended-refusal ones.',coh:'Abliterated extended-refusal models lose some coherence (down to <b>89.1%</b> for Llama-2); standard ones lose none.',mmlu:'Largest MMLU loss: extended Llama-2 after abliteration, <b>46.4 → 41.8</b>.',ppl:'Largest perplexity rise: extended Qwen 1.5B after abliteration, <b>26.7 → 49.5</b>.'};
+    $('#ut-r').innerHTML=msg[key]; }
+  $$('[data-ut]').forEach(function(b){ b.addEventListener('click',function(){ key=b.dataset.ut; $$('[data-ut]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }); });
+  draw();
+})();
+(function(){ // centroids
+  var svg=$('#cz'), m=0;
+  var T=[['Qwen2.5-1.5B',[76.25,47.46],[75.02,64.98]],['Qwen2.5-3B',[100.88,66.99],[79.59,71.94]],['Llama-2-7B',[112.01,83.28],[74.64,60.99]]];
+  function draw(){ clear(svg); var t=T[m], sc=3.0, cx=270;
+    [['standard',t[1],60],['extended refusal',t[2],160]].forEach(function(r){ var y=r[2], d0=r[1][0], d1=r[1][1];
+      S('text',{x:20,y:y-30,'class':'t'},svg,r[0]);
+      S('circle',{cx:cx-d0*sc/2,cy:y-10,r:6,'class':'f-wire','fill-opacity':0.3},svg); S('circle',{cx:cx+d0*sc/2,cy:y-10,r:6,'class':'f-fire','fill-opacity':0.3},svg);
+      S('line',{x1:cx-d0*sc/2,y1:y-10,x2:cx+d0*sc/2,y2:y-10,'class':'w-dash'},svg);
+      S('text',{x:cx+d0*sc/2+12,y:y-6,'class':'t-s'},svg,'before '+fmt(d0,1));
+      S('circle',{cx:cx-d1*sc/2,cy:y+16,r:7,'class':'f-wire'},svg); S('circle',{cx:cx+d1*sc/2,cy:y+16,r:7,'class':'f-fire'},svg);
+      S('line',{x1:cx-d1*sc/2,y1:y+16,x2:cx+d1*sc/2,y2:y+16,'class':'w-ink'},svg);
+      S('text',{x:cx+d1*sc/2+12,y:y+20,'class':'t-s'},svg,'after '+fmt(d1,1)+'  (−'+Math.round((1-d1/d0)*1000)/10+'%)'); });
+    S('text',{x:20,y:228,'class':'t-wire'},svg,'● benign centroid'); S('text',{x:170,y:228,'class':'t-fire'},svg,'● harmful centroid'); S('text',{x:330,y:228,'class':'t-s'},svg,'gap = reported distance');
+    $('#cz-r').innerHTML=t[0]+': separation shrinks by <b>'+fmt(t[1][0]-t[1][1],1)+'</b> in the standard model and <b>'+fmt(t[2][0]-t[2][1],1)+'</b> in the extended-refusal model.'; }
+  $$('[data-cz]').forEach(function(b){ b.addEventListener('click',function(){ m=+b.dataset.cz; $$('[data-cz]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }); });
+  draw();
+})();
+(function(){ // v2 tables 2-3
+  var svg=$('#jb'), m='comp';
+  var C=[['full extended',90.9],['explanation only',81.1],['justification only',86.2],['refusal only',17.8]];
+  var suites=['DAN','HarmBench','WG-Micro','WG-Adv.','WG-Vanilla','WildJailbreak','TrustLLM'];
+  var J={q3:['Qwen2.5-3B',[53.7,13.4,22.7,40.1,8.5,93.8,39.0],[9.3,8.1,10.7,22.0,1.5,41,10.3]],
+    q15:['Qwen2.5-1.5B',[25.7,13.8,22.4,40.4,7.8,90.5,22.8],[2.7,7.2,10.4,21.4,1.5,44.1,8.3]],
+    l2:['Llama-2-7B',[3.7,8.1,4.0,6.5,1.9,17.8,3.3],[1.3,1.6,2.7,5.3,0.5,14.0,0.8]]};
+  function draw(){ clear(svg); var base=220, sc=1.8;
+    S('line',{x1:40,y1:base,x2:580,y2:base,'class':'axis'},svg);
+    [0,50,100].forEach(function(t){ S('line',{x1:40,y1:base-t*sc,x2:580,y2:base-t*sc,'class':'grid'},svg); S('text',{x:36,y:base-t*sc+4,'class':'t-s end'},svg,t); });
+    if (m==='comp'){ S('text',{x:40,y:20,'class':'t-s'},svg,'refusal score after abliteration (%)');
+      C.forEach(function(c,i){ var x=70+i*130, h=c[1]*sc; S('rect',{x:x,y:base-h,width:80,height:h,'class':i===3?'f-inh':(i?'f-wire':'f-fire')},svg); S('text',{x:x+40,y:base-h-6,'class':'t-s mid'},svg,fmt(c[1],1)); S('text',{x:x+40,y:base+18,'class':'t-s mid'},svg,c[0]); });
+      $('#jb-r').innerHTML='Trained on the refusal sentence alone, abliteration leaves <b>17.8%</b> refusal; with the explanatory parts, <b>81–91%</b>.';
+    } else { var d=J[m]; S('text',{x:40,y:20,'class':'t-s'},svg,d[0]+': jailbreak success (%), lower is safer');
+      suites.forEach(function(sn,i){ var x=55+i*75, a=d[1][i], b=d[2][i];
+        S('rect',{x:x,y:base-a*sc,width:28,height:Math.max(1,a*sc),'class':'f-rule'},svg); S('rect',{x:x+30,y:base-b*sc,width:28,height:Math.max(1,b*sc),'class':'f-fire'},svg);
+        S('text',{x:x+14,y:base-a*sc-5,'class':'t-s mid','font-size':9},svg,fmt(a,1)); S('text',{x:x+44,y:base-b*sc-5,'class':'t-s mid','font-size':9},svg,fmt(b,1));
+        S('text',{x:x+29,y:base+16,'class':'t-s mid','font-size':10},svg,sn); });
+      var mx=0, k=0; suites.forEach(function(_,i){ var dd=d[1][i]-d[2][i]; if (dd>mx){ mx=dd; k=i; } });
+      $('#jb-r').innerHTML=d[0]+': extended model lower on all 7 suites; largest drop on '+suites[k]+', from <b>'+fmt(d[1][k],1)+'%</b> to <b>'+fmt(d[2][k],1)+'%</b>.'; } }
+  $$('[data-jb]').forEach(function(b){ b.addEventListener('click',function(){ m=b.dataset.jb; $$('[data-jb]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }); });
+  draw();
+})();
+</script>

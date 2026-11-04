@@ -1,0 +1,87 @@
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guides · <b>Do it yourself</b></p>
+  <h1>Make your own study guide with AI</h1>
+  <p class="lede">The guides in this archive were written for a general reader. An AI model such as Claude can make one shaped around you instead: your background, your goal, the format you learn best from. This page shows how to ask, and how to check what you get back.</p>
+  <p class="paperlinks"><a href="index.html">All study guides</a> <a href="https://lovespark.love/papers-worth-reading/">The archive</a></p>
+</header>
+
+<section class="kp" id="why">
+  <h2>Why make your own?</h2>
+  <div class="prose">
+    <p>A ready-made guide has to guess who is reading. Yours doesn't. You can ask for explanations that start from what you already know ("I'm a nurse", "I know Python but no calculus"), analogies from things you care about, more depth on the part that confused you, and a format that suits how you learn. You can also keep asking follow-up questions, which no static page can answer.</p>
+  </div>
+</section>
+
+<section class="kp" id="ask">
+  <h2>What to put in your request</h2>
+  <div class="prose">
+    <ol>
+      <li><strong>The paper.</strong> Paste the link from this archive, or upload the PDF. Ask the AI to read the paper itself, not to work from memory.</li>
+      <li><strong>Who you are.</strong> What you already know, and what you don't. "Assume no maths beyond school algebra" or "I've trained small neural nets before" changes the whole guide.</li>
+      <li><strong>Why you're reading it.</strong> General curiosity, an exam, a job interview, building something with the idea, or deciding whether a news story is right.</li>
+      <li><strong>The format.</strong> See the list below. You can ask for more than one.</li>
+      <li><strong>How to keep it honest.</strong> Ask for section or page references for every key claim, and for the AI to say plainly when it is unsure or when a later paper changed the idea.</li>
+    </ol>
+  </div>
+</section>
+
+<section class="kp" id="formats">
+  <h2>Formats you can ask for</h2>
+  <div class="tablebox"><table>
+    <thead><tr><th>Ask for</th><th>Good for</th></tr></thead>
+    <tbody>
+      <tr><td>An interactive HTML page</td><td>Diagrams you can play with, like these guides. Claude can build one as an Artifact right in the chat, and you can download it.</td></tr>
+      <tr><td>A short explainer in plain words</td><td>A first read before you open the paper.</td></tr>
+      <tr><td>Flashcards or a quiz</td><td>Remembering it a week later. Ask for an export you can import into a flashcard app such as Anki (often a CSV file).</td></tr>
+      <tr><td>A slide deck</td><td>Presenting the paper to a study group or team.</td></tr>
+      <tr><td>A video or animation</td><td>Seeing a process move. Some AI tools can produce a narrated video overview directly. An AI coding agent (such as Claude Code) can also write and render an animation for you, for example with Manim, the open-source library made for maths explainer videos.</td></tr>
+      <tr><td>An audio script or podcast-style dialogue</td><td>Listening on a walk. Some tools can turn a paper into an audio overview for you.</td></tr>
+      <tr><td>A worked example or tiny code demo</td><td>Understanding by doing: "show me attention on a 3-word sentence with real numbers".</td></tr>
+      <tr><td>A "steelman and critique"</td><td>Seeing the paper's strongest case and its known weaknesses side by side.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="kp" id="prompts">
+  <h2>Prompts to copy and adapt</h2>
+  <div class="prose"><p>Replace the parts in square brackets. Each box has a copy button.</p></div>
+  <figure class="prompt"><pre class="algo" id="p1">Here is a research paper: [link or attached PDF]. Please read the paper itself.
+
+Make me an interactive HTML study guide for it. About me: [your background, e.g. "I work in marketing and have no maths beyond school algebra"]. I want to understand [the main idea / how it works / why it mattered].
+
+Include: a plain-language summary, 2–3 diagrams I can interact with, an everyday analogy for each key idea, and 5 check-yourself questions with answers. Give a section or page reference for every key claim, say clearly when you are unsure, and note if a later paper improved or replaced the idea.</pre><button class="btn" data-copy="p1">Copy prompt</button></figure>
+  <figure class="prompt"><pre class="algo" id="p2">I'm reading [paper title, link]. I already know [what you know]. Explain only the part I'm stuck on: [quote the sentence, equation or figure]. Use a small worked example with real numbers, then ask me two questions to check I understood.</pre><button class="btn" data-copy="p2">Copy prompt</button></figure>
+  <figure class="prompt"><pre class="algo" id="p3">Turn [paper title, link] into 20 flashcards for spaced repetition, as a CSV with columns Front and Back. Mix definitions, "why" questions and one or two numbers worth remembering. Base every card on the paper itself and include the section it comes from on the back.</pre><button class="btn" data-copy="p3">Copy prompt</button></figure>
+  <figure class="prompt"><pre class="algo" id="p4">Make a 3-minute explainer video plan for [paper title, link] aimed at [audience]: a scene-by-scene script with narration and what is shown on screen. [If you are an agent that can run code:] then build it as an animation with Manim and render it to MP4.</pre><button class="btn" data-copy="p4">Copy prompt</button></figure>
+  <figure class="prompt"><pre class="algo" id="p5">Here is a study guide that an AI wrote: [paste or attach it]. Here is the paper: [link]. Fact-check the guide against the paper. List every claim that is wrong, unsupported or out of date, quote the paper's own words as evidence, and suggest a correction.</pre><button class="btn" data-copy="p5">Copy prompt</button></figure>
+</section>
+
+<section class="kp" id="check">
+  <h2>Check what you get</h2>
+  <div class="prose">
+    <p>AI models can be confidently wrong, especially about exact numbers, who invented what, and papers newer than their training. A few habits catch most problems:</p>
+    <ul>
+      <li><strong>Spot-check the references.</strong> Open the paper at two or three of the cited sections and confirm they say what the guide claims.</li>
+      <li><strong>Be wary of precise numbers.</strong> Benchmark scores, dataset sizes and hyperparameters are where errors hide. Find them in the paper's tables.</li>
+      <li><strong>Get a second opinion.</strong> Paste the guide into a fresh chat (or a different AI) with the last prompt above and ask it to fact-check.</li>
+      <li><strong>Read the abstract and conclusion yourself.</strong> If the guide's headline doesn't match them, trust the paper.</li>
+      <li><strong>Ask "what came after?".</strong> Many ideas in this archive were later refined. The archive's "Led to" links are a good place to look.</li>
+    </ul>
+  </div>
+  <p class="takeaway"><span class="label">Rule of thumb</span>Use the AI to understand the paper, and the paper to check the AI.</p>
+</section>
+
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a>. <a href="index.html">All study guides</a>. This page was written with Claude.</p>
+</footer>
+</div>
+<script>
+document.querySelectorAll('[data-copy]').forEach(function(b){
+  b.addEventListener('click', function(){
+    var t = document.getElementById(b.dataset.copy).textContent;
+    function done(ok){ b.textContent = ok ? 'Copied' : 'Select the text and copy it'; setTimeout(function(){ b.textContent = 'Copy prompt'; }, 1800); }
+    try { navigator.clipboard.writeText(t).then(function(){ done(true); }, function(){ done(false); }); } catch (e) { done(false); }
+  });
+});
+</script>

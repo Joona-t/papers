@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nature DQN (2015) study guide</title>
+<meta name="description" content="Can a single learning agent, with one fixed design, reach human-level play across dozens of different video games from pixels and the score alone? This Nature paper scales up the 2013 Atari agent with one key addition, a slowly updated &quot;target network&quot;, and reaches more than 75% of a profe">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Robotics &amp; reinforcement learning</b> · 2015</p>
+  <h1>Human-level control through deep reinforcement learning</h1>
+  <p class="cite">Volodymyr Mnih et al. · Nature</p>
+  <p class="lede">Can a single learning agent, with one fixed design, reach human-level play across dozens of different video games from pixels and the score alone? This Nature paper scales up the 2013 Atari agent with one key addition, a slowly updated "target network", and reaches more than 75% of a professional games tester's score (measured above random play) on 29 of 49 games.</p>
+  <p class="paperlinks"><a href="https://klab.tch.harvard.edu/academia/classes/Neuro230/ReadingAssignments/MnihEtAlHassibis15NatureControlDeepRL.pdf">Read the paper (free)</a> <a href="https://lovespark.love/papers-worth-reading/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, separate AI review (also by Claude), but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>The deep Q-network (DQN) learns to play Atari games from the screen pixels and the score, with no game-specific knowledge, using the same network, learning method and settings for all 49 games tested (each game trained separately).</p>
+  <p>It learns by guessing how much future score each joystick move will bring, and correcting each guess using its own guess about the next moment.</p>
+  <p>Two tricks keep that self-correcting process from spiralling: a big memory of past moments that it learns from in random order, and a frozen copy of itself that provides the "next moment" guesses and is only updated now and then.</p>
+  <p>It beats the best earlier learning methods on 43 of the 49 games and reaches more than 75% of a professional human tester's level on 29 of them, though games that need long-term exploration, like Montezuma's Revenge, remain out of reach.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · Abstract · Fig. 3</p>
+  <h2>One agent, 49 games</h2>
+  <div class="prose">
+    <p>This is the grown-up version of the <a href="dqn.html">2013 workshop paper</a>. The idea is the same: an agent that watches an Atari game screen, presses joystick buttons and is told the score, and that has to work out everything else for itself. What changed is the scale and the care. Instead of seven games, there are 49. Instead of training for 10 million frames, each game gets 50 million frames, about 38 days of play at the console's normal speed.</p>
+    <p>"One agent" needs reading carefully. A fresh copy is trained from scratch on each game; there is not one network that plays all 49. What is shared is the recipe: the network design, the learning method and every setting are identical across games. That is the point being made. Nothing was tuned per game, so the success has to come from the general method, not from human insight into each game.</p>
+    <p>The games are wildly different: shooters like Space Invaders, sports like Boxing and Tennis, racing like Enduro, mazes like Ms. Pac-Man. Some reward you constantly, some rarely.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Think of a cookery school that teaches one method and then sends its graduates to 49 different kitchens. Each graduate learns their own kitchen on the job, but they all arrived with the same training and the same habits. The paper is testing the method, not any one cook.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Same design, same settings, separate training on each of 49 games: the test is whether a general learning recipe can reach human-level play without help.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · Methods: preprocessing</p>
+  <h2>What the agent actually sees</h2>
+  <div class="prose">
+    <p>The Atari console could only draw a few moving objects (sprites) at once, so many games draw some objects only on even frames and others only on odd frames, relying on the eye to blur the flicker. A program that looks at single frames would see enemies blink in and out of existence. The paper fixes this by taking, for every pixel, the brighter of the current and previous frame, so a flickering object is always visible.</p>
+    <p>The picture is then turned grey and shrunk to 84 × 84 pixels, and the agent is given the <strong>last four</strong> of these images at once. One still frame cannot tell you which way a ball is moving; four can. The agent picks a move only every fourth frame and holds it in between.</p>
+    <p>Play with a made-up game screen below. Switch off the max-of-two-frames step and watch the enemy blink; switch to a single frame and try to say which way the ball is travelling.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn" id="fr-play" aria-pressed="false">Play</button><button class="btn" id="fr-step">Next frame</button>
+      <button class="btn" id="fr-max" aria-pressed="true">Max of two frames: on</button><button class="btn" id="fr-stack" aria-pressed="true">Frames shown: 4</button>
+    </div>
+    <div class="svgbox"><svg id="fr" viewBox="0 0 600 250" role="img" aria-label="A toy game screen on the left and the agent's processed view on the right"></svg></div>
+    <p class="readout" id="fr-r"></p>
+    <figcaption>A toy screen, not a real Atari game. Left: the raw frame; the blue enemy is drawn only on even frames, as many Atari games did. Right: what the network receives. With "max of two frames" each pixel takes the brighter of this frame and the last one, so the enemy never vanishes. With 4 frames stacked, older frames appear fainter, so the ball's direction of travel is visible.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Small preprocessing choices (remove flicker, stack four frames) give a still-image network the information it needs: where things are and which way they are moving.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why give the network four frames rather than one?</dt>
+    <dd>A single frame shows position but not motion. Four frames let it infer speed and direction, such as which way the ball is going.</dd>
+    <dt>What does taking the maximum over two frames fix?</dt>
+    <dd>Sprites that the game draws only on alternate frames. The maximum keeps them visible in every processed frame.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · Main text · Methods</p>
+  <h2>Stop chasing your own tail: the target network</h2>
+  <div class="prose">
+    <p>Like the 2013 version, DQN learns a <strong>Q-value</strong> for each move: its guess of the future score that move will bring. Each guess is corrected towards "reward just received + a discounted version of my own best guess for the next moment". The awkward part is that the answer key is written by the student. Every time the network updates, its guess for the next moment shifts too, so the target it is aiming at keeps moving. With a large neural network, where changing one guess nudges many others, this can make learning wobble or even blow up.</p>
+    <p>The fix is a <strong>target network</strong>: a frozen copy of the Q-network that is used only to compute those "next moment" guesses. The main network learns towards targets that stay still for 10,000 updates. Then the copy is refreshed, and the process repeats. Each stretch becomes an ordinary, stable learning problem with a fixed answer key.</p>
+    <p>The paper keeps the other stabiliser from 2013, <strong>experience replay</strong>: the last million moments are stored, and learning uses random handfuls of them. Below, watch what the target looks like during training with and without a frozen copy.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Refresh target every <input type="range" id="tg-c" min="0" max="4" step="1" value="3"><output id="tg-c-o">200</output> updates</label>
+      <button class="btn" id="tg-run">Train again</button>
+    </div>
+    <div class="svgbox"><svg id="tg" viewBox="0 0 600 260" role="img" aria-label="The learning target and the Q estimate over 3,000 updates"></svg></div>
+    <p class="readout" id="tg-r"></p>
+    <figcaption>An illustrative toy: one state that leads back to itself, noisy reward averaging 1, discount 0.9, so the true value is 10. Amber: the target the network is chasing. Blue: its current estimate. With refresh every 1 update the target moves every single step (the 2013 setting); with a frozen copy it stands still in flat steps and then jumps. Very long freezes make progress slow, one refresh at a time, so <var>C</var> is a trade-off. In this tiny linear toy every setting is stable; the paper's point is that in a large nonlinear network the fixed answer key prevents the feedback loops that cause oscillation and divergence.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>Trying to hit a dartboard that someone moves every time you throw is maddening. Agree that the board stays put for the next hundred throws, then gets moved to where you now think it should be, and you can actually improve.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>A periodically refreshed frozen copy gives the network a fixed answer key for thousands of updates at a time, which keeps self-correcting learning stable.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is the target "moving" in plain Q-learning with a network?</dt>
+    <dd>The target is computed from the same network that is being trained, so every update changes the target as well as the estimate.</dd>
+    <dt>What exactly is frozen in the target network, and for how long?</dt>
+    <dd>A full copy of the network's weights, used only to compute targets. It is replaced by a fresh copy of the main network every 10,000 updates.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · Fig. 3 · Extended Data Table 2</p>
+  <h2>What "human level" means here</h2>
+  <div class="prose">
+    <p>Scores in different games are in different units, so the paper puts them on one scale. A random button-masher scores 0%, and a <strong>professional games tester</strong> who practised each game for about two hours scores 100%. An agent at 75% has closed three quarters of the gap between random and that human.</p>
+    <p>On this scale DQN beat the best earlier learning methods on 43 of the 49 games, and reached 75% or more on 29. On some games it went far beyond the tester. In Breakout it discovered the classic trick of digging a tunnel up the side of the wall so the ball bounces around behind the bricks.</p>
+    <p>It failed badly on games where reward is rare and you must explore deliberately. In Montezuma's Revenge you need many precise moves before the first point, so random button pressing almost never finds a reward to learn from.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Agent's score <input type="range" id="ns-a" min="0" max="10000" step="100" value="3000"><output id="ns-a-o">3000</output></label>
+      <label>Human <input type="range" id="ns-h" min="1000" max="10000" step="100" value="7500"><output id="ns-h-o">7500</output></label>
+      <label>Random <input type="range" id="ns-r" min="0" max="1000" step="50" value="350"><output id="ns-r-o">350</output></label>
+    </div>
+    <div class="svgbox"><svg id="ns" viewBox="0 0 600 140" role="img" aria-label="A ruler from random to human score with the agent placed on it"></svg></div>
+    <p class="readout" id="ns-r-out"></p>
+    <figcaption>The paper's normalised score: 100 × (agent − random) / (human − random). The slider values are made up; move them to see how the same raw score can be a strong or weak result depending on where random play and the human sit.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>"Human level" means a share of the gap between random play and a practised tester. DQN cleared 75% on 29 of 49 games, and was weakest where rewards are rare.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · Fig. 4 · Discussion</p>
+  <h2>What the network learned, and what came next</h2>
+  <div class="prose">
+    <p>The authors looked inside the trained Space Invaders network. They took its last hidden layer for many game moments and laid them out on a 2-D map so that similar internal patterns sit close together. Screens that look alike landed near each other, as you would expect. More interestingly, some screens that look quite different but promise a similar future score also landed together. The network had organised what it sees around what matters for the score.</p>
+    <p>The paper became a landmark: it showed deep learning and reinforcement learning working together at scale, and the same team went on to <a href="alphago.html">AlphaGo</a>.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>DQN tends to overestimate Q-values, because it uses the same maximum both to pick and to score the next move. Double DQN (2015) fixed this by letting the online network choose and the target network score. Prioritised replay (2015) replays surprising memories more often, and Rainbow (2017) combined six such improvements. Montezuma's Revenge was finally cracked by methods built for exploration, such as Random Network Distillation (2018) and Go-Explore (2019), and Agent57 (2020) beat the human baseline on all 57 Atari games.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The network learned an internal picture of the game organised by future reward. Its weaknesses (overestimation, poor exploration) set the agenda for the next five years.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Reinforcement learning agents have needed hand-crafted features or low-dimensional, fully observed state spaces. The deep Q-network combines Q-learning with a deep convolutional network to learn policies directly from high-dimensional pixels and the game score. Tested on 49 Atari 2600 games with one algorithm, architecture and set of hyperparameters, it surpasses all previous algorithms and reaches a level comparable to a professional human games tester. <em>Nature</em> 518, 529–533 (26 February 2015).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · Main text · Methods</p>
+  <h2>The loss with a target network</h2>
+  <div class="prose"><p>The optimal action-value function obeys the Bellman equation <var>Q</var>*(<var>s</var>, <var>a</var>) = 𝔼<sub><var>s′</var></sub>[<var>r</var> + γ max<sub><var>a′</var></sub> <var>Q</var>*(<var>s′</var>, <var>a′</var>) | <var>s</var>, <var>a</var>]. DQN parameterises <var>Q</var>(<var>s</var>, <var>a</var>; θ<sub><var>i</var></sub>) and, at iteration <var>i</var>, minimises over uniformly sampled minibatches from the replay memory <var>D</var>:</p></div>
+  <div class="eq"><var>L<sub>i</sub></var>(θ<sub><var>i</var></sub>) = 𝔼<sub>(<var>s</var>,<var>a</var>,<var>r</var>,<var>s′</var>) ∼ U(<var>D</var>)</sub>[ ( <var>r</var> + γ max<sub><var>a′</var></sub> <var>Q</var>(<var>s′</var>, <var>a′</var>; θ<sub><var>i</var></sub><sup>−</sup>) − <var>Q</var>(<var>s</var>, <var>a</var>; θ<sub><var>i</var></sub>) )<sup>2</sup> ]</div>
+  <div class="prose">
+    <p>θ<sup>−</sup> are the target-network parameters, set equal to θ every <var>C</var> updates and held fixed in between. The paper's argument: an update that increases <var>Q</var>(<var>s<sub>t</sub></var>, <var>a<sub>t</sub></var>) often also increases <var>Q</var>(<var>s</var><sub><var>t</var>+1</sub>, <var>a</var>) for all <var>a</var>, and so raises the target, which can lead to oscillation or divergence. Delaying the target's response adds a lag between an update and its effect on the targets, making divergence less likely.</p>
+    <p>A second change: the error term <var>r</var> + γ max <var>Q</var>(θ<sup>−</sup>) − <var>Q</var>(θ) is clipped to [−1, 1]. Because the gradient of the absolute value is ±1, this is equivalent to using a squared loss for errors inside (−1, 1) and an absolute-value loss outside, which is what is now called the Huber loss. Rewards are also clipped to {−1, 0, +1} as in 2013.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>TD error δ <input type="range" id="hu-d" min="-4" max="4" step="0.1" value="2.5" data-fmt="1"><output id="hu-d-o">2.5</output></label></div>
+    <div class="svgbox"><svg id="hu" viewBox="0 0 600 240" role="img" aria-label="Loss and gradient as functions of the TD error, with and without error clipping"></svg></div>
+    <p class="readout" id="hu-r"></p>
+    <figcaption>Left: loss as a function of the TD error δ. Dashed: plain ½δ². Amber: the loss implied by clipping the error to [−1, 1] (quadratic inside, linear outside). Right: the gradient that actually reaches the network. Clipping caps any single transition's push at magnitude 1, so a rare huge error cannot yank the weights.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · Methods · Algorithm 1 · Extended Data Table 1</p>
+  <h2>Architecture, preprocessing and settings</h2>
+  <div class="prose">
+    <p><strong>Preprocessing φ.</strong> Per-pixel maximum over the current and previous frame (removes flicker from sprites drawn on alternate frames), extract the luminance (Y) channel, rescale to 84 × 84, stack the <var>m</var> = 4 most recent frames (the paper notes 3 or 5 also work).</p>
+    <p><strong>Network.</strong> Input 84 × 84 × 4 → conv 32 filters 8 × 8 stride 4 → conv 64 filters 4 × 4 stride 2 → conv 64 filters 3 × 3 stride 1 → fully connected 512 → linear output, one per valid action (4 to 18). All hidden layers are rectifiers. Compared with 2013 (16 and 32 filters, two conv layers, 256 hidden units) this is a substantially larger network.</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Minibatch size</td><td class="num">32</td></tr>
+      <tr><td>Replay memory</td><td class="num">1,000,000 most recent frames</td></tr>
+      <tr><td>Agent history length <var>m</var></td><td class="num">4</td></tr>
+      <tr><td>Target network update period <var>C</var></td><td class="num">10,000</td></tr>
+      <tr><td>Discount γ</td><td class="num">0.99</td></tr>
+      <tr><td>Action repeat (frame skip)</td><td class="num">4</td></tr>
+      <tr><td>Update frequency</td><td class="num">1 gradient update per 4 actions</td></tr>
+      <tr><td>Optimiser</td><td>RMSProp, learning rate 0.00025, gradient momentum 0.95</td></tr>
+      <tr><td>Exploration ε</td><td class="num">1.0 → 0.1 linearly over first 1M frames</td></tr>
+      <tr><td>Replay start size</td><td class="num">50,000 (uniform random policy first)</td></tr>
+      <tr><td>Training length</td><td class="num">50 million frames per game</td></tr>
+    </tbody></table></div>
+  <div class="prose"><p>Values from the Methods and Extended Data Table 1, cross-checked against the "Nature settings" reproduced in the Dopamine framework (Castro et al., 2018). The same values were used for every game; they were selected by an informal search on a handful of games, not per game.</p></div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn" id="tg2-play" aria-pressed="false">Run training loop</button><button class="btn" id="tg2-rst">Reset</button>
+      <label><var>C</var> <input type="range" id="tg2-c" min="2" max="30" step="1" value="12"><output id="tg2-c-o">12</output></label>
+    </div>
+    <div class="svgbox wide"><svg id="tg2" viewBox="0 0 640 230" role="img" aria-label="Step-through of Algorithm 1: environment, replay memory, minibatch, online network, target network"></svg></div>
+    <p class="readout" id="tg2-r"></p>
+    <figcaption>Algorithm 1 as a loop. Each tick the agent acts (ε-greedy on the online network θ), stores a transition in the ring buffer <var>D</var>, samples a minibatch, computes targets with θ<sup>−</sup> and takes a gradient step on θ. Every <var>C</var> ticks θ<sup>−</sup> ← θ (the target box flashes). Small numbers here so you can see the cycle; the paper uses a buffer of 10<sup>6</sup>, minibatch 32 and <var>C</var> = 10<sup>4</sup>.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · Fig. 3 · Fig. 4 · Methods: evaluation</p>
+  <h2>Evaluation and results</h2>
+  <div class="prose">
+    <p><strong>Protocol.</strong> Each trained agent plays 30 episodes of up to 5 minutes with ε = 0.05, each episode beginning with a random number of no-op actions so that it starts from varied states. The professional tester played about 20 episodes of up to 5 minutes per game after about 2 hours of practice, with sound off and no pausing or reloading. The random baseline presses a random button at 10 Hz (every sixth frame).</p>
+    <div class="eq">normalised score = 100 × (DQN score − random score) / (human score − random score)</div>
+    <p><strong>Headline numbers.</strong> DQN outperforms the best existing reinforcement learning methods on 43 of 49 games and achieves more than 75% of the human score on 29 games (Fig. 3). It does well on games such as Boxing, Breakout, Enduro and River Raid, and learns long-horizon strategies in some (tunnelling in Breakout), but is close to random on games requiring extended exploration and planning such as Montezuma's Revenge.</p>
+    <p><strong>Representations (Fig. 4).</strong> t-SNE on last-hidden-layer activations from 2 hours of Space Invaders play, coloured by predicted value, places perceptually similar states together and also groups some perceptually dissimilar states with similar expected reward.</p>
+    <p><strong>Ablation (Extended Data Table 3).</strong> On a subset of games, trained for 10 million frames at three learning rates each, the authors compare DQN with and without replay and with and without the separate target network. The paper uses this comparison to argue that both components matter to performance; the individual numbers are not reproduced here.</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why randomise the number of no-op actions at the start of evaluation episodes?</dt>
+    <dd>Atari emulation is deterministic, so an agent could memorise one action sequence. Random starts make the evaluation test a policy rather than a memorised trajectory.</dd>
+    <dt>Why does the target network help when an update to Q(s, a) generalises to Q(s′, ·)?</dt>
+    <dd>Without it, raising Q(s, a) also raises the target r + γ max Q(s′, ·), creating a positive feedback loop. Freezing θ<sup>−</sup> breaks the loop for <var>C</var> updates.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · Discussion and lineage</p>
+  <h2>Limitations and later refinements</h2>
+  <div class="prose"><ul>
+    <li><strong>Sample cost.</strong> 50 million frames (about 38 days of play) per game, far beyond what a human needs.</li>
+    <li><strong>Exploration.</strong> ε-greedy dithering cannot find sparse rewards (Montezuma's Revenge).</li>
+    <li><strong>Overestimation.</strong> The max in the target uses the same noisy estimates to choose and evaluate actions, biasing values upward.</li>
+    <li><strong>Discrete actions only.</strong> The output layer enumerates actions, so continuous control needs other methods.</li>
+    <li><strong>Theory.</strong> The "deadly triad" (function approximation, bootstrapping, off-policy data) still has no convergence guarantee; the target network and replay are effective heuristics.</li>
+    <li><strong>Evaluation fragility.</strong> Later work showed results depend on start conditions (no-op versus human starts) and on sticky actions (Machado et al., 2018).</li>
+  </ul></div>
+  <div class="later"><span class="label">Later refinements</span>Double DQN (van Hasselt, Guez &amp; Silver, 2015) evaluates the online network's argmax with θ<sup>−</sup>. Prioritised replay (Schaul et al., 2015), dueling heads (Wang et al., 2016), distributional RL (C51, 2017), noisy nets and multi-step returns were combined in Rainbow (Hessel et al., 2017). Asynchronous actor-critic (A3C, 2016) dropped replay in favour of parallel actors. In continuous control, DDPG (2015) carried the target-network idea over, using slowly tracking "soft" targets. The same group's next landmark, <a href="alphago.html">AlphaGo</a>, combined deep networks with search. Agent57 (2020) was the first to exceed the human baseline on all 57 Atari games.</div>
+</section>
+
+<section class="kp" id="t5" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>θ, θ<sup>−</sup></dt><dd>Online and target network parameters.</dd>
+    <dt><var>C</var></dt><dd>Number of updates between target-network refreshes.</dd>
+    <dt>Replay memory <var>D</var></dt><dd>Ring buffer of recent transitions (<var>s</var>, <var>a</var>, <var>r</var>, <var>s′</var>) sampled uniformly.</dd>
+    <dt>Error clipping</dt><dd>Clipping the TD error to [−1, 1], equivalent to a Huber loss.</dd>
+    <dt>Normalised score</dt><dd>Percentage of the gap between random play and the human tester.</dd>
+    <dt>No-op start</dt><dd>Beginning an evaluation episode with a random number of do-nothing actions.</dd>
+    <dt>t-SNE</dt><dd>A method for laying out high-dimensional vectors in 2-D while keeping neighbours close.</dd>
+    <dt>Deadly triad</dt><dd>Sutton and Barto's name for the unstable combination of function approximation, bootstrapping and off-policy learning.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="dqn.html">DQN (2013)</a></p>
+  <p><strong>Led to:</strong> <a href="alphago.html">AlphaGo (2016)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> (<a href="https://lovespark.love/papers-worth-reading/#dqn-nature">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // frames demo
+  var svg=$('#fr'), t=0, mx=true, stack=true, timer=null, G=10, CW=24, CH=18;
+  function ball(t){ var x=2+((t*1.0)%40), y=2+((t*0.7)%28); x = x>21 ? 42-x : x; y = y>15 ? 30-y : y; return [Math.round(x),Math.round(y)]; }
+  function enemy(t){ return [6+Math.round(6*Math.sin(t*0.25)+6), 3]; }
+  function frame(t){ var o={b:ball(t), p:[Math.max(1,Math.min(19,ball(t)[0]-2)),16]}; if (t%2===0) o.e=enemy(t); return o; }
+  function drawFrame(x0,o,op,showE){ S('rect',{x:x0+o.b[0]*G,y:20+o.b[1]*G,width:G,height:G,'class':'f-fire','fill-opacity':op},svg);
+    S('rect',{x:x0+o.p[0]*G,y:20+o.p[1]*G,width:4*G,height:G,'class':'f-ink','fill-opacity':op},svg);
+    if (showE) S('rect',{x:x0+showE[0]*G,y:20+showE[1]*G,width:2*G,height:G,'class':'f-wire','fill-opacity':op},svg); }
+  function draw(){ clear(svg); var x1=20, x2=330;
+    [x1,x2].forEach(function(x0){ S('rect',{x:x0,y:20,width:CW*G,height:CH*G,'class':'box'},svg); });
+    S('text',{x:x1,y:14,'class':'t-s'},svg,'raw frame '+t); S('text',{x:x2,y:14,'class':'t-s'},svg,'network input');
+    var f=frame(t); drawFrame(x1,f,1,f.e);
+    var n=stack?4:1;
+    for (var k=n-1;k>=0;k--){ var tt=t-k; if (tt<0) continue; var fk=frame(tt), e=fk.e; if (mx && !e && tt>0) e=enemy(tt-1);
+      drawFrame(x2,fk,k===0?1:0.55-0.13*k,e); }
+    S('text',{x:x1,y:222,'class':'t-s'},svg,'amber ball, ink paddle, blue enemy'); S('text',{x:x2,y:222,'class':'t-s'},svg,(mx?'max over 2 frames':'no max')+' · '+(stack?'4 frames stacked':'1 frame'));
+    var visible = mx || f.e; $('#fr-r').innerHTML='Frame <b>'+t+'</b>. Enemy in network input: <b>'+(visible?'visible':'missing')+'</b>. Ball direction readable: <b>'+(stack?'yes, from the trail':'no, a single frame has no motion')+'</b>.'; }
+  $('#fr-step').onclick=function(){ t++; draw(); };
+  $('#fr-play').onclick=function(){ var b=this; if (timer){ clearInterval(timer); timer=null; b.textContent='Play'; b.setAttribute('aria-pressed','false'); return; } b.textContent='Pause'; b.setAttribute('aria-pressed','true'); timer=setInterval(function(){ t++; draw(); },220); };
+  $('#fr-max').onclick=function(){ mx=!mx; this.setAttribute('aria-pressed',mx); this.textContent='Max of two frames: '+(mx?'on':'off'); draw(); };
+  $('#fr-stack').onclick=function(){ stack=!stack; this.setAttribute('aria-pressed',stack); this.textContent='Frames shown: '+(stack?4:1); draw(); };
+  t=5; draw();
+})();
+(function(){ // target trace toy
+  var svg=$('#tg'), Cs=[1,10,50,200,500], C=200, seed=3;
+  function run(){ var r=rng(seed), w=0, wm=0, ys=[], ws=[], ch=0, lr=0.05, g=0.9;
+    for (var t=0;t<3000;t++){ if (t%C===0){ if (wm!==w) ch++; wm=w; } var y=1+0.8*gauss(r)+g*wm; w+=lr*(y-w); ys.push(1+g*wm); ws.push(w); }
+    return {ys:ys,ws:ws,ch:ch}; }
+  function draw(){ clear(svg); var o=run(), x0=50, y0=20, pw=530, ph=200, X=function(i){return x0+i/2999*pw;}, Y=function(v){return y0+ph-v/12*ph;};
+    S('line',{x1:x0,y1:y0+ph,x2:x0+pw,y2:y0+ph,'class':'axis'},svg); S('line',{x1:x0,y1:y0,x2:x0,y2:y0+ph,'class':'axis'},svg);
+    [0,5,10].forEach(function(v){ S('text',{x:x0-6,y:Y(v)+4,'class':'t-s end'},svg,String(v)); S('line',{x1:x0,y1:Y(v),x2:x0+pw,y2:Y(v),'class':'grid'},svg); });
+    S('line',{x1:x0,y1:Y(10),x2:x0+pw,y2:Y(10),'class':'w-dash'},svg); S('text',{x:x0+pw,y:Y(10)-6,'class':'t-s end'},svg,'true value 10');
+    var d1='',d2=''; o.ys.forEach(function(v,i){ d1+=(i?'L':'M')+X(i)+','+Y(v); }); o.ws.forEach(function(v,i){ d2+=(i?'L':'M')+X(i)+','+Y(v); });
+    S('path',{d:d1,'class':'w-fire'},svg); S('path',{d:d2,'class':'w'},svg);
+    S('text',{x:x0+pw,y:y0+ph+20,'class':'t-s end'},svg,'updates →'); S('text',{x:x0+10,y:y0+12,'class':'t-fire'},svg,'amber: target'); S('text',{x:x0+10,y:y0+28,'class':'t-wire'},svg,'blue: estimate');
+    $('#tg-r').innerHTML='Target refreshed every <b>'+C+'</b> update'+(C>1?'s':'')+': the answer key changed <b>'+o.ch+'</b> times in 3,000 updates. Final estimate <b>'+fmt(o.ws[2999],2)+'</b>.'; }
+  bindRange('tg-c',function(v){ C=Cs[v]; $('#tg-c-o').textContent=C; draw(); });
+  $('#tg-run').onclick=function(){ seed++; draw(); };
+})();
+(function(){ // normalised score
+  var svg=$('#ns'), a=3000, h=7500, rr=350;
+  function draw(){ clear(svg); var n=100*(a-rr)/(h-rr), X=function(p){ return 60+Math.max(-20,Math.min(160,p))/160*480; };
+    S('line',{x1:X(-20),y1:70,x2:X(160),y2:70,'class':'axis'},svg);
+    [0,75,100,150].forEach(function(p){ S('line',{x1:X(p),y1:62,x2:X(p),y2:78,'class':'axis'},svg); S('text',{x:X(p),y:96,'class':'t-s mid'},svg,p+'%'); });
+    S('text',{x:X(0),y:116,'class':'t-s mid'},svg,'random'); S('text',{x:X(100),y:116,'class':'t-ok mid'},svg,'human tester');
+    S('rect',{x:X(75),y:64,width:X(160)-X(75),height:12,'class':'f-ok','fill-opacity':0.25},svg); S('text',{x:X(75)+4,y:56,'class':'t-ok'},svg,'"human level" (≥ 75%)');
+    S('circle',{cx:X(n),cy:70,r:9,'class':'u-on'},svg); S('text',{x:X(n),y:36,'class':'t-fire mid'},svg,'agent '+fmt(n,0)+'%');
+    $('#ns-r-out').innerHTML='100 × ('+a+' − '+rr+') / ('+h+' − '+rr+') = <b>'+fmt(n,1)+'%</b>'+(n>=75?': counts as human level.':': below the 75% line.'); }
+  bindRange('ns-a',function(v){ a=v; draw(); }); bindRange('ns-h',function(v){ h=v; draw(); }); bindRange('ns-r',function(v){ rr=v; draw(); });
+})();
+(function(){ // Huber
+  var svg=$('#hu'), d=2.5;
+  function L(x){ return Math.abs(x)<=1 ? 0.5*x*x : Math.abs(x)-0.5; }
+  function draw(){ clear(svg);
+    function panel(x0,title,f1,f2,ymin,ymax,val){ var pw=250, ph=160, y0=40, X=function(v){return x0+(v+4)/8*pw;}, Y=function(v){return y0+ph-(v-ymin)/(ymax-ymin)*ph;};
+      S('text',{x:x0,y:y0-16,'class':'t-h'},svg,title); S('line',{x1:x0,y1:Y(0),x2:x0+pw,y2:Y(0),'class':'axis'},svg); S('line',{x1:X(0),y1:y0,x2:X(0),y2:y0+ph,'class':'grid'},svg);
+      var a='',b=''; for (var i=0;i<=80;i++){ var x=-4+i*0.1; a+=(i?'L':'M')+X(x)+','+Math.max(y0,Y(f1(x))); b+=(i?'L':'M')+X(x)+','+Math.max(y0,Y(f2(x))); }
+      S('path',{d:a,'class':'w-dash'},svg); S('path',{d:b,'class':'w-fire'},svg);
+      S('line',{x1:X(d),y1:y0,x2:X(d),y2:y0+ph,'class':'w-faint'},svg); S('circle',{cx:X(d),cy:Y(f2(d)),r:5,'class':'u-on'},svg);
+      S('text',{x:x0+pw,y:y0+ph+18,'class':'t-s end'},svg,'δ from −4 to 4'); }
+    panel(30,'Loss',function(x){return 0.5*x*x;},L,0,8);
+    panel(320,'Gradient',function(x){return x;},function(x){return Math.max(-1,Math.min(1,x));},-4,4);
+    $('#hu-r').innerHTML='δ = <b>'+fmt(d,1)+'</b>. Gradient with clipping: <b>'+fmt(Math.max(-1,Math.min(1,d)),2)+'</b>; without: <b>'+fmt(d,2)+'</b>.'; }
+  bindRange('hu-d',function(v){ d=v; draw(); });
+})();
+(function(){ // Algorithm 1 loop
+  var svg=$('#tg2'), C=12, tick, buf, th, thm, timer=null, flash=0, r, B=10, last=[];
+  function reset(){ tick=0; buf=[]; th=0.0; thm=0.0; r=rng(9); last=[]; draw(); $('#tg2-r').textContent='Press Run to start the loop.'; }
+  function step(){ tick++; var tr=Math.floor(r()*90)+10; buf.push(tr); if (buf.length>B) buf.shift();
+    last=[]; for (var i=0;i<3;i++) last.push(Math.floor(r()*buf.length));
+    th += 0.15*(1 + 0.9*thm - th) + 0.05*gauss(r); flash=0; if (tick%C===0){ thm=th; flash=1; } draw(); }
+  function box(x,y,w,h,cls,title,sub){ S('rect',{x:x,y:y,width:w,height:h,'class':cls},svg); S('text',{x:x+w/2,y:y+20,'class':'t mid'},svg,title); if (sub) S('text',{x:x+w/2,y:y+38,'class':'t-s mid'},svg,sub); }
+  function draw(){ clear(svg);
+    box(10,80,100,60,'box','Atari','acts with θ');
+    S('text',{x:140,y:38,'class':'t-s'},svg,'replay memory D (last '+B+')');
+    for (var i=0;i<B;i++){ var on=i<buf.length, sel=last.indexOf(i)>=0; S('rect',{x:140+i*22,y:46,width:20,height:20,'class':sel?'box-fire':(on?'box-wire':'box')},svg); }
+    S('line',{x1:110,y1:100,x2:138,y2:60,'class':'w','marker-end':'url(#aw)'},svg);
+    box(170,110,120,50,'box-fire','minibatch','3 random');
+    S('line',{x1:230,y1:68,x2:230,y2:108,'class':'w-fire','marker-end':'url(#af)'},svg);
+    box(360,30,130,60,'box-wire','online θ','Q = '+fmt(th,2));
+    box(360,150,130,60,flash?'box-ok':'box','target θ⁻','Q = '+fmt(thm,2));
+    S('line',{x1:358,y1:180,x2:292,y2:150,'class':'w','marker-end':'url(#aw)'},svg); S('text',{x:170,y:190,'class':'t-s'},svg,'targets y = r + γ max Q⁻');
+    S('line',{x1:290,y1:125,x2:358,y2:70,'class':'w-fire','marker-end':'url(#af)'},svg); S('text',{x:318,y:120,'class':'t-fire'},svg,'∇ step on θ');
+    S('line',{x1:425,y1:92,x2:425,y2:148,'class':flash?'w-ok':'w-dash','marker-end':flash?'url(#ao)':''},svg); S('text',{x:432,y:124,'class':flash?'t-ok':'t-s'},svg,'copy every C = '+C);
+    
+    var k=C-(tick%C); S('text',{x:630,y:60,'class':'t-big end'},svg,String(tick)); S('text',{x:630,y:80,'class':'t-s end'},svg,'updates');
+    S('text',{x:630,y:180,'class':'t-big end'},svg,String(k)); S('text',{x:630,y:200,'class':'t-s end'},svg,'until next copy');
+    if (tick) $('#tg2-r').innerHTML='Update <b>'+tick+'</b>. Online Q estimate <b>'+fmt(th,2)+'</b>, target copy <b>'+fmt(thm,2)+'</b>'+(flash?': <b>target refreshed now</b>.':'.'); }
+  bindRange('tg2-c',function(v){ C=v; });
+  $('#tg2-play').onclick=function(){ var b=this; if (timer){ clearInterval(timer); timer=null; b.textContent='Run training loop'; b.setAttribute('aria-pressed','false'); return; } b.textContent='Pause'; b.setAttribute('aria-pressed','true'); timer=setInterval(step,350); };
+  $('#tg2-rst').onclick=reset; reset();
+})();
+</script>
+
+</body>
+</html>

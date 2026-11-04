@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perceptrons (book) (1969) study guide</title>
+<meta name="description" content="Two MIT researchers turn the perceptron from an exciting demo into a subject of mathematics, and prove precise limits on what it can recognise. Some things that look easy to us, like &quot;is this shape all one piece?&quot;, turn out to be impossible for a perceptron whose parts each look at only a ">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Neural networks</b> · 1969</p>
+  <h1>Perceptrons: An Introduction to Computational Geometry</h1>
+  <p class="cite">Marvin Minsky, Seymour Papert · MIT Press (book)</p>
+  <p class="lede">Two MIT researchers turn the perceptron from an exciting demo into a subject of mathematics, and prove precise limits on what it can recognise. Some things that look easy to us, like "is this shape all one piece?", turn out to be impossible for a perceptron whose parts each look at only a small region.</p>
+  <p class="paperlinks"><a href="https://en.wikipedia.org/wiki/Perceptrons_(book)">Free explainer (Wikipedia)</a> <span class="badge">No free copy of the original</span> <a href="https://lovespark.love/papers-worth-reading/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, separate AI review (also by Claude), but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The book in four sentences</p>
+  <p>A perceptron makes its decision by adding up votes from many small detectors, each looking at part of the picture.</p>
+  <p>Minsky and Papert ask: which questions about a picture can be answered that way, if every detector sees only a small patch?</p>
+  <p>Some can (is the shape convex?), but some provably can't: whether the number of dots is even or odd, and whether a shape is connected in one piece. For those, some detector must see the whole picture, or grow with it.</p>
+  <p>The book was read as a verdict against neural networks and is often blamed for a lull in the field, though historians disagree about how much it caused.</p>
+</div>
+<div class="later"><span class="label">About the source</span>The book has no free legal copy online, so the archive links to a free explainer. This guide describes the book's main results as they are standardly reported; chapter references are to the 1969 edition.</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · Chapter 0</p>
+  <h2>A perceptron is a committee of small detectors</h2>
+  <div class="prose">
+    <p>Picture a large committee judging a photo. Each member only gets to look at one small piece through a peephole, and can only report a simple yes or no about that piece. Each member's vote has a weight. The chair adds up the weighted votes and announces "yes" if the total is big enough.</p>
+    <p>That is a perceptron, as Minsky and Papert define it. The interesting question is: <em>which</em> yes/no questions about the whole photo can such a committee answer, when every peephole is small?</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Asking a hundred people, each looking at one tile of a mosaic, whether the mosaic shows a single unbroken line. None of them can see far enough to know, and simply adding up their opinions doesn't help.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The book studies a perceptron as weighted voting by limited-view detectors, and asks what that structure can and cannot decide.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · Chapter 3</p>
+  <h2>Even or odd: the parity problem</h2>
+  <div class="prose">
+    <p>Here is a question a child can answer: is the number of lit squares even or odd? Yet no committee of small peepholes can do it. The reason is simple: if even one square is hidden from you, the answer is a coin flip, because that one square can flip it either way. Parity depends on <em>every</em> square at once.</p>
+    <p>Minsky and Papert proved that a perceptron for parity needs at least one detector that sees the entire picture. Try it below: hide some squares and see that the visible ones tell you nothing.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Squares a detector can see <input type="range" id="par-k" min="1" max="8" step="1" value="5"><output id="par-k-o">5</output> of 8</label><button class="btn" id="par-rand">Random picture</button></div>
+    <div class="svgbox"><svg id="par" viewBox="0 0 560 160" role="img" aria-label="Eight squares, some hidden from a detector"></svg></div>
+    <p class="readout" id="par-r"></p>
+    <figcaption>Click squares to switch them on. Hidden squares (dashed) are outside the detector's view. Unless it sees all 8, the possible pictures it can't tell apart are exactly half even and half odd.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Parity can only be decided by looking at everything at once, so a perceptron built from small detectors cannot compute it.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>If you can see 7 of 8 squares, what do you know about parity?</dt>
+    <dd>Nothing. The hidden square makes it even or odd with equal likelihood.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · Chapters 5 and 8</p>
+  <h2>"Is it one piece?" can't be decided locally</h2>
+  <div class="prose">
+    <p>The book's most famous argument concerns <strong>connectedness</strong>: is a shape all one piece? Imagine four long strands with their ends tied together in pairs. At each end there are two ways to tie them. Depending on the combination, you get one big loop or two separate loops.</p>
+    <p>The trick: a detector with a small view sees only one end, or only the middle. Whichever way the left end is tied, the right end decides the outcome, and vice versa. Set the committee's votes below and try to make it get all four cases right. You can't, and the box shows the short proof why.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl" id="cn-ends">
+      <span>Left end:</span><button class="btn on" data-l="0">pairs side by side</button><button class="btn" data-l="1">pairs nested</button>
+      <span>Right end:</span><button class="btn" data-r="0">side by side</button><button class="btn on" data-r="1">nested</button>
+    </div>
+    <div class="svgbox"><svg id="cn" viewBox="0 0 560 210" role="img" aria-label="Four strands joined at both ends, forming one or two loops"></svg></div>
+    <div class="ctl">
+      <label>vote for left "side by side" <input type="range" id="cw-l0" min="-3" max="3" step="0.5" value="1" data-fmt="1"><output id="cw-l0-o">1</output></label>
+      <label>left "nested" <input type="range" id="cw-l1" min="-3" max="3" step="0.5" value="0" data-fmt="1"><output id="cw-l1-o">0</output></label>
+      <label>right "side by side" <input type="range" id="cw-r0" min="-3" max="3" step="0.5" value="0" data-fmt="1"><output id="cw-r0-o">0</output></label>
+      <label>right "nested" <input type="range" id="cw-r1" min="-3" max="3" step="0.5" value="1" data-fmt="1"><output id="cw-r1-o">1</output></label>
+      <label>threshold <input type="range" id="cw-t" min="-3" max="3" step="0.5" value="1.5" data-fmt="1"><output id="cw-t-o">1.5</output></label>
+    </div>
+    <div class="svgbox"><svg id="cw" viewBox="0 0 660 150" role="img" aria-label="Table of the four cases with the committee's verdicts"></svg></div>
+    <p class="readout" id="cw-r"></p>
+    <figcaption>Middle detectors see the same thing in all four cases, so they only add a constant (folded into the threshold). Why no setting works: the two "one loop" cases need L₀+R₁ &gt; t and L₁+R₀ &gt; t; adding gives L₀+L₁+R₀+R₁ &gt; 2t. The two "two loops" cases need L₀+R₀ &lt; t and L₁+R₁ &lt; t; adding gives the same sum &lt; 2t. Both can't hold.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>When the answer depends on how distant parts relate, adding up local evidence fails. Connectedness is such a question.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why can't the left-end detectors help?</dt>
+    <dd>"Side by side" on the left gives one loop in one case and two loops in the other, depending on the right end. Seen alone, it is no evidence either way.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · Chapter 13 and history</p>
+  <h2>What the book did, and a popular myth</h2>
+  <div class="prose">
+    <p>A common story says this book "proved neural networks can't do XOR" and killed the field. Both halves are too simple. XOR (one or the other but not both) is just parity on two inputs. A perceptron with one detector seeing both inputs computes it easily. And everyone, including the authors, knew that networks with more layers could compute anything. What the book proved is narrower: perceptrons whose detectors see only a limited part of the input can't compute certain global properties.</p>
+    <p>What the authors added was a guess: that adding layers would not lead anywhere useful, because nobody knew how to train them. That guess turned out wrong once <a href="backprop.html">backpropagation</a> made training hidden layers practical. Funding for neural-network research did shrink in the 1970s, but historians still argue about how much the book caused it.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>The theorems were correct and specific; the pessimism about multi-layer networks was a conjecture, and it did not hold up.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Setting</p>
+  <p>Let R be a finite retina and Φ a family of predicates φ: 2<sup>R</sup> → {0,1}. A predicate ψ is <em>linear with respect to Φ</em> (a perceptron over Φ) if ψ(X) = ⟦Σ<sub>φ∈Φ</sub> α<sub>φ</sub> φ(X) &gt; θ⟧ for real α, θ. The <strong>order</strong> of ψ is the smallest <var>k</var> such that ψ is linear over some Φ whose members each depend on at most <var>k</var> points of R.</p>
+  <p>The book (Minsky &amp; Papert, MIT Press 1969; expanded edition 1988 with a new prologue and epilogue but no new theorems) develops an algebraic theory (Part I), a geometric theory (Part II) and an analysis of learning (Part III).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · Ch. 1–2</p>
+  <h2>Order, masks, and group invariance</h2>
+  <div class="prose">
+    <p>Any predicate can be written as a linear threshold over <em>masks</em> φ<sub>A</sub>(X) = ⟦A ⊆ X⟧, so order is equivalently the minimum degree of a polynomial threshold representation over {0,1}<sup>|R|</sup>. Order 1 predicates are ordinary linear threshold functions of the pixels.</p>
+    <p>The <strong>group invariance theorem</strong> is the main tool: if ψ is invariant under a group G of permutations of R, and Φ is closed under G, then if ψ is linear over Φ it is linear over Φ with coefficients constant on each G-orbit (average the coefficients over the group). This collapses a representation to a few free numbers, which then lead to contradictions.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · Ch. 3–4</p>
+  <h2>Parity has order |R|</h2>
+  <div class="prose">
+    <p>Parity is invariant under all permutations of R, so by group invariance a representation of order <var>k</var> can use equal coefficients for all masks of the same size <var>j</var> ≤ <var>k</var>. On an input with |X| = <var>n</var>, the weighted sum is then a polynomial P(<var>n</var>) = Σ<sub><var>j</var>≤<var>k</var></sub> α<sub><var>j</var></sub> C(<var>n</var>, <var>j</var>) of degree ≤ <var>k</var>. For it to cross θ with every change of parity for <var>n</var> = 0…|R|, P − θ must change sign |R| times, so it needs degree ≥ |R|. Hence <strong>ord(ψ<sub>PARITY</sub>) = |R|</strong>.</p>
+    <p>The same method shows "one-in-a-box" (every box of a partition contains at least one point) has order growing with box size, and gives the <em>And/Or theorem</em>: a conjunction or disjunction of two low-order predicates on disjoint parts of the retina can have high order.</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does symmetry reduce the representation to a polynomial in |X|?</dt>
+    <dd>With coefficients equal within each mask size, the sum depends only on how many masks of each size are contained in X, which is C(|X|, <var>j</var>).</dd>
+    <dt>Does order |R| mean parity is not a perceptron predicate?</dt>
+    <dd>No. It is a perceptron predicate if a mask can see the whole retina. The point is that no bounded-order family suffices as R grows.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · Ch. 5, 8</p>
+  <h2>Connectedness is not of finite order</h2>
+  <div class="prose">
+    <p>For <strong>diameter-limited</strong> perceptrons (each φ depends only on points within a fixed diameter), the switching argument on the Plain English tab is a complete proof. Build four figures from a long central section and two end-pieces, each end chosen from two configurations, so that the figure is connected iff the ends differ. Each φ sees at most one end, so the weighted sum decomposes as C + L(<var>a</var>) + R(<var>b</var>). Connectedness requires</p>
+  </div>
+  <div class="eq">L<sub>0</sub>+R<sub>1</sub> &gt; θ′, &nbsp; L<sub>1</sub>+R<sub>0</sub> &gt; θ′, &nbsp; L<sub>0</sub>+R<sub>0</sub> &lt; θ′, &nbsp; L<sub>1</sub>+R<sub>1</sub> &lt; θ′</div>
+  <div class="prose">
+    <p>Summing the first pair and the second pair gives contradictory inequalities on the same total. For order-limited perceptrons (each φ depends on few points, but they may be far apart), Chapter 5 uses a reduction from one-in-a-box to show that the order of ψ<sub>CONNECTED</sub> grows without bound with the size of the retina.</p>
+    <p>By contrast several geometric predicates have small order: <strong>convexity has order 3</strong> (X is convex iff no pair of its points has its midpoint outside X, a condition on triples), and some predicates are order 1 or 2. Chapter 7 (stratification) builds bounded-order representations for some translation-invariant predicates, but only with enormously large coefficients.</p>
+  </div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · Ch. 10–13</p>
+  <h2>Learning, coefficient size, and the multilayer conjecture</h2>
+  <div class="prose">
+    <p>Part III restates the perceptron convergence theorem and compares perceptron learning with other procedures. It also shows that for some predicates the coefficients must grow exponentially or worse in |R|, so even when a representation exists it may be impractical to store, and learning it may take an impractically long time.</p>
+    <p>In the concluding chapter (§13.2) the authors consider multilayer extensions such as Gamba perceptrons, and state their "intuitive judgment" that extending the theory to multilayer systems would be "sterile". This was a conjecture about learnability, not a theorem.</p>
+  </div>
+  <div class="later"><span class="label">Later refinements</span>Gradient training of hidden layers (<a href="backprop.html">backpropagation</a>, 1986) learns features that are not limited in order or diameter; a two-layer network represents parity of <var>n</var> bits with about <var>n</var> hidden units. Convolutional networks (<a href="lenet.html">LeNet</a>) are diameter-limited in each layer but compose layers, so receptive fields grow with depth. Minsky and Papert's 1988 epilogue argued the new networks still faced scaling problems their analysis exposed. In modern theory, "order" survives as polynomial threshold degree in Boolean function analysis and circuit complexity.</div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Which of the book's claims are theorems and which a conjecture?</dt>
+    <dd>Order bounds for parity, one-in-a-box and connectedness, and the diameter-limited impossibility, are theorems. The sterility of multilayer extensions is a stated judgment.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t5" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Retina R</dt><dd>The finite set of input points.</dd>
+    <dt>Partial predicate φ</dt><dd>A detector computing a yes/no function of part of the retina.</dd>
+    <dt>Support</dt><dd>The set of points a predicate depends on.</dd>
+    <dt>Order</dt><dd>Minimum over representations of the largest support size used.</dd>
+    <dt>Mask</dt><dd>φ<sub>A</sub>(X) = 1 iff all points of A are in X; a conjunction.</dd>
+    <dt>Diameter-limited</dt><dd>Each φ's support fits in a disc of fixed diameter.</dd>
+    <dt>Group invariance</dt><dd>Averaging coefficients over a symmetry group preserves a representation.</dd>
+    <dt>Gamba perceptron</dt><dd>A two-layer variant whose first-layer units are themselves linear threshold units.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="perceptron.html">Perceptron (1958)</a></p>
+  <p><strong>Led to:</strong> <a href="backprop.html">Backpropagation (1986)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> (<a href="https://lovespark.love/papers-worth-reading/#perceptrons-book">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // parity with hidden squares
+  var svg=$('#par'), bits=[1,0,1,1,0,0,1,0], k=5;
+  function draw(){ clear(svg); var on=0;
+    for (var i=0;i<8;i++){ var vis=i<k, x=30+i*64;
+      var r=S('rect',{x:x,y:30,width:52,height:52,'class':(vis?(bits[i]?'box-fire':'box'):'box-inh')+' clickable'},svg);
+      if (!vis) S('text',{x:x+26,y:62,'class':'t-s mid'},svg,'hidden');
+      (function(ii){ r.addEventListener('click',function(){ bits[ii]^=1; draw(); }); })(i);
+      on+=bits[i]; }
+    var visOn = bits.slice(0,k).reduce(function(a,b){return a+b;},0);
+    S('text',{x:30,y:115,'class':'t'},svg,'Detector sees '+visOn+' lit of '+k+' visible squares.');
+    S('text',{x:30,y:138,'class':'t-s'},svg,'True answer: '+on+' lit, '+(on%2?'ODD':'EVEN')+'.');
+    $('#par-r').innerHTML = k<8 ? 'Of the '+Math.pow(2,8-k)+' pictures consistent with what the detector sees, <b>'+Math.pow(2,7-k)+'</b> are even and <b>'+Math.pow(2,7-k)+'</b> are odd: no information.' : 'The detector sees everything, so it knows the answer: <b>'+(on%2?'odd':'even')+'</b>.';
+  }
+  bindRange('par-k',function(v){k=v;draw();});
+  $('#par-rand').onclick=function(){ bits=bits.map(function(){return Math.random()<.5?1:0;}); draw(); };
+})();
+(function(){ // connectedness switching figure
+  var svg=$('#cn'), L=0, R=1, w={l0:1,l1:0,r0:0,r1:1,t:1.5};
+  var ys=[40,80,120,160];
+  function comps(l,r){ // strands 0..3; pairings
+    var P=[[[0,1],[2,3]],[[0,3],[1,2]]];
+    var parent=[0,1,2,3]; function f(x){ return parent[x]===x?x:(parent[x]=f(parent[x])); } function u(a,b){ parent[f(a)]=f(b); }
+    P[l].forEach(function(p){u(p[0],p[1]);}); P[r].forEach(function(p){u(p[0],p[1]);});
+    var roots={}; [0,1,2,3].forEach(function(i){ roots[f(i)]=1; }); return {n:Object.keys(roots).length, f:f};
+  }
+  function cap(side,cfg,cls,c){ var x = side? 440:120, d = side? 1:-1;
+    var P=[[[0,1],[2,3]],[[0,3],[1,2]]][cfg];
+    P.forEach(function(p){ var y1=ys[p[0]], y2=ys[p[1]], r=(y2-y1)/2;
+      S('path',{d:'M'+x+','+y1+' A'+r+','+r+' 0 0 '+(side?1:0)+' '+x+','+y2,'class':cls(c.f(p[0]))},svg); });
+  }
+  function draw(){ clear(svg); var c=comps(L,R); var col={}; var cl=['w-fire','w']; var n=0;
+    function cls(root){ if(!(root in col)) col[root]=cl[n++]; return col[root]; }
+    ys.forEach(function(y,i){ S('line',{x1:120,y1:y,x2:440,y2:y,'class':cls(c.f(i))},svg); });
+    cap(0,L,cls,c); cap(1,R,cls,c);
+    S('rect',{x:20,y:20,width:110,height:160,'class':'area'},svg); S('text',{x:75,y:198,'class':'t-s mid'},svg,'left detectors');
+    S('rect',{x:430,y:20,width:110,height:160,'class':'area'},svg); S('text',{x:485,y:198,'class':'t-s mid'},svg,'right detectors');
+    S('text',{x:280,y:198,'class':c.n===1?'t-fire mid':'t-wire mid'},svg,c.n===1?'ONE loop: connected':'TWO loops: not connected');
+  }
+  $$('#cn-ends [data-l]').forEach(function(b){ b.addEventListener('click',function(){ L=+b.dataset.l; $$('#cn-ends [data-l]').forEach(function(x){x.classList.toggle('on',x===b);}); draw(); }); });
+  $$('#cn-ends [data-r]').forEach(function(b){ b.addEventListener('click',function(){ R=+b.dataset.r; $$('#cn-ends [data-r]').forEach(function(x){x.classList.toggle('on',x===b);}); draw(); }); });
+  var tw=$('#cw');
+  function table(){ clear(tw); var ok=0;
+    ['left','right','truth','vote total','committee says',''].forEach(function(h,i){ S('text',{x:20+i*108,y:18,'class':'t-s'},tw,h); });
+    var names=['side by side','nested'];
+    [[0,0],[0,1],[1,0],[1,1]].forEach(function(lr,j){ var y=40+j*26, conn=comps(lr[0],lr[1]).n===1;
+      var tot=(lr[0]?w.l1:w.l0)+(lr[1]?w.r1:w.r0), say=tot>w.t, good=say===conn; ok+=good;
+      S('text',{x:20,y:y,'class':'t'},tw,names[lr[0]]); S('text',{x:128,y:y,'class':'t'},tw,names[lr[1]]);
+      S('text',{x:236,y:y,'class':'t'},tw,conn?'connected':'two loops'); S('text',{x:344,y:y,'class':'t'},tw,fmt(tot,1)+(tot>w.t?' > ':' ≤ ')+fmt(w.t,1));
+      S('text',{x:452,y:y,'class':'t'},tw,say?'connected':'two loops'); S('text',{x:560,y:y,'class':good?'t-ok':'t-inh'},tw,good?'✓ right':'✗ wrong'); });
+    $('#cw-r').innerHTML='Committee gets <b>'+ok+' of 4</b> right. '+(ok===4?'':'The best possible is 3.');
+  }
+  ['l0','l1','r0','r1','t'].forEach(function(k){ bindRange('cw-'+k,function(v){ w[k]=v; table(); }); });
+  draw(); table();
+})();
+</script>
+
+</body>
+</html>

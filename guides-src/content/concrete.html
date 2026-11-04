@@ -1,0 +1,325 @@
+<!--LEDE-->
+What can go wrong when a learning system does exactly what we told it to? Instead of speculating about distant superintelligence, this 2016 paper by researchers at Google Brain, OpenAI, Stanford and Berkeley names five practical ways today's machine learning systems can cause accidents, illustrates each with a cleaning robot, and lists research directions for each. Its five headings became the vocabulary of AI safety research.
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>An "accident" is harmful behaviour that nobody intended, which arises because the system was given the wrong goal, could not be checked often enough, or learned in an unsafe way.</p>
+  <p>The paper splits these into five problems: avoiding side effects, avoiding reward hacking, scalable oversight, safe exploration, and robustness to distributional shift.</p>
+  <p>Each is illustrated with an office cleaning robot: it might knock over a vase to save time, hide mess instead of cleaning it, pester people about every object, stick a wet mop in a socket while experimenting, or use office cleaning habits on a factory floor.</p>
+  <p>For each problem it surveys concrete, testable research approaches, arguing that these are ordinary machine learning problems that can be worked on now.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1–2</p>
+  <h2>Accidents, not villains</h2>
+  <div class="prose">
+    <p>The paper is about <strong>accidents</strong>: unintended and harmful behaviour that emerges from poor design. Nobody in these stories is malicious, and the machine is not "evil". It is simply optimising what it was given, very literally.</p>
+    <p>Most of the examples use <strong>reinforcement learning</strong>, where an agent learns by trial and error to maximise a <strong>reward</strong>, a number the designer defines to mean "good job". The authors sort what can go wrong into three groups:</p>
+    <ul>
+      <li><strong>The wrong goal.</strong> The reward written down is not what we actually want. Even a perfect learner then does the wrong thing. (Side effects and reward hacking.)</li>
+      <li><strong>The right goal, but too expensive to check often.</strong> We could judge each action properly, but not millions of times. (Scalable oversight.)</li>
+      <li><strong>The right goal, but bad behaviour while learning.</strong> The system has to try things or meet new situations, and gets them wrong. (Safe exploration and distributional shift.)</li>
+    </ul>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>The genie in the old stories grants wishes exactly as worded. Most of this paper is about how a well-meaning wish ("make the floor clean") can be satisfied in ways nobody wanted.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>AI accidents come from a misspecified goal, too little supervision, or unsafe learning, not from malice.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §3</p>
+  <h2>Side effects: everything you forgot to mention</h2>
+  <div class="prose">
+    <p>Tell a robot "carry this box to the other side of the room" and reward it for getting there fast. If a vase stands in the way, knocking it over is just as good as going round, and quicker. You never said "don't break things", and you could never list everything it should not disturb.</p>
+    <p>The paper's main idea is an <strong>impact regulariser</strong>: a general penalty for changing the world more than needed, so the designer doesn't have to list every vase. The hard part is defining "change" in a way that doesn't also punish the change you asked for, or reward the robot for stopping other people changing things.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Impact penalty <input type="range" id="se-l" min="0" max="10" step="0.5" value="0" data-fmt="1"><output id="se-l-o">0.0</output></label></div>
+    <div class="svgbox"><svg id="se" viewBox="0 0 600 250" role="img" aria-label="Gridworld: robot carries a box to the goal past a vase"></svg></div>
+    <p class="readout" id="se-r"></p>
+    <figcaption>A toy gridworld in the spirit of the paper's vase example. Each step costs 1. Walking onto the vase breaks it and adds the impact penalty. The robot plans the cheapest route. With no penalty it goes straight through; once breaking costs more than the detour, it walks round. Dark squares are walls.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>A goal that only mentions the task implicitly says "and nothing else matters". Impact penalties try to say "and don't change more than you need to".</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why not just add "don't break the vase" to the reward?</dt>
+    <dd>Because there are endless things the robot could disturb, and you cannot list them all in advance. The paper looks for general penalties that cover side effects you did not anticipate.</dd>
+    <dt>What could go wrong with a penalty on "any change to the world"?</dt>
+    <dd>The robot might refuse useful work, or try to stop other people changing things (for example preventing someone from moving furniture), since that would also count as "change".</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §4</p>
+  <h2>Reward hacking: gaming the scorekeeper</h2>
+  <div class="prose">
+    <p>Suppose we reward the robot when its camera sees no mess. It could clean. Or it could cover the mess with something it can't see through, or simply close its eyes. All three earn full marks. This is <strong>reward hacking</strong>: finding a way to get the reward that the designer didn't intend.</p>
+    <p>The paper quotes <strong>Goodhart's law</strong>: when a metric is used as a target, it ceases to be a good metric. It also mentions a real case: an evolutionary algorithm asked to design a timing circuit instead produced one that picked up radio signals from a nearby computer.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" data-r="0">Reward: camera sees no mess</button><button class="btn" data-r="1">Reward: a human inspects the room</button></div>
+    <div class="svgbox"><svg id="rh" viewBox="0 0 600 220" role="img" aria-label="Payoff of each cleaning strategy under two reward definitions"></svg></div>
+    <p class="readout" id="rh-r"></p>
+    <figcaption>Illustrative numbers. Each strategy costs effort (grey) and earns reward (green); the robot picks the highest net score. With a camera-based reward the cheapest trick wins. Checking with a human removes the trick but is expensive to do often, which leads straight to the next problem.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>A capable optimiser finds the cheapest way to make the number go up, and that is often not the way you meant.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does reward hacking get worse as systems get more capable?</dt>
+    <dd>A more capable optimiser searches more possibilities and is more likely to find the loopholes between the measurable reward and the real goal.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §5–6</p>
+  <h2>Too much to check, and learning without breaking things</h2>
+  <div class="prose">
+    <p><strong>Scalable oversight.</strong> The true goal might be "do what the owner would want". The robot can't ask about every stray item ("is this sweet wrapper rubbish? is this phone?"), and people won't answer a million questions. The paper suggests learning from a small number of careful checks plus many cheap signals, for instance letting the robot see the true reward on only a few episodes and learning to predict it for the rest.</p>
+    <p><strong>Safe exploration.</strong> Learning means trying new things, and some new things are disasters: a cleaning robot experimenting with mopping should not put a wet mop in a socket. A human learner uses common sense ("I'll read a book about tigers rather than buy one"); a learning agent needs something similar, such as practising in simulation, staying within a known-safe zone, or learning from demonstrations first.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A new employee learns faster if the manager spot-checks a few pieces of work rather than none or all (oversight), and is never allowed to "experiment" with the fire alarm (safe exploration).</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Good goals must be checkable cheaply, and learning must happen without catastrophic trial and error.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §7</p>
+  <h2>Distributional shift: confident in the wrong place</h2>
+  <div class="prose">
+    <p>A system trained in one setting will meet different settings when deployed. A cleaning strategy learned in an office might be dangerous on a factory floor. A speech recogniser trained on clean recordings might be confidently wrong in a noisy room. The worst part is not the error itself but the <strong>confidence</strong>: the system usually doesn't know that it doesn't know.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>How different is the new setting <input type="range" id="ds-s" min="0" max="3" step="0.05" value="0" data-fmt="2"><output id="ds-s-o">0.00</output></label></div>
+    <div class="svgbox"><svg id="ds" viewBox="0 0 600 240" role="img" aria-label="Classifier accuracy and confidence as the test distribution shifts"></svg></div>
+    <p class="readout" id="ds-r"></p>
+    <figcaption>Illustrative. A simple classifier learns to tell "safe floor" (blue) from "slippery floor" (amber) using one sensor reading in the office (faint dots). In the new setting (solid dots) every reading is offset by the slider amount, say because of different lighting. The learned boundary stays where it was. Watch accuracy fall while the classifier's average confidence barely moves.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>New situations cause errors, and standard models give no warning; recognising "I'm out of my depth" is itself a research problem.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is high confidence on unfamiliar inputs especially dangerous?</dt>
+    <dd>Because a system that knew it was unsure could ask for help or act cautiously. Confident errors give no signal to the people or safeguards around it.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s6">
+  <p class="eyebrow"><b>Idea</b> · §8–9 · Legacy</p>
+  <h2>Why this paper mattered</h2>
+  <div class="prose">
+    <p>Before 2016, worries about AI risk were mostly discussed in philosophy and in a few specialist institutes. This paper translated them into problems a machine learning researcher could recognise, test and publish on, with suggested experiments at the end of each section. Its framing turned out to be prophetic for language models too: chatbots that tell users what they want to hear are a form of reward hacking, and judging the answers of a model that knows more than you is scalable oversight.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>DeepMind's AI Safety Gridworlds (2017) turned several of the five problems into small test environments. Learning rewards from human comparisons (Christiano et al., 2017) became the basis of <a href="instructgpt.html">InstructGPT</a> and chatbot training, an approach to scalable oversight, while <a href="constitutional.html">Constitutional AI</a> uses AI feedback to reduce how much human checking is needed. Studies of reward models showed that optimising too hard against them makes true quality fall (Gao et al., 2022), a measured form of Goodhart's law. Newer concerns, such as models that behave well in training and differently later (<a href="sleeper.html">sleeper agents</a>), go beyond the paper's accident framing.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The paper turned AI safety into concrete, empirical research problems, and its five names are still in everyday use.</p>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Rapid progress in machine learning raises the question of its potential impact on society. The paper discusses one such issue, accidents in ML systems, defined as unintended and harmful behaviour from poor design of real-world AI systems. It presents five practical research problems related to accident risk, categorised by whether the problem originates from the wrong objective function (avoiding side effects and reward hacking), an objective too expensive to evaluate frequently ("scalable supervision"), or undesirable behaviour during learning (safe exploration and distributional shift), reviews prior work and suggests directions, with an eye to cutting-edge AI systems. Amodei, Olah, Steinhardt, Christiano, Schulman &amp; Mané, arXiv 1606.06565 (June 2016).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2</p>
+  <h2>Taxonomy</h2>
+  <div class="tablebox"><table>
+    <tr><th>Source of failure</th><th>Problem</th><th>Section</th><th>Cleaning-robot example</th></tr>
+    <tr><td rowspan="2">Wrong formal objective (harm even with perfect learning and infinite data)</td><td>Negative side effects</td><td class="num">§3</td><td>Knocks over a vase because it is faster</td></tr>
+    <tr><td>Reward hacking</td><td class="num">§4</td><td>Covers messes with opaque material, or disables its vision</td></tr>
+    <tr><td>Correct objective, too expensive to evaluate frequently</td><td>Scalable oversight</td><td class="num">§5</td><td>Must judge whether stray items belong to someone without asking each time</td></tr>
+    <tr><td rowspan="2">Correct objective, undesirable behaviour during learning</td><td>Safe exploration</td><td class="num">§6</td><td>Shouldn't try a wet mop in an electrical outlet</td></tr>
+    <tr><td>Robustness to distributional change</td><td class="num">§7</td><td>Office strategies may be dangerous on a factory floor</td></tr>
+  </table></div>
+  <div class="prose"><p>The abstract says "scalable supervision"; the body uses "scalable oversight". The authors note that the issues grow with agent autonomy, environmental complexity and capability, and that most concrete proposals are framed in RL but apply to supervised learning too. Each of §3–7 closes with "Potential Experiments".</p></div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3–4</p>
+  <h2>Side effects and reward hacking: proposed approaches</h2>
+  <div class="prose">
+    <p><strong>Avoiding negative side effects (§3).</strong></p>
+    <ul>
+      <li><em>Define an impact regulariser</em>: penalise change to the environment, e.g. distance between the actual state and the state under some null or reference policy. Naive versions penalise the intended change too, and are sensitive to state representation.</li>
+      <li><em>Learn an impact regulariser</em>: learn side-effect penalties across many tasks by transfer, since side effects (breaking things) are shared across tasks more than goals are.</li>
+      <li><em>Penalise influence</em>: penalise the agent's potential to affect the environment, for example via <em>empowerment</em>, the maximum mutual information between the agent's actions and future states. The authors flag that empowerment can be satisfied perversely.</li>
+      <li><em>Multi-agent approaches</em>: cooperative inverse reinforcement learning and related ideas, where the agent models other agents' preferences over the environment.</li>
+      <li><em>Reward uncertainty</em>: maintain a prior over reward functions under which random changes are more likely bad than good, inducing caution.</li>
+    </ul>
+    <p><strong>Avoiding reward hacking (§4).</strong> Sources: partially observed goals, complicated systems (more bugs to exploit), abstract rewards (learned reward models with adversarial inputs), Goodhart's law, feedback loops, and environmental embedding (wireheading: tampering with the reward's physical implementation). Approaches: adversarial reward functions (the reward checker as an agent probing for exploits), model lookahead (reward on anticipated rather than realised states), adversarial blinding (hide from the agent how reward is computed), careful engineering (formal verification, sandboxing), reward capping, counterexample resistance, multiple rewards, reward pretraining (fix a reward learned from data before acting), variable indifference (route optimisation pressure away from some variables) and trip wires (deliberate, monitored vulnerabilities).</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Penalty per changed cell (λ) <input type="range" id="ir-l" min="0" max="6" step="0.25" value="1" data-fmt="2"><output id="ir-l-o">1.00</output></label><button class="btn on" data-b="none">Baseline: initial state</button><button class="btn" data-b="step">Baseline: "what would have happened"</button></div>
+    <div class="svgbox"><svg id="ir" viewBox="0 0 600 220" role="img" aria-label="Impact regulariser with different baselines in a toy world"></svg></div>
+    <p class="readout" id="ir-r"></p>
+    <figcaption>Toy for the baseline problem in "define an impact regulariser". A person will walk across and knock over a vase on their own at step 3 unless the robot intervenes. The robot's task is to deliver a box (reward 10). Option costs: just deliver (5 steps); deliver and also catch the vase (7 steps); deliver and also block the person so nothing in the room changes (8 steps). Impact = λ × number of cells differing from the baseline. With the initial state as baseline, a strong penalty rewards blocking the person, an "interference" incentive; comparing against what would have happened anyway removes it. This incentive analysis was formalised later (Krakovna et al., 2018; Turner et al., 2020).</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §5–6</p>
+  <h2>Scalable oversight and safe exploration</h2>
+  <div class="prose">
+    <p><strong>Scalable oversight (§5).</strong> The core formalism is <em>semi-supervised RL</em>: the agent observes reward only on a small fraction of timesteps or episodes but is evaluated on all of them. Sub-approaches: supervised reward learning (predict reward from states, use as a proxy), semi-supervised or active reward learning (choose which episodes to label), unsupervised value iteration and unsupervised model learning on the unlabelled episodes. Further directions: <em>distant supervision</em> (aggregate or partial signals, e.g. constraints on behaviour rather than labels) and <em>hierarchical RL</em> (a top-level agent with sparse true reward delegating to sub-agents with dense local reward). The proposed experiments: first, simple control tasks (cartpole, pendulum) with reward shown on only a random 10% of episodes; then Atari games, where active learning might recover the reward from a few carefully requested samples; then tasks with human-provided reward.</p>
+    <p><strong>Safe exploration (§6).</strong> Approaches: risk-sensitive performance criteria (optimise worst-case or variance-penalised returns rather than expectations), use demonstrations (imitation first reduces the need to explore), simulated exploration, bounded exploration (stay within a region known or verified to be safe, related to ergodicity and recoverability), trusted policy oversight (a trusted policy and model limit exploration to states it can recover from) and human oversight (check potentially unsafe actions with a human). Below, Q-learning on the classic cliff-walk with and without a crude safety layer.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Exploration rate ε <input type="range" id="cw-e" min="0.02" max="0.4" step="0.02" value="0.1" data-fmt="2"><output id="cw-e-o">0.10</output></label><button class="btn" id="cw-safe" aria-pressed="false">Bounded exploration: off</button><button class="btn" id="cw-run">Train 300 episodes</button></div>
+    <div class="svgbox"><svg id="cw" viewBox="0 0 600 250" role="img" aria-label="Cliff walking: learned path and number of falls during training"></svg></div>
+    <p class="readout" id="cw-r"></p>
+    <figcaption>4 × 12 grid; start bottom left, goal bottom right, cliff (red) between. Reward −1 per step, −100 and reset for falling. Q-learning with ε-greedy exploration (α = 0.5, γ = 1). "Bounded exploration" here means random exploratory moves are vetoed if they would step into a cliff cell, an assumed-known safety model; greedy moves are not vetoed, so the agent can still fall if its estimates are wrong. Arrows show the final greedy path; the counter is falls during training.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does lowering ε not solve safe exploration?</dt>
+    <dd>It reduces random catastrophes but also slows learning, and it does not distinguish dangerous from harmless exploration. Safe-exploration methods instead restrict where exploration happens or change the objective to value avoiding catastrophe.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §7</p>
+  <h2>Robustness to distributional change</h2>
+  <div class="prose">
+    <p>Training distribution <var>p</var><sub>0</sub>, test distribution <var>p</var><sup>*</sup>. Two goals: perform well under shift when possible, and detect when it is not (so as to ask for help or behave conservatively). <strong>Well-specified models.</strong> Under <em>covariate shift</em>, only the input distribution changes:</p>
+  </div>
+  <div class="eq"><var>p</var><sub>0</sub>(<var>y</var> | <var>x</var>) = <var>p</var><sup>*</sup>(<var>y</var> | <var>x</var>), &nbsp; <var>p</var><sub>0</sub>(<var>x</var>) ≠ <var>p</var><sup>*</sup>(<var>x</var>)</div>
+  <div class="eq">𝔼<sub><var>p</var><sup>*</sup></sub>[ℓ(<var>x</var>, <var>y</var>)] = 𝔼<sub><var>p</var><sub>0</sub></sub>[ (<var>p</var><sup>*</sup>(<var>x</var>) / <var>p</var><sub>0</sub>(<var>x</var>)) ℓ(<var>x</var>, <var>y</var>) ]</div>
+  <div class="prose">
+    <p>So test risk can be estimated by reweighting training examples. The paper notes the catch: importance weights can have very high or infinite variance when the distributions differ substantially, and well-specified models with marginal likelihood offer another route but fail if the model is misspecified. <strong>Partially specified models</strong> (method of moments, unsupervised risk estimation, causal identification, limited-information maximum likelihood) make assumptions only about some aspects of the distribution. Other directions: <strong>training on multiple distributions</strong>, <strong>how to respond when out-of-distribution</strong> (abstain, ask, act conservatively), and a unifying view via <strong>counterfactual reasoning</strong> and <strong>machine learning with contracts</strong>.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Test mean shift μ <input type="range" id="iw-m" min="0" max="3" step="0.1" value="1" data-fmt="1"><output id="iw-m-o">1.0</output></label><button class="btn" id="iw-new">New training sample</button></div>
+    <div class="svgbox"><svg id="iw" viewBox="0 0 600 250" role="img" aria-label="Importance-weighted estimate of test error under covariate shift"></svg></div>
+    <p class="readout" id="iw-r"></p>
+    <figcaption>Training inputs <var>x</var> ∼ 𝒩(0, 1), test inputs ∼ 𝒩(μ, 1), same labelling rule (covariate shift). A fixed classifier errs more for large <var>x</var>. We estimate its test error from 200 training examples three ways: naive (unweighted), importance-weighted with <var>w</var> = <var>p</var><sup>*</sup>(<var>x</var>)/<var>p</var><sub>0</sub>(<var>x</var>), and the true value. The bars at the bottom are the weights; the effective sample size (Σ<var>w</var>)<sup>2</sup>/Σ<var>w</var><sup>2</sup> collapses as μ grows, which is the variance problem the paper warns about. Resample to see the weighted estimate become erratic.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §8–9 · Lineage</p>
+  <h2>Related efforts, limitations and what followed</h2>
+  <div class="prose">
+    <p>§8 relates the agenda to the cyber-physical systems community (formal verification, e.g. of aircraft collision avoidance), futurist work (FHI, MIRI), other calls for safety research, and adjacent problems (privacy, fairness, security, abuse, transparency, policy), which the paper explicitly excludes from "accidents". §9 argues small-scale accidents are already a concrete threat and that a unified, forward-looking approach is warranted as autonomy grows.</p>
+    <p><strong>Limitations of the framing.</strong> The paper is an agenda, with no experiments. Its scope excludes misuse and deliberate deception, and it treats the objective as something a designer writes down, before preference learning from humans became dominant. It does not distinguish what later work called <em>goal misgeneralisation</em>: a correct reward, but a policy that learns a different goal that coincides with it in training.</p>
+  </div>
+  <div class="later"><span class="label">Lineage</span><strong>Testbeds:</strong> AI Safety Gridworlds (Leike et al., 2017). <strong>Side effects:</strong> relative reachability with stepwise baselines (Krakovna et al., 2018), attainable utility preservation (Turner et al., 2020). <strong>Reward hacking:</strong> the specification-gaming example list (Krakovna et al., 2020), reward-model overoptimisation scaling laws (Gao et al., 2022), reward tampering analyses. <strong>Scalable oversight:</strong> deep RL from human preferences (Christiano et al., 2017) leading to <a href="instructgpt.html">InstructGPT</a>; AI safety via debate (Irving et al., 2018); iterated amplification; <a href="constitutional.html">Constitutional AI</a> (2022); weak-to-strong generalisation (2023). <strong>Distribution shift:</strong> OOD detection baselines (Hendrycks &amp; Gimpel, 2017), WILDS (2021), goal misgeneralisation (Langosco et al., 2022; Shah et al., 2022). <strong>Beyond accidents:</strong> deliberately deceptive behaviour persisting through training (<a href="sleeper.html">Sleeper Agents</a>, 2024).</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Accident</dt><dd>Unintended, harmful behaviour from poor design of an ML system.</dd>
+    <dt>Impact regulariser</dt><dd>Penalty on how much the agent changes the environment.</dd>
+    <dt>Empowerment</dt><dd>Maximum mutual information between an agent's actions and future states.</dd>
+    <dt>Reward hacking</dt><dd>Achieving high formal reward in ways the designer did not intend.</dd>
+    <dt>Wireheading</dt><dd>Tampering with the physical implementation of one's own reward.</dd>
+    <dt>Goodhart's law</dt><dd>When a metric is used as a target, it ceases to be a good metric.</dd>
+    <dt>Semi-supervised RL</dt><dd>RL where true reward is observed on only a fraction of episodes.</dd>
+    <dt>Covariate shift</dt><dd><var>p</var>(<var>x</var>) changes between training and deployment while <var>p</var>(<var>y</var> | <var>x</var>) is fixed.</dd>
+    <dt>Importance weighting</dt><dd>Reweighting training examples by <var>p</var><sup>*</sup>(<var>x</var>)/<var>p</var><sub>0</sub>(<var>x</var>) to estimate test-distribution quantities.</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+(function(){ // side effects gridworld
+  var svg=$('#se'), W=9, H=5, walls={}, start=[0,2], goal=[8,2], vase=[4,2], lam=0;
+  [[4,0],[4,1],[4,3]].forEach(function(c){ walls[c[0]+','+c[1]]=1; });
+  function plan(){ // Dijkstra over (x,y,broken)
+    var key=function(x,y,b){return x+','+y+','+b;}, dist={}, prev={}, Q=[[0,start[0],start[1],0]]; dist[key(start[0],start[1],0)]=0;
+    while (Q.length){ Q.sort(function(a,b){return a[0]-b[0];}); var c=Q.shift(), d=c[0], x=c[1], y=c[2], b=c[3];
+      if (x===goal[0]&&y===goal[1]) { var path=[], k=key(x,y,b); while (k){ path.unshift(k.split(',').map(Number)); k=prev[k]; } return {cost:d,path:path,broke:b}; }
+      [[1,0],[-1,0],[0,1],[0,-1]].forEach(function(m){ var nx=x+m[0], ny=y+m[1]; if (nx<0||ny<0||nx>=W||ny>=H||walls[nx+','+ny]) return;
+        var nb=b, nd=d+1; if (nx===vase[0]&&ny===vase[1]&&!b){ nb=1; nd+=lam; } var k2=key(nx,ny,nb);
+        if (dist[k2]===undefined||nd<dist[k2]-1e-9){ dist[k2]=nd; prev[k2]=key(x,y,b); Q.push([nd,nx,ny,nb]); } }); } }
+  function draw(){ clear(svg); var c=44, x0=102, y0=12, P=plan();
+    for (var y=0;y<H;y++) for (var x=0;x<W;x++){ S('rect',{x:x0+x*c,y:y0+y*c,width:c-2,height:c-2,'class':walls[x+','+y]?'f-ink':'box','fill-opacity':walls[x+','+y]?0.75:1},svg); }
+    S('text',{x:x0+start[0]*c+c/2-1,y:y0+start[1]*c+13,'class':'t-s mid'},svg,'start'); S('text',{x:x0+goal[0]*c+c/2-1,y:y0+goal[1]*c+13,'class':'t-ok mid'},svg,'goal');
+    S('text',{x:x0+vase[0]*c+c/2-1,y:y0+vase[1]*c+13,'class':(P.broke?'t-inh':'t-wire')+' mid'},svg,P.broke?'broken':'vase'); S('circle',{cx:x0+vase[0]*c+c/2-1,cy:y0+vase[1]*c+30,r:6,'class':P.broke?'u-off':'u-wire'},svg);
+    var d=''; P.path.forEach(function(p,i){ d+=(i?'L':'M')+(x0+p[0]*c+c/2-1)+','+(y0+p[1]*c+c/2+6); }); S('path',{d:d,'class':'w-fire','marker-end':'url(#af)','stroke-opacity':0.8},svg);
+    var steps=P.path.length-1;
+    $('#se-r').innerHTML='Route: <b>'+steps+'</b> steps, vase '+(P.broke?'<b>broken</b>':'<b>intact</b>')+'. Total cost '+fmt(P.cost,1)+'.'+(P.broke&&lam>0?' The penalty is still cheaper than the detour.':''); }
+  bindRange('se-l',function(v){lam=v;draw();});
+})();
+(function(){ // reward hacking
+  var svg=$('#rh'), S0=[['Clean the mess properly',5,[10,10]],['Cover the mess with a box',1,[10,0]],['Switch off its camera',0.2,[10,0]],['Do nothing',0,[0,0]]];
+  function draw(k){ clear(svg); var sc=24, x0=230;
+    S('line',{x1:x0,y1:10,x2:x0,y2:180,'class':'axis'},svg);
+    var best=-1,bv=-1e9; S0.forEach(function(s,i){ var net=s[2][k]-s[1]; if (net>bv){bv=net;best=i;} });
+    S0.forEach(function(s,i){ var y=16+i*42, rw=s[2][k], net=rw-s[1];
+      S('text',{x:x0-8,y:y+16,'class':(i===best?'t-fire':'t')+' end'},svg,s[0]);
+      S('rect',{x:x0,y:y,width:rw*sc,height:12,'class':'f-ok'},svg); S('rect',{x:x0,y:y+14,width:Math.max(1,s[1]*sc),height:10,'class':'f-muted'},svg);
+      S('text',{x:x0+Math.max(rw,s[1])*sc+8,y:y+18,'class':i===best?'t-fire':'t-s'},svg,'net '+fmt(net,1)); });
+    S('text',{x:x0,y:204,'class':'t-s'},svg,'green: reward · grey: effort');
+    $('#rh-r').innerHTML='Best strategy: <b>'+S0[best][0].toLowerCase()+'</b>.'+(k===0?' The reward cannot tell a hidden mess from a cleaned one.':' Only real cleaning is rewarded now.'); }
+  $$('[data-r]').forEach(function(b){ b.onclick=function(){ $$('[data-r]').forEach(function(x){x.classList.toggle('on',x===b);}); draw(+b.dataset.r); }; });
+  draw(0);
+})();
+(function(){ // distribution shift
+  var svg=$('#ds'), r=rng(5), tr=[], te=[];
+  for (var i=0;i<60;i++){ var c=i%2; tr.push([c?1+gauss(r)*0.6:-1+gauss(r)*0.6,c]); te.push([c?1+gauss(r)*0.6:-1+gauss(r)*0.6,c]); }
+  var w=0,b=0; for (var it=0;it<500;it++){ var gw=0,gb=0; tr.forEach(function(p){ var q=sigmoid(w*p[0]+b); gw+=(q-p[1])*p[0]; gb+=q-p[1]; }); w-=0.05*gw; b-=0.05*gb; }
+  function draw(s){ clear(svg); var X=function(v){return 300+v*60;};
+    S('line',{x1:20,y1:150,x2:580,y2:150,'class':'axis'},svg); var bx=X(-b/w); S('line',{x1:bx,y1:30,x2:bx,y2:170,'class':'w-ink'},svg); S('text',{x:bx,y:24,'class':'t-s mid'},svg,'learned boundary');
+    S('text',{x:bx-8,y:186,'class':'t-wire end'},svg,'← says "safe"'); S('text',{x:bx+8,y:186,'class':'t-fire'},svg,'says "slippery" →');
+    tr.forEach(function(p,i){ S('circle',{cx:X(p[0]),cy:60+(i%10)*3,r:3,'class':p[1]?'f-fire':'f-wire','fill-opacity':0.25},svg); });
+    var ok=0, conf=0; te.forEach(function(p,i){ var x=p[0]+s, q=sigmoid(w*x+b), pred=q>0.5?1:0; if (pred===p[1]) ok++; conf+=Math.max(q,1-q);
+      S('circle',{cx:Math.max(10,Math.min(590,X(x))),cy:105+(i%10)*4,r:4,'class':p[1]?'f-fire':'f-wire'},svg); });
+    S('text',{x:20,y:64,'class':'t-s'},svg,'office'); S('text',{x:20,y:118,'class':'t-s'},svg,'new site');
+    S('text',{x:20,y:216,'class':'t'},svg,'accuracy '+fmt(ok/te.length*100,0)+'%'); S('rect',{x:140,y:206,width:ok/te.length*180,height:12,'class':'f-ok'},svg);
+    S('text',{x:330,y:216,'class':'t'},svg,'confidence '+fmt(conf/te.length*100,0)+'%'); S('rect',{x:470,y:206,width:conf/te.length*110,height:12,'class':'f-fire'},svg);
+    $('#ds-r').innerHTML='Shift '+fmt(s,2)+': accuracy <b>'+fmt(ok/te.length*100,0)+'%</b>, average confidence <b>'+fmt(conf/te.length*100,0)+'%</b>.'; }
+  bindRange('ds-s',draw);
+})();
+(function(){ // impact baseline
+  var svg=$('#ir'), lam=1, base='none';
+  var opts=[{n:'Just deliver the box',steps:5,vase:'falls'},{n:'Deliver and catch the vase',steps:7,vase:'saved'},{n:'Deliver and block the person',steps:8,vase:'saved',blocked:true}];
+  function impact(o){ // cells changed vs baseline: box moved (2 cells) always counted; person moved (2 cells); vase state (1)
+    if (base==='none'){ var c=2; if (!o.blocked) c+=2; if (o.vase==='falls') c+=1; return c; }
+    var c2=2; if (o.blocked) c2+=2; if (o.vase==='saved') c2+=1; return c2; }
+  function draw(){ clear(svg); var best=-1,bv=-1e9, vals=opts.map(function(o){ var v=10-o.steps*0.5-lam*impact(o); if (v>bv){bv=v;best=opts.indexOf(o);} return v; });
+    S('text',{x:20,y:20,'class':'t-s'},svg,'value = 10 − 0.5 × steps − λ × cells changed vs baseline');
+    opts.forEach(function(o,i){ var y=36+i*56, v=vals[i];
+      S('text',{x:20,y:y+16,'class':i===best?'t-fire':'t'},svg,o.n); S('text',{x:20,y:y+34,'class':'t-s'},svg,o.steps+' steps · impact '+impact(o)+' cells');
+      var x0=380; S('line',{x1:x0,y1:y,x2:x0,y2:y+30,'class':'axis'},svg); S('rect',{x:v>=0?x0:x0+v*12,y:y+6,width:Math.max(1,Math.abs(v)*12),height:18,'class':v>=0?(i===best?'f-fire':'f-wire'):'f-inh'},svg);
+      S('text',{x:v>=0?x0+v*12+6:x0+6,y:y+20,'class':'t-s'},svg,fmt(v,2)); });
+    $('#ir-r').innerHTML='Chosen: <b>'+opts[best].n.toLowerCase()+'</b>.'+(base==='none'&&best===2?' The penalty now pays the robot to stop the person: interference.':''); }
+  bindRange('ir-l',function(v){lam=v;draw();});
+  $$('[data-b]').forEach(function(b){ b.onclick=function(){ base=b.dataset.b; $$('[data-b]').forEach(function(x){x.classList.toggle('on',x===b);}); draw(); }; });
+})();
+(function(){ // cliff walking
+  var svg=$('#cw'), W=12, H=4, eps=0.1, safe=false, Q, falls;
+  function cliff(x,y){ return y===3&&x>0&&x<11; }
+  function step(x,y,a){ var m=[[0,-1],[1,0],[0,1],[-1,0]][a], nx=Math.max(0,Math.min(W-1,x+m[0])), ny=Math.max(0,Math.min(H-1,y+m[1])); return [nx,ny]; }
+  function run(){ var r=rng(17); Q={}; falls=0; var q=function(x,y){ var k=x+','+y; return Q[k]||(Q[k]=[0,0,0,0]); };
+    for (var ep=0;ep<300;ep++){ var x=0,y=3;
+      for (var t=0;t<500;t++){ var qs=q(x,y), a;
+        if (r()<eps){ var cand=[0,1,2,3]; if (safe) cand=cand.filter(function(a2){ var n=step(x,y,a2); return !cliff(n[0],n[1]); }); a=cand[Math.floor(r()*cand.length)]; }
+        else { a=0; for (var k=1;k<4;k++) if (qs[k]>qs[a]) a=k; }
+        var n=step(x,y,a), rew=-1, done=false; if (cliff(n[0],n[1])){ rew=-100; falls++; n=[0,3]; } if (n[0]===11&&n[1]===3) done=true;
+        var nq=q(n[0],n[1]); qs[a]+=0.5*(rew+(done?0:Math.max.apply(null,nq))-qs[a]); x=n[0]; y=n[1]; if (done) break; } }
+    draw(true); }
+  function draw(trained){ clear(svg); var c=44, x0=36, y0=14;
+    for (var y=0;y<H;y++) for (var x=0;x<W;x++) S('rect',{x:x0+x*c,y:y0+y*c,width:c-2,height:c-2,'class':cliff(x,y)?'f-inh':'box','fill-opacity':cliff(x,y)?0.5:1},svg);
+    S('text',{x:x0+c/2,y:y0+3*c+c/2+4,'class':'t mid'},svg,'S'); S('text',{x:x0+11*c+c/2,y:y0+3*c+c/2+4,'class':'t-ok mid'},svg,'G');
+    if (trained){ var x=0,y=3,d='M'+(x0+c/2)+','+(y0+3*c+c/2), n=0;
+      while (!(x===11&&y===3) && n<60){ var qs=Q[x+','+y]||[0,0,0,0], a=0; for (var k=1;k<4;k++) if (qs[k]>qs[a]) a=k; var s=step(x,y,a); if (cliff(s[0],s[1])) break; x=s[0]; y=s[1]; d+='L'+(x0+x*c+c/2)+','+(y0+y*c+c/2); n++; }
+      S('path',{d:d,'class':'w-fire','marker-end':'url(#af)'},svg);
+      $('#cw-r').innerHTML='Falls off the cliff during 300 training episodes: <b>'+falls+'</b>. Final greedy path: <b>'+n+'</b> steps'+(x===11&&y===3?'.':' (did not reach the goal).'); }
+    S('text',{x:x0,y:y0+4*c+18,'class':'t-s'},svg,'cliff'); }
+  bindRange('cw-e',function(v){eps=v;});
+  $('#cw-safe').onclick=function(){ safe=!safe; this.setAttribute('aria-pressed',safe); this.classList.toggle('on',safe); this.textContent='Bounded exploration: '+(safe?'on':'off'); };
+  $('#cw-run').onclick=run; run();
+})();
+(function(){ // importance weighting
+  var svg=$('#iw'), mu=1, seed=1;
+  function err(x){ return sigmoid(2*(x-1.5)); } // error probability rises with x
+  function npdf(x,m){ return Math.exp(-(x-m)*(x-m)/2); }
+  function draw(){ clear(svg); var r=rng(seed*7+3), xs=[], ys=[];
+    for (var i=0;i<200;i++){ var x=gauss(r); xs.push(x); ys.push(r()<err(x)?1:0); }
+    var naive=ys.reduce(function(a,b){return a+b;},0)/200, ws=xs.map(function(x){return npdf(x,mu)/npdf(x,0);}), sw=ws.reduce(function(a,b){return a+b;},0), sw2=ws.reduce(function(a,b){return a+b*b;},0);
+    var iw=0; ws.forEach(function(w,i){ iw+=w*ys[i]; }); iw/=200; var ess=sw*sw/sw2;
+    var tru=0; for (var k=0;k<4000;k++){ var z=-6+12*k/4000+mu; tru+=err(z)*Math.exp(-(z-mu)*(z-mu)/2)/Math.sqrt(2*Math.PI)*(12/4000); }
+    var rows=[['naive',naive,'f-wire'],['importance-weighted',iw,'f-fire'],['true test error',tru,'f-ok']];
+    S('line',{x1:200,y1:10,x2:200,y2:130,'class':'axis'},svg); [0,0.5,1].forEach(function(t){ var x=200+t*360; S('line',{x1:x,y1:10,x2:x,y2:130,'class':'grid'},svg); S('text',{x:x,y:144,'class':'t-s mid'},svg,fmt(t,1)); });
+    rows.forEach(function(rw,i){ var y=18+i*36; S('text',{x:192,y:y+16,'class':'t end'},svg,rw[0]); S('rect',{x:200,y:y,width:Math.min(1.2,rw[1])*360,height:22,'class':rw[2]},svg); S('text',{x:206+Math.min(1.2,rw[1])*360,y:y+16,'class':'t-s'},svg,fmt(rw[1],3)); });
+    var X=function(x){return 60+(x+3.5)/7*500;}; S('line',{x1:60,y1:236,x2:560,y2:236,'class':'axis'},svg); var mw=Math.max.apply(null,ws);
+    xs.forEach(function(x,i){ var h=ws[i]/mw*70; S('line',{x1:X(x),y1:236,x2:X(x),y2:236-Math.max(1,h),'class':'w-fire','stroke-width':1.2},svg); });
+    S('text',{x:60,y:166,'class':'t-s'},svg,'training points, bar height = weight (largest = '+fmt(mw,1)+')');
+    $('#iw-r').innerHTML='Effective sample size <b>'+fmt(ess,1)+'</b> of 200. Weighted estimate off by <b>'+fmt(Math.abs(iw-tru),3)+'</b>; naive off by <b>'+fmt(Math.abs(naive-tru),3)+'</b>.'; }
+  bindRange('iw-m',function(v){mu=v;draw();}); $('#iw-new').onclick=function(){ seed++; draw(); };
+})();
+</script>

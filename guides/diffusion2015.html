@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diffusion models (2015) study guide</title>
+<meta name="description" content="How do you build a model that can invent new, realistic data but is still simple enough to train and to score? Sohl-Dickstein and colleagues borrow an idea from physics: destroy the structure in data by adding a little noise many times over, then train a neural network to undo each small step. Run t">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Computer vision</b> · 2015</p>
+  <h1>Deep Unsupervised Learning using Nonequilibrium Thermodynamics</h1>
+  <p class="cite">Jascha Sohl-Dickstein, Eric Weiss, Niru Maheswaranathan, Surya Ganguli · ICML 2015</p>
+  <p class="lede">How do you build a model that can invent new, realistic data but is still simple enough to train and to score? Sohl-Dickstein and colleagues borrow an idea from physics: destroy the structure in data by adding a little noise many times over, then train a neural network to undo each small step. Run the learned undo steps starting from pure noise and you get new samples. This is the original diffusion model.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/1503.03585">Read the paper (free)</a> <a href="https://lovespark.love/papers-worth-reading/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, separate AI review (also by Claude), but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Models that generate data usually have to choose between being flexible (able to capture complicated data) and being tractable (easy to train, sample from and evaluate). This paper tries to get both.</p>
+  <p>Start with real data and blur it with a tiny bit of random noise, over and over, until nothing but noise is left. That direction is easy and needs no learning.</p>
+  <p>The trick is that each single step is so small that undoing it is also simple: a bell-shaped guess. A neural network learns those small undo steps.</p>
+  <p>Chain the learned undo steps together, starting from pure noise, and structure reappears: new samples of the data. The idea lay mostly dormant until 2020, when <a href="ddpm.html">DDPM</a> made it produce excellent images.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1</p>
+  <h2>The generative modelling dilemma</h2>
+  <div class="prose">
+    <p>A <strong>generative model</strong> is a program that has learned what a kind of data looks like, so it can make up new examples (a new face, a new handwritten digit) and say how likely a given example is. Formally it learns a <strong>probability distribution</strong>: a rule that assigns every possible image a plausibility score.</p>
+    <p>The paper opens with a tension. <strong>Tractable</strong> models, such as a single bell curve, are easy to fit and easy to evaluate, but far too simple for real images. <strong>Flexible</strong> models can describe almost anything, but computing their scores usually involves a sum over astronomically many possibilities, so training and sampling become slow or approximate.</p>
+    <p>The authors' goal is a model that is flexible and still tractable: you can train it, draw samples from it, and compute (or at least tightly bound) how likely the data is under it.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Describing a city with one sentence ("it's round-ish") is easy but useless. Describing every brick is complete but impossible to work with. The paper looks for a description built out of many tiny, simple pieces that add up to something detailed.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The paper wants a model of data that is rich enough for real images but still easy to train, sample and score.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §2.1 · Fig. 1</p>
+  <h2>Destroy the data slowly with noise</h2>
+  <div class="prose">
+    <p>Picture a drop of ink in a glass of water. Over time the molecules jiggle randomly and the drop spreads out until the water is evenly tinted. Physicists call this <strong>diffusion</strong>. Every trace of the drop's original shape is gone.</p>
+    <p>The paper does the same to data. Take a data point (say, a dot on a spiral) and at every step shrink it very slightly towards the centre and add a pinch of random noise. After enough steps, every dot ends up in a featureless round cloud, the familiar bell-shaped <strong>Gaussian</strong> distribution. This is the <strong>forward process</strong>. It is fixed in advance and involves no learning at all.</p>
+    <p>Drag the slider to watch a spiral (the paper's first toy example is a "Swiss roll" like this) dissolve over 40 steps, the number the paper uses for this toy.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Step <input type="range" id="fw-t" min="0" max="40" step="1" value="0"><output id="fw-t-o">0</output></label><button class="btn" id="fw-play">Play</button><button class="btn" id="fw-new">New noise</button></div>
+    <div class="svgbox"><svg id="fw" viewBox="0 0 600 270" role="img" aria-label="A spiral of points dissolving into a round Gaussian cloud as noise is added step by step"></svg></div>
+    <p class="readout" id="fw-r"></p>
+    <figcaption>Left: 300 points after the chosen number of steps. Right: how much of each point's original position survives (amber) versus how much is accumulated noise (blue). Each step uses the fixed schedule the paper gives for binomial diffusion, β<sub><var>t</var></sub> = 1/(40 − <var>t</var> + 1), applied here to Gaussian noise (footnote 2 reports this works too), so the signal is exactly gone at step 40. The paper's own Swiss-roll model learns its schedule instead.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Adding a little noise many times turns any data into plain noise. This direction is easy and needs nothing learned.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does the forward process need no training?</dt>
+    <dd>It is a fixed recipe (shrink slightly, add a known amount of noise). Nothing about it depends on a model; only the reverse direction is learned.</dd>
+    <dt>Where do all the points end up after many steps, whatever data you start with?</dt>
+    <dd>In the same simple, round Gaussian cloud. That is what makes it a good starting point for generating.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §2.2</p>
+  <h2>Small steps are easy to undo</h2>
+  <div class="prose">
+    <p>Running the movie backwards, from noise to data, sounds hopeless: you can't un-stir ink. But the paper relies on an old mathematical fact (it cites Feller, 1949): if each forward step is <em>tiny</em>, then the reverse of that step has the same simple form. Given a slightly noisy point, the place it probably came from a moment ago is described by a single bell curve, nudged in some direction.</p>
+    <p>That turns an impossible problem into many easy ones. A neural network only needs to learn, for each step and each location, where the centre of that bell curve is and how wide it is.</p>
+    <p>Try it below. The data here is one-dimensional: values cluster around −1 and +1. We take a noisy value and ask "where was it a few steps earlier?". The answer is computed exactly. With a small jump it is one tidy bump (the dashed bell curve fits it). With a big jump it splits into two bumps, which a single bell curve cannot describe.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Steps undone at once <input type="range" id="rv-d" min="1" max="20" step="1" value="1"><output id="rv-d-o">1</output></label>
+      <label>Noisy value now <input type="range" id="rv-x" min="-1.5" max="1.5" step="0.05" value="0.1" data-fmt="2"><output id="rv-x-o">0.10</output></label>
+    </div>
+    <div class="svgbox"><svg id="rv" viewBox="0 0 600 260" role="img" aria-label="The exact distribution of an earlier value given a noisy value, compared with the best single bell curve"></svg></div>
+    <p class="readout" id="rv-r"></p>
+    <figcaption>Data: two narrow clusters at −1 and +1. We start at step 20 of 40 (half the signal gone). The solid amber curve is the exact probability of each earlier value; the dashed blue curve is the best single bell curve. Try "Steps undone at once" = 20 with the noisy value near 0: the true answer is "near −1 or near +1", and a single bell curve misplaces it in the middle.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>If you see a footprint in the sand and are asked where the walker was one second earlier, "about one stride back" is a good answer. Asked where they were an hour earlier, the honest answer is a complicated map of possibilities. Small steps keep the answer simple.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Each tiny noise step can be reversed with a simple bell-curve guess, so the hard reverse journey becomes many easy, learnable steps.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why not reverse the whole process in one go?</dt>
+    <dd>Over a large jump, the set of places a noisy point could have come from is complicated (here, two separate clusters). Only for small jumps is it a simple bell curve that a network can easily output.</dd>
+    <dt>What does the network actually have to output at each step?</dt>
+    <dd>The centre and the width of the bell curve for the previous step, given the current noisy point and the step number.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §2.2–2.4 · Figs. 1–2</p>
+  <h2>Generate by walking back from noise</h2>
+  <div class="prose">
+    <p>To make a new sample: draw a point from the plain noise cloud, then apply the learned undo step, then again, and again, all the way back to step 0. Each undo step removes a little noise and adds a little structure. After the last step, the point looks like data.</p>
+    <p>Training checks how well the chain of undo steps retraces the forward process. Because every piece is a simple bell curve, the paper can compute a guaranteed lower bound on how likely the data is under the model, and improve the network by pushing that bound up.</p>
+    <p>Below, the "network" is replaced by the best possible bell-curve step, computed exactly, so you can see the effect of the number of steps on its own. With few, big steps the samples come out in the wrong places. With many small steps they land on the two clusters.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Number of steps <input type="range" id="gn-T" min="1" max="60" step="1" value="2"><output id="gn-T-o">2</output></label><button class="btn" id="gn-run">Generate 2,000 samples</button></div>
+    <div class="svgbox"><svg id="gn" viewBox="0 0 600 270" role="img" aria-label="Histogram of generated samples compared with the true two-cluster data distribution"></svg></div>
+    <p class="readout" id="gn-r"></p>
+    <figcaption>Each sample starts as pure noise and takes the chosen number of reverse steps, each the best single bell curve for that step. Grey outline: the real data distribution. Amber bars: the generated samples. "Matches the data" is the overlap between the two shapes. Toy illustration; the real paper learns the steps with a neural network.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>New data comes from running the learned small undo steps from pure noise. More, smaller steps make each one simpler and the result better.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>With two steps, why do many samples land between the clusters?</dt>
+    <dd>Each step can only move a sample by a bell-curve-shaped amount. With so few steps, the last step has to cover a large jump whose true answer has two bumps, and a single bell curve averages them.</dd>
+    <dt>What does the model start from when it generates?</dt>
+    <dd>Pure random noise from the simple Gaussian cloud that the forward process ends in.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §2.5, §3 · Figs. 3–5</p>
+  <h2>Repairing images, and what happened next</h2>
+  <div class="prose">
+    <p>Because the model is built from simple steps, it can be combined with other information. The paper uses this to clean up noisy images (CIFAR-10 photos with heavy added noise, Fig. 3) and to fill in a missing patch of a bark texture (Fig. 5), by steering each reverse step towards what is already known.</p>
+    <p>The authors tested the approach on toy data, handwritten digits (MNIST), small photos (CIFAR-10), and natural textures. The samples were recognisable but blurry by later standards, and the method attracted little attention for five years.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>In 2020, <a href="ddpm.html">DDPM</a> (Ho, Jain and Abbeel) kept the same forward-and-reverse structure but fixed the noise schedule, had the network predict the added noise instead of the bell curve's centre, and simplified the training loss. The results rivalled the best image generators of the day, and diffusion became the dominant way to generate images.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>This paper set out the full diffusion recipe; five years of engineering later, the same recipe powers modern image generators.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>The goal is a family of probabilistic models that is both highly flexible and tractable to learn, sample and evaluate. Inspired by non-equilibrium statistical physics, the method slowly destroys structure in a data distribution through an iterative forward diffusion process, then learns a reverse diffusion process that restores it. This yields deep generative models with thousands of layers or time steps whose likelihood can be bounded, and which allow conditional and posterior probabilities to be computed cheaply. A reference implementation was released. ICML 2015 (PMLR 37); arXiv:1503.03585.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2.1 · Eqs. 1–3 · Table App.1</p>
+  <h2>Forward trajectory</h2>
+  <div class="prose"><p>Data distribution <var>q</var>(<b>x</b><sup>(0)</sup>) is converted into an analytically tractable distribution π(<b>y</b>) by repeatedly applying a Markov diffusion kernel <var>T</var><sub>π</sub> for which π is stationary:</p></div>
+  <div class="eq">π(<b>y</b>) = ∫ d<b>y</b>′ <var>T</var><sub>π</sub>(<b>y</b> | <b>y</b>′; β) π(<b>y</b>′) <span class="n">(1)</span></div>
+  <div class="eq"><var>q</var>(<b>x</b><sup>(<var>t</var>)</sup> | <b>x</b><sup>(<var>t</var>−1)</sup>) = <var>T</var><sub>π</sub>(<b>x</b><sup>(<var>t</var>)</sup> | <b>x</b><sup>(<var>t</var>−1)</sup>; β<sub><var>t</var></sub>) <span class="n">(2)</span></div>
+  <div class="eq"><var>q</var>(<b>x</b><sup>(0…<var>T</var>)</sup>) = <var>q</var>(<b>x</b><sup>(0)</sup>) ∏<sub><var>t</var>=1</sub><sup><var>T</var></sup> <var>q</var>(<b>x</b><sup>(<var>t</var>)</sup> | <b>x</b><sup>(<var>t</var>−1)</sup>) <span class="n">(3)</span></div>
+  <div class="prose">
+    <p>Two kernels are used (Table App.1). For continuous data, a Gaussian kernel <span class="v">N</span>(<b>x</b><sup>(<var>t</var>)</sup>; <b>x</b><sup>(<var>t</var>−1)</sup>√(1 − β<sub><var>t</var></sub>), <b>I</b>β<sub><var>t</var></sub>), whose stationary distribution is the standard normal. For binary data, a binomial kernel <span class="v">B</span>(<b>x</b><sup>(<var>t</var>)</sup>; <b>x</b><sup>(<var>t</var>−1)</sup>(1 − β<sub><var>t</var></sub>) + 0.5β<sub><var>t</var></sub>), whose stationary distribution is independent fair coins. β<sub><var>t</var></sub> is the diffusion rate of step <var>t</var>.</p>
+    <p>Composing Gaussian steps gives <b>x</b><sup>(<var>t</var>)</sup> = √ᾱ<sub><var>t</var></sub> <b>x</b><sup>(0)</sup> + √(1 − ᾱ<sub><var>t</var></sub>) <b>ε</b> with ᾱ<sub><var>t</var></sub> = ∏<sub><var>s</var>≤<var>t</var></sub>(1 − β<sub><var>s</var></sub>). This closed form is not emphasised in the 2015 paper; it became central in <a href="ddpm.html">DDPM</a>, which writes it as its Eq. 4.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §2.2 · Eqs. 4–5</p>
+  <h2>Reverse trajectory and the small-step argument</h2>
+  <div class="prose"><p>The generative model is the same chain run backwards from the stationary distribution:</p></div>
+  <div class="eq"><var>p</var>(<b>x</b><sup>(<var>T</var>)</sup>) = π(<b>x</b><sup>(<var>T</var>)</sup>) <span class="n">(4)</span></div>
+  <div class="eq"><var>p</var>(<b>x</b><sup>(0…<var>T</var>)</sup>) = <var>p</var>(<b>x</b><sup>(<var>T</var>)</sup>) ∏<sub><var>t</var>=1</sub><sup><var>T</var></sup> <var>p</var>(<b>x</b><sup>(<var>t</var>−1)</sup> | <b>x</b><sup>(<var>t</var>)</sup>) <span class="n">(5)</span></div>
+  <div class="prose">
+    <p>For continuous diffusion (the limit of small β), the reversal of the diffusion process has "the identical functional form as the forward process" (§2.2, citing Feller 1949). So if β<sub><var>t</var></sub> is small, <var>q</var>(<b>x</b><sup>(<var>t</var>−1)</sup> | <b>x</b><sup>(<var>t</var>)</sup>) is itself close to Gaussian (or binomial), and the model uses <var>p</var>(<b>x</b><sup>(<var>t</var>−1)</sup> | <b>x</b><sup>(<var>t</var>)</sup>) = <span class="v">N</span>(<b>x</b><sup>(<var>t</var>−1)</sup>; <b>f</b><sub>μ</sub>(<b>x</b><sup>(<var>t</var>)</sup>, <var>t</var>), <b>f</b><sub>Σ</sub>(<b>x</b><sup>(<var>t</var>)</sup>, <var>t</var>)) for Gaussian diffusion, or <span class="v">B</span>(<b>x</b><sup>(<var>t</var>−1)</sup>; <b>f</b><sub>b</sub>(<b>x</b><sup>(<var>t</var>)</sup>, <var>t</var>)) for binomial. The functions <b>f</b> are neural networks (multi-layer perceptrons in §2.2; the image models use a multi-scale convolutional architecture, Appendix D). The cost of learning is then "the cost of these functions, times the number of time-steps".</p>
+    <p>The figure measures how wrong the Gaussian assumption is. For a 1-D two-cluster data distribution, it integrates the exact reverse kernel on a grid and computes its KL divergence from the moment-matched Gaussian (the best Gaussian in that KL direction), summed over all <var>T</var> steps and averaged over <b>x</b><sup>(<var>t</var>)</sup>. By the chain rule for KL this sum upper-bounds the gap between the bound <var>K</var> of §2.4 and the true log-likelihood for an ideal Gaussian-kernel model.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Cluster width <input type="range" id="kl-s" min="0.05" max="0.5" step="0.01" value="0.12" data-fmt="2"><output id="kl-s-o">0.12</output></label><label>Cluster gap <input type="range" id="kl-m" min="0.5" max="2" step="0.1" value="1" data-fmt="1"><output id="kl-m-o">1.0</output></label></div>
+    <div class="svgbox"><svg id="kl" viewBox="0 0 600 260" role="img" aria-label="Total KL divergence between exact reverse kernels and Gaussian approximations versus number of steps"></svg></div>
+    <p class="readout" id="kl-r"></p>
+    <figcaption>Data: equal mixture of <span class="v">N</span>(±<var>m</var>, <var>s</var><sup>2</sup>). Schedule β<sub><var>t</var></sub> = (<var>T</var> − <var>t</var> + 1)<sup>−1</sup> (the paper's binomial schedule, which footnote 2 reports also works for Gaussian diffusion), so ᾱ<sub><var>t</var></sub> = 1 − <var>t</var>/<var>T</var> and <var>q</var>(<b>x</b><sup>(<var>T</var>)</sup>) = π exactly. Vertical axis in nats, log scale. Narrower or further-apart clusters need more steps before the Gaussian reverse kernel is accurate.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>The whole method rests on one approximation, Gaussian reverse kernels, and that approximation becomes exact as the number of steps grows.</p>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §2.3–2.4 · Eqs. 9–14</p>
+  <h2>Model probability and the training bound</h2>
+  <div class="prose">
+    <p>The model probability <var>p</var>(<b>x</b><sup>(0)</sup>) = ∫ d<b>x</b><sup>(1…<var>T</var>)</sup> <var>p</var>(<b>x</b><sup>(0…<var>T</var>)</sup>) is intractable directly, but can be written as an average over forward trajectories of the ratio <var>p</var>/<var>q</var> (§2.3). The paper notes this is the same move as annealed importance sampling and the Jarzynski equality (§1.2: "the Jarzynski equality … known in machine learning as Annealed Importance Sampling"): if forward and reverse trajectories coincide (a quasi-static process), a single sample from <var>q</var> evaluates <var>p</var>(<b>x</b><sup>(0)</sup>) exactly.</p>
+    <p>Training maximises the log-likelihood <var>L</var> = ∫ <var>q</var>(<b>x</b><sup>(0)</sup>) log <var>p</var>(<b>x</b><sup>(0)</sup>). Jensen's inequality (Eq. 12) gives <var>L</var> ≥ <var>K</var> (Eq. 13), and with the derivation of Appendix B:</p>
+  </div>
+  <div class="eq"><var>K</var> = −Σ<sub><var>t</var>=2</sub><sup><var>T</var></sup> E<sub><var>q</var></sub>[ D<sub>KL</sub>( <var>q</var>(<b>x</b><sup>(<var>t</var>−1)</sup> | <b>x</b><sup>(<var>t</var>)</sup>, <b>x</b><sup>(0)</sup>) ‖ <var>p</var>(<b>x</b><sup>(<var>t</var>−1)</sup> | <b>x</b><sup>(<var>t</var>)</sup>) ) ] + <var>H</var><sub><var>q</var></sub>(<b>X</b><sup>(<var>T</var>)</sup> | <b>X</b><sup>(0)</sup>) − <var>H</var><sub><var>q</var></sub>(<b>X</b><sup>(1)</sup> | <b>X</b><sup>(0)</sup>) − <var>H</var><sub><var>p</var></sub>(<b>X</b><sup>(<var>T</var>)</sup>) <span class="n">(14)</span></div>
+  <div class="prose">
+    <p>Every term is analytic for Gaussian kernels: the entropies are fixed by the schedule, and each KL is between two Gaussians, because conditioning the forward process on <b>x</b><sup>(0)</sup> makes the posterior <var>q</var>(<b>x</b><sup>(<var>t</var>−1)</sup> | <b>x</b><sup>(<var>t</var>)</sup>, <b>x</b><sup>(0)</sup>) Gaussian. The bound is tight when the reverse kernels equal the true reverse of the forward process. Training is regression: find the <b>f</b><sub>μ</sub>, <b>f</b><sub>Σ</sub> maximising <var>K</var> (Eq. 15).</p>
+    <p><strong>Schedule (§2.4.1).</strong> For Gaussian diffusion, β<sub>1</sub> is fixed to a small constant (to prevent overfitting) and β<sub>2…<var>T</var></sub> are learned by gradient ascent on <var>K</var>, holding the sampled noise fixed so the gradient is low-variance. For binomial diffusion the schedule is fixed: β<sub><var>t</var></sub> = (<var>T</var> − <var>t</var> + 1)<sup>−1</sup>, which removes a 1/<var>T</var> share of the original signal per step.</p>
+    <p><strong>Entropy bounds (§2.6, App. A).</strong> The entropy of each reverse step is bounded above and below by quantities computable from the forward process, which constrains <b>f</b><sub>Σ</sub>.</p>
+  </div>
+  <pre class="algo"><span class="c"># Training, as in §2.4 (Gaussian case)</span>
+repeat:
+  x0 ~ data;  sample a forward trajectory x1..xT with Eq. 2
+  for each t: compute the analytic Gaussian KL between
+      q(x_{t-1} | x_t, x0)  and  N(f_mu(x_t,t), f_Sigma(x_t,t))
+  K = -(sum of KLs) + schedule-dependent entropy terms     <span class="c"># Eq. 14</span>
+  gradient ascent on K w.r.t. network weights (and beta_2..T)</pre>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why condition the posterior on <b>x</b><sup>(0)</sup> inside <var>K</var>?</dt>
+    <dd>The marginal reverse <var>q</var>(<b>x</b><sup>(<var>t</var>−1)</sup> | <b>x</b><sup>(<var>t</var>)</sup>) depends on the unknown data distribution, but conditioned on <b>x</b><sup>(0)</sup> it is a Gaussian with closed-form mean and variance, so every KL term is analytic and low-variance.</dd>
+    <dt>What links the method to annealed importance sampling?</dt>
+    <dd>The likelihood is an importance-weighted average over forward trajectories of <var>p</var>/<var>q</var>; this is AIS (equivalently the Jarzynski equality), and it is exact with one sample when forward and reverse trajectories agree.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §2.5 · Eqs. 16–23 · Figs. 3, 5</p>
+  <h2>Multiplying distributions: posteriors, denoising, inpainting</h2>
+  <div class="prose">
+    <p>Many tasks need the product of the model with another function, <var>p̃</var>(<b>x</b><sup>(0)</sup>) ∝ <var>p</var>(<b>x</b><sup>(0)</sup>) <var>r</var>(<b>x</b><sup>(0)</sup>): a posterior given a noisy observation, or a constraint that some pixels are known. For most models this is hard. Here, the paper multiplies every intermediate distribution by a corresponding <var>r</var>(<b>x</b><sup>(<var>t</var>)</sup>) (Eq. 16) and obtains a modified reverse kernel (Eq. 22). When <var>r</var> is smooth relative to the kernel, it acts as a small perturbation of each Gaussian step, computable in closed form (§2.5.3, App. C). The simplest choice is a constant <var>r</var>(<b>x</b><sup>(<var>t</var>)</sup>) = <var>r</var>(<b>x</b><sup>(0)</sup>) (Eq. 23).</p>
+    <p>Applications: denoising CIFAR-10 images corrupted with Gaussian noise of variance 1 (Fig. 3), and inpainting a 100 × 100 region of a bark texture replaced by noise (Fig. 5). This "steer each reverse step with extra information" idea is the ancestor of classifier guidance in <a href="beatgans.html">Diffusion Models Beat GANs</a> and of later inpainting and editing methods.</p>
+  </div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §3 · Tables 1–2 · App. D</p>
+  <h2>Experiments</h2>
+  <div class="prose">
+    <p><strong>Toy problems (§3.1).</strong> A 2-D Swiss roll with <var>T</var> = 40 and a radial-basis-function network with 16 hidden units (Fig. 1), and binary "heartbeat" sequences (a periodic pulse) with binomial diffusion, <var>T</var> = 2000 and an MLP with three hidden layers of 50 units (Fig. 2). On the heartbeat, the bound <var>K</var> = −2.414 bits per sequence against a true log-likelihood of −2.322.</p>
+    <p><strong>Images (§3.2).</strong> MNIST, CIFAR-10, dead-leaf images and bark textures, using <var>T</var> = 1000 (500 for bark). Image networks are multi-scale convolutional (mean-pooling to several scales, convolution, upsampling and summing), with a dense pathway for MNIST and CIFAR-10; the mean is parameterised as a perturbation of the forward kernel and the covariance is diagonal (App. D.2.1). Training used SFO, except RMSprop for CIFAR-10.</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Dataset (Table 1)</th><th>Bound <var>K</var></th><th><var>K</var> − <var>L</var><sub>null</sub></th></tr></thead>
+    <tbody>
+      <tr><td>Swiss roll</td><td class="num">2.35 bits</td><td class="num">6.45 bits</td></tr>
+      <tr><td>Binary heartbeat</td><td class="num">−2.414 bits/seq</td><td class="num">12.024 bits/seq</td></tr>
+      <tr><td>Bark</td><td class="num">−0.55 bits/pixel</td><td class="num">1.5 bits/pixel</td></tr>
+      <tr><td>Dead leaves</td><td class="num">1.489 bits/pixel</td><td class="num">3.536 bits/pixel</td></tr>
+      <tr><td>CIFAR-10</td><td class="num">5.4 ± 0.2 bits/pixel</td><td class="num">11.5 ± 0.2 bits/pixel</td></tr>
+    </tbody></table></div>
+  <div class="prose">
+    <p>All datasets except the heartbeat were scaled to unit variance, so these are not the bits-per-dimension numbers later papers report for 8-bit images. A footnote records that an earlier version reported higher CIFAR-10 bounds because of pixel quantisation, fixed by adding uniform noise. Table 2 compares with prior work: on dead leaves, the bound of 1.489 bits/pixel beats the MCGSM's 1.244; on MNIST, Parzen-window log-likelihood estimates are 317 ± 2.7 bits for diffusion against 309 ± 1.6 for a deep GSN and 325 ± 2.9 for an adversarial net. Parzen-window estimates were soon shown to be unreliable (Theis, van den Oord and Bethge, 2016), so that comparison carries little weight.</p>
+  </div>
+</section>
+
+<section class="kp" id="t6">
+  <p class="eyebrow"><b>Section</b> · §4 and lineage</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose"><ul>
+    <li><strong>Sample quality.</strong> Image samples (CIFAR-10, MNIST) were recognisable but well behind contemporary GANs; the paper's strength was tractable likelihood bounds and posterior computation, not visual quality.</li>
+    <li><strong>Many steps.</strong> Accuracy of the Gaussian reverse kernel needs small β, hence hundreds to thousands of network evaluations per sample. Reducing this became a research field of its own (DDIM, distillation, consistency models, <a href="flowmatch.html">flow matching</a>).</li>
+    <li><strong>What the network predicts.</strong> Predicting the reverse mean directly, plus learning a covariance and the schedule, made optimisation harder than it needed to be.</li>
+  </ul></div>
+  <div class="later"><span class="label">Later refinements</span><a href="ddpm.html">DDPM</a> (2020) fixed the schedule (linear β from 10<sup>−4</sup> to 0.02, <var>T</var> = 1000), reparameterised the mean in terms of predicted noise ε, and dropped the bound's weighting to get a simple mean-squared-error loss. It also connected the model to denoising score matching and Langevin dynamics (Song and Ermon, 2019). Song et al. (2021) then unified both views as stochastic differential equations, whose reverse-time form is the continuous-time version of the small-step argument here. <a href="beatgans.html">Dhariwal and Nichol</a> (2021) made diffusion beat GANs on ImageNet, and <a href="ldm.html">latent diffusion</a> made it cheap enough for Stable Diffusion.</div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Which ingredient of the 2015 model did DDPM change most consequentially?</dt>
+    <dd>The parameterisation and loss: predicting the added noise with an unweighted squared error, rather than predicting the reverse mean and covariance under the full bound with a learned schedule.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t7" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Forward trajectory</dt><dd>The fixed Markov chain <var>q</var> that turns data into noise (Eq. 3).</dd>
+    <dt>Reverse trajectory</dt><dd>The learned Markov chain <var>p</var> from noise to data (Eq. 5).</dd>
+    <dt>β<sub><var>t</var></sub></dt><dd>Diffusion rate (noise variance) of step <var>t</var>.</dd>
+    <dt>Stationary distribution π</dt><dd>The distribution the kernel leaves unchanged; the end point of the forward process and starting point of generation.</dd>
+    <dt><var>K</var></dt><dd>The variational lower bound on log-likelihood (Eq. 14), maximised during training.</dd>
+    <dt>AIS</dt><dd>Annealed importance sampling: estimating a normaliser by averaging importance weights along a chain of intermediate distributions; the Jarzynski equality in physics.</dd>
+    <dt>Moment matching</dt><dd>Fitting a Gaussian with the same mean and variance as a target; it minimises KL(target ‖ Gaussian).</dd>
+    <dt>Inpainting</dt><dd>Filling in a missing region of an image consistently with the rest.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Led to:</strong> <a href="ddpm.html">DDPM (2020)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> (<a href="https://lovespark.love/papers-worth-reading/#diffusion2015">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+function npdf(x,m,v){ return Math.exp(-0.5*(x-m)*(x-m)/v)/Math.sqrt(2*Math.PI*v); }
+// exact reverse kernel moments for a 1-D Gaussian-mixture data distribution
+function revMoments(x, abPrev, a, M, s2){ // abPrev = alphabar_{t-1}, a = alpha_t, M = component means
+  var ws=[],Ms=[],Vs=[],tot=0;
+  M.forEach(function(m){ var mu=Math.sqrt(abPrev)*m, v=abPrev*s2+1-abPrev, sv=a*v+1-a;
+    var w=npdf(x,Math.sqrt(a)*mu,sv); ws.push(w); tot+=w; Ms.push(mu+v*Math.sqrt(a)/sv*(x-Math.sqrt(a)*mu)); Vs.push(v*(1-a)/sv); });
+  var mean=0,sq=0; for (var k=0;k<M.length;k++){ var w=ws[k]/(tot||1e-300); mean+=w*Ms[k]; sq+=w*(Vs[k]+Ms[k]*Ms[k]); }
+  return {mean:mean,v:Math.max(sq-mean*mean,1e-12),ws:ws.map(function(w){return w/(tot||1e-300);}),Ms:Ms,Vs:Vs};
+}
+(function(){ // forward diffusion of a spiral
+  var svg=$('#fw'), T=40, N=300, traj, t=0, timer=null, seed=3;
+  function make(){ var r=rng(seed++), pts=[];
+    for (var i=0;i<N;i++){ var th=1.5*Math.PI*(1+2*r()), x=th*Math.cos(th)/10+0.15*gauss(r)*0.3, y=th*Math.sin(th)/10+0.15*gauss(r)*0.3; pts.push([x,y]); }
+    traj=[pts]; for (var s=1;s<=T;s++){ var b=1/(T-s+1), prev=traj[s-1]; traj.push(prev.map(function(p){ return [Math.sqrt(1-b)*p[0]+Math.sqrt(b)*gauss(r), Math.sqrt(1-b)*p[1]+Math.sqrt(b)*gauss(r)]; })); } }
+  function draw(){ clear(svg); var cx=150, cy=135, sc=46;
+    S('rect',{x:20,y:15,width:260,height:240,'class':'area'},svg);
+    traj[t].forEach(function(p){ var X=Math.max(24,Math.min(276,cx+p[0]*sc)), Y=Math.max(19,Math.min(251,cy-p[1]*sc)); S('circle',{cx:X,cy:Y,r:2.4,'class':'f-fire','fill-opacity':0.75},svg); });
+    S('text',{x:28,y:32,'class':'t-s'},svg,'step '+t+' of '+T);
+    var ab=1-t/T; var x0=330, w=240, y1=90, y2=170;
+    S('text',{x:x0,y:60,'class':'t-h'},svg,'What is left of each point');
+    S('rect',{x:x0,y:y1-16,width:w,height:22,'class':'box'},svg); S('rect',{x:x0,y:y1-16,width:w*Math.sqrt(ab),height:22,'class':'f-fire'},svg);
+    S('text',{x:x0,y:y1+22,'class':'t-fire'},svg,'original position × '+fmt(Math.sqrt(ab),2));
+    S('rect',{x:x0,y:y2-16,width:w,height:22,'class':'box'},svg); S('rect',{x:x0,y:y2-16,width:w*Math.sqrt(1-ab),height:22,'class':'f-wire'},svg);
+    S('text',{x:x0,y:y2+22,'class':'t-wire'},svg,'+ random noise × '+fmt(Math.sqrt(1-ab),2));
+    S('text',{x:x0,y:240,'class':'t-s'},svg,'(each point = shrunk original + noise)');
+    $('#fw-r').innerHTML = t===0 ? 'Step 0: the original spiral.' : (t<T ? 'Step <b>'+t+'</b>: '+fmt(100*ab,0)+'% of the original signal’s variance remains.' : 'Step <b>40</b>: the spiral is gone; the points are pure Gaussian noise.');
+  }
+  var rr=bindRange('fw-t',function(v){ t=v; if (traj) draw(); });
+  make(); draw();
+  $('#fw-new').onclick=function(){ make(); draw(); };
+  $('#fw-play').onclick=function(){ if (timer){ clearInterval(timer); timer=null; this.textContent='Play'; return; } var b=this; b.textContent='Pause'; if (t>=T) t=0;
+    timer=setInterval(function(){ t++; rr.value=t; $('#fw-t-o').textContent=t; draw(); if (t>=T){ clearInterval(timer); timer=null; b.textContent='Play'; } },120); };
+})();
+(function(){ // exact reverse kernel vs one Gaussian
+  var svg=$('#rv'), T=40, t0=20, d=1, x=0.1, M=[-1,1], s2=0.15*0.15;
+  function ab(t){ return 1-t/T; }
+  function draw(){ clear(svg); var tp=t0-d, a=ab(t0)/ab(tp);
+    var G=[],lo=-2.2,hi=2.2,n=400,mx=0; for (var i=0;i<=n;i++){ var u=lo+(hi-lo)*i/n, pr=0; M.forEach(function(m){ pr+=0.5*npdf(u,Math.sqrt(ab(tp))*m,ab(tp)*s2+1-ab(tp)); }); G.push([u,pr*npdf(x,Math.sqrt(a)*u,1-a)]); }
+    var Z=0; G.forEach(function(g){ Z+=g[1]*(hi-lo)/n; }); G.forEach(function(g){ g[1]/=Z; if (g[1]>mx) mx=g[1]; });
+    var mo=revMoments(x,ab(tp),a,M,s2), gmx=npdf(mo.mean,mo.mean,mo.v); mx=Math.max(mx,gmx);
+    function X(u){ return 40+(u-lo)/(hi-lo)*530; } function Y(p){ return 220-p/mx*170; }
+    S('line',{x1:40,y1:220,x2:570,y2:220,'class':'axis'},svg);
+    [-2,-1,0,1,2].forEach(function(u){ S('line',{x1:X(u),y1:220,x2:X(u),y2:225,'class':'axis'},svg); S('text',{x:X(u),y:238,'class':'t-s mid'},svg,u); });
+    S('text',{x:305,y:256,'class':'t-s mid'},svg,'earlier value (step '+tp+')');
+    var dp=''; G.forEach(function(g,i){ dp+=(i?'L':'M')+X(g[0])+','+Y(g[1]); }); S('path',{d:dp,'class':'w-fire'},svg);
+    var dg=''; for (var i=0;i<=n;i++){ var u=lo+(hi-lo)*i/n; dg+=(i?'L':'M')+X(u)+','+Y(npdf(u,mo.mean,mo.v)); } S('path',{d:dg,'class':'w-dash'},svg); S('path',{d:dg,'class':'w-faint'},svg);
+    S('line',{x1:X(x),y1:40,x2:X(x),y2:220,'class':'w-inh'},svg); S('text',{x:X(x)+(x>1?-6:6),y:36,'class':(x>1?'t-inh end':'t-inh')},svg,'noisy value now (step '+t0+')');
+    var kl=0; G.forEach(function(g){ if (g[1]>1e-12) kl+=g[1]*Math.log(g[1]/npdf(g[0],mo.mean,mo.v))*(hi-lo)/n; });
+    S('text',{x:44,y:60,'class':'t-fire'},svg,'exact answer'); S('text',{x:44,y:76,'class':'t-wire'},svg,'best single bell curve');
+    $('#rv-r').innerHTML='Undoing <b>'+d+'</b> step'+(d>1?'s':'')+' at once. Mismatch between the exact answer and one bell curve: <b>'+fmt(kl,3)+'</b> nats '+(kl<0.02?'(essentially a perfect fit).':(kl<0.2?'(a noticeable misfit).':'(a bad fit: the true answer has two bumps).'));
+  }
+  bindRange('rv-d',function(v){ d=v; draw(); }); bindRange('rv-x',function(v){ x=v; draw(); });
+})();
+(function(){ // generate with best-Gaussian reverse steps
+  var svg=$('#gn'), T=2, M=[-1,1], s2=0.15*0.15, hist=null;
+  function truth(u){ return 0.5*npdf(u,-1,s2)+0.5*npdf(u,1,s2); }
+  function run(){ var r=rng(11), N=2000, xs=[];
+    for (var i=0;i<N;i++){ var x=gauss(r); for (var t=T;t>=1;t--){ var abt=1-t/T, abp=1-(t-1)/T, a=abt/abp; var mo=revMoments(x,abp,a,M,s2); x=mo.mean+Math.sqrt(mo.v)*gauss(r); } xs.push(x); }
+    return xs; }
+  function draw(xs){ clear(svg); var lo=-2,hi=2,B=60,bw=(hi-lo)/B, h=[]; for (var b=0;b<B;b++) h.push(0);
+    if (xs) xs.forEach(function(x){ var b=Math.floor((x-lo)/bw); if (b>=0&&b<B) h[b]++; });
+    var dens=h.map(function(c){ return xs? c/xs.length/bw : 0; });
+    function X(u){ return 40+(u-lo)/(hi-lo)*530; } var mx=truth(1)*1.05; function Y(p){ return 225-Math.min(p,mx)/mx*185; }
+    dens.forEach(function(p,b){ if (p>0) S('rect',{x:X(lo+b*bw)+0.5,y:Y(p),width:530/B-1,height:225-Y(p),'class':'f-fire','fill-opacity':0.8},svg); });
+    var d=''; for (var i=0;i<=400;i++){ var u=lo+(hi-lo)*i/400; d+=(i?'L':'M')+X(u)+','+Y(truth(u)); } S('path',{d:d,'class':'w-ink'},svg);
+    S('line',{x1:40,y1:225,x2:570,y2:225,'class':'axis'},svg); [-2,-1,0,1,2].forEach(function(u){ S('text',{x:X(u),y:242,'class':'t-s mid'},svg,u); });
+    S('text',{x:44,y:30,'class':'t-s'},svg,'grey line: real data   amber bars: generated');
+    if (xs){ var ov=0; dens.forEach(function(p,b){ var u=lo+(b+0.5)*bw; ov+=Math.min(p,truth(u))*bw; });
+      $('#gn-r').innerHTML='With <b>'+T+'</b> step'+(T>1?'s':'')+': generated samples match the data <b>'+fmt(100*Math.min(ov,1),0)+'%</b>'+(ov>0.85?'. The clusters are recovered.':'. Too few steps: each step’s bell curve is a poor fit.'); }
+  }
+  bindRange('gn-T',function(v){ T=v; $('#gn-r').textContent='Press Generate.'; draw(null); });
+  $('#gn-run').onclick=function(){ draw(run()); };
+  draw(run());
+})();
+(function(){ // total KL vs T
+  var svg=$('#kl'), s=0.12, m=1, timer=null;
+  var Ts=[1,2,3,5,8,12,20,30,50,80,120];
+  function totalKL(T){ var M=[-m,m], s2=s*s, r=rng(5), tot=0, ns=24, lo=-m-1.5-4*s, hi=m+1.5+4*s, n=260, du=(hi-lo)/n;
+    for (var t=1;t<=T;t++){ var abt=1-t/T, abp=1-(t-1)/T, a=abt/abp, acc=0;
+      for (var j=0;j<ns;j++){ var k=r()<0.5?0:1, x0=M[k]+s*gauss(r), x=Math.sqrt(abt)*x0+Math.sqrt(1-abt)*gauss(r);
+        var mo=revMoments(x,abp,a,M,s2), Z=0, vals=[], sd=Math.sqrt(mo.v); lo=mo.mean-9*sd; du=18*sd/n;
+        for (var i=0;i<=n;i++){ var u=lo+du*i, p=0; for (var c=0;c<2;c++) p+=mo.ws[c]*npdf(u,mo.Ms[c],mo.Vs[c]); vals.push(p); Z+=p*du; }
+        var kl=0; for (var i=0;i<=n;i++){ var u=lo+du*i, p=vals[i]/Z; if (p>1e-14) kl+=p*Math.log(p/Math.max(npdf(u,mo.mean,mo.v),1e-300))*du; }
+        acc+=Math.max(kl,0); }
+      tot+=acc/ns; }
+    return tot; }
+  function draw(){ clear(svg); var res=Ts.map(function(T){ return [T,totalKL(T)]; });
+    function X(T){ return 60+Math.log(T)/Math.log(120)*500; } var lmin=-4, lmax=0.5; function Y(v){ var l=Math.log10(Math.max(v,1e-4)); return 215-(Math.min(l,lmax)-lmin)/(lmax-lmin)*180; }
+    for (var e=lmin;e<=0;e++){ S('line',{x1:60,y1:Y(Math.pow(10,e)),x2:560,y2:Y(Math.pow(10,e)),'class':'grid'},svg); S('text',{x:54,y:Y(Math.pow(10,e))+4,'class':'t-s end'},svg,e===0?'1':'1e'+e); }
+    S('line',{x1:60,y1:215,x2:560,y2:215,'class':'axis'},svg); S('line',{x1:60,y1:30,x2:60,y2:215,'class':'axis'},svg);
+    Ts.forEach(function(T){ if ([1,2,5,12,30,120].indexOf(T)>=0) S('text',{x:X(T),y:232,'class':'t-s mid'},svg,T); });
+    S('text',{x:310,y:252,'class':'t-s mid'},svg,'number of diffusion steps T (log scale)');
+    S('text',{x:66,y:24,'class':'t-s'},svg,'total KL, exact reverse vs Gaussian (nats)');
+    var d=''; res.forEach(function(p,i){ d+=(i?'L':'M')+X(p[0])+','+Y(p[1]); }); S('path',{d:d,'class':'w-fire'},svg);
+    res.forEach(function(p){ S('circle',{cx:X(p[0]),cy:Y(p[1]),r:3.5,'class':'u-on'},svg); });
+    var last=res[res.length-1], one=res[0];
+    $('#kl-r').innerHTML='T = 1: <b>'+fmt(one[1],2)+'</b> nats lost. T = 12: <b>'+fmt(res[5][1],3)+'</b>. T = 120: <b>'+fmt(last[1],4)+'</b>.';
+  }
+  function sched(){ if (timer) clearTimeout(timer); timer=setTimeout(draw,60); }
+  bindRange('kl-s',function(v){ s=v; sched(); }); bindRange('kl-m',function(v){ m=v; sched(); });
+})();
+</script>
+
+</body>
+</html>

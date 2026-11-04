@@ -1,6 +1,6 @@
 // Offline checks for the built archive. Run: node scripts/verify.mjs  (exit 0 = PASS)
 // Online link/title checks are separate: python3 -I scripts/check_links.py
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { strict as assert } from 'node:assert';
 import { execFileSync } from 'node:child_process';
 import vm from 'node:vm';
@@ -75,5 +75,24 @@ ok(!/\b(fetch|XMLHttpRequest|WebSocket|sendBeacon)\s*\(/.test(script), 'network 
 // 5. no local paths ship
 const personal = /\/Users\/[A-Za-z]|\/home\/[A-Za-z]|C:\\Users\\/;
 for (const [name, text] of [['index.html', html.replace(/data:[^"')]+/g, '')], ['data', JSON.stringify(data)]]) ok(!personal.test(text), `personal reference in ${name}: ${text.match(personal)}`);
+
+// 6. study guides (guides/, written with Claude 2026-11-04): one per paper, linked once, each says it is AI-made,
+//    and each obeys the same rules as the main page (no external resources, no walled hosts, no local paths)
+const gfiles = [...data.papers.map(p => p.id + '.html'), 'index.html', 'make-your-own.html'];
+for (const p of data.papers) {
+  ok(existsSync(new URL(`guides/${p.id}.html`, root)), `${p.id}: no study guide`);
+  ok(html.split(`href="guides/${p.id}.html"`).length === 2, `${p.id}: study guide not linked exactly once`);
+}
+for (const f of gfiles) {
+  const g = readFileSync(new URL('guides/' + f, root), 'utf8');
+  ok(/Made with AI|written with Claude/.test(g), `guides/${f}: missing AI-made notice`);
+  if (f !== 'make-your-own.html') ok(/not (yet all|personally) read/.test(g), `guides/${f}: missing 'not yet read by Joona' note`);
+  ok(!/<(?:script|img|iframe)\b[^>]*\bsrc\s*=\s*["']https?:/i.test(g), `guides/${f}: external script/img`);
+  ok(!/<link\b[^>]*\bhref\s*=\s*["']https?:/i.test(g), `guides/${f}: external stylesheet`);
+  ok(!/\b(fetch|XMLHttpRequest|WebSocket|sendBeacon)\s*\(/.test(g), `guides/${f}: network API`);
+  for (const [, href] of g.matchAll(/href="(https?:[^"]+)"/g)) ok(!WALLED.test(href), `guides/${f}: walled host ${href}`);
+  ok(!personal.test(g), `guides/${f}: personal path ${g.match(personal)}`);
+  for (const [, href] of g.matchAll(/href="([a-z0-9-]+\.html)(?:#[^"]*)?"/g)) ok(existsSync(new URL('guides/' + href, root)), `guides/${f}: broken link ${href}`);
+}
 
 console.log(JSON.stringify({ result: 'PASS', papers: data.papers.length, checks }, null, 1));

@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ReAct (2022) study guide</title>
+<meta name="description" content="Language models could either &quot;think out loud&quot; (reason step by step) or take actions such as searching the web, but not both at once. ReAct prompts a model to alternate: write a thought, take an action, read the result, think again. Grounding the reasoning in what it actually finds cut down">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Language models &amp; AI</b> · 2022</p>
+  <h1>ReAct: Synergizing Reasoning and Acting in Language Models</h1>
+  <p class="cite">Shunyu Yao et al. · ICLR 2023</p>
+  <p class="lede">Language models could either "think out loud" (reason step by step) or take actions such as searching the web, but not both at once. ReAct prompts a model to alternate: write a thought, take an action, read the result, think again. Grounding the reasoning in what it actually finds cut down made-up facts, and the same loop let it play text games and shop online. The pattern became the basic template for LLM agents.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/2210.03629">Read the paper (free)</a> <a href="https://lovespark.love/papers-worth-reading/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, separate AI review (also by Claude), but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Chain-of-thought prompting lets a language model reason step by step, but only from memory, so it confidently reasons from facts it has made up.</p>
+  <p>Other work let models act (search, click, move in a game) but without explicit reasoning, so they lose track of what they are doing.</p>
+  <p>ReAct shows the model a few examples in which "Thought", "Action" and "Observation" lines alternate, so it learns to plan in words, act, read the result, and update its plan.</p>
+  <p>On fact-checking and multi-step questions this made the model more trustworthy and, combined with plain reasoning, more accurate; on a household text game and an online shopping site it beat methods trained on thousands of examples, using just one or two examples in the prompt.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1 · Fig. 1</p>
+  <h2>Thinking without looking, looking without thinking</h2>
+  <div class="prose">
+    <p>Two lines of work were developing separately in 2022. <a href="cot.html">Chain-of-thought</a> prompting showed that if you give a large language model examples where the reasoning is written out, it reasons step by step and solves harder problems. But it reasons only from what it remembers. If its memory is wrong, every later step builds on a mistake. This is called <strong>hallucination</strong>: fluent, confident, made-up facts.</p>
+    <p>Meanwhile, other work used language models to choose <strong>actions</strong> in an environment, such as which web page to open or which button to press. These models act but do not explain to themselves why, so on long tasks they repeat themselves or wander off.</p>
+    <p>ReAct ("reason + act") puts both in one stream of text. Step through the three styles on the same question below.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" data-m="0">Reason only</button><button class="btn" data-m="1">Act only</button><button class="btn on" data-m="2">ReAct</button><button class="btn" id="tr-step">Next step</button><button class="btn" id="tr-all">Show all</button></div>
+    <div class="svgbox"><svg id="tr" viewBox="0 0 600 330" role="img" aria-label="Step-by-step trajectories for three prompting styles"></svg></div>
+    <p class="readout" id="tr-r"></p>
+    <figcaption>An illustrative trajectory written in the style of the paper's Fig. 1, on a small made-up search tool (real facts: Hemingway wrote <em>The Old Man and the Sea</em>, was born in Oak Park, Illinois, and later lived in Key West and Cuba). Amber lines are the model's thoughts, blue its actions, grey what the tool returns. Reason only answers from memory and picks a place associated with Hemingway but not his birthplace. Act only finds the right page but, with no thoughts to track the goal, grabs the wrong fact.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Reasoning alone can drift into made-up facts; acting alone loses track of the goal. Interleaving them lets each fix the other's weakness.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What does "hallucination" mean for a language model?</dt>
+    <dd>Producing a confident, fluent statement that is false, typically a made-up fact, because it is generated from patterns in memory rather than checked against a source.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §2 · §3.1</p>
+  <h2>A thought is an action that changes nothing outside</h2>
+  <div class="prose">
+    <p>The paper's formal idea is simple. An agent normally chooses from a fixed set of actions, like "search" or "go to the kitchen". ReAct adds one more kind of action: writing a <strong>thought</strong>. A thought does not change the world and gets no reply from it. It only adds text to the model's own notes, which then shape what it does next.</p>
+    <p>Thoughts do different jobs: breaking the goal into steps ("I need to find who wrote it, then where they were born"), pulling out the key fact from a long result, noticing a mistake ("this page is about the film, not the book"), or deciding when to stop.</p>
+    <p>For the question-answering tasks, the model got a deliberately simple Wikipedia tool with three actions: <strong>search</strong> for a page (returns its first few sentences), <strong>lookup</strong> a word in the current page (like Ctrl+F), and <strong>finish</strong> with an answer. No training was involved: the model, Google's 540-billion-parameter PaLM, just saw six worked examples in its prompt.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Doing a research task with a notepad beside the keyboard. You jot "first find the author", search, jot "born in Oak Park; that's in Illinois", then write the answer. The notepad doesn't change the internet, but it keeps your searches on track.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>ReAct treats "think" as one more action the model can take, so planning and tool use live in a single text stream.</p>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §3.3 · Table 2</p>
+  <h2>Fewer invented facts, different mistakes</h2>
+  <div class="prose">
+    <p>The authors read through 200 of the model's attempts at multi-step questions (HotpotQA) and sorted what went right and wrong. Choose a style below.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" data-e="0">ReAct</button><button class="btn" data-e="1">Chain of thought (reason only)</button></div>
+    <div class="svgbox"><svg id="er" viewBox="0 0 600 240" role="img" aria-label="Why answers succeeded or failed, by prompting style"></svg></div>
+    <p class="readout" id="er-r"></p>
+    <figcaption>Real numbers from Table 2 (PaLM-540B on HotpotQA). Top: among correct answers, the share with a genuinely sound path versus a lucky or hallucinated one. Bottom: among wrong answers, the share caused by each kind of mistake. "Label ambiguity" means the answer was arguably right but did not match the expected wording.</figcaption>
+  </figure>
+  <div class="prose">
+    <p>The pattern is clear. Hallucination caused 56% of chain-of-thought's failures and none of ReAct's. But ReAct has its own weaknesses: it more often gets its reasoning tangled (sometimes looping on the same search), and an unhelpful search result can derail it completely.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Looking things up nearly eliminates invented facts, but makes the model dependent on good search results and good bookkeeping.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is ReAct's answer more trustworthy even when the accuracy is similar?</dt>
+    <dd>Its reasoning is tied to observations you can read, so you can check where each fact came from; chain-of-thought's correct answers more often rest on hallucinated steps (14% vs 6% of correct answers).</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §3.2–3.3 · Table 1</p>
+  <h2>Best of both: fall back when unsure</h2>
+  <div class="prose">
+    <p>On raw accuracy, ReAct alone did not beat chain-of-thought on the question benchmark (27.4% against 29.4% exact match), though it did better on fact-checking. The two make different mistakes, so the authors combined them: if ReAct fails to finish within a few steps, fall back to chain-of-thought; or if chain-of-thought's answers disagree with each other a lot, switch to ReAct. Combinations scored best on both benchmarks among the prompting methods, though still well below systems trained specifically for these tasks.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Internal knowledge and external lookup are complementary; knowing when to trust each gave the best results.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §4 · Tables 3–4</p>
+  <h2>Acting in games and shops</h2>
+  <div class="prose">
+    <p>ReAct was also tested on two decision-making environments. <strong>ALFWorld</strong> is a text adventure set in a home ("go to countertop 1", "take mug 2", "heat mug with microwave"). <strong>WebShop</strong> is a simulated shopping site where the model must find a product matching a request such as a particular size and price.</p>
+    <p>Here thoughts are used sparingly, just when needed: to set subgoals ("first I need to find a mug; it is probably in a cabinet") and to check progress. With only one or two examples in the prompt, ReAct succeeded on 71% of ALFWorld tasks (best of six prompts) against 37% for a system trained by imitating about 100,000 expert demonstrations per task type. On WebShop it raised the success rate by 10 percentage points over methods trained by imitation and reinforcement learning (40.0% against 28.7–29.1%), though still well short of human experts (59.6%).</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>The Thought / Action / Observation loop became the default design for LLM "agents" and was built into popular frameworks. Later work let models write their own feedback and retry (Reflexion), learn when to call tools during training (Toolformer), and explore several reasoning branches (Tree of Thoughts, by the same first author). Chat models now have structured "tool calling" built in, which is ReAct's idea moved from prompt format into model training. Giving models tools also opened new risks: text returned by a tool can try to take over the agent (<a href="injection.html">indirect prompt injection</a>).</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The same think-act-observe loop worked for question answering, household tasks and web shopping, from a handful of examples: the template for today's agents.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>LLMs' abilities for reasoning (e.g. chain-of-thought prompting) and acting (e.g. action-plan generation) had been studied separately. ReAct uses LLMs to generate reasoning traces and task-specific actions in an interleaved manner: traces help induce, track and update action plans and handle exceptions, while actions let the model interface with external sources such as knowledge bases or environments. On HotpotQA and FEVER, interacting with a simple Wikipedia API overcomes hallucination and error propagation in chain-of-thought and produces more interpretable, human-like trajectories. On ALFWorld and WebShop, ReAct outperforms imitation and reinforcement learning methods by an absolute success rate of 34% and 10% respectively, prompted with only one or two in-context examples. Yao et al., ICLR 2023.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2</p>
+  <h2>Formulation: augmenting the action space with language</h2>
+  <div class="prose">
+    <p>An agent at time <var>t</var> receives observation <var>o<sub>t</sub></var> ∈ 𝒪 and takes action <var>a<sub>t</sub></var> ∈ 𝒜 following policy π(<var>a<sub>t</sub></var> | <var>c<sub>t</sub></var>), where the context is <var>c<sub>t</sub></var> = (<var>o</var><sub>1</sub>, <var>a</var><sub>1</sub>, …, <var>o</var><sub><var>t</var>−1</sub>, <var>a</var><sub><var>t</var>−1</sub>, <var>o<sub>t</sub></var>). Learning a policy is hard when the mapping <var>c<sub>t</sub></var> ↦ <var>a<sub>t</sub></var> is highly implicit and needs extensive computation.</p>
+    <p>ReAct augments the action space to 𝒜̂ = 𝒜 ∪ ℒ, with ℒ the space of language. A thought <var>â<sub>t</sub></var> ∈ ℒ does not affect the environment and yields no observation; it only updates the context:</p>
+  </div>
+  <div class="eq"><var>c</var><sub><var>t</var>+1</sub> = (<var>c<sub>t</sub></var>, <var>â<sub>t</sub></var>)</div>
+  <div class="prose">
+    <p>Because ℒ is unbounded, learning in this space is hard without a strong prior; the paper uses a frozen LLM, PaLM-540B, prompted with few-shot human-written trajectories, to generate both domain actions and free-form thoughts. For knowledge-intensive reasoning, thoughts and actions alternate densely (thought–action–observation steps); for decision making with many actions, thoughts appear sparsely and the model itself decides when to think.</p>
+    <p><strong>Action space (§3.1).</strong> search[entity] returns the first 5 sentences of the entity's Wikipedia page if it exists, else the top-5 similar entities; lookup[string] returns the next sentence containing the string in the current page; finish[answer] ends the episode. The API is deliberately weaker than state-of-the-art retrievers, forcing the model to retrieve via explicit reasoning.</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Formally, why can't a thought be "wrong" with respect to the environment?</dt>
+    <dd>It has no effect on the environment state and produces no observation; it only changes the context the policy conditions on. Its value is entirely in how it changes later environment actions.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3.2–3.3 · Table 1</p>
+  <h2>Knowledge-intensive reasoning: HotpotQA and FEVER</h2>
+  <div class="prose">
+    <p>HotpotQA (multi-hop QA, exact match) and FEVER (claim verification: SUPPORTS / REFUTES / NOT ENOUGH INFO, accuracy), question-only setting, with 6 (HotpotQA) and 3 (FEVER) hand-written trajectories in the prompt. Baselines: Standard (no thoughts or actions), CoT, CoT-SC (self-consistency: 21 sampled CoT trajectories at temperature 0.7, majority vote) and Act (actions without thoughts).</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" data-b="0">HotpotQA (EM)</button><button class="btn" data-b="1">FEVER (accuracy)</button></div>
+    <div class="svgbox"><svg id="t1c" viewBox="0 0 600 270" role="img" aria-label="Table 1 results for PaLM-540B prompting methods"></svg></div>
+    <p class="readout" id="t1c-r"></p>
+    <figcaption>Table 1, PaLM-540B prompting. Dashed: supervised state of the art (67.5 EM, 89.5 accuracy), shown for scale; those systems are trained on the full datasets with stronger retrieval.</figcaption>
+  </figure>
+  <div class="prose">
+    <p><strong>Combining internal and external knowledge.</strong> Two heuristics: ReAct → CoT-SC backs off to self-consistency when ReAct does not return an answer within 7 (HotpotQA) or 5 (FEVER) steps; CoT-SC → ReAct switches to ReAct when the majority answer among <var>n</var> CoT-SC samples occurs fewer than <var>n</var>/2 times, signalling low internal confidence. Try the decision rule:</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Majority answer count of 21 samples <input type="range" id="bo-m" min="3" max="21" step="1" value="14"><output id="bo-m-o">14</output></label>
+      <label>ReAct steps used <input type="range" id="bo-s" min="1" max="10" step="1" value="4"><output id="bo-s-o">4</output></label>
+    </div>
+    <div class="svgbox"><svg id="bo" viewBox="0 0 600 150" role="img" aria-label="Which answer each combined method returns"></svg></div>
+    <p class="readout" id="bo-r"></p>
+    <figcaption>The two combination rules from §3.2 for HotpotQA (<var>n</var> = 21 CoT-SC samples, ReAct step limit 7). If ReAct runs out of steps it is treated as having returned no answer. The paper reports both combinations beat either method alone, and that they reach CoT-SC's 21-sample performance with only 3 to 5 samples (Fig. 2).</figcaption>
+  </figure>
+  <div class="prose">
+    <p><strong>Error analysis (Table 2).</strong> Of 200 sampled trajectories, among successes ReAct had 94% grounded true positives vs 86% for CoT (6% vs 14% with hallucinated reasoning or facts); among failures, hallucination accounts for 56% of CoT's and 0% of ReAct's, while ReAct shows more reasoning errors (47% vs 16%, including repetitive loops) and search-result errors (23%). The authors attribute ReAct's lower HotpotQA EM to reduced flexibility: the structural constraint of grounding in observations makes reasoning harder when retrieval is uninformative.</p>
+    <p><strong>Fine-tuning (Fig. 3).</strong> Bootstrapping 3,000 correct ReAct trajectories and fine-tuning PaLM-8B and PaLM-62B reverses the picture: prompted ReAct is the weakest of the four methods at small scale, but fine-tuned ReAct is the strongest, with fine-tuned PaLM-8B ReAct beating all PaLM-62B prompting methods and fine-tuned 62B beating all 540B prompting methods.</p>
+  </div>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §4 · Tables 3–4</p>
+  <h2>Decision making: ALFWorld and WebShop</h2>
+  <div class="prose">
+    <p><strong>ALFWorld</strong> (text-based household tasks aligned with the embodied ALFRED benchmark; six task types such as pick-and-place, clean, heat, cool, examine-in-light, pick two). Prompts contain sparse thoughts for goal decomposition, subgoal tracking, commonsense about where objects are, and progress checks; 3 annotated trajectories per task type, combined into 6 prompts per type. <strong>WebShop</strong>: 1.18M real products and 12k human instructions; the agent searches, clicks and chooses options, and is scored by attribute match (score) and full success rate (SR). One-shot prompts.</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>ALFWorld (Table 3)</th><th>Overall success</th></tr></thead>
+    <tbody>
+      <tr><td>Act (best of 6 prompts)</td><td class="num">45%</td></tr>
+      <tr><td>ReAct (average / best of 6)</td><td class="num">57% / 71%</td></tr>
+      <tr><td>ReAct-IM (average / best of 6)</td><td class="num">48% / 53%</td></tr>
+      <tr><td>BUTLER (imitation learning, best of 8)</td><td class="num">37%</td></tr>
+    </tbody>
+  </table></div>
+  <div class="tablebox"><table>
+    <thead><tr><th>WebShop (Table 4)</th><th>Score</th><th>Success rate</th></tr></thead>
+    <tbody>
+      <tr><td>IL (imitation learning)</td><td class="num">59.9</td><td class="num">29.1</td></tr>
+      <tr><td>IL + RL</td><td class="num">62.4</td><td class="num">28.7</td></tr>
+      <tr><td>Act</td><td class="num">62.3</td><td class="num">30.1</td></tr>
+      <tr><td>ReAct</td><td class="num">66.6</td><td class="num">40.0</td></tr>
+      <tr><td>Human expert</td><td class="num">82.1</td><td class="num">59.6</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p><strong>ReAct vs Inner Monologue.</strong> ReAct-IM restricts thoughts to the style of Inner Monologue (Huang et al., 2022): dense descriptions of the environment and of what remains to be done. It drops to 53% (best of 6) because it lacks high-level goal decomposition and commonsense about object locations, and often fails to recognise when a subgoal is complete. The point is that the <em>content</em> of thoughts matters, not just their presence. Compare <a href="saycan.html">SayCan</a>, where an LLM proposes steps and learned value functions score feasibility, without free-form reasoning.</p>
+  </div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §3.3 · §6 · Lineage</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Prompted accuracy.</strong> Alone, ReAct is slightly worse than CoT on HotpotQA EM; most of the gain needs the CoT-SC combinations or fine-tuning.</li>
+      <li><strong>Brittleness to tools.</strong> Uninformative search results derail reasoning (23% of failures), and the model can loop, repeating thoughts and actions.</li>
+      <li><strong>Context length.</strong> Complex tasks with large action spaces need more demonstrations, which can exceed the in-context input limit; the authors point to fine-tuning and multi-task training as remedies.</li>
+      <li><strong>Gap to humans.</strong> WebShop success remains far below human experts.</li>
+      <li><strong>Evaluation.</strong> Results use a single large proprietary model (PaLM-540B), with GPT-3 replications in the appendix.</li>
+    </ul>
+  </div>
+  <div class="later"><span class="label">Later work</span>Reflexion (Shinn et al., 2023) adds verbal self-feedback after failed episodes; Toolformer (Schick et al., 2023) learns tool calls self-supervised; Tree of Thoughts (Yao et al., 2023) searches over reasoning branches; function-calling APIs and agent frameworks made Thought/Action/Observation a standard loop, and reasoning models such as <a href="r1.html">DeepSeek-R1</a> now interleave long internal reasoning with tool calls. The security side surfaced quickly: any tool output is untrusted text that enters the context, which is exactly the attack surface studied in <a href="injection.html">indirect prompt injection</a>.</div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does fine-tuning help ReAct more than CoT at small scale?</dt>
+    <dd>Prompting a small model with a few trajectories is not enough to teach the joint skill of reasoning and acting; fine-tuning on 3,000 trajectories teaches the generalisable skill of retrieving and reasoning from observations, whereas fine-tuned CoT mainly memorises (possibly hallucinated) facts.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t5" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Trajectory</dt><dd>The full sequence of thoughts, actions and observations for one task.</dd>
+    <dt>CoT</dt><dd>Chain-of-thought prompting: demonstrations include written-out reasoning.</dd>
+    <dt>CoT-SC</dt><dd>Self-consistency: sample many CoT answers and take the majority.</dd>
+    <dt>Act</dt><dd>The ablation with actions and observations but no thoughts.</dd>
+    <dt>EM</dt><dd>Exact match with the reference answer.</dd>
+    <dt>ALFWorld</dt><dd>Text-game household environment aligned with ALFRED.</dd>
+    <dt>WebShop</dt><dd>Simulated e-commerce site with real product data and human instructions.</dd>
+    <dt>Hallucination</dt><dd>A generated statement not supported by fact or source.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="rag.html">RAG (2020)</a>, <a href="cot.html">Chain of thought (2022)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> (<a href="https://lovespark.love/papers-worth-reading/#react">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // trajectories
+  var Q='Question: In which US state was the author of "The Old Man and the Sea" born?';
+  var T=[
+    [['T','The Old Man and the Sea was written by Ernest Hemingway.'],['T','Hemingway was born in Key West, Florida.'],['T','So the answer is Florida.'],['F','finish[Florida]']],
+    [['A','search[The Old Man and the Sea]'],['O','The Old Man and the Sea is a 1952 novella by Ernest Hemingway, written in Cuba.'],['A','search[Ernest Hemingway]'],['O','Ernest Hemingway (1899–1961) was an American novelist. He lived in Key West, Florida, and later in Cuba.'],['A','lookup[Cuba]'],['O','(Result 1/1) ... he bought a house in Cuba in 1940.'],['F','finish[Cuba]']],
+    [['T','I need the author of the novella, then where that person was born.'],['A','search[The Old Man and the Sea]'],['O','The Old Man and the Sea is a 1952 novella by Ernest Hemingway, written in Cuba.'],['T','The author is Ernest Hemingway. Now find his birthplace.'],['A','search[Ernest Hemingway]'],['O','Ernest Hemingway (1899–1961) was an American novelist. He lived in Key West, Florida, and later in Cuba.'],['T','This mentions where he lived, not where he was born. Look up "born".'],['A','lookup[born]'],['O','(Result 1/1) Hemingway was born in Oak Park, Illinois, in 1899.'],['T','Oak Park is in Illinois, so the answer is Illinois.'],['F','finish[Illinois]']]];
+  var svg=$('#tr'), m=2, n=1;
+  function wrap(s,max){ var w=s.split(' '), out=[], cur=''; w.forEach(function(x){ if ((cur+' '+x).length>max){ out.push(cur); cur=x; } else cur=cur?cur+' '+x:x; }); if (cur) out.push(cur); return out; }
+  function draw(){ clear(svg); var y=18; wrap(Q,82).forEach(function(l){ S('text',{x:10,y:y,'class':'t-h'},svg,l); y+=18; }); y+=4;
+    var L=T[m].slice(0,n), lab={T:'Thought',A:'Action',O:'Observation',F:'Action'}, cls={T:'t-fire',A:'t-wire',O:'t-s',F:'t-wire'};
+    L.forEach(function(s){ var lines=wrap(s[1],66); S('text',{x:10,y:y,'class':cls[s[0]]},svg,lab[s[0]]+':'); lines.forEach(function(l){ S('text',{x:110,y:y,'class':s[0]==='O'?'t-s':'t'},svg,l); y+=16; }); y+=4; });
+    var done=n>=T[m].length, ans=T[m][T[m].length-1][1].replace(/finish\[|\]/g,'');
+    if (done){ var ok=ans==='Illinois'; S('text',{x:590,y:322,'class':(ok?'t-ok':'t-inh')+' end'},svg,ok?'Correct':'Wrong (correct: Illinois)'); }
+    $('#tr-r').innerHTML= done ? 'Final answer: <b>'+ans+'</b>. '+(m===0?'Every step sounds reasonable, but step 2 is a confident false memory.':m===1?'It found the right pages but, without a thought tracking the goal, chased the wrong fact.':'Each thought steers the next action; the observation corrects the plan.') : 'Step '+n+' of '+T[m].length+'. Press Next step.'; }
+  $$('[data-m]').forEach(function(b){ b.onclick=function(){ m=+b.getAttribute('data-m'); n=1; $$('[data-m]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }; });
+  $('#tr-step').onclick=function(){ if (n<T[m].length) n++; draw(); }; $('#tr-all').onclick=function(){ n=T[m].length; draw(); }; draw();
+})();
+(function(){ // Table 2
+  var D=[{s:[94,6],f:[['Reasoning error',47],['Search result error',23],['Hallucination',0],['Label ambiguity',29]]},{s:[86,14],f:[['Reasoning error',16],['Search result error',null],['Hallucination',56],['Label ambiguity',28]]}];
+  var svg=$('#er');
+  function draw(k){ clear(svg); var d=D[k];
+    S('text',{x:10,y:18,'class':'t-s'},svg,'Correct answers:'); S('rect',{x:10,y:26,width:d.s[0]*5.8,height:24,'class':'f-ok'},svg); S('rect',{x:10+d.s[0]*5.8,y:26,width:d.s[1]*5.8,height:24,'class':'f-inh'},svg);
+    S('text',{x:16,y:43,'class':'t'},svg,'');
+    S('text',{x:10,y:68,'class':'t-ok'},svg,'grounded, sound path '+d.s[0]+'%'); S('text',{x:590,y:68,'class':'t-inh end'},svg,'hallucinated path '+d.s[1]+'%');
+    S('text',{x:10,y:100,'class':'t-s'},svg,'Wrong answers, by cause:');
+    d.f.forEach(function(f,i){ var y=110+i*30; S('text',{x:170,y:y+16,'class':'t end'},svg,f[0]); if (f[1]==null){ S('text',{x:180,y:y+16,'class':'t-s'},svg,'n/a (no search)'); return; }
+      S('rect',{x:180,y:y+3,width:Math.max(1.5,f[1]*6),height:18,'class':f[0]==='Hallucination'?'f-inh':'f-wire'},svg); S('text',{x:186+f[1]*6,y:y+16,'class':'t-s'},svg,f[1]+'%'); });
+    $('#er-r').innerHTML = k===0 ? 'ReAct: <b>0%</b> of failures from hallucination; the biggest problem is tangled reasoning (<b>47%</b>).' : 'Chain of thought: hallucination causes <b>56%</b> of failures, and <b>14%</b> of its correct answers rest on hallucinated steps.'; }
+  $$('[data-e]').forEach(function(b){ b.onclick=function(){ $$('[data-e]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(+b.getAttribute('data-e')); }; }); draw(0);
+})();
+(function(){ // Table 1
+  var M=['Standard','CoT','CoT-SC','Act','ReAct','CoT-SC→ReAct','ReAct→CoT-SC'], V=[[28.7,29.4,33.4,25.7,27.4,34.2,35.1],[57.1,56.3,60.4,58.9,60.9,64.6,62.0]], sota=[67.5,89.5], svg=$('#t1c');
+  function draw(k){ clear(svg); var mx=Math.max.apply(null,V[k]), X=function(v){ return 150+v/100*420; };
+    [0,25,50,75,100].forEach(function(g){ S('line',{x1:X(g),y1:10,x2:X(g),y2:236,'class':'grid'},svg); S('text',{x:X(g),y:254,'class':'t-s mid'},svg,g); });
+    M.forEach(function(m,i){ var y=14+i*31, v=V[k][i], c=/ReAct/.test(m)?'f-fire':'f-wire'; S('text',{x:142,y:y+16,'class':'t end'},svg,m); S('rect',{x:150,y:y+3,width:X(v)-150,height:20,'class':c,'fill-opacity':v===mx?1:0.6},svg); S('text',{x:X(v)+6,y:y+17,'class':v===mx?'t-fire':'t-s'},svg,v); });
+    S('line',{x1:X(sota[k]),y1:10,x2:X(sota[k]),y2:236,'class':'w-dash'},svg); S('text',{x:X(sota[k])-4,y:232,'class':'t-s end'},svg,'supervised '+sota[k]);
+    $('#t1c-r').innerHTML=(k?'FEVER':'HotpotQA')+': best prompting result <b>'+mx+'</b> ('+M[V[k].indexOf(mx)]+'); ReAct alone '+V[k][4]+' vs CoT '+V[k][1]+'.'; }
+  $$('[data-b]').forEach(function(b){ b.onclick=function(){ $$('[data-b]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(+b.getAttribute('data-b')); }; }); draw(0);
+})();
+(function(){ // backoff rules
+  var svg=$('#bo'), m=14, s=4;
+  function draw(){ clear(svg); var lowConf=m<21/2, timeout=s>7;
+    function row(y,name,first,cond,a,b,useB){ S('text',{x:10,y:y+18,'class':'t-h'},svg,name);
+      S('rect',{x:180,y:y,width:120,height:28,'class':useB?'box':'box-fire'},svg); S('text',{x:240,y:y+18,'class':'t mid'},svg,a);
+      S('line',{x1:300,y1:y+14,x2:350,y2:y+14,'class':useB?'w-fire':'w-dash','marker-end':useB?'url(#af)':''},svg); S('text',{x:325,y:y-3,'class':'t-s mid'},svg,cond);
+      S('rect',{x:352,y:y,width:120,height:28,'class':useB?'box-fire':'box'},svg); S('text',{x:412,y:y+18,'class':'t mid'},svg,b);
+      S('text',{x:490,y:y+18,'class':'t-fire'},svg,'answer: '+(useB?b:a)); }
+    row(28,'ReAct → CoT-SC','ReAct','if > 7 steps','ReAct','CoT-SC',timeout);
+    row(98,'CoT-SC → ReAct','CoT-SC','if majority < 10.5','CoT-SC','ReAct',lowConf);
+    $('#bo-r').innerHTML='ReAct '+(timeout?'ran out of steps, so the first method backs off to <b>CoT-SC</b>.':'finished in '+s+' steps, so its answer is used.')+' CoT-SC majority '+m+'/21 '+(lowConf?'is below half, so the second method switches to <b>ReAct</b>.':'is at least half, so the vote is trusted.'); }
+  bindRange('bo-m',function(v){ m=v; draw(); }); bindRange('bo-s',function(v){ s=v; draw(); });
+})();
+</script>
+
+</body>
+</html>

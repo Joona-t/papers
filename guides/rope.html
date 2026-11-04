@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RoPE (2021) study guide</title>
+<meta name="description" content="A Transformer has to be told where each word sits, and the original recipe simply added a position &quot;barcode&quot; to each word. Su and colleagues instead rotate each word&#x27;s query and key by an angle proportional to its position, so that when two words are compared only the difference in th">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Language models &amp; AI</b> · 2021</p>
+  <h1>RoFormer: Enhanced Transformer with Rotary Position Embedding</h1>
+  <p class="cite">Jianlin Su et al. · arXiv</p>
+  <p class="lede">A Transformer has to be told where each word sits, and the original recipe simply added a position "barcode" to each word. Su and colleagues instead rotate each word's query and key by an angle proportional to its position, so that when two words are compared only the difference in their angles, how far apart they are, survives. This rotary scheme, RoPE, is now the default in most open large language models.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/2104.09864">Read the paper (free)</a> <a href="https://lovespark.love/papers-worth-reading/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, separate AI review (also by Claude), but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Attention compares words by multiplying lists of numbers together, and on its own it has no idea of word order, so position information must be mixed in somehow.</p>
+  <p>RoPE does it by rotation: chop each word's query and key into pairs of numbers, treat each pair as an arrow, and turn the arrow by an angle that grows with the word's position.</p>
+  <p>When two rotated arrows are compared, the result depends only on the angle between them, so the attention score depends on how far apart the words are, not on where they sit in absolute terms.</p>
+  <p>Different pairs spin at different speeds, like the hands of a clock, which lets the model tell both near and far distances apart, and the influence between words tends to fade with distance.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1–2</p>
+  <h2>Attention is blind to order</h2>
+  <div class="prose">
+    <p>In a <a href="transformer.html">Transformer</a>, each word decides how much to pay attention to each other word by comparing two lists of numbers, its <strong>query</strong> and the other word's <strong>key</strong>. The comparison is a <strong>dot product</strong>: multiply matching entries and add them up. Nothing in that calculation knows which word came first. "Dog bites man" and "man bites dog" would get identical scores.</p>
+    <p>The original Transformer fixed this by <strong>adding</strong> a unique position pattern to each word before anything else happens, like stamping a page number onto every page. That works, but it describes <em>absolute</em> position ("I am word 37"). For language, what usually matters is <em>relative</em> position: "the adjective right before me", "the subject a few words back". Other researchers had added relative-position tricks inside attention, but they were fiddly, and many didn't fit with faster variants of attention.</p>
+    <p>The question this paper asks: is there a way to inject position so that the comparison between two words automatically depends only on their distance?</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Two people in a queue. "Person 37 and person 40" is absolute; "three places apart" is relative. If the whole queue shuffles forward ten places, the absolute numbers all change but the relationship between them doesn't.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Attention needs position information added, and what matters most for language is the distance between words rather than their absolute positions.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why can't plain attention tell "dog bites man" from "man bites dog"?</dt>
+    <dd>Its scores come from comparing word contents only. Reordering the words reorders the scores but doesn't change any of them, so nothing marks who did what to whom.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §3.2.1 · Eqs. 12–13</p>
+  <h2>Turn the arrows by position</h2>
+  <div class="prose">
+    <p>Take two numbers from a query and treat them as an arrow on a flat page: the first number is how far right it points, the second how far up. Now rotate that arrow by an angle that depends on the word's position: word 1 turns by a little, word 2 by twice as much, word 10 by ten times as much. Do the same to the keys.</p>
+    <p>Here is the key fact: the dot product of two arrows depends on their lengths and the angle between them, nothing else. If the query is turned by "position × step" and the key by "its position × step", the angle between them changes by "difference in positions × step". So the score depends on the distance between the words. Shift both words along by the same amount, and both arrows turn by the same extra angle, leaving the angle between them, and the score, unchanged.</p>
+    <p>Try to break it below.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Query position m <input type="range" id="r2-m" min="0" max="20" step="1" value="5"><output id="r2-m-o">5</output></label><label>Key position n <input type="range" id="r2-n" min="0" max="20" step="1" value="2"><output id="r2-n-o">2</output></label><button class="btn" id="r2-sh">Shift both +3</button><label>Step θ <input type="range" id="r2-t" min="0.05" max="1" step="0.05" value="0.3" data-fmt="2"><output id="r2-t-o">0.30</output></label></div>
+    <div class="svgbox"><svg id="r2" viewBox="0 0 600 260" role="img" aria-label="A query and a key arrow rotated by their positions, and their dot product"></svg></div>
+    <p class="readout" id="r2-r"></p>
+    <figcaption>Faint arrows: the query and key before rotation (their content). Solid arrows: after rotating by m·θ and n·θ (in radians; 1 radian ≈ 57°). The table on the right logs every score you produce, grouped by distance m − n: every row with the same distance has the same score. Illustrative two-number vectors; real heads have 64 or 128 numbers, handled as 32 or 64 such pairs.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>Two clock hands. If both are moved forward by an hour, the angle between them stays the same. RoPE only ever lets attention "see" that angle.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Rotating query and key by angles proportional to their positions makes their dot product depend only on the difference in positions.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>A query at position 7 and a key at position 4 give some score. What other pair of positions gives the same score (same content)?</dt>
+    <dd>Any pair three apart in the same order, such as 103 and 100. Only the offset m − n = 3 matters.</dd>
+    <dt>Does rotating an arrow change its length?</dt>
+    <dd>No. Rotation only changes direction, so the word's content "strength" is untouched; only the angle carries position.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §3.2.2 · Eq. 15</p>
+  <h2>Many hands, many speeds</h2>
+  <div class="prose">
+    <p>One rotating arrow has a problem: angles wrap around. If the step is a quarter turn, then positions 0, 4, 8 … all point the same way and look identical. A real query has many numbers, so RoPE splits it into many pairs, and each pair spins at its own speed. The first pair spins fast (one radian per word), and each later pair spins slower than the one before, down to pairs that take tens of thousands of words to complete a turn.</p>
+    <p>That is exactly how a clock tells time: the second hand distinguishes nearby moments, the hour hand distant ones, and together they are unambiguous. The fast pairs let attention resolve "one word back" versus "two words back"; the slow pairs keep far-apart positions distinct.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Position <input type="range" id="ck-p" min="0" max="400" step="1" value="12"><output id="ck-p-o">12</output></label><button class="btn" id="ck-go">Count up</button></div>
+    <div class="svgbox wide"><svg id="ck" viewBox="0 0 640 210" role="img" aria-label="Eight dials rotating at the RoPE frequencies for a 16-number head"></svg></div>
+    <p class="readout" id="ck-r"></p>
+    <figcaption>A 16-number head has 8 pairs. Pair <var>i</var> rotates by θ<sub><var>i</var></sub> = 10000<sup>−2(<var>i</var>−1)/16</sup> radians per position, the paper's formula (Eq. 15) with <var>d</var> = 16. The number under each dial is how many positions one full turn takes. Watch the left dials whirl while the right ones barely move.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Different pairs rotate at geometrically spaced speeds, so together they encode both short and long distances without ambiguity.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why not make every pair rotate fast?</dt>
+    <dd>Fast rotations wrap around after a few positions, so distant positions would be confused with near ones. Slow pairs are needed to separate long distances.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §3.3 · §3.4.3 · Fig. 2</p>
+  <h2>Side benefits: fading with distance, no extra parts</h2>
+  <div class="prose">
+    <p>The paper points out three bonuses.</p>
+    <ul>
+      <li><strong>Fading with distance.</strong> Because the many pairs spin at different speeds, for far-apart words their contributions point in scattered directions and partly cancel. The authors derive an upper limit on the attention score and show numerically that it tends to shrink as distance grows, matching the intuition that far-away words usually matter less.</li>
+      <li><strong>Nothing to learn.</strong> The rotations are fixed formulas, so RoPE adds no new trainable numbers to the model.</li>
+      <li><strong>Works with fast attention.</strong> Some faster forms of attention ("linear attention") never compute the full table of scores, which ruled out many earlier relative-position methods. Rotation is applied to each query and key separately, so it fits.</li>
+    </ul>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>RoPE gives relative positions for free: no new parameters, a natural fade with distance, and compatibility with efficient attention variants.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §4 · What came next</p>
+  <h2>Modest results, enormous adoption</h2>
+  <div class="prose">
+    <p>The paper's own experiments are modest. In translation it scored slightly above the standard Transformer. When pre-training a BERT-style model, the loss went down faster. On a Chinese legal-document task, the RoPE model handled longer inputs (1,024 tokens) better than models limited to 512. The authors openly admit they cannot fully explain why it trains faster.</p>
+    <p>What made RoPE famous was what happened next. Open-source groups tried it in large language models in 2021, found it worked well, and it spread: PaLM, <a href="llama.html">LLaMA</a> and most open models since use it.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>Models trained with RoPE on, say, 4,000 words often break when given much longer text, because the slow dials reach angles they never saw in training. Fixes from 2023 onward stretch the rotation: "position interpolation" squeezes long inputs into the trained range, and methods such as YaRN or a larger base number slow the dials down. These let RoPE models be extended to contexts of 100,000 words or more with little extra training.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>RoPE's paper showed small gains, but its simplicity and relative-distance property made it the standard position method of modern open LLMs.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Position encoding is essential in Transformers. After surveying ways of integrating positional information, the paper proposes Rotary Position Embedding (RoPE), which encodes absolute position with a rotation matrix while incorporating explicit relative-position dependency in the self-attention formulation. RoPE offers flexibility of sequence length, decaying inter-token dependency with increasing relative distance, and the ability to equip linear self-attention with relative position encoding. The resulting RoFormer is evaluated on long-text classification benchmarks and consistently beats alternatives; it is integrated into Hugging Face Transformers. Su, Lu, Pan, Murtadha, Wen, Liu (Zhuiyi Technology), arXiv 2104.09864, 2021; later published in <em>Neurocomputing</em> (2024).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2 · Eqs. 1–11</p>
+  <h2>Absolute, relative, and the goal</h2>
+  <div class="prose">
+    <p>With <var>q<sub>m</sub></var> = <var>f<sub>q</sub></var>(<var>x<sub>m</sub></var>, <var>m</var>), <var>k<sub>n</sub></var> = <var>f<sub>k</sub></var>(<var>x<sub>n</sub></var>, <var>n</var>), self-attention weights are softmax(<var>q<sub>m</sub></var><sup>⊤</sup><var>k<sub>n</sub></var>/√<var>d</var>). <strong>Absolute</strong> schemes (§2.2) set <var>f</var>(<var>x<sub>i</sub></var>, <var>i</var>) = <var>W</var>(<var>x<sub>i</sub></var> + <var>p<sub>i</sub></var>) with <var>p<sub>i</sub></var> learned or sinusoidal. Expanding <var>q<sub>m</sub></var><sup>⊤</sup><var>k<sub>n</sub></var> then gives four terms (content–content, content–position, position–content, position–position), and <strong>relative</strong> schemes (§2.3) edit these: Shaw et al. (2018) add learned, clipped relative embeddings to keys and values; Transformer-XL (Dai et al., 2019) replaces <var>p<sub>n</sub></var> by sinusoidal <var>p̃</var><sub><var>m</var>−<var>n</var></sub> with trainable vectors <var>u</var>, <var>v</var>; T5 (Raffel et al., 2020) reduces position to a learned scalar bias <var>b</var><sub><var>i</var>,<var>j</var></sub>; DeBERTa (He et al., 2020) keeps the two cross terms with relative embeddings.</p>
+    <p>All of these act on the expanded score, so they do not compose with kernelised linear attention, which never forms <var>q<sub>m</sub></var><sup>⊤</sup><var>k<sub>n</sub></var>. RoPE instead asks for functions such that</p>
+  </div>
+  <div class="eq">⟨<var>f<sub>q</sub></var>(<var>x<sub>m</sub></var>, <var>m</var>), <var>f<sub>k</sub></var>(<var>x<sub>n</sub></var>, <var>n</var>)⟩ = <var>g</var>(<var>x<sub>m</sub></var>, <var>x<sub>n</sub></var>, <var>m</var> − <var>n</var>) <span class="n">(11)</span></div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3.2 · Eqs. 12–16, 34</p>
+  <h2>The rotary solution</h2>
+  <div class="prose"><p>For <var>d</var> = 2, identify ℝ<sup>2</sup> with ℂ. Then</p></div>
+  <div class="eq"><var>f<sub>q</sub></var>(<var>x<sub>m</sub></var>, <var>m</var>) = (<var>W<sub>q</sub>x<sub>m</sub></var>) <var>e</var><sup><var>imθ</var></sup>, &nbsp; <var>f<sub>k</sub></var>(<var>x<sub>n</sub></var>, <var>n</var>) = (<var>W<sub>k</sub>x<sub>n</sub></var>) <var>e</var><sup><var>inθ</var></sup>, &nbsp; <var>g</var> = Re[(<var>W<sub>q</sub>x<sub>m</sub></var>)(<var>W<sub>k</sub>x<sub>n</sub></var>)<sup>*</sup> <var>e</var><sup><var>i</var>(<var>m</var>−<var>n</var>)<var>θ</var></sup>] <span class="n">(12)</span></div>
+  <div class="prose"><p>§3.4.1 derives this as the solution of Eq. 11 under natural initial conditions (Eq. 33). In real form it is a 2×2 rotation by <var>mθ</var> applied to <var>W<sub>q</sub>x<sub>m</sub></var> (Eq. 13). For general even <var>d</var>, split the vector into <var>d</var>/2 pairs and rotate each with its own frequency:</p></div>
+  <div class="eq"><var>f</var><sub>{<var>q</var>,<var>k</var>}</sub>(<var>x<sub>m</sub></var>, <var>m</var>) = <var>R</var><sup><var>d</var></sup><sub>Θ,<var>m</var></sub> <var>W</var><sub>{<var>q</var>,<var>k</var>}</sub> <var>x<sub>m</sub></var>, &nbsp; <var>R</var><sup><var>d</var></sup><sub>Θ,<var>m</var></sub> = diag(<var>R</var>(<var>mθ</var><sub>1</sub>), …, <var>R</var>(<var>mθ</var><sub><var>d</var>/2</sub>)), &nbsp; θ<sub><var>i</var></sub> = 10000<sup>−2(<var>i</var>−1)/<var>d</var></sup> <span class="n">(14–15)</span></div>
+  <div class="eq"><var>q<sub>m</sub></var><sup>⊤</sup><var>k<sub>n</sub></var> = (<var>R</var><sub>Θ,<var>m</var></sub><var>W<sub>q</sub>x<sub>m</sub></var>)<sup>⊤</sup>(<var>R</var><sub>Θ,<var>n</var></sub><var>W<sub>k</sub>x<sub>n</sub></var>) = <var>x</var><sub><var>m</var></sub><sup>⊤</sup><var>W<sub>q</sub></var><sup>⊤</sup> <var>R</var><sub>Θ,<var>n</var>−<var>m</var></sub> <var>W<sub>k</sub>x<sub>n</sub></var> <span class="n">(16)</span></div>
+  <div class="prose">
+    <p>since <var>R</var><sub>Θ,<var>m</var></sub><sup>⊤</sup><var>R</var><sub>Θ,<var>n</var></sub> = <var>R</var><sub>Θ,<var>n</var>−<var>m</var></sub> for commuting orthogonal blocks. Orthogonality also keeps norms, which the paper credits with stability. The frequencies reuse the sinusoidal schedule of the original Transformer. (The paper writes θ<sub><var>i</var></sub> = 10000<sup>−2<var>i</var>/<var>d</var></sup> in §3.3 and 10000<sup>−2(<var>i</var>−1)/<var>d</var></sup> in Eq. 15; the latter, starting at θ<sub>1</sub> = 1, is the usual convention.) Because <var>R</var> is block-sparse, Eq. 34 computes it elementwise:</p>
+  </div>
+  <div class="eq"><var>R</var><sub>Θ,<var>m</var></sub><var>x</var> = <var>x</var> ⊙ (cos <var>mθ</var><sub>1</sub>, cos <var>mθ</var><sub>1</sub>, …, cos <var>mθ</var><sub><var>d</var>/2</sub>, cos <var>mθ</var><sub><var>d</var>/2</sub>) + (−<var>x</var><sub>2</sub>, <var>x</var><sub>1</sub>, …, −<var>x<sub>d</sub></var>, <var>x</var><sub><var>d</var>−1</sub>) ⊙ (sin <var>mθ</var><sub>1</sub>, sin <var>mθ</var><sub>1</sub>, …) <span class="n">(34)</span></div>
+  <div class="prose"><p>Note RoPE is applied to queries and keys only (not values), in every layer, rather than once at the input.</p></div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" id="tp-rope">RoPE (Eq. 16)</button><button class="btn" id="tp-abs">Additive sinusoidal</button><button class="btn" id="tp-re">New random q, k</button></div>
+    <div class="svgbox"><svg id="tp" viewBox="0 0 600 290" role="img" aria-label="Score matrix over query and key positions"></svg></div>
+    <p class="readout" id="tp-r"></p>
+    <figcaption>Fixed random content vectors <var>q</var>, <var>k</var> ∈ ℝ<sup>16</sup> placed at every query position <var>m</var> (rows) and key position <var>n</var> (columns), 0–31. With RoPE the score matrix is Toeplitz: constant along each diagonal, i.e. a function of <var>m</var> − <var>n</var> only. With the original additive encoding (<var>q</var> + <var>p<sub>m</sub></var>)·(<var>k</var> + <var>p<sub>n</sub></var>), the content–position cross terms break this. The readout gives the largest spread of values along any diagonal.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §3.3 · §3.4.3 · Eqs. 18–19, 35–37 · Fig. 2</p>
+  <h2>Long-term decay and linear attention</h2>
+  <div class="prose">
+    <p>Group entries in pairs and write <var>h<sub>i</sub></var> = <var>q</var><sub>[2<var>i</var>:2<var>i</var>+1]</sub><var>k</var><sup>*</sup><sub>[2<var>i</var>:2<var>i</var>+1]</sub> and <var>S<sub>j</sub></var> = Σ<sub><var>i</var>=0</sub><sup><var>j</var>−1</sup> <var>e</var><sup><var>i</var>(<var>m</var>−<var>n</var>)θ<sub><var>i</var></sub></sup>. Abel summation gives</p>
+  </div>
+  <div class="eq">|Σ<sub><var>i</var>=0</sub><sup><var>d</var>/2−1</sup> <var>h<sub>i</sub></var> <var>e</var><sup><var>i</var>(<var>m</var>−<var>n</var>)θ<sub><var>i</var></sub></sup>| ≤ (max<sub><var>i</var></sub> |<var>h</var><sub><var>i</var>+1</sub> − <var>h<sub>i</sub></var>|) Σ<sub><var>i</var>=0</sub><sup><var>d</var>/2−1</sup> |<var>S</var><sub><var>i</var>+1</sub>| <span class="n">(37)</span></div>
+  <div class="prose"><p>The paper plots the "relative upper bound" (1/(<var>d</var>/2)) Σ<sub><var>i</var>=1</sub><sup><var>d</var>/2</sup> |<var>S<sub>i</sub></var>| against relative distance and observes that it decays (Fig. 2). Recompute it here:</p></div>
+  <figure class="live">
+    <div class="ctl"><label>d <input type="range" id="dc-d" min="16" max="256" step="16" value="128"><output id="dc-d-o">128</output></label><label>log<sub>10</sub> base <input type="range" id="dc-b" min="2" max="6" step="0.5" value="4" data-fmt="1"><output id="dc-b-o">4.0</output></label><label>Max distance <input type="range" id="dc-n" min="50" max="1000" step="50" value="250"><output id="dc-n-o">250</output></label></div>
+    <div class="svgbox"><svg id="dc" viewBox="0 0 600 240" role="img" aria-label="RoPE relative upper bound against relative distance"></svg></div>
+    <p class="readout" id="dc-r"></p>
+    <figcaption>(1/(<var>d</var>/2)) Σ<sub><var>i</var>=1</sub><sup><var>d</var>/2</sup> |<var>S<sub>i</sub></var>| computed exactly for every integer distance, with θ<sub><var>j</var></sub> = base<sup>−2<var>j</var>/<var>d</var></sup>. Base 10<sup>4</sup> is the paper's choice. Raising the base (as later long-context models do) slows the low frequencies and stretches the decay out over longer distances. Note this is a bound, not the score itself: actual scores depend on <var>q</var> and <var>k</var> and need not decay monotonically.</figcaption>
+  </figure>
+  <div class="prose">
+    <p><strong>Linear attention (Eqs. 17–19).</strong> For kernelised attention Attention(<var>Q</var>,<var>K</var>,<var>V</var>)<sub><var>m</var></sub> = Σ<sub><var>n</var></sub> φ(<var>q<sub>m</sub></var>)<sup>⊤</sup>φ(<var>k<sub>n</sub></var>)<var>v<sub>n</sub></var> / Σ<sub><var>n</var></sub> φ(<var>q<sub>m</sub></var>)<sup>⊤</sup>φ(<var>k<sub>n</sub></var>), RoPE multiplies <var>R</var><sub>Θ,<var>m</var></sub>φ(<var>q<sub>m</sub></var>) and <var>R</var><sub>Θ,<var>n</var></sub>φ(<var>k<sub>n</sub></var>) in the numerator only, leaving the denominator unchanged to avoid division by zero. The numerator can then contain negative terms, so the weights are no longer a strict probability distribution; the authors argue this still models value importance.</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does a larger base stretch the decay?</dt>
+    <dd>All θ<sub><var>j</var></sub> except θ<sub>0</sub> shrink, so the phases (<var>m</var> − <var>n</var>)θ<sub><var>j</var></sub> stay aligned for longer and the partial sums |<var>S<sub>j</sub></var>| stay large out to larger distances.</dd>
+    <dt>Why can't T5-style relative biases be used with linear attention?</dt>
+    <dd>They add a term <var>b</var><sub><var>m</var>−<var>n</var></sub> to the explicit score, which linear attention never materialises; RoPE acts on each <var>q</var> and <var>k</var> before the kernel product.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §4 · Tables 1–5 · Fig. 3</p>
+  <h2>Experiments</h2>
+  <div class="prose"><ul>
+    <li><strong>Machine translation (§4.1, Table 1).</strong> WMT 2014 En–De: Transformer-base 27.3 BLEU, RoFormer 27.5.</li>
+    <li><strong>Pre-training (§4.2, Fig. 3 left).</strong> Replacing BERT's sinusoidal/learned absolute positions with RoPE in masked-LM pre-training gives faster loss convergence; no final numbers are tabulated.</li>
+    <li><strong>GLUE (§4.3, Table 2).</strong> Mixed: RoFormer is higher than BERT on MRPC (89.5 vs 88.9), STS-B (87.0 vs 85.8) and QQP (86.4 vs 71.2), lower on SST-2 (90.7 vs 93.5), QNLI (88.0 vs 90.5) and MNLI (80.2/79.8 vs 84.6/83.4). The BERT column matches BERT-base's GLUE <em>test-server</em> results from the BERT paper, so the comparison may not be like for like (the large QQP gap in particular).</li>
+    <li><strong>Performer + RoPE (§4.4, Fig. 3 right).</strong> On Enwik8 language modelling, adding RoPE to linear-attention Performer converges faster to lower loss.</li>
+    <li><strong>Chinese long text (§4.5, Table 5).</strong> CAIL2019-SCM (legal case matching) test accuracy: BERT-512 67.77%, WoBERT-512 68.10%, RoFormer-512 68.29%, RoFormer-1024 69.79%. The gain comes mostly from the longer context RoPE was used with.</li>
+  </ul></div>
+  <div class="prose"><p><strong>Stated limitations (§4.5.5).</strong> No thorough explanation of why RoPE converges faster than other position encodings, despite the relative-position and decay properties; no faithful explanation of its better long-text performance; and pre-training cost limits the experiments.</p></div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · Lineage</p>
+  <h2>From a Chinese BERT variant to the LLM default</h2>
+  <div class="prose"><ul>
+    <li><strong>Origin and adoption.</strong> Su first described the method on his blog in early 2021. EleutherAI tested it and used it in GPT-J and GPT-NeoX (2021–22); PaLM (2022), <a href="llama.html">LLaMA</a> (2023) and most later open models followed. GPT-NeoX applied it to only a fraction of each head's dimensions ("partial rotary").</li>
+    <li><strong>Context extension.</strong> Models extrapolate poorly beyond their training length because low-frequency pairs reach unseen angles. Position Interpolation (Chen et al., 2023) rescales <var>m</var> → <var>m</var>·<var>L</var>/<var>L′</var>; "NTK-aware" scaling and YaRN (Peng et al., 2023) rescale frequencies non-uniformly; later models simply train with larger bases (Code Llama used 10<sup>6</sup>, Llama 3 used 5·10<sup>5</sup>).</li>
+    <li><strong>Alternatives.</strong> ALiBi (Press et al., 2021) adds a linear distance penalty to scores and extrapolates better zero-shot; some recent models interleave layers with no positional encoding at all.</li>
+    <li><strong>Interpretation.</strong> Later analyses (e.g. Barbero et al., 2024) suggest the high-frequency pairs carry positional "patterns" while low-frequency pairs act as near-position-free semantic channels, one reason partial-rotary and frequency-truncated variants work.</li>
+  </ul></div>
+  <div class="later"><span class="label">Where it sits</span>RoPE is one of the four standard changes to the 2017 <a href="transformer.html">Transformer</a> (with pre-norm, <a href="rmsnorm.html">RMSNorm</a> and SwiGLU) found in LLaMA-style models.</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Absolute PE</dt><dd>A position vector added to each token embedding at the input.</dd>
+    <dt>Relative PE</dt><dd>Position information that enters attention only through offsets m − n.</dd>
+    <dt>RoPE</dt><dd>Rotary position embedding: rotate each 2-D pair of q and k by mθ<sub>i</sub>.</dd>
+    <dt>θ<sub>i</sub></dt><dd>Per-pair angular frequency, 10000<sup>−2(i−1)/d</sup>.</dd>
+    <dt>Base</dt><dd>The 10000 in θ<sub>i</sub>; larger values slow all but the first pair.</dd>
+    <dt>Toeplitz</dt><dd>A matrix constant along each diagonal; the RoPE position effect has this form.</dd>
+    <dt>Linear attention</dt><dd>Attention computed through feature maps φ in O(n) without forming the n × n score matrix.</dd>
+    <dt>RoFormer</dt><dd>The paper's name for a Transformer that uses RoPE in place of absolute position embeddings.</dd>
+    <dt>Position interpolation</dt><dd>Scaling positions down so a longer context maps into the trained range.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="transformer.html">Transformer (2017)</a></p>
+  <p><strong>Led to:</strong> <a href="llama.html">LLaMA (2023)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> (<a href="https://lovespark.love/papers-worth-reading/#rope">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // 2-D rotation
+  var svg=$('#r2'), m=5, n=2, th=0.3, q=[1.6,0.5], k=[1.2,1.1], log=[];
+  function rot(v,a){ return [v[0]*Math.cos(a)-v[1]*Math.sin(a), v[0]*Math.sin(a)+v[1]*Math.cos(a)]; }
+  function draw(){ clear(svg); var cx=140, cy=130, R=55, qr=rot(q,m*th), kr=rot(k,n*th), s=qr[0]*kr[0]+qr[1]*kr[1];
+    S('circle',{cx:cx,cy:cy,r:105,'class':'grid'},svg); S('line',{x1:cx-115,y1:cy,x2:cx+115,y2:cy,'class':'grid'},svg); S('line',{x1:cx,y1:cy-115,x2:cx,y2:cy+115,'class':'grid'},svg);
+    S('line',{x1:cx,y1:cy,x2:cx+q[0]*R,y2:cy-q[1]*R,'class':'w-fire','opacity':0.3},svg); S('line',{x1:cx,y1:cy,x2:cx+k[0]*R,y2:cy-k[1]*R,'class':'w','opacity':0.4},svg);
+    S('line',{x1:cx,y1:cy,x2:cx+qr[0]*R,y2:cy-qr[1]*R,'class':'w-fire','marker-end':'url(#af)'},svg); S('line',{x1:cx,y1:cy,x2:cx+kr[0]*R,y2:cy-kr[1]*R,'class':'w','stroke-width':2.2,'marker-end':'url(#aw)'},svg);
+    S('text',{x:cx+qr[0]*R*1.18,y:cy-qr[1]*R*1.18+4,'class':'t-fire mid'},svg,'q@'+m); S('text',{x:cx+kr[0]*R*1.18,y:cy-kr[1]*R*1.18+4,'class':'t-wire mid'},svg,'k@'+n);
+    var key=m+'|'+n; if (!log.some(function(e){return e[0]===m&&e[1]===n&&e[3]===th;})) log.push([m,n,s,th]); log=log.filter(function(e){return e[3]===th;}).slice(-7);
+    var bx=300; S('text',{x:bx,y:24,'class':'t-h'},svg,'scores so far'); S('text',{x:bx,y:46,'class':'t-s'},svg,'m'); S('text',{x:bx+50,y:46,'class':'t-s'},svg,'n'); S('text',{x:bx+100,y:46,'class':'t-s'},svg,'m − n'); S('text',{x:bx+170,y:46,'class':'t-s'},svg,'score q·k');
+    log.slice().sort(function(a,b){ return (a[0]-a[1])-(b[0]-b[1]); }).forEach(function(e,i){ var y=68+i*26, cur=e[0]===m&&e[1]===n; [e[0],e[1],e[0]-e[1],fmt(e[2],4)].forEach(function(v,j){ S('text',{x:bx+[0,50,100,170][j],y:y,'class':cur?'t-fire':'t'},svg,v); }); });
+    $('#r2-r').innerHTML='Query rotated by '+fmt(m*th,2)+' rad, key by '+fmt(n*th,2)+' rad; angle between changed by (m − n)θ = '+fmt((m-n)*th,2)+'. Score <b>'+fmt(s,4)+'</b>.'; }
+  var rm=bindRange('r2-m',function(v){ m=v; draw(); }), rn=bindRange('r2-n',function(v){ n=v; draw(); }); bindRange('r2-t',function(v){ th=v; log=[]; draw(); });
+  $('#r2-sh').onclick=function(){ if (m+3>20||n+3>20){ rm.value=m-12>=0?m-12:m; rn.value=n-12>=0?n-12:n; } else { rm.value=m+3; rn.value=n+3; } m=+rm.value; n=+rn.value; $('#r2-m-o').textContent=m; $('#r2-n-o').textContent=n; draw(); };
+})();
+(function(){ // clock dials
+  var svg=$('#ck'), p=12, d=16, timer=null;
+  function draw(){ clear(svg); for (var i=0;i<d/2;i++){ var th=Math.pow(10000,-2*i/d), a=p*th, cx=40+i*80, cy=80, R=32;
+      S('circle',{cx:cx,cy:cy,r:R,'class':'u'},svg); S('line',{x1:cx,y1:cy,x2:cx+Math.sin(a)*R*0.9,y2:cy-Math.cos(a)*R*0.9,'class':'w-fire'},svg); S('circle',{cx:cx,cy:cy,r:2.5,'class':'f-ink'},svg);
+      var per=2*Math.PI/th; S('text',{x:cx,y:cy+52,'class':'t-s mid'},svg,'pair '+(i+1)); S('text',{x:cx,y:cy+68,'class':'t-s mid'},svg,per<100?fmt(per,1):Math.round(per).toLocaleString()); }
+    S('text',{x:4,y:186,'class':'t-s'},svg,'positions per full turn (row above) · fast pairs on the left, slow on the right');
+    $('#ck-r').innerHTML='Position <b>'+p+'</b>: pair 1 has turned '+fmt(p/(2*Math.PI),2)+' times; pair 8 has turned '+fmt(p*Math.pow(10000,-14/16)/(2*Math.PI),4)+' of a turn.'; }
+  var r=bindRange('ck-p',function(v){ p=v; draw(); });
+  $('#ck-go').onclick=function(){ if (timer){ clearInterval(timer); timer=null; return; } timer=setInterval(function(){ p=(p+1)%401; r.value=p; $('#ck-p-o').textContent=p; draw(); if (p===400){ clearInterval(timer); timer=null; } },60); };
+})();
+(function(){ // Toeplitz check
+  var svg=$('#tp'), mode='rope', seed=2, d=16, N=32;
+  function vecs(){ var r=rng(seed*13+1), q=[], k=[]; for (var i=0;i<d;i++){ q.push(gauss(r)); k.push(gauss(r)); } return [q,k]; }
+  function rope(v,m){ var o=v.slice(); for (var i=0;i<d/2;i++){ var t=m*Math.pow(10000,-2*i/d), c=Math.cos(t), s=Math.sin(t); o[2*i]=v[2*i]*c-v[2*i+1]*s; o[2*i+1]=v[2*i]*s+v[2*i+1]*c; } return o; }
+  function pe(m){ var o=[]; for (var i=0;i<d/2;i++){ var w=Math.pow(10000,-2*i/d); o.push(Math.sin(m*w)); o.push(Math.cos(m*w)); } return o; }
+  function dot(a,b){ var s=0; for (var i=0;i<a.length;i++) s+=a[i]*b[i]; return s; }
+  function draw(){ clear(svg); var v=vecs(), q=v[0], k=v[1], M=[], mx=0;
+    for (var m=0;m<N;m++){ M.push([]); for (var n=0;n<N;n++){ var s=mode==='rope'?dot(rope(q,m),rope(k,n)):dot(q.map(function(x,i){return x+pe(m)[i];}),k.map(function(x,i){return x+pe(n)[i];})); M[m].push(s); mx=Math.max(mx,Math.abs(s)); } }
+    var cs=7.6, x0=40, y0=24;
+    for (m=0;m<N;m++) for (n=0;n<N;n++){ var s2=M[m][n]; S('rect',{x:x0+n*cs,y:y0+m*cs,width:cs,height:cs,'class':s2>0?'f-fire':'f-wire','fill-opacity':Math.abs(s2)/mx*0.95+0.03},svg); }
+    S('text',{x:x0+N*cs/2,y:16,'class':'t-s mid'},svg,'key position n →'); S('text',{x:x0-6,y:y0+10,'class':'t-s end'},svg,'m'); S('text',{x:x0-6,y:y0+22,'class':'t-s end'},svg,'↓');
+    var spread=0, worst=0; for (var off=-(N-1);off<N;off++){ var vals=[]; for (m=0;m<N;m++){ n=m-off; if (n>=0&&n<N) vals.push(M[m][n]); } var sp=Math.max.apply(null,vals)-Math.min.apply(null,vals); if (sp>spread){ spread=sp; worst=off; } }
+    var gx=330, gy=30, gw=250, gh=200; S('text',{x:gx,y:gy-8,'class':'t-s'},svg,'score along diagonal m − n = 3'); S('line',{x1:gx,y1:gy+gh,x2:gx+gw,y2:gy+gh,'class':'axis'},svg);
+    var dg=[]; for (m=3;m<N;m++) dg.push(M[m][m-3]); var lo=-mx, hi=mx; S('line',{x1:gx,y1:gy+gh/2,x2:gx+gw,y2:gy+gh/2,'class':'grid'},svg);
+    dg.forEach(function(s,i){ var X=gx+i/(dg.length-1)*gw, Y=gy+gh-(s-lo)/(hi-lo)*gh; S('circle',{cx:X,cy:Y,r:3,'class':'f-fire'},svg); });
+    S('text',{x:gx+gw/2,y:gy+gh+16,'class':'t-s mid'},svg,'m = 3 … 31');
+    $('#tp-r').innerHTML=(mode==='rope'?'RoPE':'Additive sinusoidal')+': largest spread along any diagonal = <b>'+(spread<1e-9?spread.toExponential(1):fmt(spread,2))+'</b> (score range ±'+fmt(mx,1)+'). '+(spread<1e-9?'Purely relative.':'Depends on absolute position too.');
+    $('#tp-rope').classList.toggle('on',mode==='rope'); $('#tp-abs').classList.toggle('on',mode!=='rope'); }
+  $('#tp-rope').onclick=function(){ mode='rope'; draw(); }; $('#tp-abs').onclick=function(){ mode='abs'; draw(); }; $('#tp-re').onclick=function(){ seed++; draw(); };
+  draw();
+})();
+(function(){ // long-term decay bound
+  var svg=$('#dc'), d=128, lb=4, Nmax=250;
+  function bound(dist){ var re=0, im=0, tot=0, base=Math.pow(10,lb); for (var j=0;j<d/2;j++){ var t=dist*Math.pow(base,-2*j/d); re+=Math.cos(t); im+=Math.sin(t); tot+=Math.sqrt(re*re+im*im); } return tot/(d/2); }
+  function draw(){ clear(svg); var x0=50, x1=580, y0=200, y1=20, top=bound(0);
+    S('line',{x1:x0,y1:y0,x2:x1,y2:y0,'class':'axis'},svg); S('line',{x1:x0,y1:y1,x2:x0,y2:y0,'class':'axis'},svg);
+    [0,0.25,0.5,0.75,1].forEach(function(f){ var Y=y0-f*(y0-y1); S('line',{x1:x0,y1:Y,x2:x1,y2:Y,'class':'grid'},svg); S('text',{x:x0-6,y:Y+4,'class':'t-s end'},svg,fmt(f*top,0)); });
+    var pts='', vals=[]; for (var k=0;k<=Nmax;k+=Math.max(1,Math.floor(Nmax/400))){ var b=bound(k); vals.push([k,b]); pts+=(k?'L':'M')+(x0+k/Nmax*(x1-x0))+','+(y0-b/top*(y0-y1)); }
+    S('path',{d:pts,'class':'w-fire'},svg);
+    for (var t=0;t<=4;t++) S('text',{x:x0+t/4*(x1-x0),y:y0+16,'class':'t-s mid'},svg,Math.round(t/4*Nmax));
+    S('text',{x:(x0+x1)/2,y:234,'class':'t-s mid'},svg,'relative distance m − n');
+    var at=function(k){ return bound(k)/top; };
+    $('#dc-r').innerHTML='d = '+d+', base 10^'+fmt(lb,1)+': bound at distance 0 = <b>'+fmt(top,1)+'</b>; at 10 it is <b>'+Math.round(at(10)*100)+'%</b> of that, at 100 <b>'+Math.round(at(100)*100)+'%</b>, at '+Nmax+' <b>'+Math.round(at(Nmax)*100)+'%</b>.'; }
+  bindRange('dc-d',function(v){ d=v; draw(); }); bindRange('dc-b',function(v){ lb=v; draw(); }); bindRange('dc-n',function(v){ Nmax=v; draw(); });
+})();
+</script>
+
+</body>
+</html>

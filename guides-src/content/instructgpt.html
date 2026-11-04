@@ -1,0 +1,287 @@
+<!--LEDE-->
+GPT-3 was trained to continue internet text, which is not the same as doing what a user asks. Ouyang and colleagues at OpenAI fine-tune it with human demonstrations and human rankings of its answers (reinforcement learning from human feedback, RLHF), and people end up preferring the answers of a 1.3-billion-parameter InstructGPT over those of the 175-billion-parameter GPT-3.
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>A large language model trained only to predict the next word often ignores instructions, makes things up, or says harmful things, because that is what "continue this text" rewards.</p>
+  <p>The authors hired about 40 people to write good answers to real user requests, and to rank several model answers from best to worst.</p>
+  <p>They fine-tuned GPT-3 on the written answers, trained a separate "reward model" to predict the rankings, and then used reinforcement learning to make GPT-3 produce answers the reward model scores highly.</p>
+  <p>Labellers preferred the resulting InstructGPT's answers to GPT-3's most of the time, even when InstructGPT was over 100 times smaller; it was also more truthful and somewhat less toxic, though no less biased.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1</p>
+  <h2>Predicting text is not following instructions</h2>
+  <div class="prose">
+    <p><a href="gpt3.html">GPT-3</a> learned from a vast amount of internet text, one task only: guess the next word. In OpenAI's own illustration, GPT-3 given "Explain the moon landing to a 6 year old" may continue with more questions in the same style, because on the internet a list of questions is often followed by more questions.</p>
+    <p>The authors call this a problem of <strong>alignment</strong>: the model's training goal (predict text) differs from what users want (be helpful, honest and harmless). Bigger models are better at predicting text, but that does not by itself make them better at doing what they are asked.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Someone who has read every book in the library but has never had a job. They know an enormous amount, but if you hand them a request they might respond with a quotation, a parody, or a related question, rather than doing the task.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>A model's training goal shapes its behaviour. "Continue internet text" is not the same goal as "help the user", so more scale alone doesn't fix it.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §3.1 · Fig. 2</p>
+  <h2>Three steps: show, rank, practise</h2>
+  <div class="prose">
+    <p>The method has three steps, each using a different kind of human input. Step through them below.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" id="pl-1" aria-pressed="true">Step 1 · Show</button><button class="btn" id="pl-2" aria-pressed="false">Step 2 · Rank</button><button class="btn" id="pl-3" aria-pressed="false">Step 3 · Practise</button></div>
+    <div class="svgbox wide"><svg id="pl" viewBox="0 0 640 250" role="img" aria-label="The three-step RLHF pipeline"></svg></div>
+    <p class="readout" id="pl-r"></p>
+    <figcaption>The pipeline of the paper's Fig. 2. Prompt counts are the approximate dataset sizes from §3.2. Prompts came mainly from real requests submitted to OpenAI's API (with user consent), plus some written by the labellers.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>Training a new waiter. First, they shadow experienced staff (demonstrations). Then a manager watches them serve several tables and ranks the visits from best to worst, and from many such rankings the waiter forms a sense of "what the manager likes" (the reward model). Finally they serve many more tables, adjusting to that sense, while not straying too far from how they were taught.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Demonstrations teach the format, rankings teach a score, and reinforcement learning optimises against that score.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why not just collect more demonstrations instead of rankings?</dt>
+    <dd>Judging which of several answers is better is much quicker and easier for a person than writing an excellent answer from scratch, and comparisons can be collected on the model's own outputs, telling it about its specific mistakes.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §3.5 "Reward modeling"</p>
+  <h2>Turning a ranking into many comparisons</h2>
+  <div class="prose">
+    <p>For each prompt, labellers saw between 4 and 9 model answers and put them in order. A ranking of <var>K</var> answers contains a comparison for every pair: "A beat B", "A beat C", and so on. That is <var>K</var>×(<var>K</var>−1)/2 comparisons from one ranking, so a single ranking of 9 answers yields 36 lessons for the reward model.</p>
+    <p>The <strong>reward model</strong> is a neural network that reads a prompt and an answer and outputs a single number. It is trained so that, for every pair, the preferred answer gets the higher number. Click the answers to change the ranking.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Answers per prompt (<var>K</var>) <input type="range" id="rk-k" min="4" max="9" step="1" value="4"><output id="rk-k-o">4</output></label><button class="btn" id="rk-sh">Shuffle ranking</button></div>
+    <div class="svgbox wide"><svg id="rk" viewBox="0 0 640 270" role="img" aria-label="A ranking of K answers and the pairwise comparisons it produces"></svg></div>
+    <p class="readout" id="rk-r"></p>
+    <figcaption>Left: the labeller's ranking, best at the top. Click an answer to move it up one place. Right: every pairwise comparison it implies, as a grid (amber = row answer beats column answer). The paper trains on all of a prompt's comparisons together as one batch element, because comparisons from the same ranking are strongly correlated and treating them as separate examples caused overfitting.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>One ranking of <var>K</var> answers gives <var>K</var>(<var>K</var>−1)/2 pairwise lessons; the reward model learns a score that respects all of them.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>How many comparisons come from ranking 6 answers?</dt>
+    <dd>6 × 5 / 2 = 15.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §4 · Fig. 1</p>
+  <h2>Smaller but preferred</h2>
+  <div class="prose">
+    <p>The headline result: labellers preferred answers from the 1.3-billion-parameter InstructGPT to those of the 175-billion-parameter GPT-3, a model more than 100 times larger. At the same 175B size, InstructGPT's answers were preferred 85 ± 3% of the time over GPT-3's, and 71 ± 4% of the time even when GPT-3 was given a carefully written few-shot prompt.</p>
+    <p>Other effects:</p>
+    <ul>
+      <li><strong>Truthfulness:</strong> on the TruthfulQA test, InstructGPT gave truthful and informative answers about twice as often as GPT-3.</li>
+      <li><strong>Making things up:</strong> on tasks like summarising a given text, where the answer should come only from the input, it invented information 21% of the time against GPT-3's 41%.</li>
+      <li><strong>Toxicity:</strong> about 25% fewer toxic outputs when asked to be respectful.</li>
+      <li><strong>Bias:</strong> no significant improvement on two standard bias tests.</li>
+    </ul>
+    <p>There was a cost, which the authors call the <strong>alignment tax</strong>: RLHF made the model slightly worse on some standard academic tests. Mixing in some of the original next-word training during the RL step (a variant called PPO-ptx) mostly fixed this.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Fine-tuning on human preferences made a model much more useful to people than a 100× increase in size did.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §5.2–5.3</p>
+  <h2>Aligned to whom?</h2>
+  <div class="prose">
+    <p>The authors are explicit that "aligned" here means aligned to a particular group: the roughly 40 labellers (mostly English-speaking), the researchers who wrote their instructions, and the API customers whose requests were the prompts. They do not claim this is the right standard for everyone.</p>
+    <p>The model still made up facts, still followed harmful instructions if asked, and could be overly cautious with simple questions. Most comparisons were labelled by only one person.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>This recipe became the basis of ChatGPT later in 2022. Later work tried to reduce its cost and complexity: <a href="constitutional.html">Constitutional AI</a> replaced many human harm labels with AI feedback guided by written principles, <a href="dpo.html">DPO</a> removed the separate reward model and the reinforcement-learning loop, and <a href="grpo.html">GRPO</a> removed PPO's value network.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>RLHF aligns a model to whoever supplies the feedback, so who those people are, and what they were told, matters.</p>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Making language models bigger does not inherently make them better at following a user's intent; large models can be untruthful, toxic or unhelpful. Starting from labeller-written prompts and prompts submitted through the OpenAI API, the authors collect labeller demonstrations of desired behaviour and fine-tune GPT-3 with supervised learning, then collect rankings of model outputs and further fine-tune with reinforcement learning from human feedback. In human evaluations on the prompt distribution, outputs from the 1.3B InstructGPT are preferred to those of 175B GPT-3, despite 100× fewer parameters. InstructGPT improves truthfulness and reduces toxic generation with minimal performance regressions on public NLP datasets, though it still makes simple mistakes. Ouyang et al., NeurIPS 2022 (arXiv 2203.02155).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §3.2–3.4 · Table 1</p>
+  <h2>Data and labellers</h2>
+  <div class="prose">
+    <p>Prompts come mainly from the OpenAI API (InstructGPT beta playground), deduplicated by common prefix and limited to 200 per user ID, with train/validation/test split by user; plus prompts written by labellers to bootstrap. About 40 contractors were hired via Upwork and ScaleAI after a screening test of sensitivity to diverse demographic preferences and ability to identify harmful outputs. Labellers prioritised helpfulness during training data collection but truthfulness and harmlessness in final evaluations.</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Dataset (§3.2)</th><th>Prompts</th><th>Supervision</th></tr></thead>
+    <tbody>
+      <tr><td>SFT</td><td class="num">~13k</td><td>labeller demonstrations</td></tr>
+      <tr><td>RM</td><td class="num">~33k</td><td>labeller rankings of <var>K</var> = 4–9 outputs</td></tr>
+      <tr><td>PPO</td><td class="num">~31k</td><td>none (API prompts only)</td></tr>
+    </tbody>
+  </table></div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Use case (Table 1)</th><th>%</th><th>Use case</th><th>%</th></tr></thead>
+    <tbody>
+      <tr><td>Generation</td><td class="num">45.6</td><td>Summarization</td><td class="num">4.2</td></tr>
+      <tr><td>Open QA</td><td class="num">12.4</td><td>Classification</td><td class="num">3.5</td></tr>
+      <tr><td>Brainstorming</td><td class="num">11.2</td><td>Other</td><td class="num">3.5</td></tr>
+      <tr><td>Chat</td><td class="num">8.4</td><td>Closed QA</td><td class="num">2.6</td></tr>
+      <tr><td>Rewrite</td><td class="num">6.6</td><td>Extract</td><td class="num">1.9</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose"><p>Note the mismatch with academic benchmarks: classification and QA, which dominate public NLP datasets, are a small share of what API users actually asked for.</p></div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3.5 · Eq. 1</p>
+  <h2>SFT and the reward model</h2>
+  <div class="prose">
+    <p><strong>SFT.</strong> GPT-3 fine-tuned on demonstrations for 16 epochs with cosine learning-rate decay; the SFT models overfit on validation loss after one epoch, but more epochs helped both RM score and human preference.</p>
+    <p><strong>Reward model.</strong> Start from the SFT model with the unembedding layer replaced by a scalar head. Only 6B RMs are used: they save compute, and 175B RM training was found to be unstable and thus less suitable as the value function in RL. For a prompt <var>x</var> with <var>K</var> ranked completions:</p>
+  </div>
+  <div class="eq">loss(θ) = −(1 / C(<var>K</var>, 2)) 𝔼<sub>(<var>x</var>, <var>y<sub>w</sub></var>, <var>y<sub>l</sub></var>)∼<var>D</var></sub> [ log σ( <var>r</var><sub>θ</sub>(<var>x</var>, <var>y<sub>w</sub></var>) − <var>r</var><sub>θ</sub>(<var>x</var>, <var>y<sub>l</sub></var>) ) ] <span class="n">(1)</span></div>
+  <div class="prose"><p>All C(<var>K</var>, 2) comparisons from one prompt form a single batch element: one forward pass per completion rather than per comparison, and no overfitting from seeing correlated pairs in separate updates (shuffled pairs overfit after one epoch). The RM is normalised with a bias so that demonstrations score 0 on average before RL. Try the loss for one prompt with <var>K</var> = 4 and the true ranking A ≻ B ≻ C ≻ D:</p></div>
+  <figure class="live">
+    <div class="ctl">
+      <label><var>r</var>(A) <input type="range" id="rl-a" min="-3" max="3" step="0.1" value="0.5" data-fmt="1"><output id="rl-a-o">0.5</output></label>
+      <label><var>r</var>(B) <input type="range" id="rl-b" min="-3" max="3" step="0.1" value="1" data-fmt="1"><output id="rl-b-o">1.0</output></label>
+      <label><var>r</var>(C) <input type="range" id="rl-c" min="-3" max="3" step="0.1" value="0" data-fmt="1"><output id="rl-c-o">0.0</output></label>
+      <label><var>r</var>(D) <input type="range" id="rl-d" min="-3" max="3" step="0.1" value="-0.5" data-fmt="1"><output id="rl-d-o">-0.5</output></label>
+      <button class="btn" id="rl-fit">Fit by gradient descent</button>
+    </div>
+    <div class="svgbox"><svg id="rl" viewBox="0 0 600 230" role="img" aria-label="Reward scores and the six pairwise loss terms of Eq. 1"></svg></div>
+    <p class="readout" id="rl-r"></p>
+    <figcaption>Left: the four scores on a number line. Right: the six pairwise terms −log σ(<var>r<sub>w</sub></var> − <var>r<sub>l</sub></var>) averaged in Eq. 1; red bars are misordered pairs. "Fit" runs gradient descent on the four scores directly. Notice that the loss never reaches zero with finite scores, and that shifting all four by the same constant changes nothing (hence the post-hoc normalisation).</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §3.5 "Reinforcement learning" · Eq. 2</p>
+  <h2>PPO and PPO-ptx</h2>
+  <div class="prose"><p>The policy is initialised from SFT and trained with PPO in a bandit setting: a random API prompt, a sampled response, a reward from the RM, episode over. A per-token KL penalty against the SFT model mitigates over-optimisation of the RM, and the value function is initialised from the RM. PPO-ptx additionally mixes in pretraining gradients:</p></div>
+  <div class="eq">objective(φ) = 𝔼<sub>(<var>x</var>, <var>y</var>)∼<var>D</var><sub>π<sub>φ</sub><sup>RL</sup></sub></sub> [ <var>r</var><sub>θ</sub>(<var>x</var>, <var>y</var>) − β log ( π<sub>φ</sub><sup>RL</sup>(<var>y</var>|<var>x</var>) / π<sup>SFT</sup>(<var>y</var>|<var>x</var>) ) ] + γ 𝔼<sub><var>x</var>∼<var>D</var><sub>pretrain</sub></sub> [ log π<sub>φ</sub><sup>RL</sup>(<var>x</var>) ] <span class="n">(2)</span></div>
+  <div class="prose"><p>β sets the KL strength; γ = 0 gives plain "PPO" models, γ &gt; 0 gives "PPO-ptx" (the models called InstructGPT unless stated otherwise). Why the KL term matters: the RM is a learned proxy trained on a finite set of comparisons, so a policy pushed far enough will find outputs the RM overrates. The toy below illustrates the trade-off.</p></div>
+  <figure class="live">
+    <div class="ctl"><label>KL coefficient β <input type="range" id="ov-b" min="0.1" max="1.5" step="0.05" value="0.35" data-fmt="2"><output id="ov-b-o">0.35</output></label></div>
+    <div class="svgbox"><svg id="ov" viewBox="0 0 600 250" role="img" aria-label="Proxy reward, true quality and KL-penalised objective against distance from the SFT model"></svg></div>
+    <p class="readout" id="ov-r"></p>
+    <figcaption>Illustrative model, not the paper's data. Horizontal axis: how far the policy moves from SFT (√KL). Blue: the RM's score keeps rising. Green: true human-judged quality rises, peaks, then falls as the policy exploits the RM. Amber: the KL-penalised objective, whose peak (dot) is where PPO converges. Large β stops too early; small β overshoots into reward hacking. Gao et al. (2022) later measured curves of this shape for real RMs.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §4 · Figs. 1, 3–7</p>
+  <h2>Results</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>API prompt distribution (§4.1).</strong> Labeller preference ordering is PPO-ptx ≈ PPO &gt; SFT &gt; GPT-3 prompted &gt; GPT-3 at every size (1.3B, 6B, 175B). 175B InstructGPT beats 175B GPT-3 85 ± 3% of the time and few-shot GPT-3 71 ± 4%. The 1.3B PPO-ptx model is preferred to 175B GPT-3. Results hold for held-out labellers who produced no training data, and on prompts submitted to GPT-3 (not InstructGPT) models.</li>
+      <li><strong>FLAN and T0 (§4.1).</strong> GPT-3 fine-tuned on these public instruction datasets does slightly worse than SFT on API prompts; public NLP tasks do not reflect real usage.</li>
+      <li><strong>Truthfulness.</strong> On TruthfulQA, about twice as often truthful and informative as GPT-3. On closed-domain API tasks (summarisation, closed QA), hallucination 21% vs 41%.</li>
+      <li><strong>Toxicity (RealToxicityPrompts).</strong> About 25% fewer toxic outputs than GPT-3 when instructed to be respectful; no advantage without that instruction, and when explicitly instructed to be toxic, its outputs are much more toxic than GPT-3's.</li>
+      <li><strong>Bias.</strong> No significant improvement on Winogender and CrowS-Pairs.</li>
+      <li><strong>Alignment tax.</strong> PPO regresses on SQuAD, DROP, HellaSwag and WMT 2015 Fr→En; PPO-ptx greatly reduces the regressions without hurting labeller preference, though some gaps remain (DROP, SQuADv2, translation). Raising the KL coefficient alone is less effective: it costs reward and never fully recovers DROP and SQuAD.</li>
+      <li><strong>Generalisation (§4.3).</strong> Qualitatively follows instructions in non-English languages and on code, which were rare in fine-tuning data, suggesting the behaviour generalises beyond the supervised distribution.</li>
+    </ul>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why mix pretraining gradients into PPO rather than increasing β?</dt>
+    <dd>β constrains the policy towards SFT outputs on the RL prompt distribution, which does not protect capabilities exercised only on other inputs. Pretraining gradients directly maintain likelihood on broad text, which the paper finds reduces regressions more effectively.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §5.2–5.4 and later work</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Whose preferences (§5.2).</strong> Labellers, the researchers' instructions, and API customers (from a waitlist seeded by OpenAI employees). Not representative of all users or of people affected by the model.</li>
+      <li><strong>Labelling (§5.3).</strong> Mostly one labeller per comparison; labellers mostly English-speaking; inter-labeller agreement was imperfect (training labellers agreed with each other 72.6 ± 1.5% of the time, held-out labellers 77.3 ± 1.3%).</li>
+      <li><strong>Behaviour.</strong> Still fabricates, still follows harmful instructions when asked, sometimes over-hedges, and can be misled by false premises.</li>
+      <li><strong>Open questions (§5.4).</strong> Adversarial data collection, filtering pretraining data, steerability, alternative algorithms to PPO, and richer feedback such as edits or critiques.</li>
+    </ul>
+  </div>
+  <div class="later"><span class="label">Later refinements</span>RLHF on summarisation (Stiennon et al., 2020) and Anthropic's HH work (Bai et al., 2022) were close contemporaries; this paper made the recipe the template for chat assistants. <a href="constitutional.html">Constitutional AI</a> (2022) replaced harmlessness labels with AI feedback from written principles. Reward over-optimisation was quantified by Gao et al. (2022). <a href="dpo.html">DPO</a> (2023) showed the RM and PPO stages can be collapsed into one loss. <a href="grpo.html">GRPO</a> (2024) removed PPO's value network, and <a href="r1.html">DeepSeek-R1</a> (2025) replaced the learned RM with rule-based correctness rewards for reasoning tasks. Builds on <a href="ppo.html">PPO</a> and <a href="gpt3.html">GPT-3</a>.</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>SFT</dt><dd>Supervised fine-tuning on human demonstrations.</dd>
+    <dt>RM</dt><dd>Reward model: scalar score for (prompt, completion), trained on comparisons.</dd>
+    <dt>PPO</dt><dd>Proximal Policy Optimization, clipped policy-gradient RL with a value function.</dd>
+    <dt>PPO-ptx</dt><dd>PPO with pretraining log-likelihood gradients mixed in (γ &gt; 0).</dd>
+    <dt>KL penalty β</dt><dd>Per-token penalty on log(π<sup>RL</sup>/π<sup>SFT</sup>).</dd>
+    <dt>Alignment tax</dt><dd>Performance lost on other tasks as a result of alignment training.</dd>
+    <dt>Hallucination</dt><dd>Content not supported by the input in closed-domain tasks.</dd>
+    <dt>C(<var>K</var>, 2)</dt><dd>Number of pairs among <var>K</var> items, <var>K</var>(<var>K</var>−1)/2.</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+(function(){ // pipeline step-through
+  var svg=$('#pl'), st=1;
+  var info={1:'Step 1: labellers write good answers to ~13k prompts; GPT-3 is fine-tuned on them (supervised fine-tuning, "SFT").',
+    2:'Step 2: for ~33k prompts, the model writes 4–9 answers and a labeller ranks them; a 6B reward model learns to give preferred answers higher scores.',
+    3:'Step 3: on ~31k new prompts the SFT model writes answers, the reward model scores them, and PPO nudges the model towards higher scores, with a penalty for drifting from SFT.'};
+  function box(x,y,w,h,txt,on,sub){ S('rect',{x:x,y:y,width:w,height:h,rx:4,'class':on?'box-fire':'box'},svg); S('text',{x:x+w/2,y:y+h/2+(sub?-2:4),'class':'t mid'},svg,txt); if (sub) S('text',{x:x+w/2,y:y+h/2+14,'class':'t-s mid'},svg,sub); }
+  function draw(){ clear(svg);
+    ['1 · Show','2 · Rank','3 · Practise'].forEach(function(t,i){ S('text',{x:110+i*210,y:22,'class':i+1===st?'t-h mid':'t-s mid'},svg,t); });
+    // step 1
+    box(30,40,160,40,'prompt + human answer',st===1,'~13k prompts'); box(30,120,160,40,'GPT-3 → SFT model',st===1);
+    S('line',{x1:110,y1:82,x2:110,y2:118,'class':'w','marker-end':'url(#aw)'},svg);
+    // step 2
+    box(240,40,160,40,'prompt → 4–9 answers',st===2,'~33k prompts'); box(240,120,160,40,'labeller ranks them',st===2,'D ≻ C ≻ A ≻ B'); box(240,190,160,40,'6B reward model',st===2);
+    S('line',{x1:320,y1:82,x2:320,y2:118,'class':'w','marker-end':'url(#aw)'},svg); S('line',{x1:320,y1:162,x2:320,y2:188,'class':'w','marker-end':'url(#aw)'},svg);
+    // step 3
+    box(450,40,160,40,'new prompt → answer',st===3,'~31k prompts'); box(450,120,160,40,'reward model scores',st===3); box(450,190,160,40,'PPO update + KL',st===3);
+    S('line',{x1:530,y1:82,x2:530,y2:118,'class':'w','marker-end':'url(#aw)'},svg); S('line',{x1:530,y1:162,x2:530,y2:188,'class':'w','marker-end':'url(#aw)'},svg);
+    S('path',{d:'M450,210 C420,210 420,60 448,60','class':st===3?'w-fire':'w-faint','marker-end':'url(#af)'},svg);
+    S('path',{d:'M190,140 C215,140 215,60 238,60','class':'w-faint','marker-end':'url(#aw)'},svg);
+    S('path',{d:'M400,210 C425,210 425,140 448,140','class':'w-faint','marker-end':'url(#aw)'},svg);
+    $('#pl-r').textContent=info[st]; }
+  [1,2,3].forEach(function(k){ $('#pl-'+k).onclick=function(){ st=k; [1,2,3].forEach(function(j){ $('#pl-'+j).classList.toggle('on',j===k); $('#pl-'+j).setAttribute('aria-pressed',j===k); }); draw(); }; });
+  draw();
+})();
+(function(){ // ranking -> pairs
+  var svg=$('#rk'), K=4, order=[], L='ABCDEFGHI', rr=rng(3);
+  function reset(k){ K=k; order=[]; for (var i=0;i<K;i++) order.push(i); draw(); }
+  function draw(){ clear(svg); var h=Math.min(40,230/K);
+    S('text',{x:20,y:16,'class':'t-s'},svg,'ranking (best first)');
+    order.forEach(function(a,i){ var g=S('g',{'class':'clickable'},svg); S('rect',{x:20,y:24+i*h,width:150,height:h-4,rx:3,'class':i===0?'box-fire':'box'},g); S('text',{x:30,y:24+i*h+h/2+2,'class':'t'},g,(i+1)+'. answer '+L[a]);
+      g.addEventListener('click',function(){ if (i>0){ var t=order[i-1]; order[i-1]=order[i]; order[i]=t; draw(); } }); });
+    var cs=Math.min(44,220/K), x0=330, y0=34; S('text',{x:x0,y:16,'class':'t-s'},svg,'row beats column?');
+    for (var i=0;i<K;i++){ S('text',{x:x0-8,y:y0+i*cs+cs/2+4,'class':'t-s end'},svg,L[i]); S('text',{x:x0+i*cs+cs/2,y:y0-4,'class':'t-s mid'},svg,L[i]);
+      for (var j=0;j<K;j++){ var ri=order.indexOf(i), rj=order.indexOf(j); S('rect',{x:x0+j*cs,y:y0+i*cs,width:cs-2,height:cs-2,'class':i===j?'f-rule':(ri<rj?'f-fire':'f-card'),'fill-opacity':i===j?0.4:1},svg); } }
+    var n=K*(K-1)/2; $('#rk-r').innerHTML='<var>K</var> = '+K+' answers → <b>'+n+'</b> comparisons from one ranking. Top answer: '+L[order[0]]+'.';
+  }
+  bindRange('rk-k',function(v){ reset(v); });
+  $('#rk-sh').onclick=function(){ for (var i=K-1;i>0;i--){ var j=Math.floor(rr()*(i+1)), t=order[i]; order[i]=order[j]; order[j]=t; } draw(); };
+})();
+(function(){ // RM loss
+  var svg=$('#rl'), r={a:0.5,b:1,c:0,d:-0.5}, keys=['a','b','c','d'], timer=null;
+  function pairs(){ var out=[]; for (var i=0;i<4;i++) for (var j=i+1;j<4;j++) out.push([keys[i],keys[j]]); return out; }
+  function loss(){ var L=0; pairs().forEach(function(p){ L+=-Math.log(sigmoid(r[p[0]]-r[p[1]])); }); return L/6; }
+  function X(v){ return 30+(v+3)/6*220; }
+  function draw(){ clear(svg); S('line',{x1:30,y1:120,x2:250,y2:120,'class':'axis'},svg);
+    [-3,0,3].forEach(function(v){ S('text',{x:X(v),y:138,'class':'t-s mid'},svg,v); });
+    keys.forEach(function(k,i){ var v=Math.max(-3,Math.min(3,r[k])); S('circle',{cx:X(v),cy:120,r:10,'class':i===0?'u-on':'u'},svg); S('text',{x:X(v),y:124,'class':'t-s mid'},svg,k.toUpperCase()); });
+    S('text',{x:30,y:30,'class':'t-s'},svg,'scores r(x, y); true order A ≻ B ≻ C ≻ D');
+    pairs().forEach(function(p,i){ var d=r[p[0]]-r[p[1]], l=-Math.log(sigmoid(d)), y=30+i*30; S('text',{x:330,y:y+14,'class':'t end'},svg,p[0].toUpperCase()+' ≻ '+p[1].toUpperCase());
+      S('rect',{x:340,y:y,width:Math.max(1,Math.min(200,l*80)),height:18,'class':d<0?'f-inh':'f-wire'},svg); S('text',{x:346+Math.min(200,l*80),y:y+14,'class':'t-s'},svg,fmt(l,3)); });
+    S('text',{x:340,y:218,'class':'t-s'},svg,'−log σ(r_w − r_l) per pair');
+    var bad=pairs().filter(function(p){ return r[p[0]]<=r[p[1]]; }).length;
+    $('#rl-r').innerHTML='Eq. 1 loss (mean of 6 terms): <b>'+fmt(loss(),4)+'</b>. Misordered pairs: <b>'+bad+'</b>.';
+  }
+  keys.forEach(function(k){ bindRange('rl-'+k,function(v){ r[k]=v; draw(); }); });
+  $('#rl-fit').onclick=function(){ if (timer) return; var n=0; timer=setInterval(function(){ for (var s=0;s<5;s++){ var g={a:0,b:0,c:0,d:0}; pairs().forEach(function(p){ var w=sigmoid(-(r[p[0]]-r[p[1]])); g[p[0]]-=w/6; g[p[1]]+=w/6; }); keys.forEach(function(k){ r[k]-=0.5*g[k]; }); }
+      keys.forEach(function(k){ var el=$('#rl-'+k); el.value=Math.max(-3,Math.min(3,r[k])); $('#rl-'+k+'-o').textContent=fmt(r[k],1); }); draw(); if (++n>60){ clearInterval(timer); timer=null; } },40); };
+})();
+(function(){ // over-optimisation toy
+  var svg=$('#ov'), beta=0.35;
+  function proxy(d){ return d; } function gold(d){ return d-0.25*d*d; }
+  function X(d){ return 60+d/5*500; } function Y(v){ return 150-v*30; }
+  function draw(){ clear(svg); var ds=Math.min(5,1/(2*beta));
+    S('line',{x1:60,y1:Y(0),x2:560,y2:Y(0),'class':'axis'},svg); S('line',{x1:60,y1:20,x2:60,y2:225,'class':'axis'},svg);
+    [0,1,2,3,4,5].forEach(function(d){ S('text',{x:X(d),y:Y(0)+16,'class':'t-s mid'},svg,d); });
+    S('text',{x:310,y:244,'class':'t-s mid'},svg,'distance from SFT model (√KL)');
+    var d1='',d2='',d3=''; for (var d=0;d<=5.001;d+=0.05){ d1+=(d1?'L':'M')+X(d)+','+Y(proxy(d)); d2+=(d2?'L':'M')+X(d)+','+Y(gold(d)); if (proxy(d)-beta*d*d>-3) d3+=(d3?'L':'M')+X(d)+','+Y(proxy(d)-beta*d*d); }
+    S('path',{d:d1,'class':'w'},svg); S('path',{d:d2,'class':'w-ok'},svg); S('path',{d:d3,'class':'w-fire'},svg);
+    S('circle',{cx:X(ds),cy:Y(proxy(ds)-beta*ds*ds),r:6,'class':'u-on'},svg); S('line',{x1:X(ds),y1:20,x2:X(ds),y2:225,'class':'w-dash'},svg);
+    S('circle',{cx:X(ds),cy:Y(gold(ds)),r:5,'class':'f-ok'},svg);
+    S('text',{x:X(4.2),y:Y(4.2)-8,'class':'t-wire end'},svg,'RM score (proxy)'); S('text',{x:X(3.3),y:Y(gold(3.3))-10,'class':'t-ok'},svg,'true quality'); S('text',{x:70,y:20,'class':'t-fire'},svg,'proxy − β·KL');
+    $('#ov-r').innerHTML='β = '+fmt(beta,2)+': PPO settles at distance <b>'+fmt(ds,2)+'</b>; RM score <b>'+fmt(proxy(ds),2)+'</b>, true quality <b>'+fmt(gold(ds),2)+'</b> (best possible 1.00 at distance 2).';
+  }
+  bindRange('ov-b',function(v){ beta=v; draw(); });
+})();
+</script>

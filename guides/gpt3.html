@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPT-3 (2020) study guide</title>
+<meta name="description" content="Does a language model need to be retrained for every new task, or can you just show it a few examples? This paper scaled GPT-2&#x27;s recipe up more than a hundredfold, to 175 billion parameters, and found that the model could pick up many tasks from a handful of examples written into its prompt, wi">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Language models &amp; AI</b> · 2020</p>
+  <h1>Language Models are Few-Shot Learners</h1>
+  <p class="cite">Tom Brown et al. · NeurIPS 2020</p>
+  <p class="lede">Does a language model need to be retrained for every new task, or can you just show it a few examples? This paper scaled GPT-2's recipe up more than a hundredfold, to 175 billion parameters, and found that the model could pick up many tasks from a handful of examples written into its prompt, with no retraining at all. It named this "in-context learning", and it changed how people use language models.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/2005.14165">Read the paper (free)</a> <a href="https://lovespark.love/papers-worth-reading/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, separate AI review (also by Claude), but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>The standard way to get a language model to do a task was to fine-tune it: train it further on thousands of labelled examples of that task.</p>
+  <p>GPT-3 is a 175-billion-parameter language model trained only to predict the next word, on about 300 billion tokens (word pieces) of text from the web, books and Wikipedia.</p>
+  <p>Instead of fine-tuning, the authors simply wrote a task description and a few solved examples into the prompt, then asked for one more; the model's weights never change.</p>
+  <p>This "few-shot" prompting worked surprisingly well, sometimes matching fine-tuned systems, and it got much better with model size, though GPT-3 still failed on some kinds of reasoning and comparison tasks.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1 · Fig. 2.1</p>
+  <h2>Zero, one or a few examples in the prompt</h2>
+  <div class="prose">
+    <p>A <strong>language model</strong> continues text: it reads a <strong>prompt</strong> and predicts what comes next, one small piece (a <strong>token</strong>, roughly a word fragment) at a time.</p>
+    <p>The paper tests three ways of asking it to do a task, with no further training in any of them:</p>
+    <ul>
+      <li><strong>Zero-shot:</strong> just a description, such as "Translate English to French: cheese =&gt;".</li>
+      <li><strong>One-shot:</strong> the description plus one solved example, such as "sea otter =&gt; loutre de mer", before the question.</li>
+      <li><strong>Few-shot:</strong> the description plus several solved examples, usually 10 to 100, as many as fit in the model's 2,048-token window.</li>
+    </ul>
+    <p>The model has to work out from the examples what you want, and then do it. The authors call this <strong>in-context learning</strong>: "learning" that happens inside a single prompt and is forgotten the moment the prompt ends.</p>
+    <p>The toy below acts out what this asks of the model. It knows eight possible "rules" for turning a word into something else, and keeps a score of how believable each rule is given the examples so far. Add examples and watch it narrow down.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn on" data-task="0">Hidden rule A</button><button class="btn" data-task="1">Hidden rule B</button><button class="btn" data-task="2">Hidden rule C</button>
+      <label>Examples in prompt <input type="range" id="icl-k" min="0" max="4" step="1" value="0"><output id="icl-k-o">0</output></label>
+    </div>
+    <div class="svgbox"><svg id="icl" viewBox="0 0 600 270" role="img" aria-label="A prompt with examples and the toy model's belief over candidate rules"></svg></div>
+    <p class="readout" id="icl-r"></p>
+    <figcaption>An illustrative toy. Left: the prompt the model sees. Right: how much the toy believes in each candidate rule after reading the examples (each rule starts equal; a rule that contradicts an example loses almost all of its weight). The first examples of each rule are deliberately ambiguous ("pop" reversed is still "pop"), so one example is not always enough. GPT-3 has no list of rules; this only shows the kind of inference a prompt demands. Later work did describe in-context learning as a form of implicit inference about which task the prompt comes from.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>A new colleague is handed a stack of forms with three already filled in and asked to "do the rest like these". Nobody retrains them; they spot the pattern from the examples and carry on.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Few-shot prompting replaces "retrain the model on the task" with "show it a few examples of the task", and the model's weights never change.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What is the difference between few-shot prompting and fine-tuning?</dt>
+    <dd>Fine-tuning changes the model's weights by training on many labelled examples. Few-shot prompting puts a few examples in the input text; the weights are untouched and nothing is remembered after the prompt.</dd>
+    <dt>Why are there at most about 10 to 100 examples in the few-shot setting?</dt>
+    <dd>They have to fit, along with the question, inside the model's context window of 2,048 tokens.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §2.1–2.3 · Tables 2.1–2.2</p>
+  <h2>Same recipe, much bigger</h2>
+  <div class="prose">
+    <p>GPT-3 is not a new design. It is the <a href="gpt2.html">GPT-2</a> <a href="transformer.html">transformer</a> with one change to how attention is computed, made much larger. The authors trained eight sizes, from 125 million to 175 billion <strong>parameters</strong> (the adjustable numbers that training tunes). The largest is more than 100 times GPT-2.</p>
+    <p>All eight read the same 300 billion tokens. The text came mostly from a filtered crawl of the web (Common Crawl), shrunk from 45 TB of compressed text to 570 GB by keeping pages that resembled known good sources and removing near-duplicates. Smaller, higher-quality sources such as Wikipedia and books were shown to the model more often than their size alone would suggest, so it read Wikipedia more than three times over but most of the web crawl less than once.</p>
+    <p>Training the largest model took roughly 3 × 10<sup>23</sup> arithmetic operations, on a cluster of graphics processors provided by Microsoft. That cost is why the authors could not simply retrain when they later found a mistake in their data cleaning (Idea 5).</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>GPT-3's novelty is scale and the way it is used, not a new architecture.</p>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §3 · Fig. 1.2 · Tables 3.2–3.10</p>
+  <h2>What it could and could not do</h2>
+  <div class="prose">
+    <p>The authors tested GPT-3 on more than two dozen benchmarks, plus some new tasks they invented to make sure it could not have seen the answers. Three patterns stand out. Examples help, more examples usually help more, and the benefit of examples grows with model size: big models are much better at learning from the prompt (Fig. 1.2 shows this on a word-unscrambling task).</p>
+    <p>Choose a view below. All numbers are from the paper, for the 175-billion-parameter model.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl" id="res-ctl"><button class="btn on" data-v="0">LAMBADA</button><button class="btn" data-v="1">TriviaQA</button><button class="btn" data-v="2">Arithmetic</button><button class="btn" data-v="3">Word puzzles</button></div>
+    <div class="svgbox"><svg id="res" viewBox="0 0 600 250" role="img" aria-label="GPT-3 175B results on selected tasks"></svg></div>
+    <p class="readout" id="res-r"></p>
+    <figcaption>LAMBADA (predict the last word of a paragraph) and TriviaQA (answer trivia questions with no documents to look at): accuracy with zero, one and few examples, Tables 3.2–3.3. Arithmetic: few-shot accuracy on two- to five-digit sums and differences, two-digit multiplication and one-digit chains, Table 3.9. Word puzzles: few-shot accuracy on letter-scrambling tasks, Table 3.10.</figcaption>
+  </figure>
+  <div class="prose">
+    <p>The arithmetic results were striking in 2020: 100% on two-digit addition, from examples alone. But accuracy falls sharply with more digits. On word puzzles it can undo some scrambling but almost never reverse the letters of a word (0.44%), probably because it sees text as chunks rather than individual letters. In-context learning is real, but it inherits the model's blind spots.</p>
+    <p>Weak spots the authors report include tasks that compare two sentences (such as deciding whether one follows from the other, where GPT-3 was barely above chance on the hardest test, ANLI) and some reading-comprehension benchmarks.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Few-shot GPT-3 was competitive on some benchmarks and poor on others; the consistent pattern was that larger models learn more from examples in the prompt.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>On LAMBADA, one-shot was worse than zero-shot (72.5% vs 76.2%), yet few-shot was best (86.4%). What might explain this?</dt>
+    <dd>The paper suggests the models need several examples to recognise the unusual fill-in-the-blank format; with only one, the format seems to confuse more than help.</dd>
+    <dt>Why might reversing a word's letters be so hard for GPT-3?</dt>
+    <dd>Its input is split into multi-letter tokens, so it does not directly see individual letters.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §3.9.4 · §6</p>
+  <h2>Fake news that people can't spot</h2>
+  <div class="prose">
+    <p>The authors asked GPT-3 to write short news articles from a title and subtitle, then asked people to judge whether each article was written by a human or a machine. For the largest model, people were right only about 52% of the time, barely better than tossing a coin. For a deliberately weak control model they were right 86% of the time.</p>
+    <p>The paper spends a whole section on what this could mean: misinformation, spam, fraudulent academic essays. It also measured biases the model absorbed from the web, for example in how it associates genders, races and religions with particular words, and the energy cost of training.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>GPT-3's text was fluent enough that people could not reliably tell it from human writing, which the authors flagged as a risk alongside learned social biases.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §4–5</p>
+  <h2>Caveats: leaked tests and an unclear kind of learning</h2>
+  <div class="prose">
+    <p><strong>Leaked test questions.</strong> With so much web text, some benchmark questions were bound to be in the training data. The authors tried to remove them, but a bug meant some overlaps were missed, and the model was too expensive to retrain. They checked each benchmark afterwards on "clean" questions only; for most, scores barely changed, but they flagged a few results (such as PIQA and the Winograd test) as possibly inflated.</p>
+    <p><strong>Learning, or recognising?</strong> The authors admit they cannot tell whether few-shot prompting teaches GPT-3 a genuinely new task, or just helps it recognise a task it already met during training. That question shaped years of later research.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>Several of GPT-3's lessons were revised. <a href="chinchilla.html">Chinchilla</a> (2022) showed GPT-3 was trained on far too little data for its size; a smaller model trained on more text does better for the same cost, the bet that <a href="llama.html">LLaMA</a> made. <a href="instructgpt.html">InstructGPT</a> showed that fine-tuning with human feedback, not cleverer prompts, made the model reliably follow requests. And <a href="cot.html">chain-of-thought prompting</a> showed that examples which spell out their reasoning fix many of the arithmetic and reasoning failures seen here.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>GPT-3 proved prompting works at scale, but left open how much it truly learns from the prompt, and some of its scores carry contamination caveats.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Pre-training then fine-tuning achieves strong NLP results, but still needs task-specific datasets of thousands of examples; humans can generally do a new language task from a few examples or instructions. The authors show that scaling up language models greatly improves task-agnostic few-shot performance, sometimes reaching competitiveness with prior fine-tuned state of the art. GPT-3, an autoregressive LM with 175B parameters (10× any previous non-sparse LM), is applied without gradient updates or fine-tuning, with tasks and demonstrations specified purely as text. It does well on translation, QA and cloze tasks and on tasks needing on-the-fly reasoning (unscrambling words, novel words in a sentence, 3-digit arithmetic), but struggles on some datasets and faces methodological issues from training on large web corpora. Humans have difficulty distinguishing its news articles from human-written ones. Brown et al., NeurIPS 2020.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2 · Fig. 2.1</p>
+  <h2>Evaluation settings and scoring</h2>
+  <div class="prose">
+    <p>Four points on a spectrum of task-specific data: fine-tuning (not used for GPT-3 in this paper), few-shot (<var>K</var> demonstrations of context and completion plus one final context, <var>K</var> typically 10 to 100, bounded by <var>n</var><sub>ctx</sub> = 2048), one-shot (<var>K</var> = 1) and zero-shot (a natural-language instruction only). No gradient updates happen in any of the three prompting settings. Demonstrations are drawn at random from the task's training set (from the development set for LAMBADA and StoryCloze, which have no training set), separated by one or two newlines depending on the task.</p>
+    <p>Scoring (§2.4): for multiple choice, compare the LM likelihood of each completion, normalised per token; for ARC, OpenBookQA and RACE, normalising by the unconditional probability of each completion, <var>P</var>(completion | context) / <var>P</var>(completion | answer context), helped further. Free-form answers use beam search with width 4 and length penalty α = 0.6. SuperGLUE used 32 random training examples as the few-shot context.</p>
+    <p>The paper frames in-context learning as the inner loop of meta-learning: the outer loop is pre-training by SGD over many documents, some of which happen to contain repeated sub-tasks, and the inner loop is the forward pass over a prompt.</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why normalise multiple-choice scores per token?</dt>
+    <dd>Raw sequence log-likelihood penalises longer answers simply for having more tokens; per-token normalisation removes most of that length bias.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §2.1–2.3 · Table 2.1</p>
+  <h2>Models, data and compute</h2>
+  <div class="prose">
+    <p>Architecture as GPT-2 (pre-norm, modified initialisation, reversible tokenisation), except for alternating dense and locally banded sparse attention patterns in the layers, similar to the Sparse Transformer. Feed-forward width is 4<var>d</var><sub>model</sub>. Eight models were trained, all on 300B tokens:</p>
+  </div>
+  <figure class="live">
+    <div class="ctl" id="mz-ctl"></div>
+    <div class="svgbox"><svg id="mz" viewBox="0 0 600 250" role="img" aria-label="Table 2.1 model sizes with derived parameter and compute estimates"></svg></div>
+    <p class="readout" id="mz-r"></p>
+    <figcaption>Real shapes from Table 2.1. The readout recomputes the parameter count from the shape: each layer has about 12·<var>d</var><sup>2</sup> weights (4<var>d</var><sup>2</sup> in attention, 8<var>d</var><sup>2</sup> in the feed-forward block), so non-embedding parameters ≈ 12·<var>n</var><sub>layers</sub>·<var>d</var><sup>2</sup>; training compute ≈ 6·<var>N</var>·<var>D</var> for <var>N</var> parameters and <var>D</var> = 300B tokens. Bars: tokens seen per parameter, against the roughly 20 tokens per parameter that Chinchilla (2022) later found compute-optimal.</figcaption>
+  </figure>
+  <div class="prose">
+    <p><strong>Data (§2.2, Table 2.2).</strong> Common Crawl filtered by similarity to high-quality reference corpora (45 TB compressed before filtering, 570 GB after), fuzzy-deduplicated at document level within and across datasets, and mixed with curated corpora. Sampling is by quality, not size:</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Dataset</th><th>Tokens</th><th>Weight in mix</th><th>Epochs in 300B</th></tr></thead>
+    <tbody>
+      <tr><td>Common Crawl (filtered)</td><td class="num">410B</td><td class="num">60%</td><td class="num">0.44</td></tr>
+      <tr><td>WebText2</td><td class="num">19B</td><td class="num">22%</td><td class="num">2.9</td></tr>
+      <tr><td>Books1</td><td class="num">12B</td><td class="num">8%</td><td class="num">1.9</td></tr>
+      <tr><td>Books2</td><td class="num">55B</td><td class="num">8%</td><td class="num">0.43</td></tr>
+      <tr><td>Wikipedia</td><td class="num">3B</td><td class="num">3%</td><td class="num">3.4</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p><strong>Training (§2.3).</strong> Larger models use larger batches (0.5M tokens for 125M up to 3.2M for 175B) and smaller learning rates (6.0 × 10<sup>−4</sup> down to 0.6 × 10<sup>−4</sup>); model parallelism within matrix multiplies and across layers; V100 GPUs on a Microsoft cluster. The 6<var>ND</var> estimate gives about 3.1 × 10<sup>23</sup> FLOPs for the 175B run.</p>
+  </div>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §3 · Tables 3.2–3.11</p>
+  <h2>Results in brief</h2>
+  <div class="tablebox"><table>
+    <thead><tr><th>Task</th><th>Zero</th><th>One</th><th>Few</th><th>Reference</th></tr></thead>
+    <tbody>
+      <tr><td>LAMBADA acc. (Table 3.2)</td><td class="num">76.2</td><td class="num">72.5</td><td class="num">86.4</td><td>prior SOTA 68.0</td></tr>
+      <tr><td>TriviaQA acc., closed book (Table 3.3)</td><td class="num">64.3</td><td class="num">68.0</td><td class="num">71.2</td><td>no retrieval</td></tr>
+      <tr><td>SuperGLUE avg. (Table 3.8)</td><td class="num">–</td><td class="num">–</td><td class="num">71.8</td><td>fine-tuned SOTA 89.0</td></tr>
+      <tr><td>WMT Fr→En / De→En BLEU (Table 3.4)</td><td class="num">–</td><td class="num">–</td><td class="num">39.2 / 40.6</td><td>En→Fr 32.6, En→De 29.7</td></tr>
+      <tr><td>SAT analogies (§3.9.3)</td><td class="num">–</td><td class="num">–</td><td class="num">65.2</td><td>college applicants 57</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>LAMBADA's few-shot gain comes from casting it as fill-in-the-blank, which tells the model that exactly one word is wanted; one-shot is always worse than zero-shot here, which the authors attribute to models needing several examples to recognise the pattern. Translation is markedly asymmetric: translating <em>into</em> English (the training data is about 93% English by word count) is much stronger than out of it. The synthetic tasks are designed to probe on-the-fly adaptation:</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" data-a="ar">Arithmetic (Table 3.9)</button><button class="btn" data-a="ws">Word scrambling (Table 3.10)</button></div>
+    <div class="svgbox"><svg id="syn" viewBox="0 0 600 220" role="img" aria-label="Few-shot accuracy of GPT-3 175B on synthetic tasks"></svg></div>
+    <p class="readout" id="syn-r"></p>
+    <figcaption>Few-shot accuracy (%) for the 175B model. Arithmetic: <var>n</var>D+ / <var>n</var>D− are <var>n</var>-digit addition and subtraction, 2D× two-digit multiplication, 1DC compound one-digit operations. Word scrambling: CL cycle letters, A1 anagram with first and last letters fixed, A2 with first two and last two fixed, RI random characters inserted, RW reversed word. The paper's text quotes a few values that differ slightly from the tables (e.g. 3D+ 80.2 vs 80.4); table values shown. Click a bar for its exact value.</figcaption>
+  </figure>
+  <div class="prose">
+    <p><strong>Spot-checking memorisation of arithmetic.</strong> The authors searched the training data for the 3-digit problems in the form "&lt;num1&gt; + &lt;num2&gt; =" and "&lt;num1&gt; plus &lt;num2&gt;", and found only 17 matches (0.8%) among 2,000 addition problems and 2 (0.1%) among 2,000 subtraction problems, suggesting the model computes rather than looks up; errors such as failing to carry a 1 also point that way.</p>
+    <p><strong>Human detection of generated news (§3.9.4, Table 3.11).</strong> Mean human accuracy at identifying ~200-word articles from the 175B model was 52% (95% CI 49 to 54%), versus 86% for a deliberately poor control model, falling smoothly with model size.</p>
+  </div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §4–6</p>
+  <h2>Contamination, limitations and broader impacts</h2>
+  <div class="prose">
+    <p><strong>Contamination (§4).</strong> A filtering bug left some benchmark overlaps in the training data and retraining was too costly. For each benchmark the authors built a "clean" subset by removing any example with a 13-gram overlap with training data (shorter for very short examples) and compared scores. The method is deliberately conservative, so it over-flags; most benchmarks showed negligible change. PIQA and Winograd showed signs of contamination and are marked with asterisks; for reading-comprehension sets over 90% of examples were flagged, but inspection found the overlap was mostly source passages rather than questions and answers.</p>
+    <p><strong>Limitations (§5).</strong> Text-generation weaknesses (repetition, loss of coherence over long passages, self-contradiction); trouble with "common sense physics"; architectural limits from being unidirectional, which may explain weak results on tasks comparing two sentences (WiC, ANLI) and some reading comprehension; a pre-training objective that weights every token equally and has no grounding in other modalities; poor sample efficiency during pre-training compared with humans; uncertainty whether few-shot learning learns tasks "from scratch" or recognises ones seen in training; expensive inference (distillation is suggested); and the usual lack of interpretability and calibration.</p>
+    <p><strong>Broader impacts (§6).</strong> Misuse (misinformation, spam, phishing, fraudulent essays), bias probes on gender, race and religion (occupation–gender associations, sentiment and co-occurrence of descriptive words), and energy use, with the note that a trained model is cheap to use relative to training.</p>
+  </div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · Lineage</p>
+  <h2>How the ideas were refined</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Compute-optimal scaling.</strong> GPT-3 followed <a href="scaling.html">Kaplan et al. (2020)</a>, who advised growing parameters faster than data. <a href="chinchilla.html">Hoffmann et al. (2022)</a> revised this to roughly equal scaling of both, about 20 tokens per parameter; at 1.7 tokens per parameter GPT-3 175B was heavily undertrained. <a href="llama.html">LLaMA</a> went further, training small models far past that point for cheaper inference.</li>
+      <li><strong>Following instructions.</strong> <a href="instructgpt.html">InstructGPT</a> fine-tuned GPT-3 with human feedback; people preferred a 1.3B InstructGPT's outputs to 175B GPT-3's. The weak zero-shot behaviour in this paper is largely a property of the raw pre-trained model.</li>
+      <li><strong>Reasoning.</strong> <a href="cot.html">Chain-of-thought</a> demonstrations (Wei et al., 2022) greatly improved the multi-step arithmetic and reasoning tasks on which few-shot GPT-3 was weak.</li>
+      <li><strong>What in-context learning is.</strong> Xie et al. (2021) modelled it as implicit Bayesian inference over a latent task; Min et al. (2022) found that randomising the labels in demonstrations often hurts surprisingly little, implying demonstrations mainly convey format, label space and input distribution, consistent with the "recognising" side of the paper's open question. Later analyses (for example induction heads, Olsson et al. 2022) looked for the mechanism inside transformers.</li>
+      <li><strong>Emergence.</strong> Abrupt jumps with scale, visible here in arithmetic, were catalogued as "emergent abilities" (Wei et al., 2022); Schaeffer et al. (2023) argued many such jumps reflect discontinuous metrics like exact match.</li>
+    </ul>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>How many tokens per parameter did GPT-3 175B see, and why does it matter?</dt>
+    <dd>300B / 175B ≈ 1.7. Chinchilla's analysis puts the compute-optimal ratio near 20, so the same compute would have been better spent on a smaller model trained on more data.</dd>
+    <dt>What does Min et al.'s random-label result suggest about few-shot prompting?</dt>
+    <dd>That much of the benefit comes from showing the format and distribution of inputs and outputs rather than teaching the input–label mapping itself.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>In-context learning</dt><dd>Adapting to a task from demonstrations or instructions in the prompt, without weight updates.</dd>
+    <dt>Zero/one/few-shot</dt><dd><var>K</var> = 0, 1 or typically 10 to 100 demonstrations in the context.</dd>
+    <dt><var>n</var><sub>ctx</sub></dt><dd>Context window, 2,048 tokens for all GPT-3 models.</dd>
+    <dt>Fine-tuning</dt><dd>Further gradient training on a task's labelled data.</dd>
+    <dt>Contamination</dt><dd>Benchmark test items present in the pre-training data.</dd>
+    <dt>Sparse attention</dt><dd>Attention restricted to a pattern (here locally banded) to cut cost; GPT-3 alternates it with dense layers.</dd>
+    <dt>6<var>ND</var></dt><dd>Standard estimate of transformer training FLOPs: about 6 operations per parameter per token.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="transformer.html">Transformer (2017)</a>, <a href="gpt2.html">GPT-2 (2019)</a></p>
+  <p><strong>Led to:</strong> <a href="instructgpt.html">InstructGPT (RLHF) (2022)</a>, <a href="cot.html">Chain of thought (2022)</a>, <a href="llama.html">LLaMA (2023)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> (<a href="https://lovespark.love/papers-worth-reading/#gpt3">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // in-context rule inference toy
+  var rules=[['copy as is',function(w){return w;}],['reverse letters',function(w){return w.split('').reverse().join('');}],['UPPER CASE',function(w){return w.toUpperCase();}],['first letter',function(w){return w[0];}],['last letter',function(w){return w[w.length-1];}],['say it twice',function(w){return w+w;}],['add "s"',function(w){return w+'s';}],['count letters',function(w){return String(w.length);}]];
+  var tasks=[{r:1,ex:['pop','noon','star','lemon'],q:'stressed'},{r:4,ex:['anna','toot','cat','pen'],q:'lemon'},{r:3,ex:['eye','anna','dog','sun'],q:'moon'}];
+  var svg=$('#icl'), t=0, K=0;
+  function draw(){ clear(svg); var T=tasks[t], ex=T.ex.slice(0,K), post=rules.map(function(r){ var p=1; ex.forEach(function(w){ p*= (r[1](w)===rules[T.r][1](w))?0.9:0.01; }); return p; }), Z=post.reduce(function(a,b){return a+b;},0); post=post.map(function(p){return p/Z;});
+    S('text',{x:16,y:22,'class':'t-s'},svg,'Prompt'); S('rect',{x:12,y:30,width:236,height:220,'class':'box'},svg);
+    var y=52; S('text',{x:22,y:y,'class':'t-s'},svg,'Transform each word:'); y+=24;
+    ex.forEach(function(w){ S('text',{x:22,y:y,'class':'t'},svg,w+' => '+rules[T.r][1](w)); y+=22; });
+    var best=0; post.forEach(function(p,i){ if (p>post[best]) best=i; });
+    S('text',{x:22,y:y,'class':'t'},svg,T.q+' =>'); S('text',{x:22+(T.q.length+4)*7.3,y:y,'class':'t-fire'},svg,K? rules[best][1](T.q) : '?');
+    S('text',{x:270,y:22,'class':'t-s'},svg,'Belief in each candidate rule');
+    post.forEach(function(p,i){ var yy=36+i*27; S('text',{x:400,y:yy+14,'class':i===T.r&&K>=3?'t-ok end':'t end'},svg,rules[i][0]); S('rect',{x:408,y:yy+2,width:Math.max(1.5,p*150),height:17,'class':i===best&&K?'f-fire':'f-wire','fill-opacity':i===best&&K?1:0.5},svg); S('text',{x:414+p*150,y:yy+15,'class':'t-s'},svg,fmt(p*100,0)+'%'); });
+    var top=post[best], tied=post.filter(function(p){ return p>top*0.9; }).length;
+    $('#icl-r').innerHTML = K===0 ? 'Zero-shot: with only "Transform each word:" the toy has no idea which rule is meant (each about 13%).' :
+      (tied>1 ? '<b>'+tied+'</b> rules still fit all '+K+' example'+(K>1?'s':'')+'; the guess is a coin toss between them.' : 'Only one rule fits: <b>'+rules[best][0]+'</b>, so the answer is <b>'+rules[best][1](T.q)+'</b>.'); }
+  $$('[data-task]').forEach(function(b){ b.onclick=function(){ t=+b.getAttribute('data-task'); $$('[data-task]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }; });
+  bindRange('icl-k',function(v){ K=v; draw(); });
+})();
+(function(){ // results views
+  var V=[{n:'LAMBADA',l:['zero-shot','one-shot','few-shot'],v:[76.2,72.5,86.4],ref:68.0,refl:'previous best 68.0',r:'Few-shot <b>86.4%</b>, 18 points above the previous best. One example hurt; several helped.'},
+    {n:'TriviaQA',l:['zero-shot','one-shot','few-shot'],v:[64.3,68.0,71.2],r:'Each extra example helps: <b>64.3%, then 68.0%, then 71.2%</b>, answering from memory alone with no documents.'},
+    {n:'Arithmetic',l:['2D+','2D−','3D+','3D−','4D+','4D−','5D+','5D−','2D×','1DC'],v:[100,98.9,80.4,94.2,25.5,26.8,9.3,9.9,29.2,21.3],r:'Perfect on 2-digit addition, collapsing for 4 and 5 digits (few-shot).'},
+    {n:'Word puzzles',l:['cycle','anagram 1','anagram 2','insert','reverse'],v:[37.9,15.1,39.7,67.2,0.44],r:'It can remove inserted characters (67.2%) but essentially never reverses a word (<b>0.44%</b>).'}];
+  var svg=$('#res');
+  function draw(k){ clear(svg); var d=V[k], n=d.v.length, bw=Math.min(90,460/n-10);
+    S('line',{x1:60,y1:210,x2:580,y2:210,'class':'axis'},svg); [0,25,50,75,100].forEach(function(g){ var y=210-g*1.7; S('line',{x1:60,y1:y,x2:580,y2:y,'class':'grid'},svg); S('text',{x:54,y:y+4,'class':'t-s end'},svg,g+'%'); });
+    d.v.forEach(function(v,i){ var x=70+i*(500/n)+(500/n-bw)/2-5, h=v*1.7; S('rect',{x:x,y:210-h,width:bw,height:Math.max(h,1),'class':'f-fire','fill-opacity':0.85},svg); S('text',{x:x+bw/2,y:204-h,'class':'t-s mid'},svg,v); S('text',{x:x+bw/2,y:228,'class':'t-s mid'},svg,d.l[i]); });
+    if (d.ref){ var y=210-d.ref*1.7; S('line',{x1:60,y1:y,x2:580,y2:y,'class':'w-dash'},svg); S('text',{x:580,y:18,'class':'t-s end'},svg,'dashed line: '+d.refl); }
+    S('text',{x:60,y:18,'class':'t-s'},svg,'GPT-3 175B accuracy, '+d.n); $('#res-r').innerHTML=d.r; }
+  $$('[data-v]').forEach(function(b){ b.onclick=function(){ $$('[data-v]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(+b.getAttribute('data-v')); }; }); draw(0);
+})();
+(function(){ // model sizes
+  var M=[['Small','125M',125e6,12,768],['Medium','350M',350e6,24,1024],['Large','760M',760e6,24,1536],['XL','1.3B',1.3e9,24,2048],['2.7B','2.7B',2.7e9,32,2560],['6.7B','6.7B',6.7e9,32,4096],['13B','13B',13e9,40,5140],['175B','175B',175e9,96,12288]];
+  var svg=$('#mz'), ctl=$('#mz-ctl'), k=7;
+  M.forEach(function(m,i){ var b=document.createElement('button'); b.className='btn'+(i===k?' on':''); b.textContent=m[1]; b.onclick=function(){ k=i; $$('.btn',ctl).forEach(function(x,j){ x.classList.toggle('on',j===i); }); draw(); }; ctl.appendChild(b); });
+  function sci(x){ var e=Math.floor(Math.log10(x)); return fmt(x/Math.pow(10,e),1)+' × 10^'+e; }
+  function draw(){ clear(svg); var lmax=Math.log10(6000), lmin=Math.log10(1), Y=function(r){ return 200-(Math.log10(r)-lmin)/(lmax-lmin)*170; };
+    S('line',{x1:60,y1:200,x2:580,y2:200,'class':'axis'},svg); [1,10,100,1000].forEach(function(g){ S('line',{x1:60,y1:Y(g),x2:580,y2:Y(g),'class':'grid'},svg); S('text',{x:54,y:Y(g)+4,'class':'t-s end'},svg,g); });
+    S('line',{x1:60,y1:Y(20),x2:580,y2:Y(20),'class':'w-ok'},svg); S('text',{x:580,y:36,'class':'t-ok end'},svg,'green line: ~20 tokens/param (Chinchilla, 2022)');
+    M.forEach(function(m,i){ var r=300e9/m[2], x=72+i*63; S('rect',{x:x,y:Y(r),width:44,height:200-Y(r),'class':i===k?'f-fire':'f-wire','fill-opacity':i===k?1:0.5},svg); S('text',{x:x+22,y:Y(r)-5,'class':'t-s mid'},svg,r<10?fmt(r,1):fmt(r,0)); S('text',{x:x+22,y:216,'class':'t-s mid'},svg,m[1]); });
+    S('text',{x:60,y:18,'class':'t-s'},svg,'training tokens per parameter (all models saw 300B tokens; log scale)');
+    var m=M[k], est=12*m[3]*m[4]*m[4];
+    $('#mz-r').innerHTML=m[1]+': '+m[3]+' layers × d = '+m[4]+'. 12·L·d² = <b>'+sci(est)+'</b> non-embedding parameters (listed: '+m[1]+'). Training compute 6ND ≈ <b>'+sci(6*m[2]*300e9)+'</b> FLOPs. Chinchilla-style data budget: about <b>'+(m[2]*20>=1e12?fmt(m[2]*20/1e12,1)+'T':fmt(m[2]*20/1e9,0)+'B')+'</b> tokens.'; }
+  draw();
+})();
+(function(){ // synthetic tasks
+  var D={ar:[['2D+',100],['2D−',98.9],['3D+',80.4],['3D−',94.2],['4D+',25.5],['4D−',26.8],['5D+',9.3],['5D−',9.9],['2D×',29.2],['1DC',21.3]], ws:[['CL',37.9],['A1',15.1],['A2',39.7],['RI',67.2],['RW',0.44]]};
+  var svg=$('#syn'), cur='ar';
+  function draw(sel){ clear(svg); var d=D[cur], n=d.length, step=520/n, bw=Math.min(60,step-12);
+    S('line',{x1:50,y1:180,x2:580,y2:180,'class':'axis'},svg); [0,50,100].forEach(function(g){ var y=180-g*1.5; S('line',{x1:50,y1:y,x2:580,y2:y,'class':'grid'},svg); S('text',{x:44,y:y+4,'class':'t-s end'},svg,g); });
+    d.forEach(function(e,i){ var x=58+i*step+(step-bw)/2, h=e[1]*1.5, r=S('rect',{x:x,y:180-h,width:bw,height:Math.max(h,1.5),'class':(sel===i?'f-fire':'f-wire')+' clickable'},svg); r.onclick=function(){ draw(i); };
+      S('text',{x:x+bw/2,y:198,'class':'t-s mid'},svg,e[0]); if (sel===i) S('text',{x:x+bw/2,y:174-h,'class':'t-fire mid'},svg,e[1]+'%'); });
+    $('#syn-r').innerHTML = sel==null ? 'Click a bar.' : d[sel][0]+': <b>'+d[sel][1]+'%</b> few-shot.'; }
+  $$('[data-a]').forEach(function(b){ b.onclick=function(){ cur=b.getAttribute('data-a'); $$('[data-a]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(cur==='ar'?2:4); }; }); draw(2);
+})();
+</script>
+
+</body>
+</html>

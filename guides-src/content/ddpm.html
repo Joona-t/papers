@@ -1,0 +1,350 @@
+<!--LEDE-->
+Can a model that only ever learns to remove a little noise generate high-quality images from scratch? Ho, Jain and Abbeel show that it can: with a fixed noise schedule and a network trained simply to guess the noise that was added, the 2015 diffusion idea produces CIFAR-10 images with a record FID of 3.17 and 256 × 256 LSUN images of similar quality to ProgressiveGAN.
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Take a picture and add random noise to it in 1,000 small steps until it is pure static. That part is fixed and needs no learning.</p>
+  <p>Train a neural network on one simple question: "here is a noisy picture and how noisy it is; what noise was added?"</p>
+  <p>To make a new picture, start from pure static and use the network 1,000 times, each time removing a little of the noise it thinks is there.</p>
+  <p>This is the <a href="diffusion2015.html">2015 diffusion model</a> with better choices, and it was the first time diffusion images rivalled the best GANs (on CIFAR-10 it edged past them).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1 · Fig. 2</p>
+  <h2>Generating by removing noise</h2>
+  <div class="prose">
+    <p>Before this paper, the best image generators were <a href="gan.html">GANs</a>: two networks in a contest, one forging images and one spotting fakes. They made sharp pictures but were notoriously fiddly to train. A 2015 paper had proposed a calmer alternative, the <a href="diffusion2015.html">diffusion model</a>, but its pictures were blurry.</p>
+    <p>The diffusion idea runs a film in two directions. Forward: blur a real picture with a little random noise, many times, until nothing is left but static. Backward: learn to undo one small step of that blurring. Chain the backward steps together from fresh static, and a new picture emerges.</p>
+    <p>Ho, Jain and Abbeel kept that idea and changed the details: what the network predicts, how the noise is scheduled, and how training is scored. Those choices turned out to matter enormously.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A restorer cleaning a grimy painting doesn't repaint it in one stroke. They remove a thin layer of dirt, look again, remove another. DDPM generates images the same way, except it starts from a canvas that is <em>all</em> grime.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>DDPM generates images by starting from static and repeatedly removing a little predicted noise.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §2 · Eq. 4</p>
+  <h2>Adding noise, and a shortcut</h2>
+  <div class="prose">
+    <p>The forward process has 1,000 steps. At each one, the picture is faded very slightly and a pinch of random noise is sprinkled on. The amount of noise per step grows slowly from tiny (0.0001) to small (0.02), a "linear schedule".</p>
+    <p>A handy fact: you don't need to run the steps one by one. Because adding random noise to random noise just gives more random noise, the picture at any step <var>t</var> is simply "a faded copy of the original plus one dose of noise", with the exact fade and dose known in advance. That makes training fast: pick any step, jump straight there.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Step <var>t</var> <input type="range" id="nz-t" min="0" max="1000" step="10" value="0"><output id="nz-t-o">0</output></label><button class="btn" id="nz-new">New noise</button></div>
+    <div class="svgbox"><svg id="nz" viewBox="0 0 600 250" role="img" aria-label="A small picture with increasing noise, and the fraction of signal remaining"></svg></div>
+    <p class="readout" id="nz-r"></p>
+    <figcaption>A 16 × 16 picture (pixel values from −1 to 1, as in the paper) jumped straight to step <var>t</var> using the paper's schedule. The bars show the multipliers on the original picture and on the noise. By step 1,000 almost nothing of the original is left.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>The noisy picture at any step is a known mix of the original and fresh noise, so training can jump to any step instantly.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is the shortcut useful for training?</dt>
+    <dd>Each training example can be made at a random step in one calculation, instead of simulating hundreds of noise steps first.</dd>
+    <dt>The noise multiplier overtakes the picture multiplier at about step 260. Why is the ring still recognisable well after that?</dt>
+    <dd>The picture's pattern is spread consistently over many pixels while the noise is independent in each pixel, so your eye averages the noise away. Recognition fails only when the picture multiplier gets much smaller (in the figure, somewhere around steps 600 to 800).</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §3.2, §3.4 · Algorithm 1</p>
+  <h2>Training: guess the noise</h2>
+  <div class="prose">
+    <p>The key choice in this paper is what the network should predict. Instead of asking "what did the slightly cleaner picture look like?", it asks "<strong>which noise was added?</strong>". Knowing the noise is equivalent to knowing the clean picture, since one is the noisy picture minus the other, but the noise version trains much better.</p>
+    <p>Training is then almost embarrassingly simple: take a real picture, pick a random step, add the right amount of random noise, show the network the noisy picture and the step number, and penalise the squared difference between its guess and the real noise. Repeat millions of times.</p>
+    <p>The figure shows what the best possible guess looks like when the "training set" is just four tiny pictures. At low noise the guess points to exactly the right picture. At high noise, the best guess is a blend of all four: the network honestly can't tell yet.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Step <var>t</var> <input type="range" id="gs-t" min="0" max="1000" step="10" value="900"><output id="gs-t-o">900</output></label><button class="btn" id="gs-new">Another example</button></div>
+    <div class="svgbox"><svg id="gs" viewBox="0 0 600 250" role="img" aria-label="A noisy picture, the best guess of the noise, and the implied clean picture"></svg></div>
+    <p class="readout" id="gs-r"></p>
+    <figcaption>Left: the true picture. Middle: the noisy version at step <var>t</var>. Right: the clean picture implied by the best possible noise guess. Bottom: how much weight that guess gives each of the four training pictures. Slide from 1,000 down to see the blend resolve into one picture. Illustrative toy: a real network sees millions of images and generalises rather than choosing among four.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>The network learns one skill: look at a noisy picture and say what noise is in it. Training is just a squared-error penalty on that guess.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>If the network knows the noise exactly, what else does it know?</dt>
+    <dd>The clean picture: subtract the (scaled) noise from the noisy picture and undo the fading.</dd>
+    <dt>Why is a blended guess correct at high noise, rather than a mistake?</dt>
+    <dd>With lots of noise, several originals are plausible. Squared-error training rewards the average of the plausible answers, so blending is the best possible guess.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §3.2 · Algorithm 2</p>
+  <h2>Sampling: 1,000 small clean-ups</h2>
+  <div class="prose">
+    <p>To make a new picture, start from pure random static. Ask the network what noise is there, remove a small part of it, then (except at the very last step) sprinkle a little fresh noise back in. Do this 1,000 times, counting down from step 1,000 to step 1.</p>
+    <p>Sprinkling noise back in seems odd, but it keeps the process honest: each intermediate picture should look like a genuine noisy picture at that step, which is what the network was trained on. Watch below: the rough layout is decided early, and the fine detail last.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="sm-run">Generate</button><button class="btn" id="sm-step">100 steps</button><button class="btn" id="sm-reset">New static</button></div>
+    <div class="svgbox"><svg id="sm" viewBox="0 0 600 250" role="img" aria-label="Reverse diffusion turning static into a picture, with the current best guess of the final picture"></svg></div>
+    <p class="readout" id="sm-r"></p>
+    <figcaption>The real sampling algorithm (Algorithm 2, 1,000 steps, the paper's schedule), driven by the perfect noise-guesser for the four tiny training pictures. Left: the current noisy picture. Right: the clean picture it currently points to. Toy illustration: with only four pictures to learn from, the ideal model just reproduces one of them, whereas a trained network produces new ones.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Generation is the training skill used in a loop: guess the noise, remove some of it, repeat from static to picture.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Which features of the picture get decided first?</dt>
+    <dd>The coarse layout, at high noise levels. Fine details are settled near the end, when little noise is left.</dd>
+    <dt>What is the main practical cost of this method?</dt>
+    <dd>Speed: a picture needs 1,000 passes through the network, against one for a GAN.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §4 · Tables 1, 3</p>
+  <h2>The results, and what came next</h2>
+  <div class="prose">
+    <p>Image quality is often scored with <strong>FID</strong>: lower means the generated pictures are statistically closer to real ones. On CIFAR-10 (tiny 32 × 32 photos), DDPM scored 3.17, a new best for models not told the image class. On 256 × 256 pictures of bedrooms and churches, its quality was comparable to ProgressiveGAN, one of the strongest GANs of the time.</p>
+    <p>The paper also found something surprising: these models are not great at the "how likely is this image?" score that the 2015 paper emphasised. Most of that score is spent on details too faint for people to see.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>The 1,000-step sampling was the obvious weakness. DDIM (Song, Meng and Ermon, 2020) reused DDPM networks with 50 steps or fewer. <a href="beatgans.html">Dhariwal and Nichol</a> (2021) improved the network and added guidance, beating GANs outright. <a href="ldm.html">Latent diffusion</a> ran the process on compressed images, which became Stable Diffusion, and <a href="flowmatch.html">flow matching</a> recast it as learning a velocity along straight paths.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>DDPM made diffusion work in practice, and nearly every modern image generator descends from its recipe.</p>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>High-quality image synthesis with diffusion probabilistic models, latent-variable models inspired by non-equilibrium thermodynamics. The best results come from training on a weighted variational bound designed from a novel connection between diffusion models and denoising score matching with Langevin dynamics. The models admit a progressive lossy decompression scheme that can be read as a generalisation of autoregressive decoding. Unconditional CIFAR-10: Inception score 9.46, FID 3.17 (state of the art). 256 × 256 LSUN: quality similar to ProgressiveGAN. NeurIPS 2020; arXiv:2006.11239.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2 · Eqs. 1–7</p>
+  <h2>Forward process, closed forms and posterior</h2>
+  <div class="prose"><p>The forward process is a fixed Markov chain with variance schedule β<sub>1</sub>, …, β<sub><var>T</var></sub>:</p></div>
+  <div class="eq"><var>q</var>(<b>x</b><sub><var>t</var></sub> | <b>x</b><sub><var>t</var>−1</sub>) = <span class="v">N</span>(<b>x</b><sub><var>t</var></sub>; √(1 − β<sub><var>t</var></sub>) <b>x</b><sub><var>t</var>−1</sub>, β<sub><var>t</var></sub><b>I</b>) <span class="n">(2)</span></div>
+  <div class="prose"><p>With α<sub><var>t</var></sub> = 1 − β<sub><var>t</var></sub> and ᾱ<sub><var>t</var></sub> = ∏<sub><var>s</var>≤<var>t</var></sub> α<sub><var>s</var></sub>, any step can be sampled directly from the data:</p></div>
+  <div class="eq"><var>q</var>(<b>x</b><sub><var>t</var></sub> | <b>x</b><sub>0</sub>) = <span class="v">N</span>(<b>x</b><sub><var>t</var></sub>; √ᾱ<sub><var>t</var></sub> <b>x</b><sub>0</sub>, (1 − ᾱ<sub><var>t</var></sub>)<b>I</b>) <span class="n">(4)</span></div>
+  <div class="prose"><p>and the forward posterior is Gaussian with closed-form parameters:</p></div>
+  <div class="eq"><var>q</var>(<b>x</b><sub><var>t</var>−1</sub> | <b>x</b><sub><var>t</var></sub>, <b>x</b><sub>0</sub>) = <span class="v">N</span>(<b>x</b><sub><var>t</var>−1</sub>; <b>μ̃</b><sub><var>t</var></sub>(<b>x</b><sub><var>t</var></sub>, <b>x</b><sub>0</sub>), β̃<sub><var>t</var></sub><b>I</b>) <span class="n">(6)</span></div>
+  <div class="eq"><b>μ̃</b><sub><var>t</var></sub> = [√ᾱ<sub><var>t</var>−1</sub> β<sub><var>t</var></sub> / (1 − ᾱ<sub><var>t</var></sub>)] <b>x</b><sub>0</sub> + [√α<sub><var>t</var></sub> (1 − ᾱ<sub><var>t</var>−1</sub>) / (1 − ᾱ<sub><var>t</var></sub>)] <b>x</b><sub><var>t</var></sub>,&nbsp;&nbsp; β̃<sub><var>t</var></sub> = [(1 − ᾱ<sub><var>t</var>−1</sub>) / (1 − ᾱ<sub><var>t</var></sub>)] β<sub><var>t</var></sub> <span class="n">(7)</span></div>
+  <div class="prose">
+    <p>The variational bound (Eq. 5) decomposes into <var>L</var><sub><var>T</var></sub> (prior matching; constant here because β is fixed), <var>L</var><sub><var>t</var>−1</sub> = D<sub>KL</sub>(<var>q</var>(<b>x</b><sub><var>t</var>−1</sub> | <b>x</b><sub><var>t</var></sub>, <b>x</b><sub>0</sub>) ‖ <var>p</var><sub>θ</sub>(<b>x</b><sub><var>t</var>−1</sub> | <b>x</b><sub><var>t</var></sub>)) for 1 &lt; <var>t</var> ≤ <var>T</var>, and a decoder term <var>L</var><sub>0</sub>. Unlike <a href="diffusion2015.html">Sohl-Dickstein et al.</a>, the schedule is not learned: <var>T</var> = 1000 and β<sub><var>t</var></sub> rises linearly from 10<sup>−4</sup> to 0.02 (§4), chosen so that ᾱ<sub><var>T</var></sub> is close to 0 while each step stays small.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Step <var>t</var> <input type="range" id="sc-t" min="1" max="1000" step="1" value="500"><output id="sc-t-o">500</output></label><button class="btn" id="sc-cos" aria-pressed="false">Overlay cosine schedule (2021)</button></div>
+    <div class="svgbox"><svg id="sc" viewBox="0 0 600 260" role="img" aria-label="Signal fraction and log signal-to-noise ratio across the 1000 steps of the linear schedule"></svg></div>
+    <p class="readout" id="sc-r"></p>
+    <figcaption>Amber: √ᾱ<sub><var>t</var></sub>, the coefficient on <b>x</b><sub>0</sub> in Eq. 4. Blue: log SNR = log(ᾱ<sub><var>t</var></sub>/(1 − ᾱ<sub><var>t</var></sub>)) on the right-hand scale. The linear schedule destroys most signal by about step 600 and spends the remaining steps near pure noise. The cosine schedule of Nichol and Dhariwal (Improved DDPM, 2021), ᾱ<sub><var>t</var></sub> = <var>f</var>(<var>t</var>)/<var>f</var>(0) with <var>f</var>(<var>t</var>) = cos<sup>2</sup>(((<var>t</var>/<var>T</var> + 0.008)/1.008)·π/2), was designed to spread the decay more evenly.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3.2, §3.4 · Eqs. 11–14 · Algorithm 1</p>
+  <h2>ε-prediction and the simplified objective</h2>
+  <div class="prose">
+    <p>The reverse process is <var>p</var><sub>θ</sub>(<b>x</b><sub><var>t</var>−1</sub> | <b>x</b><sub><var>t</var></sub>) = <span class="v">N</span>(<b>μ</b><sub>θ</sub>(<b>x</b><sub><var>t</var></sub>, <var>t</var>), σ<sub><var>t</var></sub><sup>2</sup><b>I</b>) with untrained, time-dependent variances. Since <b>x</b><sub><var>t</var></sub> = √ᾱ<sub><var>t</var></sub><b>x</b><sub>0</sub> + √(1 − ᾱ<sub><var>t</var></sub>)<b>ε</b>, substituting <b>x</b><sub>0</sub> into Eq. 7 shows the target mean is a function of <b>x</b><sub><var>t</var></sub> and <b>ε</b>. The paper therefore parameterises</p>
+  </div>
+  <div class="eq"><b>μ</b><sub>θ</sub>(<b>x</b><sub><var>t</var></sub>, <var>t</var>) = (1/√α<sub><var>t</var></sub>) ( <b>x</b><sub><var>t</var></sub> − [β<sub><var>t</var></sub> / √(1 − ᾱ<sub><var>t</var></sub>)] <b>ε</b><sub>θ</sub>(<b>x</b><sub><var>t</var></sub>, <var>t</var>) ) <span class="n">(11)</span></div>
+  <div class="prose"><p>which turns each <var>L</var><sub><var>t</var>−1</sub> into a weighted noise-regression loss (Eq. 12) with weight β<sub><var>t</var></sub><sup>2</sup>/(2σ<sub><var>t</var></sub><sup>2</sup>α<sub><var>t</var></sub>(1 − ᾱ<sub><var>t</var></sub>)). Dropping that weight gives the objective used for the best samples:</p></div>
+  <div class="eq"><var>L</var><sub>simple</sub>(θ) = E<sub><var>t</var>, <b>x</b><sub>0</sub>, <b>ε</b></sub> [ ‖ <b>ε</b> − <b>ε</b><sub>θ</sub>(√ᾱ<sub><var>t</var></sub> <b>x</b><sub>0</sub> + √(1 − ᾱ<sub><var>t</var></sub>) <b>ε</b>, <var>t</var>) ‖<sup>2</sup> ],&nbsp;&nbsp; <var>t</var> ~ Uniform{1, …, <var>T</var>} <span class="n">(14)</span></div>
+  <div class="prose"><p>Relative to the true bound, <var>L</var><sub>simple</sub> down-weights the small-<var>t</var> terms (easy, low-noise denoising) so the network spends capacity on harder, noisier steps (§3.4). It is a better sample-quality objective and a worse likelihood objective.</p></div>
+  <pre class="algo"><span class="c">Algorithm 1  Training</span>
+repeat
+  x0 ~ q(x0)
+  t ~ Uniform({1, ..., T})
+  eps ~ N(0, I)
+  take gradient step on  || eps - eps_theta( sqrt(abar_t) x0 + sqrt(1 - abar_t) eps , t ) ||^2
+until converged</pre>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does Eq. 12 look like denoising score matching?</dt>
+    <dd>For Gaussian corruption, the score of the noised distribution is ∇ log <var>q</var>(<b>x</b><sub><var>t</var></sub>) = −E[<b>ε</b> | <b>x</b><sub><var>t</var></sub>]/√(1 − ᾱ<sub><var>t</var></sub>), so regressing <b>ε</b> is score matching at noise scale √(1 − ᾱ<sub><var>t</var></sub>), summed over many scales.</dd>
+    <dt>What does <var>L</var><sub>simple</sub> sacrifice?</dt>
+    <dd>Log-likelihood. Table 1 shows the true-bound model (3.70 bits/dim) beats <var>L</var><sub>simple</sub> (3.75) on NLL while being far worse on FID (13.51 vs 3.17).</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §3.2–3.3 · Algorithm 2</p>
+  <h2>Sampling as Langevin-like dynamics</h2>
+  <pre class="algo"><span class="c">Algorithm 2  Sampling</span>
+xT ~ N(0, I)
+for t = T, ..., 1:
+  z ~ N(0, I) if t > 1, else z = 0
+  x_{t-1} = (1/sqrt(alpha_t)) ( x_t - ((1 - alpha_t)/sqrt(1 - abar_t)) eps_theta(x_t, t) ) + sigma_t z
+return x0</pre>
+  <div class="prose">
+    <p>With <b>ε</b><sub>θ</sub> as a scaled score estimate, each step is a gradient step on log density plus injected noise, resembling annealed Langevin dynamics (Song and Ermon, 2019). For σ<sub><var>t</var></sub><sup>2</sup>, β<sub><var>t</var></sub> and β̃<sub><var>t</var></sub> gave similar results; they are the optimal choices for <b>x</b><sub>0</sub> ~ <span class="v">N</span>(0, <b>I</b>) and for deterministic <b>x</b><sub>0</sub> respectively, the two extremes of reverse-process entropy (§3.2). Data are scaled to [−1, 1] and the last step uses a discretised Gaussian decoder (Eq. 13), with the mean displayed noiselessly (§3.3).</p>
+    <p>Below, Algorithm 2 runs exactly as written on 1-D data (two clusters at −1 and +1), with the exact optimal <b>ε</b><sub>θ</sub>(<b>x</b><sub><var>t</var></sub>, <var>t</var>) = E[<b>ε</b> | <b>x</b><sub><var>t</var></sub>] substituted for the network.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" id="tr-b" aria-pressed="true">σ² = β</button><button class="btn" id="tr-bt" aria-pressed="false">σ² = β̃</button><button class="btn" id="tr-go">Resample</button></div>
+    <div class="svgbox wide"><svg id="tr" viewBox="0 0 640 260" role="img" aria-label="Trajectories of 40 samples from t equals 1000 to 0 under Algorithm 2, and the final histogram"></svg></div>
+    <p class="readout" id="tr-r"></p>
+    <figcaption>Left: 40 sample paths of Algorithm 2 (time runs left to right from <var>t</var> = 1000 to 0). Right: histogram of 3,000 final samples against the true density. Note when the paths commit to a cluster: for this data, mostly between about <var>t</var> = 700 and 400. Before that the signal is too weak to tell the clusters apart; after it, the remaining steps only refine.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §4.1–4.2 · Tables 1–3 · App. B</p>
+  <h2>Experiments</h2>
+  <div class="prose">
+    <p><strong>Architecture.</strong> A U-Net backbone similar to an unmasked PixelCNN++, built from Wide-ResNet blocks, with group normalisation, self-attention at the 16 × 16 resolution, and the step <var>t</var> given by a Transformer sinusoidal embedding added in each residual block. 35.7M parameters for CIFAR-10, 114M for LSUN and CelebA-HQ (about 256M for a larger LSUN Bedroom model). Training on a TPU v3-8: CIFAR-10 for 800k steps at batch 128 (about 10.6 hours); sampling 256 CIFAR images took about 17 s. Adam, learning rate 2 × 10<sup>−4</sup> (2 × 10<sup>−5</sup> at 256 × 256), EMA 0.9999, dropout 0.1 on CIFAR-10.</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>CIFAR-10, Table 1</th><th>IS</th><th>FID</th><th>NLL test (train), bits/dim</th></tr></thead>
+    <tbody>
+      <tr><td>Ours, <var>L</var> (true bound, fixed isotropic Σ)</td><td class="num">7.67 ± 0.13</td><td class="num">13.51</td><td class="num">≤ 3.70 (3.69)</td></tr>
+      <tr><td>Ours, <var>L</var><sub>simple</sub></td><td class="num">9.46 ± 0.11</td><td class="num">3.17</td><td class="num">≤ 3.75 (3.72)</td></tr>
+      <tr><td>StyleGAN2 + ADA (v1), unconditional</td><td class="num">9.74 ± 0.05</td><td class="num">3.26</td><td class="num">–</td></tr>
+      <tr><td>StyleGAN2 + ADA (v1), class-conditional</td><td class="num">10.06</td><td class="num">2.67</td><td class="num">–</td></tr>
+      <tr><td>Diffusion (original, 2015)</td><td class="num">–</td><td class="num">–</td><td class="num">≤ 5.40</td></tr>
+      <tr><td>NCSN (Song &amp; Ermon)</td><td class="num">8.87 ± 0.12</td><td class="num">25.32</td><td class="num">–</td></tr>
+    </tbody></table></div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Ablation, Table 2 (CIFAR-10)</th><th>IS</th><th>FID</th></tr></thead>
+    <tbody>
+      <tr><td>predict μ̃, true bound, learned diagonal Σ</td><td class="num">7.28</td><td class="num">23.69</td></tr>
+      <tr><td>predict μ̃, true bound, fixed isotropic Σ</td><td class="num">8.06</td><td class="num">13.22</td></tr>
+      <tr><td>predict μ̃, unweighted MSE</td><td>unstable</td><td></td></tr>
+      <tr><td>predict ε, true bound, learned diagonal Σ</td><td>unstable</td><td></td></tr>
+      <tr><td>predict ε, true bound, fixed isotropic Σ</td><td class="num">7.67</td><td class="num">13.51</td></tr>
+      <tr><td>predict ε, <var>L</var><sub>simple</sub></td><td class="num">9.46</td><td class="num">3.17</td></tr>
+    </tbody></table></div>
+  <div class="prose">
+    <p>Table 3 (LSUN 256 × 256 FID): Church 7.89 (ProgressiveGAN 6.42), Bedroom 6.36 and 4.90 for the large model (ProgressiveGAN 8.34), Cat 19.75 (ProgressiveGAN 37.52). CIFAR-10 FID against the test set is 5.24; the train/test NLL gap of at most 0.03 bits/dim indicates no overfitting.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>The ablation is the paper in miniature: ε-prediction with the unweighted loss is what turns diffusion from FID ~13 into FID ~3.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Which StyleGAN2 number is lower than DDPM's FID, and why is it not a like-for-like comparison?</dt>
+    <dd>StyleGAN2 + ADA's 2.67 is class-conditional; DDPM's 3.17 is unconditional. The like-for-like unconditional StyleGAN2 + ADA result is 3.26, slightly worse than DDPM.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §4.3–4.4 · Table 4 · Figs. 6–9</p>
+  <h2>Progressive coding and interpolation</h2>
+  <div class="prose">
+    <p><strong>Lossless codelengths.</strong> 3.75 bits/dim is better than energy-based models and score matching but worse than other likelihood models (the paper cites 2.80 for the Sparse Transformer). Treating <var>L</var><sub>1</sub> + … + <var>L</var><sub><var>T</var></sub> as rate and <var>L</var><sub>0</sub> as distortion, the CIFAR-10 model has rate 1.78 bits/dim and distortion 1.97 bits/dim, an RMSE of 0.95 on a 0–255 scale. So more than half the lossless codelength describes imperceptible distortions: diffusion models have an inductive bias towards perceptually good lossy compression.</p>
+    <p><strong>Progressive generation.</strong> Predicting <b>x̂</b><sub>0</sub> from <b>x</b><sub><var>t</var></sub> during sampling shows large-scale features appearing first and details last (Fig. 6). Sampling from the same <b>x</b><sub><var>t</var></sub> shares high-level attributes when <var>t</var> is small and only coarse layout when <var>t</var> is large (Fig. 7). The authors read Algorithm 2 as a generalisation of autoregressive decoding along a bit ordering.</p>
+    <p><strong>Interpolation (Figs. 8–9).</strong> Encode two images to <b>x</b><sub><var>t</var></sub> with the forward process (<var>t</var> = 500), interpolate linearly, and decode with the reverse process; on CelebA-HQ this smoothly varies pose, skin tone, hairstyle, expression and background, "but not eyewear".</p>
+  </div>
+</section>
+
+<section class="kp" id="t6">
+  <p class="eyebrow"><b>Section</b> · §5–6 and lineage</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose"><ul>
+    <li><strong>Sampling cost.</strong> 1,000 sequential network evaluations; sampling 128 images at 256 × 256 took about 300 s on the TPU v3-8.</li>
+    <li><strong>Likelihood.</strong> NLL is uncompetitive with autoregressive models, and the best-sample objective is not the best-likelihood objective.</li>
+    <li><strong>Schedule and variances by hand.</strong> Fixed linear β and fixed σ<sub><var>t</var></sub> leave quality on the table, especially with fewer steps.</li>
+  </ul></div>
+  <div class="later"><span class="label">Later refinements</span><strong>DDIM</strong> (Song, Meng and Ermon, 2020): a non-Markovian process with the same training objective, allowing deterministic sampling in tens of steps. <strong>Improved DDPM</strong> (Nichol and Dhariwal, 2021): cosine schedule and learned variances Σ<sub>θ</sub> = exp(<var>v</var> log β<sub><var>t</var></sub> + (1 − <var>v</var>) log β̃<sub><var>t</var></sub>), competitive likelihoods and fewer steps. <strong>Score SDEs</strong> (Song et al., 2021): DDPM is a discretisation of a variance-preserving SDE with a probability-flow ODE. <a href="beatgans.html">ADM</a> (2021) and <a href="cfg.html">classifier-free guidance</a> made conditional diffusion beat GANs; <a href="ldm.html">latent diffusion</a> moved it to a compressed space; <a href="flowmatch.html">flow matching</a> generalised the training target to velocities along arbitrary paths; <a href="diffpolicy.html">Diffusion Policy</a> applied the same machinery to robot actions.</div>
+</section>
+
+<section class="kp" id="t7" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>β<sub><var>t</var></sub>, α<sub><var>t</var></sub>, ᾱ<sub><var>t</var></sub></dt><dd>Per-step noise variance, 1 − β<sub><var>t</var></sub>, and the cumulative product of α.</dd>
+    <dt>ε-prediction</dt><dd>Network outputs the noise that was added, rather than the mean or the clean image.</dd>
+    <dt><var>L</var><sub>simple</sub></dt><dd>Unweighted mean-squared error on ε with uniformly sampled <var>t</var> (Eq. 14).</dd>
+    <dt>FID</dt><dd>Fréchet Inception Distance: distance between Gaussian fits to Inception-network features of real and generated images. Lower is better.</dd>
+    <dt>IS</dt><dd>Inception Score: rewards confident and diverse class predictions on samples. Higher is better.</dd>
+    <dt>bits/dim</dt><dd>Negative log-likelihood per pixel channel, in bits.</dd>
+    <dt>Langevin dynamics</dt><dd>Sampling by repeatedly following the score (gradient of log density) plus Gaussian noise.</dd>
+    <dt>EMA</dt><dd>Exponential moving average of weights, used at sampling time.</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+var DD=(function(){ var T=1000, beta=[0], al=[1], ab=[1];
+  for (var t=1;t<=T;t++){ var b=1e-4+(0.02-1e-4)*(t-1)/(T-1); beta.push(b); al.push(1-b); ab.push(ab[t-1]*(1-b)); }
+  // four 16x16 glyphs, values -1 / +1
+  var G=[]; function make(f){ var a=[]; for (var y=0;y<16;y++) for (var x=0;x<16;x++) a.push(f(x-7.5,y-7.5)?1:-1); return a; }
+  G.push(make(function(x,y){ var r=Math.sqrt(x*x+y*y); return r>4.2&&r<6.8; }));
+  G.push(make(function(x,y){ return (Math.abs(x-y)<1.6||Math.abs(x+y)<1.6)&&Math.abs(x)<6.6&&Math.abs(y)<6.6; }));
+  G.push(make(function(x,y){ return y>-6.5&&y<6.5&&Math.abs(x)<(y+6.5)*0.5; }));
+  G.push(make(function(x,y){ return (Math.abs(x)<1.6&&Math.abs(y)<6.6)||(Math.abs(y)<1.6&&Math.abs(x)<6.6); }));
+  function post(xt,t){ var a=Math.sqrt(ab[t]), v=1-ab[t], L=G.map(function(g){ var d=0; for (var i=0;i<256;i++){ var e=xt[i]-a*g[i]; d+=e*e; } return -d/(2*Math.max(v,1e-8)); });
+    var m=Math.max.apply(null,L), w=L.map(function(l){ return Math.exp(l-m); }), s=w.reduce(function(p,q){return p+q;},0); return w.map(function(q){return q/s;}); }
+  function x0hat(xt,t){ var w=post(xt,t), o=[]; for (var i=0;i<256;i++){ var s=0; for (var k=0;k<4;k++) s+=w[k]*G[k][i]; o.push(s); } return {x0:o,w:w}; }
+  function pic(svg,arr,x,y,size,label){ var c=size/16; S('rect',{x:x,y:y,width:size,height:size,'class':'f-card'},svg);
+    for (var i=0;i<256;i++){ var v=Math.max(0,Math.min(1,(arr[i]+1)/2)); if (v>0.02) S('rect',{x:x+(i%16)*c,y:y+Math.floor(i/16)*c,width:c+0.3,height:c+0.3,'class':'f-ink','fill-opacity':fmt(v,2)},svg); }
+    S('rect',{x:x,y:y,width:size,height:size,'class':'w-ink'},svg); if (label) S('text',{x:x+size/2,y:y+size+16,'class':'t-s mid'},svg,label); }
+  return {T:T,beta:beta,al:al,ab:ab,G:G,post:post,x0hat:x0hat,pic:pic};
+})();
+function npdf(x,m,v){ return Math.exp(-0.5*(x-m)*(x-m)/v)/Math.sqrt(2*Math.PI*v); }
+(function(){ // forward noising
+  var svg=$('#nz'), t=0, eps, seed=1;
+  function ne(){ var r=rng(seed++); eps=[]; for (var i=0;i<256;i++) eps.push(gauss(r)); }
+  function draw(){ clear(svg); var a=Math.sqrt(DD.ab[t]), b=Math.sqrt(1-DD.ab[t]), x=DD.G[0].map(function(g,i){ return a*g+b*eps[i]; });
+    DD.pic(svg,DD.G[0],30,30,170,'original'); DD.pic(svg,x,230,30,170,'step '+t);
+    var X0=430, W=150; S('text',{x:X0,y:50,'class':'t-h'},svg,'Step '+t);
+    S('rect',{x:X0,y:80,width:W,height:18,'class':'box'},svg); S('rect',{x:X0,y:80,width:W*a,height:18,'class':'f-fire'},svg); S('text',{x:X0,y:116,'class':'t-fire'},svg,'picture × '+fmt(a,3));
+    S('rect',{x:X0,y:140,width:W,height:18,'class':'box'},svg); S('rect',{x:X0,y:140,width:W*b,height:18,'class':'f-wire'},svg); S('text',{x:X0,y:176,'class':'t-wire'},svg,'noise × '+fmt(b,3));
+    $('#nz-r').innerHTML='Step <b>'+t+'</b>: noisy = <b>'+fmt(a,3)+'</b> × picture + <b>'+fmt(b,3)+'</b> × noise.'+(t>0?' This step alone added noise of variance β = '+fmt(DD.beta[t],4)+'.':''); }
+  ne(); bindRange('nz-t',function(v){ t=v; draw(); }); $('#nz-new').onclick=function(){ ne(); draw(); };
+})();
+(function(){ // best guess
+  var svg=$('#gs'), t=900, k=0, eps, seed=7;
+  function ne(){ var r=rng(seed++); eps=[]; for (var i=0;i<256;i++) eps.push(gauss(r)); }
+  function draw(){ clear(svg); var a=Math.sqrt(DD.ab[t]), b=Math.sqrt(1-DD.ab[t]), x=DD.G[k].map(function(g,i){ return a*g+b*eps[i]; });
+    var h=DD.x0hat(x,Math.max(t,1)); DD.pic(svg,DD.G[k],20,20,150,'true picture'); DD.pic(svg,x,220,20,150,'noisy, step '+t); DD.pic(svg,t===0?x:h.x0,420,20,150,'implied clean picture');
+    S('text',{x:20,y:222,'class':'t-s'},svg,'weight on each training picture:');
+    h.w.forEach(function(w,j){ var X=250+j*85; S('rect',{x:X,y:206,width:70,height:14,'class':'box'},svg); S('rect',{x:X,y:206,width:70*w,height:14,'class':j===k?'f-fire':'f-wire'},svg); S('text',{x:X+35,y:240,'class':'t-s mid'},svg,['ring','cross','triangle','plus'][j]+' '+fmt(w*100,0)+'%'); });
+    var err=0, e2=0; var ehat=x.map(function(xi,i){ return (xi-a*h.x0[i])/b; }); for (var i=0;i<256;i++){ err+=Math.pow(ehat[i]-eps[i],2); e2+=Math.pow(h.x0[i]-DD.G[k][i],2); }
+    $('#gs-r').innerHTML= t===0 ? 'Step 0: no noise to guess.' : 'Per-pixel squared error of the noise guess: <b>'+fmt(err/256,3)+'</b>; of the implied clean picture: <b>'+fmt(e2/256,3)+'</b>. '+(Math.max.apply(null,h.w)>0.99?'The guess has locked on to one picture.':'The guess is still a blend.')+(t>=800?' (At high noise the picture is almost all noise, so guessing the noise is easy while the clean picture is still uncertain.)':''); }
+  ne(); bindRange('gs-t',function(v){ t=v; draw(); }); $('#gs-new').onclick=function(){ k=(k+1)%4; ne(); draw(); };
+})();
+(function(){ // sampling with Algorithm 2
+  var svg=$('#sm'), x, t, timer=null, seed=21, r, snaps;
+  function reset(){ if (timer){ clearInterval(timer); timer=null; $('#sm-run').textContent='Generate'; } r=rng(seed++); x=[]; for (var i=0;i<256;i++) x.push(gauss(r)); t=DD.T; draw(); }
+  function step(n){ for (var k=0;k<n&&t>0;k++){ var h=DD.x0hat(x,t), a=Math.sqrt(DD.ab[t]), b=Math.sqrt(1-DD.ab[t]), sig=Math.sqrt(DD.beta[t]);
+      for (var i=0;i<256;i++){ var e=(x[i]-a*h.x0[i])/b; x[i]=(x[i]-DD.beta[t]/b*e)/Math.sqrt(DD.al[t])+(t>1?sig*gauss(r):0); } t--; } draw(); }
+  function draw(){ clear(svg); var h=DD.x0hat(x,Math.max(t,1)); DD.pic(svg,x,40,20,180,'x at step '+t); DD.pic(svg,h.x0,260,20,180,'points towards');
+    var X0=470; S('text',{x:X0,y:40,'class':'t-h'},svg,'Step '+t); S('text',{x:X0,y:62,'class':'t-s'},svg,'of 1000');
+    S('rect',{x:X0,y:90,width:110,height:12,'class':'box'},svg); S('rect',{x:X0,y:90,width:110*(1-t/DD.T),height:12,'class':'f-fire'},svg);
+    var j=h.w.indexOf(Math.max.apply(null,h.w)); S('text',{x:X0,y:140,'class':'t-s'},svg,'leading guess:'); S('text',{x:X0,y:160,'class':'t-fire'},svg,['ring','cross','triangle','plus'][j]+' '+fmt(h.w[j]*100,0)+'%');
+    $('#sm-r').innerHTML= t===DD.T ? 'Pure static. Press Generate.' : (t===0 ? 'Done: a clean <b>'+['ring','cross','triangle','plus'][j]+'</b>.' : 'Step <b>'+t+'</b>.'); }
+  $('#sm-run').onclick=function(){ var bt=this; if (timer){ clearInterval(timer); timer=null; bt.textContent='Generate'; return; } if (t===0) reset(); bt.textContent='Pause';
+    timer=setInterval(function(){ step(20); if (t===0){ clearInterval(timer); timer=null; bt.textContent='Generate'; } },40); };
+  $('#sm-step').onclick=function(){ if (t===0) reset(); step(100); };
+  $('#sm-reset').onclick=reset; reset();
+})();
+(function(){ // schedules
+  var svg=$('#sc'), t=500, cos=false, T=1000, abc=[];
+  function f(t){ return Math.pow(Math.cos(((t/T)+0.008)/1.008*Math.PI/2),2); } for (var i=0;i<=T;i++) abc.push(Math.max(f(i)/f(0),1e-9));
+  function X(t){ return 60+t/T*480; } function Y(v){ return 215-v*180; } function Ys(l){ return 215-(l+12)/24*180; }
+  function draw(){ clear(svg);
+    S('line',{x1:60,y1:215,x2:540,y2:215,'class':'axis'},svg); S('line',{x1:60,y1:35,x2:60,y2:215,'class':'axis'},svg); S('line',{x1:540,y1:35,x2:540,y2:215,'class':'axis'},svg);
+    [0,250,500,750,1000].forEach(function(u){ S('text',{x:X(u),y:232,'class':'t-s mid'},svg,u); }); S('text',{x:300,y:252,'class':'t-s mid'},svg,'step t');
+    [0,0.5,1].forEach(function(v){ S('text',{x:54,y:Y(v)+4,'class':'t-fire end'},svg,v); }); [-10,0,10].forEach(function(l){ S('text',{x:546,y:Ys(l)+4,'class':'t-wire'},svg,l); S('line',{x1:60,y1:Ys(l),x2:540,y2:Ys(l),'class':'grid'},svg); });
+    S('text',{x:66,y:28,'class':'t-fire'},svg,'√ᾱ (signal kept)'); S('text',{x:534,y:28,'class':'t-wire end'},svg,'log SNR');
+    function curve(arr,fn,cl){ var d=''; for (var i=1;i<=T;i+=5) d+=(d?'L':'M')+X(i)+','+fn(arr[i]); S('path',{d:d,'class':cl},svg); }
+    curve(DD.ab,function(a){ return Y(Math.sqrt(a)); },'w-fire'); curve(DD.ab,function(a){ return Ys(Math.max(-12,Math.log(a/(1-a)))); },'w');
+    if (cos){ curve(abc,function(a){ return Y(Math.sqrt(a)); },'w-dash'); curve(abc,function(a){ return Ys(Math.max(-12,Math.min(12,Math.log(a/(1-a))))); },'w-dash'); S('text',{x:300,y:48,'class':'t-s mid'},svg,'dashed: cosine schedule'); }
+    S('line',{x1:X(t),y1:35,x2:X(t),y2:215,'class':'w-inh'},svg);
+    var a=DD.ab[t]; $('#sc-r').innerHTML='Linear: ᾱ = <b>'+fmt(a,4)+'</b>, √ᾱ = <b>'+fmt(Math.sqrt(a),3)+'</b>, log SNR = <b>'+fmt(Math.log(a/(1-a)),2)+'</b>'+(cos?'. Cosine: √ᾱ = <b>'+fmt(Math.sqrt(abc[t]),3)+'</b>, log SNR = <b>'+fmt(Math.log(abc[t]/(1-abc[t])),2)+'</b>.':'.')+(t===1000?' At t = T, √ᾱ ≈ 0.006: essentially pure noise.':''); }
+  bindRange('sc-t',function(v){ t=v; draw(); });
+  $('#sc-cos').onclick=function(){ cos=!cos; this.setAttribute('aria-pressed',cos); this.classList.toggle('on',cos); draw(); };
+})();
+(function(){ // 1-D Algorithm 2 with exact eps
+  var svg=$('#tr'), tilde=false, seed=4, M=[-1,1], s2=0.1*0.1, T=DD.T;
+  function epsHat(x,t){ var a=Math.sqrt(DD.ab[t]), v=1-DD.ab[t], ws=[], ex=[], tot=0;
+    M.forEach(function(m){ var sv=DD.ab[t]*s2+v, w=npdf(x,a*m,sv); ws.push(w); tot+=w; ex.push(m+a*s2/sv*(x-a*m)); });
+    var x0=(ws[0]*ex[0]+ws[1]*ex[1])/(tot||1e-300); return (x-a*x0)/Math.sqrt(v); }
+  function sig(t){ return tilde ? (t>1?(1-DD.ab[t-1])/(1-DD.ab[t])*DD.beta[t]:0) : DD.beta[t]; }
+  function run(n,keep){ var r=rng(seed), paths=[], fin=[];
+    for (var j=0;j<n;j++){ var x=gauss(r), p=keep?[[T,x]]:null;
+      for (var t=T;t>=1;t--){ var e=epsHat(x,t); x=(x-DD.beta[t]/Math.sqrt(1-DD.ab[t])*e)/Math.sqrt(DD.al[t])+(t>1?Math.sqrt(sig(t))*gauss(r):0); if (keep&&t%10===1) p.push([t-1,x]); }
+      if (keep) paths.push(p); fin.push(x); }
+    return {paths:paths,fin:fin}; }
+  function draw(){ clear(svg); var A=run(40,true), B=run(3000,false);
+    function X(t){ return 50+(T-t)/T*380; } function Y(x){ return 130-x*50; }
+    S('line',{x1:50,y1:235,x2:430,y2:235,'class':'axis'},svg); S('line',{x1:50,y1:20,x2:50,y2:235,'class':'axis'},svg);
+    [-2,-1,0,1,2].forEach(function(v){ S('text',{x:44,y:Y(v)+4,'class':'t-s end'},svg,v); S('line',{x1:50,y1:Y(v),x2:430,y2:Y(v),'class':'grid'},svg); });
+    [1000,500,0].forEach(function(t){ S('text',{x:X(t),y:250,'class':'t-s mid'},svg,'t = '+t); });
+    A.paths.forEach(function(p){ var d=''; p.forEach(function(q,i){ d+=(i?'L':'M')+fmt(X(q[0]),1)+','+fmt(Y(Math.max(-2.1,Math.min(2.1,q[1]))),1); }); S('path',{d:d,'class':'w-faint'},svg); });
+    var B0=455, Bw=170, lo=-2.1, hi=2.1, nb=42, bw=(hi-lo)/nb, h=[]; for (var i=0;i<nb;i++) h.push(0);
+    B.fin.forEach(function(x){ var b=Math.floor((x-lo)/bw); if (b>=0&&b<nb) h[b]++; });
+    var tmax=0.5*npdf(1,1,s2); h.forEach(function(c,i){ var d=c/B.fin.length/bw, w=Math.min(d/tmax,1.2)*Bw*0.8; S('rect',{x:B0,y:Y(lo+(i+1)*bw),width:w,height:Math.max(bw*50-0.6,0.5),'class':'f-fire','fill-opacity':0.8},svg); });
+    var d=''; for (var i=0;i<=200;i++){ var x=lo+(hi-lo)*i/200, p=0.5*npdf(x,-1,s2)+0.5*npdf(x,1,s2); d+=(i?'L':'M')+(B0+p/tmax*Bw*0.8)+','+Y(x); } S('path',{d:d,'class':'w-ink'},svg);
+    S('text',{x:B0,y:16,'class':'t-s'},svg,'final samples');
+    var m=0,v=0; B.fin.forEach(function(x){ m+=Math.abs(x); }); m/=B.fin.length; B.fin.forEach(function(x){ v+=Math.pow(Math.abs(x)-m,2); }); v=Math.sqrt(v/B.fin.length);
+    var left=B.fin.filter(function(x){return x<0;}).length/B.fin.length;
+    $('#tr-r').innerHTML='σ² = '+(tilde?'β̃':'β')+': '+fmt(100*left,1)+'% of samples in the left cluster; cluster centre |x| = <b>'+fmt(m,3)+'</b> (true 1), spread <b>'+fmt(v,3)+'</b> (true 0.100).'; }
+  $('#tr-b').onclick=function(){ tilde=false; this.classList.add('on'); this.setAttribute('aria-pressed','true'); $('#tr-bt').classList.remove('on'); $('#tr-bt').setAttribute('aria-pressed','false'); draw(); };
+  $('#tr-bt').onclick=function(){ tilde=true; this.classList.add('on'); this.setAttribute('aria-pressed','true'); $('#tr-b').classList.remove('on'); $('#tr-b').setAttribute('aria-pressed','false'); draw(); };
+  $('#tr-go').onclick=function(){ seed++; draw(); };
+  draw();
+})();
+</script>

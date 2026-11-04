@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Abliteration tools compared (2025) study guide</title>
+<meta name="description" content="After the 2024 discovery that a chat model&#x27;s refusals can be removed by deleting one internal direction, several open-source tools appeared that automate the edit. This paper measures them side by side on 16 models. They share one idea but do very different amounts of collateral damage: the sam">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Safety &amp; security</b> · 2025</p>
+  <h1>Comparative Analysis of LLM Abliteration Methods: A Cross-Architecture Evaluation</h1>
+  <p class="cite">Richard J. Young · arXiv</p>
+  <p class="lede">After the 2024 discovery that a chat model's refusals can be removed by deleting one internal direction, several open-source tools appeared that automate the edit. This paper measures them side by side on 16 models. They share one idea but do very different amounts of collateral damage: the same model's grade-school maths score moved anywhere from +1.5 to −18.8 points depending on the tool, and how easily refusal comes out depends strongly on the model.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/2512.13655">Read the paper (free)</a> <a href="https://lovespark.love/papers-worth-reading/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, separate AI review (also by Claude), but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>"Abliteration" removes a model's refusals by deleting the internal direction tied to refusing, and four public tools (Heretic, DECCP, ErisForge and FailSpy's abliterator) do this in different ways.</p>
+  <p>The study runs them on 16 open models of 7 to 14 billion parameters and measures what is left of the refusals, how much the model's behaviour shifted on harmless prompts, and its scores on knowledge, maths and common-sense tests.</p>
+  <p>Results depend strongly on the model: some lose their refusals with barely any other change, others resist, and resisting goes together with bigger side effects.</p>
+  <p>Maths reasoning (GSM8K) is the most fragile skill, and the tool that searches hardest for the edit did the most maths damage, which says something about how tangled refusal is with other abilities.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1–2</p>
+  <h2>One idea, many implementations</h2>
+  <div class="prose">
+    <p>A chat model's internal state is a long list of numbers that can be thought of as an arrow. <a href="refusal.html">Arditi et al. (2024)</a> showed that refusing a harmful request is largely controlled by one <strong>direction</strong> of that arrow, and that the model's weights can be edited so this direction is never written. The technique became known as <strong>abliteration</strong>, and several open-source tools now automate it.</p>
+    <p>The tools differ in how they choose the direction, which layers they edit, how strongly, and whether they search over many settings. Until this paper, nobody had compared them carefully. Why does that matter for safety? Because how much damage the edit does, and which models resist it, tells us how deeply safety training is tied into a model's other abilities. The author's own framing is blunt: as currently implemented, alignment of open-weight models is "not a security mechanism but a speed bump", and measuring that is the point.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Four surgeons all trained in the same operation. Comparing their outcomes tells you about the surgeons, but also about the patients: which bodies make the operation clean, and where the nerve you want to cut runs right next to one you need.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The study compares tools that implement the same weight edit, to learn how cleanly refusal can be separated from everything else in different models.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §3 · Table 1</p>
+  <h2>How the comparison was done</h2>
+  <div class="prose">
+    <p>Sixteen instruction-tuned models were used, including Llama-3.1-8B, Mistral-7B, several Qwen models, Gemma, Yi, DeepSeek, Phi-3, Vicuna and one model built on a different, non-transformer architecture (Falcon-Mamba). Four measurements mattered:</p>
+    <ul>
+      <li><strong>Remaining refusals</strong>: of 100 harmful prompts, how many still got a refusal.</li>
+      <li><strong>KL divergence</strong>: a measure of how much the model's word choices on 100 <em>harmless</em> prompts changed. Near zero means "behaves just as before".</li>
+      <li><strong>Benchmark scores</strong>: MMLU (general knowledge), GSM8K (grade-school maths word problems) and HellaSwag (common-sense sentence completion).</li>
+      <li><strong>Coverage</strong>: on how many of the 16 models a tool worked at all. Heretic handled all 16, DECCP 11, ErisForge 9 and FailSpy's tool 5.</li>
+    </ul>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>The study checks not only whether refusals disappear but how much else changes, using a "behaviour shift" score and three skill tests.</p>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §4.2 · Tables 3–4</p>
+  <h2>Same edit, very different damage</h2>
+  <div class="prose">
+    <p>On general knowledge and common sense, every tool cost less than a point on average. Maths was different. The tool that runs an automated search over many edit settings (Heretic) cut the Yi-1.5-9B model's GSM8K score from 70.9% to 52.1%, a loss of 18.8 points, while a single-pass tool (DECCP) on the same model actually <em>raised</em> it by 1.5 points. Pick a model below to see the spread.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn on" data-gm="0">Yi-1.5-9B</button>
+      <button class="btn" data-gm="1">DeepSeek-7B</button>
+      <button class="btn" data-gm="2">Mistral-7B</button>
+      <button class="btn" data-gm="avg">Average change, 3 benchmarks</button>
+    </div>
+    <div class="svgbox"><svg id="gm" viewBox="0 0 600 270" role="img" aria-label="GSM8K scores of base and abliterated models"></svg></div>
+    <p class="readout" id="gm-r"></p>
+    <figcaption>From Tables 3 and 4 of the paper. Per-model views: GSM8K accuracy (%) for the original model and after each tool. "Average change" view: mean change in points versus the original across the three models that had complete results for all three tools. The paper gives GSM8K's standard error as about 1.2–1.4 points, so only changes well beyond that are meaningful.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Knowledge survives abliteration well; maths does not always, and the damage depends on both the tool and the model.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Is DECCP's +1.5 on Yi evidence that abliteration improves maths?</dt>
+    <dd>Not really. It is about the size of the benchmark's standard error, so it is best read as "no measurable damage".</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §5 · Discussion</p>
+  <h2>Why maths? Overlapping directions</h2>
+  <div class="prose">
+    <p>The author suggests two reasons. Maths needs long, exact chains of reasoning, so a small disturbance anywhere can turn a right answer wrong. And refusal may <em>overlap</em> with maths reasoning inside the model: if the direction being deleted is not perfectly separate from directions the model uses for calculation, deleting it takes some maths with it. The paper frames this overlap as a possibility, not a proven finding.</p>
+    <p>The geometry is easy to see in two dimensions. Removing a direction removes, from every other feature, whatever part of it lies along that direction.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Angle between "refusal" and "maths" <input type="range" id="ov-a" min="10" max="90" step="1" value="70"><output id="ov-a-o">70</output>°</label>
+    </div>
+    <div class="svgbox"><svg id="ov" viewBox="0 0 600 260" role="img" aria-label="A maths feature losing its component along the refusal direction when that direction is removed"></svg></div>
+    <p class="readout" id="ov-r"></p>
+    <figcaption>Illustrative toy. The amber line is the refusal direction being deleted. The blue arrow is a feature the model uses for maths. Deleting the refusal direction flattens the maths arrow onto the line at right angles to it (green). At 90° nothing is lost; the smaller the angle, the more of the maths feature goes with it.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>Erasing pencil marks along a ruler's edge. Anything drawn exactly across the ruler survives; any line that runs partly along it loses that part.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>If refusal shares direction with a useful skill, removing refusal damages that skill; maths appears most exposed.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §4.1, §5.2 · Table 2</p>
+  <h2>Some models resist, and resisting costs</h2>
+  <div class="prose">
+    <p>Across eight models run with the search-based tool, how many refusals survived ranged from 2 out of 100 (Zephyr-7B) to 54 (StableLM-2-12B). The models that kept the most refusals were also the ones whose harmless behaviour shifted most. The author reads this as "coupled resistance": in some models refusal is tangled up with general behaviour, so it cannot be removed without disturbing everything else.</p>
+    <p>Zephyr, the most easily stripped model, is the study's only model aligned with DPO alone (a single preference-training step). The author suggests, cautiously and from that one example, that multi-stage alignment (for example RLHF followed by DPO) may spread safety more widely through a model. That idea matches the <a href="abl-defense.html">extended-refusal defence</a>, which deliberately spreads refusal out.</p>
+  </div>
+  <div class="later"><span class="label">Context</span>This paper does not propose new methods. Its value is measurement: it shows that "abliteration preserves capabilities" was an over-general claim, and that a model's resistance to it varies a lot. It also notes that the refusal checks used are rough (they look for refusal phrases), so they likely understate how often refusals were actually removed.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>How hard refusal is to remove varies by model, and models where it is hard to remove are those where it is entangled with everything else.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Safety alignment makes LLMs refuse harmful queries; abliteration removes refusal by orthogonalising weights against refusal-related directions, and several open-source tools implement it. This study evaluates four tools (Heretic, DECCP, ErisForge, FailSpy) on sixteen instruction-tuned models from 7B to 14B parameters, measuring tool compatibility, refusal suppression, distribution shift and capability preservation. Single-pass methods preserve capabilities better on the benchmarked subset than the Bayesian-optimised method, which produced variable distribution shift; mathematical reasoning (GSM8K) is the most sensitive capability. Richard J. Young, arXiv:2512.13655 (v1 December 2025; v2 January 2026).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2.1–2.3</p>
+  <h2>The edit and its variants</h2>
+  <div class="prose"><p>All tools implement a variant of weight orthogonalisation against a refusal direction <var>r</var> (unit norm), with an ablation strength <var>α</var>:</p></div>
+  <div class="eq"><var>W</var>′ = <var>W</var> − <var>α</var> <var>r</var><var>r</var><sup>⊤</sup><var>W</var></div>
+  <div class="prose">
+    <p><var>α</var> = 1 is the full projection of <a href="refusal.html">Arditi et al.</a>; other values partially remove the direction. Two variants appear in the tools: <strong>norm-preserving</strong> ablation (attributed to Lai), which removes the directional component but restores each weight row's original norm, and <strong>projected</strong> ablation, which first uses Gram–Schmidt to remove the harmless-mean component from <var>r</var>, so that the edit does not also delete what harmful and harmless prompts share.</p>
+    <p>The tools differ in how they choose <var>r</var>, layers and strength:</p>
+  </div>
+  <div class="tablebox"><table>
+    <tr><th>Tool</th><th>Approach (as described in §2.3)</th><th>Coverage</th></tr>
+    <tr><td>Heretic</td><td>Bayesian optimisation (Optuna TPE, 50 trials) over layer ranges, ablation weights and direction indices; objective combines KL divergence on harmless prompts with refusal rate.</td><td class="num">16/16</td></tr>
+    <tr><td>DECCP</td><td>Single pass; direction chosen by refusal-direction magnitude scanning; memory-efficient sharded processing; norm-preserving and projected variants.</td><td class="num">11/16</td></tr>
+    <tr><td>ErisForge</td><td>Single pass; wraps decoder layers in ablation (or addition) modules with a weight parameter (1.0 in this study).</td><td class="num">9/16</td></tr>
+    <tr><td>FailSpy abliterator</td><td>TransformerLens hooks; selects the layer with maximum refusal-direction magnitude.</td><td class="num">5/16</td></tr>
+  </table></div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Strength <var>α</var> <input type="range" id="np-a" min="0" max="1.2" step="0.05" value="1" data-fmt="2"><output id="np-a-o">1.00</output></label>
+      <button class="btn" id="np-n" aria-pressed="false">Norm-preserving</button>
+    </div>
+    <div class="svgbox"><svg id="np" viewBox="0 0 600 260" role="img" aria-label="A weight row vector before and after partial projection, with and without norm preservation"></svg></div>
+    <p class="readout" id="np-r"></p>
+    <figcaption>One weight row <var>w</var> (blue) in a 2-D slice containing <var>r</var> (amber dashed). The edit leaves (1 − <var>α</var>)(<var>r</var>·<var>w</var>) along <var>r</var>; <var>α</var> &gt; 1 overshoots and flips the sign. Norm-preserving rescales the edited row back to ‖<var>w</var>‖, which keeps the row's overall magnitude, and therefore the scale of its downstream effect, unchanged. Illustrative geometry, not a tool's code.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why might norm preservation reduce side effects?</dt>
+    <dd>Plain projection shortens every row that had a component along <var>r</var>, changing activation scales seen by later layers and normalisation. Restoring the norm removes the direction while keeping magnitudes as the rest of the network expects.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §1, §3 · Hypotheses</p>
+  <h2>Design, metrics and hypotheses</h2>
+  <div class="prose">
+    <p><strong>Hypotheses.</strong> H1 (model dependence): outcomes are strongly model-dependent, with some models showing low KL and low residual refusals and others "coupled resistance". H2 (capability preservation): single-pass methods (DECCP, ErisForge) show smaller average capability loss than optimisation-based Heretic, largest on GSM8K. H3 (alignment sensitivity): a DPO-only model is more susceptible than RLHF-aligned ones.</p>
+    <p><strong>Metrics.</strong> First-token KL divergence on 100 harmless prompts (below 0.1 "excellent", above 1.0 significant shift). Refusal rate on 100 harmful prompts by refusal-marker matching; ASR = 100% − refusal rate. MMLU (5-shot), GSM8K (5-shot, strict match), HellaSwag (10-shot, normalised). Effect sizes binned as minimal (|Δ| &lt; 1 pp), moderate (1–5) and substantial (≥ 5).</p>
+    <p><strong>Ethics (§3.4).</strong> The author argues the contribution is "systematic evaluation and comparison, not capability advancement", since the tools are already public, and does not release abliterated weights for models without explicitly permissive licences.</p>
+  </div>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §4.1 · Table 2 · H1</p>
+  <h2>Model dependence: KL vs residual refusals</h2>
+  <div class="prose"><p>Heretic was run to completion on eight models. Residual refusals range from 2/100 to 54/100 and KL from 0.043 to 1.646. The two are strongly correlated (Pearson <var>r</var> = 0.87, <var>p</var> = 0.005, <var>n</var> = 8): models that resist refusal removal also suffer the largest distribution shift on harmless prompts. The figure recomputes the correlation from the table.</p></div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn on" id="kl-log" aria-pressed="true">Log KL axis</button>
+      <button class="btn" id="kl-drop" aria-pressed="false">Leave out the two high-KL models</button>
+    </div>
+    <div class="svgbox"><svg id="kl" viewBox="0 0 600 290" role="img" aria-label="Scatter of KL divergence against remaining refusals for eight models"></svg></div>
+    <p class="readout" id="kl-r"></p>
+    <figcaption>Table 2 of the paper (Heretic): remaining refusals out of 100 against first-token KL divergence on harmless prompts. Pearson <var>r</var> is computed live on linear KL, as in the paper. Dropping Qwen2.5-7B and StableLM-2-12B shows how much of the correlation those two models carry, a caution with <var>n</var> = 8.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does dropping two points change <var>r</var> so much?</dt>
+    <dd>With eight points, two high-leverage outliers can create most of a correlation. The remaining six are much more weakly related, so H1's support rests substantially on two models.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §4.2–4.4 · Tables 3–4 · H2, H3</p>
+  <h2>Capability preservation and coverage</h2>
+  <div class="prose">
+    <p>Three models (DeepSeek-7B, Mistral-7B, Yi-1.5-9B) had complete results for Heretic, DECCP and ErisForge. Average changes versus base (Table 4): Heretic −0.78 MMLU, −7.81 GSM8K, −0.56 HellaSwag; DECCP −0.61, −0.13, −0.25; ErisForge −0.12, −0.28, −0.08. GSM8K spread runs from +1.51 (DECCP on Yi) to −18.81 (Heretic on Yi; −26.5% relative). H2 is supported on this subset.</p>
+    <p>For H3, the paper says the result "is consistent with" the hypothesis but that "stronger conclusions require additional DPO-only models": Zephyr-7B-beta, the DPO-only model, had the fewest residual refusals (2/100), but one model cannot separate alignment method from other differences. Coverage: Heretic was the only tool to process the Mamba state-space model, as the others assume transformer blocks.</p>
+    <p>The paper's refusal heuristic is coarse. On a separate cross-check (UncensorBench, <var>n</var> = 900) it gave 72.2% non-refusal where a classifier gave 95.7%, so marker-based refusal rates likely <em>understate</em> how much refusal was removed.</p>
+  </div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §5.3 · Lineage</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose"><ul>
+    <li><strong>Unmatched budgets.</strong> Tools ran at defaults, so differences mix algorithm with compute and refusal targets. Heretic optimises for low KL subject to refusal constraints and may simply push refusal further; a fair comparison needs Pareto curves at matched refusal rates, as the paper itself recommends.</li>
+    <li><strong>Single runs and small <var>n</var>.</strong> One run per configuration; only three models with complete cross-tool baselines; H1's correlation rests on eight points.</li>
+    <li><strong>Narrow evaluation.</strong> Three benchmarks; no instruction following, long-context or multi-turn behaviour; marker-based refusal detection; no models above 14B or mixture-of-experts.</li>
+  </ul></div>
+  <div class="later"><span class="label">Lineage</span>Rests on <a href="refusal.html">Arditi et al. (2024)</a>. The finding that resistance couples with distribution shift echoes <a href="abl-defense.html">Abu Shairah et al. (2025)</a>, whose defended models could only be abliterated at a cost in coherence and perplexity, and <a href="cones.html">Wollschläger et al. (2025)</a>, whose multi-dimensional refusal cones imply single-direction tools leave refusal partly in place. Together they suggest robust open-weight safety means entangling refusal with capability on purpose, so that removing it is visibly costly.</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Abliteration</dt><dd>Orthogonalising weights against a refusal direction.</dd>
+    <dt>KL divergence</dt><dd>Here, shift in the first-token output distribution on harmless prompts.</dd>
+    <dt>Single-pass</dt><dd>Compute a direction once and apply it, no search.</dd>
+    <dt>TPE</dt><dd>Tree-structured Parzen estimator, a Bayesian optimisation method (Optuna).</dd>
+    <dt>Norm-preserving</dt><dd>Variant that restores each row's norm after removing the direction.</dd>
+    <dt>Projected ablation</dt><dd>Variant removing the harmless-mean component from <var>r</var> first.</dd>
+    <dt>DPO</dt><dd>Direct preference optimisation, an alignment method (see <a href="dpo.html">DPO</a>).</dd>
+    <dt>Coupled resistance</dt><dd>Residual refusal that comes with high distribution shift.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="refusal.html">Abliteration (2024)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> (<a href="https://lovespark.love/papers-worth-reading/#abl-compare">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // GSM8K per model
+  var svg=$('#gm'), m='0';
+  var G=[['Yi-1.5-9B',70.89,52.08,72.40,70.51],['DeepSeek-7B',44.58,40.11,43.59,44.35],['Mistral-7B',48.52,48.37,47.61,48.29]];
+  var A={'MMLU':[-0.78,-0.61,-0.12],'GSM8K':[-7.81,-0.13,-0.28],'HellaSwag':[-0.56,-0.25,-0.08]};
+  var tools=['Heretic','DECCP','ErisForge'];
+  function draw(){ clear(svg);
+    if (m!=='avg'){ var g=G[+m], base=225, sc=2.5;
+      S('line',{x1:40,y1:base,x2:580,y2:base,'class':'axis'},svg);
+      [0,40,80].forEach(function(t){ S('line',{x1:40,y1:base-t*sc,x2:580,y2:base-t*sc,'class':'grid'},svg); S('text',{x:36,y:base-t*sc+4,'class':'t-s end'},svg,t); });
+      S('line',{x1:40,y1:base-g[1]*sc,x2:580,y2:base-g[1]*sc,'class':'w-dash'},svg);
+      var lab=['original'].concat(tools);
+      for (var j=0;j<4;j++){ var v=g[j+1], x=70+j*130, d=v-g[1];
+        S('rect',{x:x,y:base-v*sc,width:70,height:v*sc,'class':j?(d< -1.5?'f-inh':'f-wire'):'f-muted'},svg);
+        S('text',{x:x+35,y:base-v*sc-6,'class':'t-s mid'},svg,fmt(v,2)+(j?' ('+(d>=0?'+':'')+fmt(d,2)+')':''));
+        S('text',{x:x+35,y:base+18,'class':'t mid'},svg,lab[j]); }
+      S('text',{x:40,y:18,'class':'t-s'},svg,g[0]+': GSM8K accuracy (%)');
+      $('#gm-r').innerHTML=g[0]+': GSM8K ranges from <b>'+fmt(Math.min(g[2],g[3],g[4]),2)+'%</b> to <b>'+fmt(Math.max(g[2],g[3],g[4]),2)+'%</b> across tools (original <b>'+fmt(g[1],2)+'%</b>).';
+    } else { var x0=360, sc=26, y=40;
+      S('text',{x:40,y:18,'class':'t-s'},svg,'Average change vs original (points), DeepSeek-7B, Mistral-7B, Yi-1.5-9B');
+      [-8,-4,0].forEach(function(t){ var x=x0+t*sc; S('line',{x1:x,y1:28,x2:x,y2:250,'class':t?'grid':'axis'},svg); S('text',{x:x,y:264,'class':'t-s mid'},svg,t); });
+      Object.keys(A).forEach(function(k,i){ S('text',{x:20,y:y+i*72+10,'class':'t'},svg,k);
+        A[k].forEach(function(v,j){ var yy=y+i*72+j*18; S('rect',{x:x0+v*sc,y:yy,width:Math.max(1.5,-v*sc),height:14,'class':v< -1.5?'f-inh':'f-wire'},svg);
+          S('text',{x:x0+6,y:yy+11,'class':'t-s'},svg,tools[j]+' '+fmt(v,2)); }); });
+      $('#gm-r').innerHTML='Every average change is under 1 point except Heretic on GSM8K, <b>−7.81</b>.'; } }
+  $$('[data-gm]').forEach(function(b){ b.addEventListener('click',function(){ m=b.dataset.gm; $$('[data-gm]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }); });
+  draw();
+})();
+(function(){ // overlap toy
+  var svg=$('#ov'), a=70;
+  function draw(){ clear(svg); var cx=230, cy=200, R=170, t=a*Math.PI/180;
+    S('line',{x1:cx-60,y1:cy,x2:cx+R+40,y2:cy,'class':'w-fire','stroke-dasharray':'6 4'},svg); S('text',{x:cx+R+36,y:cy+18,'class':'t-fire end'},svg,'refusal direction (deleted)');
+    S('line',{x1:cx,y1:cy+20,x2:cx,y2:20,'class':'grid'},svg);
+    var mx=Math.cos(t), my=Math.sin(t);
+    S('line',{x1:cx,y1:cy,x2:cx+mx*R,y2:cy-my*R,'class':'w','stroke-width':2.4,'marker-end':'url(#aw)'},svg);
+    S('text',{x:cx+mx*R+8,y:cy-my*R,'class':'t-wire'},svg,'maths feature');
+    S('line',{x1:cx+mx*R,y1:cy-my*R,x2:cx,y2:cy-my*R,'class':'w-dash'},svg);
+    S('line',{x1:cx,y1:cy,x2:cx,y2:cy-my*R,'class':'w-ok','stroke-width':3,'marker-end':'url(#ao)'},svg);
+    S('text',{x:cx-8,y:cy-my*R+4,'class':'t-ok end'},svg,'after edit');
+    var kept=my; S('rect',{x:470,y:40,width:40,height:150,'class':'box'},svg); S('rect',{x:470,y:40+150*(1-kept),width:40,height:150*kept,'class':'f-ok'},svg);
+    S('text',{x:490,y:210,'class':'t mid'},svg,Math.round(kept*100)+'%'); S('text',{x:490,y:228,'class':'t-s mid'},svg,'maths kept');
+    $('#ov-r').innerHTML='At '+a+'° the maths feature keeps <b>'+Math.round(kept*100)+'%</b> of its length (sin '+a+'°); <b>'+Math.round((1-kept)*100)+'%</b> is lost along with refusal.'; }
+  bindRange('ov-a',function(v){ a=v; draw(); });
+})();
+(function(){ // alpha and norm preservation
+  var svg=$('#np'), al=1, np=false;
+  function draw(){ clear(svg); var cx=200, cy=200, s=140, w=[0.8,0.75], r=[1,0];
+    var d=w[0]*r[0]+w[1]*r[1], e=[w[0]-al*d*r[0], w[1]-al*d*r[1]], nw=Math.hypot(w[0],w[1]), ne=Math.hypot(e[0],e[1]);
+    if (np && ne>1e-9) e=[e[0]*nw/ne, e[1]*nw/ne];
+    S('line',{x1:40,y1:cy,x2:420,y2:cy,'class':'w-fire','stroke-dasharray':'6 4'},svg); S('text',{x:416,y:cy+18,'class':'t-fire end'},svg,'r');
+    S('line',{x1:cx,y1:cy,x2:cx+w[0]*s,y2:cy-w[1]*s,'class':'w-faint','stroke-width':2},svg); S('text',{x:cx+w[0]*s+6,y:cy-w[1]*s,'class':'t-s'},svg,'w (before)');
+    S('line',{x1:cx,y1:cy,x2:cx+e[0]*s,y2:cy-e[1]*s,'class':'w','stroke-width':2.6,'marker-end':'url(#aw)'},svg); S('text',{x:cx+e[0]*s+(e[0]<0?-6:6),y:cy-e[1]*s-8,'class':'t-wire'+(e[0]<0?' end':'')},svg,"w′");
+    var comp=e[0]*r[0]+e[1]*r[1], n2=Math.hypot(e[0],e[1]);
+    S('text',{x:440,y:60,'class':'t'},svg,'along r: '+fmt(comp,2)); S('text',{x:440,y:80,'class':'t-s'},svg,'(was '+fmt(d,2)+')');
+    S('text',{x:440,y:120,'class':'t'},svg,'‖w′‖: '+fmt(n2,2)); S('text',{x:440,y:140,'class':'t-s'},svg,'(was '+fmt(nw,2)+')');
+    $('#np-r').innerHTML='α = <b>'+fmt(al,2)+'</b>: component along r is <b>'+fmt(comp,2)+'</b>'+(np?' (scaled by the norm restoration)':'')+'; row norm '+(np?'kept at ':'changes to ')+'<b>'+fmt(n2,2)+'</b>.'; }
+  bindRange('np-a',function(v){ al=v; draw(); });
+  $('#np-n').onclick=function(){ np=!np; this.setAttribute('aria-pressed',np); this.classList.toggle('on',np); draw(); };
+})();
+(function(){ // KL scatter
+  var svg=$('#kl'), logx=true, drop=false;
+  var D=[['Zephyr-7B',2,0.076],['DeepSeek-7B',16,0.043],['Mistral-7B',16,0.317],['Llama-3.1-8B',24,0.056],['Qwen3-8B',25,0.210],['Yi-1.5-9B',25,0.248],['Qwen2.5-7B',42,1.646],['StableLM-2-12B',54,1.605]];
+  function pear(P){ var n=P.length, mx=0, my=0; P.forEach(function(p){ mx+=p[0]; my+=p[1]; }); mx/=n; my/=n; var sxy=0,sx=0,sy=0; P.forEach(function(p){ sxy+=(p[0]-mx)*(p[1]-my); sx+=Math.pow(p[0]-mx,2); sy+=Math.pow(p[1]-my,2); }); return sxy/Math.sqrt(sx*sy); }
+  function draw(){ clear(svg); var x0=70, x1=560, y0=250, y1=30;
+    function X(k){ return logx ? x0+(Math.log10(k)-Math.log10(0.03))/(Math.log10(3)-Math.log10(0.03))*(x1-x0) : x0+k/1.8*(x1-x0); }
+    function Y(r){ return y0-r/60*(y0-y1); }
+    S('line',{x1:x0,y1:y0,x2:x1,y2:y0,'class':'axis'},svg); S('line',{x1:x0,y1:y0,x2:x0,y2:y1,'class':'axis'},svg);
+    (logx?[0.03,0.1,0.3,1,3]:[0,0.5,1,1.5]).forEach(function(t){ S('line',{x1:X(t),y1:y0,x2:X(t),y2:y1,'class':'grid'},svg); S('text',{x:X(t),y:y0+16,'class':'t-s mid'},svg,t); });
+    [0,20,40,60].forEach(function(t){ S('text',{x:x0-6,y:Y(t)+4,'class':'t-s end'},svg,t); });
+    S('text',{x:(x0+x1)/2,y:284,'class':'t-s mid'},svg,'KL divergence on harmless prompts'+(logx?' (log scale)':'')); if (!logx) S('text',{x:x1,y:y1+160,'class':'t-s end'},svg,'(crowded labels hidden; use log axis)');
+    S('text',{x:x0+4,y:22,'class':'t-s'},svg,'remaining refusals / 100');
+    var P=[];
+    D.forEach(function(d,i){ var out=drop && d[2]>1; if (!out) P.push([d[2],d[1]]);
+      S('circle',{cx:X(d[2]),cy:Y(d[1]),r:6,'class':out?'u-off':'f-fire'},svg);
+      if (!logx && (i===3||i===4||i===5)) return; var right=X(d[2])<x1-110 && i!==4; S('text',{x:X(d[2])+(right?9:-9),y:Y(d[1])+(i===2?14:(i===1||i===4||i===5?-9:4)),'class':'t-s'+(right?'':' end')},svg,d[0]); });
+    var r=pear(P);
+    $('#kl-r').innerHTML='Pearson r (linear KL) on <b>'+P.length+'</b> models: <b>'+fmt(r,2)+'</b>'+(drop?'.':' (paper: 0.87).'); }
+  $('#kl-log').onclick=function(){ logx=!logx; this.setAttribute('aria-pressed',logx); this.classList.toggle('on',logx); draw(); };
+  $('#kl-drop').onclick=function(){ drop=!drop; this.setAttribute('aria-pressed',drop); this.classList.toggle('on',drop); draw(); };
+  draw();
+})();
+</script>
+
+</body>
+</html>

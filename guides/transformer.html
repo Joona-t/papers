@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transformer (2017) study guide</title>
+<meta name="description" content="In 2017 the best translation systems still read sentences one word at a time with recurrent networks, using attention as a helper. This paper throws out the recurrence and builds the whole model from attention, so every word can look at every other word at once. It translated better, trained in a fr">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Language models &amp; AI</b> · 2017</p>
+  <h1>Attention Is All You Need</h1>
+  <p class="cite">Ashish Vaswani et al. · NeurIPS 2017</p>
+  <p class="lede">In 2017 the best translation systems still read sentences one word at a time with recurrent networks, using attention as a helper. This paper throws out the recurrence and builds the whole model from attention, so every word can look at every other word at once. It translated better, trained in a fraction of the time, and became the blueprint for nearly every large language model since.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/1706.03762">Read the paper (free)</a> <a href="https://lovespark.love/papers-worth-reading/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, separate AI review (also by Claude), but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Recurrent networks read a sentence one word after another, so they are slow to train and struggle to connect words that are far apart.</p>
+  <p>Attention, a way for each word to pull in information from whichever other words are relevant, had been used as an add-on to them.</p>
+  <p>The Transformer is built from attention alone: in every layer, every word looks at every other word directly and in parallel, with some extra information added to say where each word sits in the sentence.</p>
+  <p>It set new records on English–German and English–French translation at a fraction of the training cost, and its design (with a few later tweaks) is what GPT, BERT and today's chatbots are built on.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1–2</p>
+  <h2>The problem with reading one word at a time</h2>
+  <div class="prose">
+    <p>Before this paper, the standard way to process a sentence with a neural network was a <strong>recurrent network</strong> (such as an <a href="lstm.html">LSTM</a>). It reads word 1, updates a running memory, reads word 2, updates the memory again, and so on. Word 50 cannot be processed until words 1 to 49 are done.</p>
+    <p>That causes two problems. First, speed: modern chips (GPUs) are fast because they do thousands of calculations at the same time, and a strict one-after-another chain wastes that. Second, distance: information about word 1 has to survive 49 memory updates to influence word 50, and it tends to fade on the way.</p>
+    <p>A fix already existed in part. <a href="bahdanau.html">Bahdanau and colleagues</a> had let a translator "attend" back to any source word directly. But the recurrent chain was still there underneath. The Transformer's authors asked whether attention could do the whole job.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Passing a message down a line of fifty people by whispering, versus putting everyone in one room where anyone can ask anyone directly. The room is faster and the message doesn't get garbled.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Recurrent networks are slow because each step waits for the last, and they lose track of far-apart words. Attention offered a direct path between any two words.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §3.2.1</p>
+  <h2>Attention as a soft search</h2>
+  <div class="prose">
+    <p>Here is how one word gathers information from the others. Each word produces three lists of numbers:</p>
+    <ul>
+      <li>a <strong>query</strong>: what am I looking for?</li>
+      <li>a <strong>key</strong>: what do I contain, as a label others can match against?</li>
+      <li>a <strong>value</strong>: what information do I hand over if someone picks me?</li>
+    </ul>
+    <p>To update a word, compare its query with every word's key. The comparison is a <strong>dot product</strong>: multiply matching entries and add them up, which gives a big number when the two lists point the same way. Turn those scores into weights that are positive and add up to 1 (a "softmax"), and take the weighted blend of the values. All of these lists are produced by the network itself, and it learns what to put in them during training.</p>
+    <p>Below, the word "it" is deciding what it refers to. Change the last word of the sentence and its query changes.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" id="it-tired">… because it was too tired</button><button class="btn" id="it-wide">… because it was too wide</button><label>Sharpness <input type="range" id="it-s" min="0.2" max="3" step="0.1" value="1" data-fmt="1"><output id="it-s-o">1.0</output></label></div>
+    <div class="svgbox"><svg id="it" viewBox="0 0 600 270" role="img" aria-label="Query of the word it compared against keys of other words"></svg></div>
+    <p class="readout" id="it-r"></p>
+    <figcaption>Left: keys of the other words (blue) and the query of "it" (amber) as arrows in a two-dimensional space. Right: dot-product score and resulting weight for each word. The vectors are hand-made to illustrate the mechanism; in a real model they have 64 or more numbers and are learned. The paper's own attention visualisations (Figs. 3–5) show heads resolving references like this.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>Searching a library. Your query is what you type, the keys are the catalogue entries, the values are the books. Instead of taking the one best match, you take a bit of every book, more from the better matches.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Each word asks a question (query), every word offers a label (key), and the answer is a blend of the words' contents (values) weighted by how well labels match the question.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why use a weighted blend instead of picking the single best match?</dt>
+    <dd>A blend can combine information from several words, and, unlike a hard pick, it changes smoothly when the numbers change, which is what training by gradient descent needs.</dd>
+    <dt>What would happen if every key were identical?</dt>
+    <dd>All scores would be equal, so every word gets the same weight and the result is a plain average of all values.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §4 · Table 1</p>
+  <h2>Everything at once</h2>
+  <div class="prose">
+    <p>In a Transformer layer, every word does this search at the same time. Nothing waits for anything else, so a GPU can compute the whole layer in one go. And any word can reach any other in a single step, however far apart they are.</p>
+    <p>The price is that the number of comparisons grows with the square of the sentence length: 10 words means 100 query–key comparisons, 1,000 words means a million. For the sentence lengths in translation that was cheap; for long documents it became the main cost, which later work like <a href="flash.html">FlashAttention</a> attacks.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Sentence length <input type="range" id="pp-n" min="3" max="16" step="1" value="8"><output id="pp-n-o">8</output></label><button class="btn" id="pp-go">Animate</button></div>
+    <div class="svgbox wide"><svg id="pp" viewBox="0 0 640 280" role="img" aria-label="Recurrent processing step by step compared with one parallel attention step"></svg></div>
+    <p class="readout" id="pp-r"></p>
+    <figcaption>Top: a recurrent network must take one step per word, and word 1 reaches word n only after n − 1 hops. Bottom: one self-attention layer connects every pair of words directly in a single parallel step (every line is one query–key comparison). The counts follow Table 1 of the paper: O(n) sequential steps versus O(1), and n² comparisons per attention layer.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Self-attention swaps a long chain of steps for one big parallel step, at the cost of comparing every pair of words.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>A sentence doubles in length. How do the sequential steps change for an RNN and for self-attention? And the comparisons?</dt>
+    <dd>RNN steps double; self-attention stays at one step per layer. But the self-attention comparisons quadruple.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §3.2.2 · §3.5</p>
+  <h2>Many heads, and a sense of order</h2>
+  <div class="prose">
+    <p><strong>Many heads.</strong> One search can only look for one kind of thing at a time. So each layer runs several searches side by side (8 in the base model, 16 in the big one), called <strong>heads</strong>, each with its own queries, keys and values. One head might track which noun a pronoun refers to, another the verb that goes with a subject. Their results are stuck together and mixed.</p>
+    <p><strong>Order.</strong> Attention on its own ignores word order: "dog bites man" and "man bites dog" would look the same, because the search compares contents, not positions. So before the first layer, each word gets a <strong>positional encoding</strong> added to it: a pattern of wave values (sines and cosines of different wavelengths) unique to its position, like a barcode. The network learns to read these barcodes.</p>
+    <p>Each layer also has a small ordinary network applied to every word separately (the "feed-forward" part), plus shortcuts that add a layer's input back to its output and a normalisation step that keeps numbers in a sensible range. Six such layers make the encoder, which reads the source sentence; six more make the decoder, which writes the translation one word at a time and is blocked from peeking at words it hasn't written yet.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A committee reading a contract. One member checks names, another dates, another money. Each reads the whole document at once and they pool notes. The page numbers (positions) are printed on every page so nobody loses the order.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Several attention heads look for different relationships in parallel, and added position signals give the model the word order that attention alone ignores.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does the decoder need to be blocked from looking ahead?</dt>
+    <dd>At use time it generates words one by one, so future words don't exist yet. During training it must predict each word without seeing it, or it would just copy the answer.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §6 · Tables 2–3 · What came next</p>
+  <h2>Better, cheaper, and everywhere</h2>
+  <div class="prose">
+    <p>On the standard English-to-German translation test (WMT 2014) the big Transformer scored 28.4 BLEU, more than 2 points above the best previous results, including ensembles of several models. On English-to-French it scored 41.8, a new single-model record. The small version trained in 12 hours on one machine with 8 GPUs; the big one in 3.5 days, a small fraction of the computing cost of the previous best systems.</p>
+    <p>The paper also showed the design wasn't specific to translation: with little tuning, it did well at parsing English sentences into grammatical trees.</p>
+    <p>Within two years, <a href="gpt1.html">GPT</a> took just the decoder half and <a href="bert.html">BERT</a> took just the encoder half, and pre-trained them on huge amounts of text. Later it spread to images (<a href="vit.html">ViT</a>), audio, proteins and robotics.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>Today's language models keep the core of attention plus feed-forward blocks with shortcuts, but usually change four details: the normalisation is moved to the start of each block ("pre-norm") and simplified (<a href="rmsnorm.html">RMSNorm</a>); the wave-pattern positions are replaced by rotating queries and keys (<a href="rope.html">RoPE</a>); and the feed-forward part uses a "gated" variant (SwiGLU). Most also drop the encoder and use the decoder alone.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Attention-only models were more accurate and much cheaper to train, and with a handful of later tweaks they became the standard architecture of modern AI.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Dominant sequence transduction models are complex recurrent or convolutional encoder–decoders, the best connected through attention. The Transformer is based solely on attention, dispensing with recurrence and convolutions. On WMT 2014 English–German it reaches 28.4 BLEU, over 2 BLEU above existing best results including ensembles; on WMT 2014 English–French it sets a single-model state of the art of 41.8 BLEU after 3.5 days on eight GPUs, a small fraction of the training cost of the best models in the literature. It also generalises to English constituency parsing. NeurIPS 2017 (arXiv 1706.03762).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §3.1 · Fig. 1</p>
+  <h2>Architecture</h2>
+  <div class="prose">
+    <p><strong>Encoder:</strong> <var>N</var> = 6 identical layers, each with a multi-head self-attention sub-layer and a position-wise feed-forward sub-layer. <strong>Decoder:</strong> 6 layers, each with masked self-attention, encoder–decoder attention (queries from the decoder, keys and values from the encoder output) and a feed-forward sub-layer. Every sub-layer is wrapped as</p>
+  </div>
+  <div class="eq">output = LayerNorm(<var>x</var> + Sublayer(<var>x</var>))</div>
+  <div class="prose">
+    <p>(post-norm), with all sub-layers and embeddings of width <var>d</var><sub>model</sub> = 512 so the residuals type-check. Decoder self-attention is masked by setting scores of illegal (future) connections to −∞ before the softmax; together with offsetting the output embeddings by one position, this makes prediction at position <var>i</var> depend only on outputs before <var>i</var>.</p>
+    <p><strong>Embeddings (§3.4).</strong> Input embedding, output embedding and pre-softmax projection share one weight matrix; embedding weights are multiplied by √<var>d</var><sub>model</sub>.</p>
+  </div>
+  <figure>
+    <div class="svgbox"><svg viewBox="0 0 600 250" role="img" aria-label="Encoder and decoder layer structure">
+      <rect x="30" y="40" width="240" height="170" class="area"/><text x="150" y="30" class="t-s mid">encoder layer × 6</text>
+      <rect x="42" y="150" width="216" height="34" class="box-wire"/><text x="150" y="172" class="t mid">multi-head self-attention</text>
+      <rect x="60" y="100" width="180" height="22" class="box"/><text x="150" y="115" class="t-s mid">add &amp; LayerNorm</text>
+      <rect x="42" y="60" width="216" height="30" class="box-fire"/><text x="150" y="80" class="t mid">feed-forward (512→2048→512)</text>
+      <line x1="150" y1="230" x2="150" y2="186" class="w" marker-end="url(#aw)"/><text x="150" y="244" class="t-s mid">inputs + positional encoding</text>
+      <rect x="320" y="20" width="270" height="200" class="area"/><text x="455" y="14" class="t-s mid">decoder layer × 6</text>
+      <rect x="360" y="170" width="190" height="30" class="box-wire"/><text x="455" y="190" class="t mid">masked self-attention</text>
+      <rect x="335" y="112" width="240" height="40" class="box-ok"/><text x="455" y="129" class="t mid">encoder–decoder attention</text><text x="455" y="145" class="t-s mid">Q: decoder · K, V: encoder</text>
+      <rect x="360" y="55" width="190" height="30" class="box-fire"/><text x="455" y="75" class="t mid">feed-forward</text>
+      <path d="M260,75 C295,75 300,132 333,132" class="w-ok" marker-end="url(#ao)"/>
+      <text x="455" y="240" class="t-s mid">each sub-layer: LayerNorm(x + Sublayer(x))</text>
+    </svg></div>
+    <figcaption>Simplified from the paper's Fig. 1: residual connections and normalisation surround every sub-layer; a final linear layer and softmax (sharing weights with the embeddings) produce next-token probabilities.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3.2 · Eq. 1 · footnote 4</p>
+  <h2>Scaled dot-product and multi-head attention</h2>
+  <div class="eq">Attention(<var>Q</var>, <var>K</var>, <var>V</var>) = softmax(<var>QK</var><sup>⊤</sup> / √<var>d<sub>k</sub></var>) <var>V</var> <span class="n">(1)</span></div>
+  <div class="prose">
+    <p>Dot-product attention is chosen over additive attention (<a href="bahdanau.html">Bahdanau et al.</a>) because it is a pair of matrix multiplications and therefore much faster and more memory-efficient in practice. The scale matters: if the components of <var>q</var> and <var>k</var> are independent with mean 0 and variance 1, then <var>q</var>·<var>k</var> = Σ<sub><var>i</var>=1</sub><sup><var>d<sub>k</sub></var></sup> <var>q<sub>i</sub>k<sub>i</sub></var> has mean 0 and variance <var>d<sub>k</sub></var>. Large logits push the softmax into saturated regions where its gradient is tiny; dividing by √<var>d<sub>k</sub></var> restores unit variance. The authors note additive attention outperforms unscaled dot-product attention for larger <var>d<sub>k</sub></var>, which motivates the scaling.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>log<sub>2</sub> d<sub>k</sub> <input type="range" id="sc-d" min="0" max="10" step="1" value="6"><output id="sc-d-o">6</output></label><button class="btn on" id="sc-on" aria-pressed="true">Scale by 1/√d<sub>k</sub></button><button class="btn" id="sc-re">Resample</button></div>
+    <div class="svgbox"><svg id="sc" viewBox="0 0 600 240" role="img" aria-label="Softmax weights over ten keys with and without scaling"></svg></div>
+    <p class="readout" id="sc-r"></p>
+    <figcaption>One query against ten keys, all components drawn from N(0, 1). Bars: one sample's softmax weights. Readout: averages over 300 samples of the largest weight and of the Frobenius norm of the softmax Jacobian diag(<var>p</var>) − <var>pp</var><sup>⊤</sup>, a proxy for how much gradient flows back through the softmax. Unscaled, at <var>d<sub>k</sub></var> = 64 (the paper's value) the softmax is already close to one-hot and its gradient has collapsed.</figcaption>
+  </figure>
+  <div class="eq">MultiHead(<var>Q</var>, <var>K</var>, <var>V</var>) = Concat(head<sub>1</sub>, …, head<sub><var>h</var></sub>) <var>W<sup>O</sup></var>, &nbsp; head<sub><var>i</var></sub> = Attention(<var>QW<sub>i</sub><sup>Q</sup></var>, <var>KW<sub>i</sub><sup>K</sup></var>, <var>VW<sub>i</sub><sup>V</sup></var>)</div>
+  <div class="prose">
+    <p>With <var>W<sub>i</sub><sup>Q</sup></var>, <var>W<sub>i</sub><sup>K</sup></var> ∈ ℝ<sup><var>d</var><sub>model</sub>×<var>d<sub>k</sub></var></sup>, <var>W<sub>i</sub><sup>V</sup></var> ∈ ℝ<sup><var>d</var><sub>model</sub>×<var>d<sub>v</sub></var></sup>, <var>W<sup>O</sup></var> ∈ ℝ<sup><var>hd<sub>v</sub></var>×<var>d</var><sub>model</sub></sup>, <var>h</var> = 8 and <var>d<sub>k</sub></var> = <var>d<sub>v</sub></var> = <var>d</var><sub>model</sub>/<var>h</var> = 64, the total cost matches single-head attention at full width. The paper's rationale: a single head averages, which inhibits attending to information from different representation subspaces at different positions. Ablation (Table 3, row A, newstest2013 En–De dev BLEU): 1 head 24.9, 4 heads 25.5, 8 heads 25.8, 16 heads 25.8, 32 heads 25.4. Reducing <var>d<sub>k</sub></var> alone (row B) to 16 or 32 hurts (25.1, 25.4).</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why doesn't additive attention need the 1/√<var>d<sub>k</sub></var> factor in the same way?</dt>
+    <dd>Its score passes through a tanh and a learned vector <var>v<sub>a</sub></var>, so its magnitude is bounded by ‖<var>v<sub>a</sub></var>‖ rather than growing with dimension like a raw sum of <var>d<sub>k</sub></var> products.</dd>
+    <dt>Given the mean-0, variance-1 assumption, what is the standard deviation of an unscaled logit at <var>d<sub>k</sub></var> = 64?</dt>
+    <dd>√64 = 8, so differences of tens between logits are common and exp makes one weight dominate.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §3.3 · §3.5 · Eq. 2</p>
+  <h2>Feed-forward layers and sinusoidal positions</h2>
+  <div class="eq">FFN(<var>x</var>) = max(0, <var>xW</var><sub>1</sub> + <var>b</var><sub>1</sub>) <var>W</var><sub>2</sub> + <var>b</var><sub>2</sub> <span class="n">(2)</span></div>
+  <div class="prose"><p>Applied identically at every position (equivalently two kernel-size-1 convolutions), with inner width <var>d<sub>ff</sub></var> = 2048. Positions are injected by adding to the embeddings</p></div>
+  <div class="eq"><var>PE</var><sub>(<var>pos</var>, 2<var>i</var>)</sub> = sin(<var>pos</var> / 10000<sup>2<var>i</var>/<var>d</var><sub>model</sub></sup>), &nbsp; <var>PE</var><sub>(<var>pos</var>, 2<var>i</var>+1)</sub> = cos(<var>pos</var> / 10000<sup>2<var>i</var>/<var>d</var><sub>model</sub></sup>)</div>
+  <div class="prose"><p>Wavelengths form a geometric progression from 2π to 10000·2π. The authors chose sinusoids because for any fixed offset <var>k</var>, <var>PE</var><sub><var>pos</var>+<var>k</var></sub> is a linear function of <var>PE</var><sub><var>pos</var></sub> (each sin/cos pair is rotated by an angle proportional to <var>k</var>), hypothesising this would make relative positions easy to learn, and because it might extrapolate to longer sequences. Learned position embeddings gave nearly identical results (Table 3, row E: 25.7 vs 25.8).</p></div>
+  <figure class="live">
+    <div class="ctl"><label>Position <input type="range" id="pe-p" min="0" max="59" step="1" value="10"><output id="pe-p-o">10</output></label><label>Offset k <input type="range" id="pe-k" min="1" max="30" step="1" value="5"><output id="pe-k-o">5</output></label></div>
+    <div class="svgbox wide"><svg id="pe" viewBox="0 0 640 280" role="img" aria-label="Sinusoidal positional encoding heatmap and dot product versus distance"></svg></div>
+    <p class="readout" id="pe-r"></p>
+    <figcaption>Left: <var>PE</var> for positions 0–59 (rows) and the 64 dimensions of a <var>d</var><sub>model</sub> = 64 toy (columns; amber positive, blue negative). Low dimensions oscillate fast, high ones slowly. Right: the dot product <var>PE</var><sub><var>p</var></sub>·<var>PE</var><sub><var>p</var>+<var>k</var></sub> against <var>k</var>; it is the same for every <var>p</var>, and it is symmetric in ±<var>k</var>, so these encodings alone cannot tell left from right through a dot product. The readout applies the fixed rotation for offset <var>k</var> to <var>PE</var><sub><var>p</var></sub> and checks it equals <var>PE</var><sub><var>p</var>+<var>k</var></sub>.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §4–6 · Tables 1–4 · Eq. 3</p>
+  <h2>Why self-attention, training, and results</h2>
+  <div class="tablebox"><table>
+    <thead><tr><th>Layer type (Table 1)</th><th>Complexity / layer</th><th>Sequential ops</th><th>Max path length</th></tr></thead>
+    <tbody>
+      <tr><td>Self-attention</td><td class="num">O(n²·d)</td><td class="num">O(1)</td><td class="num">O(1)</td></tr>
+      <tr><td>Recurrent</td><td class="num">O(n·d²)</td><td class="num">O(n)</td><td class="num">O(n)</td></tr>
+      <tr><td>Convolutional</td><td class="num">O(k·n·d²)</td><td class="num">O(1)</td><td class="num">O(log<sub>k</sub> n)</td></tr>
+      <tr><td>Self-attention (restricted, r)</td><td class="num">O(r·n·d)</td><td class="num">O(1)</td><td class="num">O(n/r)</td></tr>
+    </tbody></table></div>
+  <div class="prose">
+    <p>Self-attention is cheaper than recurrence per layer when <var>n</var> &lt; <var>d</var>, true for sentence-level translation with word-piece vocabularies, and its O(1) path length makes long-range dependencies easier to learn.</p>
+    <p><strong>Training (§5).</strong> WMT 2014 En–De: about 4.5M sentence pairs, byte-pair encoding with a shared source–target vocabulary of about 37,000 tokens. En–Fr: 36M sentences, 32,000 word-piece vocabulary. Batches of about 25,000 source and 25,000 target tokens. One machine with 8 NVIDIA P100 GPUs: base model 100,000 steps at about 0.4 s/step (12 hours); big model 300,000 steps at 1.0 s/step (3.5 days). Adam with β<sub>1</sub> = 0.9, β<sub>2</sub> = 0.98, ε = 10<sup>−9</sup>, and</p>
+  </div>
+  <div class="eq"><var>lrate</var> = <var>d</var><sub>model</sub><sup>−0.5</sup> · min(<var>step</var><sup>−0.5</sup>, <var>step</var> · <var>warmup</var><sup>−1.5</sup>), &nbsp; <var>warmup</var> = 4000 <span class="n">(3)</span></div>
+  <figure class="live">
+    <div class="ctl"><label>warmup_steps <input type="range" id="lr-w" min="500" max="16000" step="500" value="4000"><output id="lr-w-o">4000</output></label><label>d<sub>model</sub> <input type="range" id="lr-d" min="256" max="1024" step="256" value="512"><output id="lr-d-o">512</output></label></div>
+    <div class="svgbox"><svg id="lr" viewBox="0 0 600 200" role="img" aria-label="Learning rate schedule of Eq. 3"></svg></div>
+    <p class="readout" id="lr-r"></p>
+    <figcaption>Eq. 3 over the base model's 100,000 steps: linear warm-up, then inverse-square-root decay. The peak, reached at step = warmup, equals (<var>d</var><sub>model</sub> · warmup)<sup>−0.5</sup>.</figcaption>
+  </figure>
+  <div class="prose"><p>Regularisation: residual dropout <var>P</var><sub>drop</sub> = 0.1 (base) on sub-layer outputs and on embedding + PE sums; label smoothing ε<sub><var>ls</var></sub> = 0.1, which hurts perplexity but improves BLEU.</p></div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Model (Table 2)</th><th>EN–DE BLEU</th><th>EN–FR BLEU</th><th>Train FLOPs (EN–DE)</th></tr></thead>
+    <tbody>
+      <tr><td>ByteNet</td><td class="num">23.75</td><td class="num">–</td><td class="num">–</td></tr>
+      <tr><td>GNMT + RL</td><td class="num">24.6</td><td class="num">39.92</td><td class="num">2.3·10¹⁹</td></tr>
+      <tr><td>ConvS2S</td><td class="num">25.16</td><td class="num">40.46</td><td class="num">9.6·10¹⁸</td></tr>
+      <tr><td>MoE</td><td class="num">26.03</td><td class="num">40.56</td><td class="num">2.0·10¹⁹</td></tr>
+      <tr><td>ConvS2S ensemble</td><td class="num">26.36</td><td class="num">41.29</td><td class="num">7.7·10¹⁹</td></tr>
+      <tr><td>Transformer (base, ~65M params)</td><td class="num">27.3</td><td class="num">38.1</td><td class="num">3.3·10¹⁸</td></tr>
+      <tr><td>Transformer (big, ~213M params)</td><td class="num">28.4</td><td class="num">41.8</td><td class="num">2.3·10¹⁹</td></tr>
+    </tbody></table></div>
+  <div class="prose">
+    <p>The arXiv text of §6.1 gives 41.0 for big En–Fr while Table 2 and the abstract give 41.8; the paper is internally inconsistent here. Ablations (Table 3) also show bigger models help (<var>d</var><sub>model</sub> 1024: 26.0; <var>d<sub>ff</sub></var> 4096: 26.2) and dropout matters (<var>P</var><sub>drop</sub> = 0: 24.6).</p>
+    <p><strong>Constituency parsing (§6.3, Table 4).</strong> A 4-layer Transformer with <var>d</var><sub>model</sub> = 1024 on the WSJ portion of the Penn Treebank (about 40K sentences) reaches 91.3 F1 trained on WSJ only and 92.7 semi-supervised, better than all previously reported models except the Recurrent Neural Network Grammar.</p>
+  </div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §7 · Limitations and lineage</p>
+  <h2>What modern models changed</h2>
+  <div class="prose"><ul>
+    <li><strong>Pre-norm.</strong> Post-norm (LayerNorm after the residual add) makes deep stacks hard to train without warm-up. Moving the norm inside the residual branch, <var>x</var> + Sublayer(LN(<var>x</var>)), gives better-behaved gradients (Xiong et al., 2020) and is used by GPT-2 onwards.</li>
+    <li><strong>RMSNorm.</strong> <a href="rmsnorm.html">Zhang &amp; Sennrich (2019)</a> drop LayerNorm's mean-centring and bias; standard in LLaMA-style models.</li>
+    <li><strong>Positions.</strong> Additive sinusoids were replaced first by learned absolute embeddings (GPT, BERT), then by relative schemes; <a href="rope.html">RoPE</a> (2021) rotates queries and keys so the score depends on the offset. The hope that sinusoids would extrapolate to longer sequences was not borne out in practice (Press et al., 2021).</li>
+    <li><strong>Feed-forward.</strong> Gated variants such as SwiGLU (Shazeer, 2020) replace ReLU FFNs, usually with a reduced inner width to keep parameters constant. Sparse mixture-of-experts layers (<a href="switch.html">Switch</a>) scale the FFN further.</li>
+    <li><strong>Attention cost and memory.</strong> The O(<var>n</var><sup>2</sup>) cost limited context length; <a href="flash.html">FlashAttention</a> makes exact attention IO-efficient, and multi-query / grouped-query attention shrink the key–value cache at inference.</li>
+    <li><strong>Decoder-only.</strong> <a href="gpt1.html">GPT</a> showed the decoder stack alone, trained as a language model, transfers broadly; <a href="bert.html">BERT</a> did the same with the encoder. Scaling laws (<a href="scaling.html">Kaplan et al.</a>, <a href="chinchilla.html">Chinchilla</a>) were measured on this architecture.</li>
+  </ul></div>
+  <div class="later"><span class="label">Still unchanged</span>Scaled dot-product attention (Eq. 1), multi-head projections, residual streams, and the alternation of attention and position-wise MLPs survive essentially as written in 2017.</div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>When is a self-attention layer cheaper than a recurrent one, according to Table 1?</dt>
+    <dd>When sequence length <var>n</var> is smaller than representation width <var>d</var>, since the costs are O(<var>n</var>²<var>d</var>) versus O(<var>nd</var>²).</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Self-attention</dt><dd>Attention where queries, keys and values all come from the same sequence.</dd>
+    <dt>Q, K, V</dt><dd>Queries, keys, values: linear projections of the token representations.</dd>
+    <dt>Head</dt><dd>One attention computation with its own projections; h of them run in parallel.</dd>
+    <dt>d<sub>model</sub></dt><dd>Width of the residual stream (512 base, 1024 big).</dd>
+    <dt>Masking</dt><dd>Setting disallowed scores to −∞ so future tokens get zero weight.</dd>
+    <dt>Positional encoding</dt><dd>A position-dependent vector added to token embeddings.</dd>
+    <dt>Post-norm / pre-norm</dt><dd>LayerNorm after the residual addition (this paper) or before the sub-layer (modern).</dd>
+    <dt>Label smoothing</dt><dd>Training against a target distribution with ε of the mass spread over other tokens.</dd>
+    <dt>BPE</dt><dd>Byte-pair encoding: a subword vocabulary built by merging frequent symbol pairs.</dd>
+    <dt>BLEU</dt><dd>N-gram overlap metric for translation quality.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="lstm.html">LSTM (1997)</a>, <a href="bahdanau.html">Attention (2014)</a></p>
+  <p><strong>Led to:</strong> <a href="gpt1.html">GPT-1 (2018)</a>, <a href="bert.html">BERT (2018)</a>, <a href="gpt3.html">GPT-3 (2020)</a>, <a href="vit.html">ViT (2020)</a>, <a href="flash.html">FlashAttention (2022)</a>, <a href="rope.html">RoPE (2021)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a> (<a href="https://lovespark.love/papers-worth-reading/#transformer">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // "it" attention toy
+  var svg=$('#it'), words=['animal','street','cross','didn\'t','the'], K=[[1.6,0.9],[0.9,-1.6],[-0.6,1.2],[-1.3,-0.5],[0.2,-0.3]], mode='tired', sh=1;
+  var Q={tired:[1.5,0.9],wide:[0.8,-1.5]};
+  function draw(){ clear(svg); var q=Q[mode], sc=K.map(function(k){ return sh*(q[0]*k[0]+q[1]*k[1])/Math.SQRT2; }), m=Math.max.apply(null,sc), ex=sc.map(function(x){return Math.exp(x-m);}), Z=ex.reduce(function(a,b){return a+b;},0), w=ex.map(function(x){return x/Z;});
+    var cx=140, cy=135, R=55; S('line',{x1:cx-120,y1:cy,x2:cx+120,y2:cy,'class':'grid'},svg); S('line',{x1:cx,y1:cy-120,x2:cx,y2:cy+120,'class':'grid'},svg);
+    K.forEach(function(k,i){ S('line',{x1:cx,y1:cy,x2:cx+k[0]*R,y2:cy-k[1]*R,'class':'w','marker-end':'url(#aw)','stroke-width':1+w[i]*4},svg); S('text',{x:cx+k[0]*R*1.15+(k[0]<0?-4:4),y:cy-k[1]*R*1.15+4,'class':'t-wire '+(k[0]<0?'end':'')},svg,words[i]); });
+    S('line',{x1:cx,y1:cy,x2:cx+q[0]*R,y2:cy-q[1]*R,'class':'w-fire','marker-end':'url(#af)'},svg); S('text',{x:cx+q[0]*R*0.5+(q[1]>0?14:-14),y:cy-q[1]*R*0.5+(q[1]>0?22:-10),'class':'t-fire'+(q[1]>0?'':' end')},svg,'query of "it"');
+    var bx=310; S('text',{x:bx,y:24,'class':'t-h'},svg,'score → weight');
+    words.forEach(function(wd,i){ var y=42+i*42; S('text',{x:bx,y:y+16,'class':'t'},svg,wd); S('text',{x:bx+70,y:y+16,'class':'t-s'},svg,fmt(sc[i],2));
+      S('rect',{x:bx+115,y:y+2,width:130,height:20,'class':'f-rule'},svg); S('rect',{x:bx+115,y:y+2,width:130*w[i],height:20,'class':'f-fire'},svg); S('text',{x:bx+252,y:y+16,'class':'t-s'},svg,fmt(w[i],2)); });
+    var top=w.indexOf(Math.max.apply(null,w));
+    $('#it-r').innerHTML='"it was too '+mode+'": most weight (<b>'+fmt(w[top],2)+'</b>) goes to <b>'+words[top]+'</b>.';
+    $('#it-tired').classList.toggle('on',mode==='tired'); $('#it-wide').classList.toggle('on',mode==='wide'); }
+  $('#it-tired').onclick=function(){ mode='tired'; draw(); }; $('#it-wide').onclick=function(){ mode='wide'; draw(); };
+  bindRange('it-s',function(v){ sh=v; draw(); });
+})();
+(function(){ // parallel vs sequential
+  var svg=$('#pp'), n=8, t=-1, timer=null;
+  function draw(){ clear(svg); var x0=40, x1=600, dx=(x1-x0)/(n-1);
+    S('text',{x:x0-20,y:22,'class':'t-h'},svg,'Recurrent: one step per word'); S('text',{x:x0-20,y:160,'class':'t-h'},svg,'Self-attention: one parallel step');
+    for (var i=0;i<n;i++){ var X=x0+i*dx, on=t<0||i<=t;
+      if (i<n-1) S('line',{x1:X+9,y1:70,x2:X+dx-11,y2:70,'class':(t>=0&&i<t)?'w-fire':'w','marker-end':(t>=0&&i<t)?'url(#af)':'url(#aw)'},svg);
+      S('circle',{cx:X,cy:70,r:9,'class':(t>=0&&i<=t)?'u-on':'u'},svg); S('text',{x:X,y:100,'class':'t-s mid'},svg,'w'+(i+1)); }
+    var y=230, done=t>=0;
+    for (var a=0;a<n;a++) for (var b=a+1;b<n;b++){ var xa=x0+a*dx, xb=x0+b*dx, h=Math.min(55,(b-a)*dx*0.35); S('path',{d:'M'+xa+','+y+' Q'+((xa+xb)/2)+','+(y-h*2)+' '+xb+','+y,'class':done?'w-fire':'w-faint','stroke-width':done?1:1},svg); }
+    for (i=0;i<n;i++){ var X2=x0+i*dx; S('circle',{cx:X2,cy:y,r:9,'class':done?'u-on':'u'},svg); S('text',{x:X2,y:y+28,'class':'t-s mid'},svg,'w'+(i+1)); }
+    $('#pp-r').innerHTML='n = '+n+': recurrent needs <b>'+n+'</b> sequential steps and '+(n-1)+' hops from w1 to w'+n+'; self-attention needs <b>1</b> step, 1 hop, and computes <b>'+(n*n)+'</b> query–key scores (each word with every word, itself included).'; }
+  bindRange('pp-n',function(v){ n=v; t=-1; draw(); });
+  $('#pp-go').onclick=function(){ if (timer) clearInterval(timer); t=0; draw(); timer=setInterval(function(){ t++; if (t>=n){ clearInterval(timer); timer=null; t=n-1; } draw(); },300); };
+})();
+(function(){ // scaling demo
+  var svg=$('#sc'), ld=6, on=true, seed=1;
+  function sample(r,dk){ var q=[],i,j; for (i=0;i<dk;i++) q.push(gauss(r)); var s=[]; for (j=0;j<10;j++){ var a=0; for (i=0;i<dk;i++) a+=q[i]*gauss(r); s.push(on?a/Math.sqrt(dk):a); } var m=Math.max.apply(null,s), e=s.map(function(x){return Math.exp(x-m);}), Z=e.reduce(function(a,b){return a+b;},0); return [s,e.map(function(x){return x/Z;})]; }
+  function draw(){ clear(svg); var dk=Math.pow(2,ld), r=rng(seed*31+ld), one=sample(r,dk), p=one[1], logits=one[0];
+    var mx=0, jn=0, N=300; for (var k=0;k<N;k++){ var pp=sample(r,dk)[1], f=0; mx+=Math.max.apply(null,pp)/N; for (var a=0;a<10;a++) for (var b=0;b<10;b++){ var v=(a===b?pp[a]:0)-pp[a]*pp[b]; f+=v*v; } jn+=Math.sqrt(f)/N; }
+    S('line',{x1:40,y1:200,x2:580,y2:200,'class':'axis'},svg);
+    p.forEach(function(w,j){ var X=50+j*53, h=w*170; S('rect',{x:X,y:200-h,width:38,height:Math.max(h,0.5),'class':'f-fire'},svg); S('text',{x:X+19,y:196-h,'class':'t-s mid'},svg,fmt(w,2)); S('text',{x:X+19,y:216,'class':'t-s mid'},svg,'k'+(j+1)); S('text',{x:X+19,y:232,'class':'t-s mid'},svg,fmt(logits[j],1)); });
+    S('text',{x:4,y:232,'class':'t-s'},svg,'logit');
+    $('#sc-r').innerHTML='d<sub>k</sub> = '+dk+(on?', scaled':', unscaled')+'. Mean largest weight <b>'+fmt(mx,2)+'</b> (uniform = 0.10); mean ‖Jacobian‖ <b>'+fmt(jn,3)+'</b>.';
+    $('#sc-on').classList.toggle('on',on); $('#sc-on').setAttribute('aria-pressed',on); }
+  bindRange('sc-d',function(v){ ld=v; draw(); });
+  $('#sc-on').onclick=function(){ on=!on; draw(); }; $('#sc-re').onclick=function(){ seed++; draw(); };
+})();
+(function(){ // positional encoding
+  var svg=$('#pe'), P=10, Kk=5, D=64;
+  function pe(pos){ var v=[]; for (var i=0;i<D/2;i++){ var w=1/Math.pow(10000,2*i/D); v.push(Math.sin(pos*w)); v.push(Math.cos(pos*w)); } return v; }
+  var M=[]; for (var p=0;p<60;p++) M.push(pe(p));
+  function draw(){ clear(svg); var cw=4.2, ch=4.1, x0=30, y0=24;
+    for (var p=0;p<60;p++) for (var d=0;d<D;d++){ var v=M[p][d]; S('rect',{x:x0+d*cw,y:y0+p*ch,width:cw,height:ch,'class':v>0?'f-fire':'f-wire','fill-opacity':Math.abs(v)*0.9+0.05},svg); }
+    [P,Math.min(59,P+Kk)].forEach(function(pp,i){ S('rect',{x:x0-2,y:y0+pp*ch-1,width:D*cw+4,height:ch+2,'class':i?'w-ok':'w-ink'},svg); });
+    S('text',{x:x0,y:16,'class':'t-s'},svg,'dimension 0 → 63'); S('text',{x:x0-4,y:y0+8,'class':'t-s end'},svg,'0'); S('text',{x:x0-4,y:y0+59*ch+4,'class':'t-s end'},svg,'59');
+    var gx=340, gw=280, gy=40, gh=200, maxk=40; S('line',{x1:gx,y1:gy+gh,x2:gx+gw,y2:gy+gh,'class':'axis'},svg); S('line',{x1:gx,y1:gy,x2:gx,y2:gy+gh,'class':'axis'},svg);
+    function Y(v){ return gy+gh-v/34*gh; } [0,16,32].forEach(function(v){ S('line',{x1:gx,y1:Y(v),x2:gx+gw,y2:Y(v),'class':'grid'},svg); S('text',{x:gx-4,y:Y(v)+4,'class':'t-s end'},svg,v); });
+    [P,40].forEach(function(base,ci){ var d=''; for (var k=-maxk;k<=maxk;k++){ var a=pe(base), b=pe(base+k), s=0; for (var i=0;i<D;i++) s+=a[i]*b[i]; d+=(k===-maxk?'M':'L')+(gx+(k+maxk)/(2*maxk)*gw)+','+Y(s); } S('path',{d:d,'class':ci?'w-dash':'w-fire'},svg); });
+    S('text',{x:gx+gw/2,y:gy+gh+16,'class':'t-s mid'},svg,'offset k (−40 … 40)'); S('text',{x:gx+4,y:gy-8,'class':'t-s'},svg,'PE_p · PE_p+k (solid p='+P+', dashed p=40)');
+    var a=pe(P), tgt=pe(P+Kk), err=0; for (var i=0;i<D/2;i++){ var w=1/Math.pow(10000,2*i/D), c=Math.cos(Kk*w), s=Math.sin(Kk*w), sn=a[2*i]*c+a[2*i+1]*s, cs=a[2*i+1]*c-a[2*i]*s; err=Math.max(err,Math.abs(sn-tgt[2*i]),Math.abs(cs-tgt[2*i+1])); }
+    $('#pe-r').innerHTML='Rotating each (sin, cos) pair of PE<sub>'+P+'</sub> by angle k·ω<sub>i</sub> gives PE<sub>'+(P+Kk)+'</sub> with max error <b>'+err.toExponential(1)+'</b>: the same linear map works for every position.'; }
+  bindRange('pe-p',function(v){ P=v; draw(); }); bindRange('pe-k',function(v){ Kk=v; draw(); });
+})();
+(function(){ // lr schedule
+  var svg=$('#lr'), W=4000, D=512;
+  function draw(){ clear(svg); var T=100000, f=function(s){ return Math.pow(D,-0.5)*Math.min(Math.pow(s,-0.5), s*Math.pow(W,-1.5)); }, peak=f(W), top=peak*1.15;
+    S('line',{x1:60,y1:170,x2:580,y2:170,'class':'axis'},svg); S('line',{x1:60,y1:15,x2:60,y2:170,'class':'axis'},svg);
+    var d=''; for (var s=1;s<=T;s+=250){ d+=(s===1?'M':'L')+(60+s/T*520)+','+(170-f(s)/top*150); } S('path',{d:d,'class':'w-fire'},svg);
+    [0,25000,50000,75000,100000].forEach(function(s){ S('text',{x:60+s/T*520,y:186,'class':'t-s mid'},svg,s/1000+'k'); });
+    S('text',{x:56,y:22,'class':'t-s end'},svg,fmt(top*1000,1)+'e-3'); S('text',{x:320,y:198,'class':'t-s mid'},svg,'training step');
+    $('#lr-r').innerHTML='Peak learning rate <b>'+peak.toExponential(2)+'</b> at step '+W+'; at step 100,000 it is <b>'+f(T).toExponential(2)+'</b>.'; }
+  bindRange('lr-w',function(v){ W=v; draw(); }); bindRange('lr-d',function(v){ D=v; draw(); });
+})();
+</script>
+
+</body>
+</html>
