@@ -1,0 +1,262 @@
+<!--LEDE-->
+Diffusion models turn noise into data by learning to undo a noising process. Lipman and colleagues ask a more direct question: why not learn the <em>velocity</em> that carries each bit of noise to data, and choose the simplest possible paths for it to follow? Their flow matching objective trains such a velocity field with a plain regression loss, and with straight-line paths it trains faster and samples in fewer steps than diffusion.
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Picture generation as moving a cloud of random points (noise) until it takes the shape of the data, like wind blowing sand into the shape of dunes.</p>
+  <p>A neural network learns the "wind": at every place and moment, which direction and how fast a point should move. Generating means releasing a noise point and letting it drift.</p>
+  <p>The trick that makes training easy: pair a random noise point with a random data point, draw a path between them, and teach the network the speed along that path. Averaged over many pairs, it learns the right wind for the whole cloud.</p>
+  <p>Choosing straight-line paths, rather than the curved paths diffusion implies, gives a simpler wind that needs fewer steps to follow. Recent image models and the robot model <a href="pi0.html">π0</a> use this.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1–2</p>
+  <h2>Generating as moving a cloud of points</h2>
+  <div class="prose">
+    <p>Every generative model has to turn something simple and random into something that looks like real data. <a href="ddpm.html">Diffusion models</a> do it by learning to remove noise step by step. There is another way to see the same job: as <strong>transport</strong>. Start with a cloud of random points, then move every point smoothly over a fixed stretch of time until the cloud has the shape of the data.</p>
+    <p>A rule that says, for every location and every moment, which way and how fast to move is called a <strong>velocity field</strong> (or vector field). If a neural network can represent that field, generating a sample is just following it: start at a random point and take small steps in the direction the network says. Models built this way are called <strong>continuous normalising flows</strong>. They were known before this paper, but they were slow and awkward to train, because training required simulating the whole journey.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Think of a weather map of wind arrows. Drop a feather anywhere and the arrows tell you where it drifts. Flow matching learns a wind map that blows a pile of randomly scattered feathers into the shape of, say, a face.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Generation can be seen as moving noise into data along a learned velocity field; the challenge is training that field efficiently.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §4.1 · Figs. 2–4</p>
+  <h2>Straight paths beat curved ones</h2>
+  <div class="prose">
+    <p>Many different velocity fields can carry the noise cloud to the data. The paper's flexible framework lets you choose the paths. One choice reproduces the curved paths that diffusion models follow. Another, which the paper calls the <strong>optimal transport</strong> path, moves each point in a straight line at constant speed.</p>
+    <p>Straight paths matter because generating means following the field in a limited number of steps. On a curved path, each straight step overshoots the bend; on a straight path, even one big step lands close to where it should. Below, both kinds of flow carry the same noise to the same three data clusters, using the exact velocity field for each. Lower the number of steps and see which holds up.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" id="fl-ot" aria-pressed="true">Straight (OT) paths</button><button class="btn" id="fl-vp" aria-pressed="false">Diffusion paths</button><label>Steps <input type="range" id="fl-n" min="1" max="40" step="1" value="4"><output id="fl-n-o">4</output></label><button class="btn" id="fl-go">Play</button></div>
+    <div class="svgbox"><svg id="fl" viewBox="0 0 600 300" role="img" aria-label="Particles flowing from a Gaussian cloud to three clusters along straight or curved paths"></svg></div>
+    <p class="readout" id="fl-r"></p>
+    <figcaption>500 noise points follow the exact velocity field with the chosen number of simple straight-line steps (Euler steps). Faint lines: the routes of 50 of them. Dashed circles: the three data clusters. With 4 steps the straight-path flow lands roughly 90% of points on clusters, the diffusion-path flow fewer than half. With a single step both fail: from pure noise, one step can only aim at the average of the data. Toy illustration in two dimensions, with exact rather than learned velocities.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Straight-line paths make the velocity field simple, so it can be followed accurately in few steps.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does a curved route need more steps to follow?</dt>
+    <dd>Each step moves in a straight line in the current direction. On a curve the direction keeps changing, so big steps cut corners and go off course; on a straight route the direction doesn't change.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §3 · Theorems 1–2</p>
+  <h2>The training trick: learn from single pairs</h2>
+  <div class="prose">
+    <p>Here is the problem. To train the network you would want to show it the correct overall velocity at each place and time, but nobody knows that field; it is exactly what we're trying to find.</p>
+    <p>The paper's insight: pick one noise point and one data point, join them with a simple path, and use the velocity along <em>that</em> path as the training target. For a straight path the target is simply "data point minus noise point". Each individual target is "wrong", since a point in the middle of the cloud could be heading to many places. But the network, trained with a squared-error loss over millions of random pairs, learns the <em>average</em> velocity at each place and time. The paper proves that this average is exactly the field that moves the whole cloud correctly.</p>
+    <p>In the figure, time runs left to right. Grey lines are individual training pairs: they cross each other freely. The amber curves are what the learned, averaged field actually does: they never cross, and each noise point is routed smoothly to one of the two data clusters.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" id="pr-pairs" aria-pressed="true">Show training pairs</button><button class="btn on" id="pr-flow" aria-pressed="true">Show learned flow</button><button class="btn" id="pr-new">New pairs</button></div>
+    <div class="svgbox"><svg id="pr" viewBox="0 0 600 270" role="img" aria-label="Straight training pairs between noise and data crossing each other, and the non-crossing averaged flow"></svg></div>
+    <p class="readout" id="pr-r"></p>
+    <figcaption>One-dimensional data at −1 and +1 (right edge), noise from a bell curve (left edge). Grey: 40 random noise-to-data pairs joined by straight lines (training targets). Amber: 25 paths of the exact averaged velocity field, started from evenly spread noise values. Toy illustration.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Train on simple single-pair targets; the squared-error loss averages them into the correct velocity field for the whole distribution.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why can the learned paths not cross, even though the training pairs do?</dt>
+    <dd>The learned field gives one velocity per place and time. Two paths meeting at the same place and time would have to continue identically, so they cannot cross.</dd>
+    <dt>What is the training target for a straight path from noise point A to data point B?</dt>
+    <dd>The constant velocity B − A (with a tiny correction in the paper for a minimum noise level).</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §6 · Tables 1–2</p>
+  <h2>How well it worked</h2>
+  <div class="prose">
+    <p>The authors trained one U-Net architecture with different objectives on CIFAR-10 and downsampled ImageNet (32, 64 and 128 pixels). Flow matching with straight paths gave the best likelihood and image-quality scores among their trained baselines, and generated images with fewer network evaluations: on ImageNet 64 × 64, an FID of 14.45 using about 138 evaluations, against 17.36 and about 264 for the DDPM baseline. It also trained faster and handled 4× super-resolution well.</p>
+    <p>Even training the network with diffusion-shaped paths, but via flow matching, worked better than the usual score-matching loss, showing the training method itself is robust.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Flow matching with straight paths matched or beat diffusion training in quality while sampling with fewer steps.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §5, §7 and legacy</p>
+  <h2>A simpler alternative to diffusion</h2>
+  <div class="prose">
+    <p>Flow matching does not throw diffusion away; it contains it. Diffusion paths are one choice inside the framework, and the training loss is a cousin of diffusion's noise-prediction loss. What it adds is freedom to choose the path, and a clean, simulation-free way to train any of them.</p>
+    <p>The paper was one of several in 2022 that reached closely related ideas at the same time, notably "rectified flow" (Liu and colleagues) and "stochastic interpolants" (Albergo and Vanden-Eijnden).</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>Straight-path flow matching (often called rectified flow) became a standard way to train large generators: Stable Diffusion 3 and Flux for images, Meta's Movie Gen for video, and robot policies such as <a href="pi0.html">π0</a>, which generates action sequences with a flow-matching "action expert", much as <a href="diffpolicy.html">Diffusion Policy</a> did with diffusion. Note that only the individual training paths are straight; the learned overall paths are generally curved, which later work such as rectification and distillation addresses to reach one or two steps.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Flow matching reframed diffusion as learning velocities along chosen paths, and straight paths became the default for many state-of-the-art generators.</p>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>A new paradigm for generative modelling built on continuous normalising flows (CNFs), training CNFs at unprecedented scale. Flow Matching (FM) is a simulation-free approach that regresses vector fields of fixed conditional probability paths. It is compatible with a general family of Gaussian probability paths that includes diffusion paths as a special case; using FM with diffusion paths gives a more robust and stable alternative for training diffusion models. FM also opens the door to non-diffusion paths, such as optimal transport (OT) displacement interpolation, which are more efficient than diffusion paths, train and sample faster, and generalise better. On ImageNet, FM-trained CNFs beat diffusion-based alternatives in likelihood and sample quality, and allow fast, reliable sampling with off-the-shelf ODE solvers. ICLR 2023; arXiv:2210.02747.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2 · Eqs. 1–4</p>
+  <h2>Continuous normalising flows</h2>
+  <div class="prose"><p>A time-dependent vector field <var>v</var><sub><var>t</var></sub> : [0, 1] × ℝ<sup><var>d</var></sup> → ℝ<sup><var>d</var></sup> defines a flow φ<sub><var>t</var></sub> by the ODE</p></div>
+  <div class="eq">d/d<var>t</var> φ<sub><var>t</var></sub>(<var>x</var>) = <var>v</var><sub><var>t</var></sub>(φ<sub><var>t</var></sub>(<var>x</var>)),&nbsp;&nbsp; φ<sub>0</sub>(<var>x</var>) = <var>x</var> <span class="n">(1–2)</span></div>
+  <div class="prose">
+    <p>and pushes a simple prior <var>p</var><sub>0</sub> forward to a probability path <var>p</var><sub><var>t</var></sub> = [φ<sub><var>t</var></sub>]<sub>*</sub><var>p</var><sub>0</sub> via the change-of-variables formula (Eqs. 3–4). A vector field <var>u</var><sub><var>t</var></sub> <em>generates</em> <var>p</var><sub><var>t</var></sub> if its flow pushes <var>p</var><sub>0</sub> to <var>p</var><sub><var>t</var></sub>; equivalently, the continuity equation ∂<sub><var>t</var></sub><var>p</var><sub><var>t</var></sub> + div(<var>p</var><sub><var>t</var></sub><var>u</var><sub><var>t</var></sub>) = 0 holds (App. B, Eq. 26). Convention: <var>t</var> = 0 is noise (<var>p</var><sub>0</sub> = <span class="v">N</span>(0, <var>I</var>)) and <var>t</var> = 1 is data, the reverse of the DDPM time direction. Earlier CNF training by maximum likelihood needed ODE simulation through the network during training, which limited scale.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3 · Eqs. 5–9 · Theorems 1–2</p>
+  <h2>Flow Matching and Conditional Flow Matching</h2>
+  <div class="prose"><p>Given a target path <var>p</var><sub><var>t</var></sub> with <var>p</var><sub>1</sub> ≈ <var>q</var> and a generating field <var>u</var><sub><var>t</var></sub>, Flow Matching regresses</p></div>
+  <div class="eq"><var>L</var><sub>FM</sub>(θ) = E<sub><var>t</var>~U[0,1], <var>x</var>~<var>p</var><sub><var>t</var></sub>(<var>x</var>)</sub> ‖<var>v</var><sub><var>t</var></sub>(<var>x</var>; θ) − <var>u</var><sub><var>t</var></sub>(<var>x</var>)‖<sup>2</sup> <span class="n">(5)</span></div>
+  <div class="prose"><p>which is intractable because neither <var>p</var><sub><var>t</var></sub> nor <var>u</var><sub><var>t</var></sub> is known. Build them from per-sample <em>conditional</em> paths <var>p</var><sub><var>t</var></sub>(<var>x</var> | <var>x</var><sub>1</sub>) with <var>p</var><sub>0</sub>(<var>x</var> | <var>x</var><sub>1</sub>) = <var>p</var>(<var>x</var>) and <var>p</var><sub>1</sub>(<var>x</var> | <var>x</var><sub>1</sub>) concentrated at <var>x</var><sub>1</sub>:</p></div>
+  <div class="eq"><var>p</var><sub><var>t</var></sub>(<var>x</var>) = ∫ <var>p</var><sub><var>t</var></sub>(<var>x</var> | <var>x</var><sub>1</sub>) <var>q</var>(<var>x</var><sub>1</sub>) d<var>x</var><sub>1</sub> <span class="n">(6)</span></div>
+  <div class="eq"><var>u</var><sub><var>t</var></sub>(<var>x</var>) = ∫ <var>u</var><sub><var>t</var></sub>(<var>x</var> | <var>x</var><sub>1</sub>) <var>p</var><sub><var>t</var></sub>(<var>x</var> | <var>x</var><sub>1</sub>) <var>q</var>(<var>x</var><sub>1</sub>) / <var>p</var><sub><var>t</var></sub>(<var>x</var>) d<var>x</var><sub>1</sub> <span class="n">(8)</span></div>
+  <div class="prose"><p><strong>Theorem 1:</strong> if each <var>u</var><sub><var>t</var></sub>(· | <var>x</var><sub>1</sub>) generates <var>p</var><sub><var>t</var></sub>(· | <var>x</var><sub>1</sub>), the marginal field (8) generates the marginal path (6). So <var>u</var><sub><var>t</var></sub>(<var>x</var>) = E[<var>u</var><sub><var>t</var></sub>(<var>x</var> | <var>x</var><sub>1</sub>) | <var>x</var><sub><var>t</var></sub> = <var>x</var>], a posterior average. Then define</p></div>
+  <div class="eq"><var>L</var><sub>CFM</sub>(θ) = E<sub><var>t</var>, <var>q</var>(<var>x</var><sub>1</sub>), <var>p</var><sub><var>t</var></sub>(<var>x</var> | <var>x</var><sub>1</sub>)</sub> ‖<var>v</var><sub><var>t</var></sub>(<var>x</var>; θ) − <var>u</var><sub><var>t</var></sub>(<var>x</var> | <var>x</var><sub>1</sub>)‖<sup>2</sup> <span class="n">(9)</span></div>
+  <div class="prose"><p><strong>Theorem 2:</strong> <var>L</var><sub>FM</sub> and <var>L</var><sub>CFM</sub> differ by a constant independent of θ, so ∇<sub>θ</sub><var>L</var><sub>FM</sub> = ∇<sub>θ</sub><var>L</var><sub>CFM</sub>. The proof is the usual fact that the minimiser of a squared loss is the conditional expectation, here of <var>u</var><sub><var>t</var></sub>(<var>x</var> | <var>x</var><sub>1</sub>) given <var>x</var>. Training needs only samples of <var>x</var><sub>1</sub> and of the conditional path; no ODE is simulated.</p></div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is <var>L</var><sub>CFM</sub> not zero at its optimum?</dt>
+    <dd>The conditional targets for a given (<var>x</var>, <var>t</var>) vary with the unknown <var>x</var><sub>1</sub>; the network can only output their mean, so the residual variance remains. That variance is the constant separating <var>L</var><sub>CFM</sub> from <var>L</var><sub>FM</sub>.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §4 · Eqs. 10–23 · Theorem 3 · Figs. 2–3, 7</p>
+  <h2>Gaussian conditional paths: diffusion vs optimal transport</h2>
+  <div class="prose"><p>Take <var>p</var><sub><var>t</var></sub>(<var>x</var> | <var>x</var><sub>1</sub>) = <span class="v">N</span>(<var>x</var> | μ<sub><var>t</var></sub>(<var>x</var><sub>1</sub>), σ<sub><var>t</var></sub>(<var>x</var><sub>1</sub>)<sup>2</sup><var>I</var>) (Eq. 10) with μ<sub>0</sub> = 0, σ<sub>0</sub> = 1, μ<sub>1</sub> = <var>x</var><sub>1</sub>, σ<sub>1</sub> = σ<sub>min</sub>. The simplest flow generating it is ψ<sub><var>t</var></sub>(<var>x</var>) = σ<sub><var>t</var></sub>(<var>x</var><sub>1</sub>)<var>x</var> + μ<sub><var>t</var></sub>(<var>x</var><sub>1</sub>) (Eq. 11), and <strong>Theorem 3</strong> gives its field:</p></div>
+  <div class="eq"><var>u</var><sub><var>t</var></sub>(<var>x</var> | <var>x</var><sub>1</sub>) = (σ′<sub><var>t</var></sub>(<var>x</var><sub>1</sub>)/σ<sub><var>t</var></sub>(<var>x</var><sub>1</sub>)) (<var>x</var> − μ<sub><var>t</var></sub>(<var>x</var><sub>1</sub>)) + μ′<sub><var>t</var></sub>(<var>x</var><sub>1</sub>) <span class="n">(15)</span></div>
+  <div class="prose">
+    <p>Reparameterising <var>x</var> = ψ<sub><var>t</var></sub>(<var>x</var><sub>0</sub>) with <var>x</var><sub>0</sub> ~ <span class="v">N</span>(0, <var>I</var>) gives <var>L</var><sub>CFM</sub> = E‖<var>v</var><sub><var>t</var></sub>(ψ<sub><var>t</var></sub>(<var>x</var><sub>0</sub>)) − (d/d<var>t</var>)ψ<sub><var>t</var></sub>(<var>x</var><sub>0</sub>)‖<sup>2</sup> (Eq. 14).</p>
+    <p><strong>Example I, diffusion paths.</strong> Variance-exploding: <var>p</var><sub><var>t</var></sub>(<var>x</var> | <var>x</var><sub>1</sub>) = <span class="v">N</span>(<var>x</var><sub>1</sub>, σ<sub>1−<var>t</var></sub><sup>2</sup><var>I</var>) (Eq. 16). Variance-preserving: <span class="v">N</span>(α<sub>1−<var>t</var></sub><var>x</var><sub>1</sub>, (1 − α<sub>1−<var>t</var></sub><sup>2</sup>)<var>I</var>) with α<sub><var>s</var></sub> = e<sup>−½<var>T</var>(<var>s</var>)</sup>, <var>T</var>(<var>s</var>) = ∫<sub>0</sub><sup><var>s</var></sup>β(<var>r</var>)d<var>r</var> (Eq. 18). Their fields (Eqs. 17, 19) coincide with the probability-flow ODE of Song et al. (2021); these paths only approach noise asymptotically, not at finite time.</p>
+    <p><strong>Example II, optimal-transport paths.</strong> μ<sub><var>t</var></sub>(<var>x</var>) = <var>t</var><var>x</var><sub>1</sub>, σ<sub><var>t</var></sub>(<var>x</var>) = 1 − (1 − σ<sub>min</sub>)<var>t</var> (Eq. 20), so</p>
+  </div>
+  <div class="eq">ψ<sub><var>t</var></sub>(<var>x</var><sub>0</sub>) = (1 − (1 − σ<sub>min</sub>)<var>t</var>)<var>x</var><sub>0</sub> + <var>t</var><var>x</var><sub>1</sub>,&nbsp;&nbsp; <var>L</var><sub>CFM</sub>(θ) = E ‖<var>v</var><sub><var>t</var></sub>(ψ<sub><var>t</var></sub>(<var>x</var><sub>0</sub>)) − (<var>x</var><sub>1</sub> − (1 − σ<sub>min</sub>)<var>x</var><sub>0</sub>)‖<sup>2</sup> <span class="n">(22–23)</span></div>
+  <div class="prose">
+    <p>The conditional flow is the OT displacement map between the two Gaussians <var>p</var><sub>0</sub>(<var>x</var> | <var>x</var><sub>1</sub>) and <var>p</var><sub>1</sub>(<var>x</var> | <var>x</var><sub>1</sub>) (McCann's interpolation). Its conditional field has constant direction in time (Fig. 2) and its conditional trajectories are straight, whereas diffusion conditional trajectories can overshoot and backtrack (Fig. 3). The authors caution that this "by no means" implies the <em>marginal</em> field is an OT solution.</p>
+    <p>The figure measures the practical consequence on the 2-D toy above: Euler sampling with <var>N</var> function evaluations against a 2,000-step reference, for the exact marginal fields of both paths (VP with β from 0.1 to 20, as in Song et al.; both integrated to <var>t</var> = 0.999).</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="ne-go">Recompute</button><label>Cluster width <input type="range" id="ne-s" min="0.05" max="0.4" step="0.05" value="0.15" data-fmt="2"><output id="ne-s-o">0.15</output></label></div>
+    <div class="svgbox"><svg id="ne" viewBox="0 0 600 260" role="img" aria-label="Sampling error versus number of function evaluations for OT and diffusion paths"></svg></div>
+    <p class="readout" id="ne-r"></p>
+    <figcaption>Mean distance between Euler endpoints and reference endpoints from the same 300 noise samples, log–log axes. This mirrors the left panel of the paper's Fig. 7 (error vs NFE on ImageNet 32, where FM-OT reached a given error with roughly 60% of the NFEs of diffusion paths), but the numbers here are for the toy only. In this toy the straight paths win clearly in the few-step regime (2 to 8 steps), while from about 16 steps on the two are similar and the diffusion path is sometimes slightly more accurate: the advantage depends on the data and on the solver's time grid, and the paper's ImageNet measurement is the evidence that it holds in practice.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §6 · Tables 1–2 · Figs. 5–7</p>
+  <h2>Experiments</h2>
+  <div class="prose"><p>The authors trained FM-OT, FM with diffusion paths and score matching with diffusion paths using an identical U-Net (from Dhariwal and Nichol, with minimal changes); likelihood via the instantaneous change of variables and sampling with the adaptive dopri5 solver at tolerance 10<sup>−5</sup>; NFE is the number of function evaluations it used.</p></div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Table 1</th><th>CIFAR-10<br>NLL / FID / NFE</th><th>ImageNet 32<br>NLL / FID / NFE</th><th>ImageNet 64<br>NLL / FID / NFE</th></tr></thead>
+    <tbody>
+      <tr><td>DDPM</td><td class="num">3.12 / 7.48 / 274</td><td class="num">3.54 / 6.99 / 262</td><td class="num">3.32 / 17.36 / 264</td></tr>
+      <tr><td>Score matching</td><td class="num">3.16 / 19.94 / 242</td><td class="num">3.56 / 5.68 / 178</td><td class="num">3.40 / 19.74 / 441</td></tr>
+      <tr><td>ScoreFlow</td><td class="num">3.09 / 20.78 / 428</td><td class="num">3.55 / 14.14 / 195</td><td class="num">3.36 / 24.95 / 601</td></tr>
+      <tr><td>FM w/ diffusion paths</td><td class="num">3.10 / 8.06 / 183</td><td class="num">3.54 / 6.37 / 193</td><td class="num">3.33 / 16.88 / 187</td></tr>
+      <tr><td><strong>FM w/ OT paths</strong></td><td class="num">2.99 / 6.35 / 142</td><td class="num">3.53 / 5.02 / 122</td><td class="num">3.31 / 14.45 / 138</td></tr>
+    </tbody></table></div>
+  <div class="prose">
+    <p>NLL in bits per dimension. On ImageNet 128 × 128, FM-OT reaches NLL 2.90 and FID 20.9, which the authors call state of the art apart from IC-GAN. They note the CIFAR-10 FIDs are higher than usual, perhaps because the architecture was not tuned for CIFAR-10. FM-OT also lowers FID faster during training (Fig. 5), and its sampling cost stays roughly constant over training, unlike score matching (Fig. 10). <strong>Super-resolution from 64 to 256 pixels (Table 2):</strong> FM-OT FID 3.4, IS 200.8, against SR3's 5.2 and 180.1, with slightly lower PSNR (24.7 vs 26.4) and SSIM (0.747 vs 0.762).</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>"FM w/ diffusion" and DDPM use the same probability path. What, then, does their comparison isolate?</dt>
+    <dd>The training objective and sampler: regressing the path's vector field (and sampling with an ODE solver) versus DDPM's noise-prediction loss and ancestral sampling. FM with diffusion paths is comparable in quality and uses fewer NFEs.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §5, §7 and lineage</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose"><ul>
+    <li><strong>Marginal paths still curve.</strong> Only conditional paths are straight. Where conditional paths from different <var>x</var><sub>1</sub> cross, the averaged field bends, so few-step sampling remains approximate.</li>
+    <li><strong>Gaussian, isotropic paths only.</strong> The paper restricts itself to isotropic Gaussian conditional paths and lists richer paths as future work.</li>
+    <li><strong>Evaluation.</strong> Experiments are at modest resolutions with a fixed architecture; there is no dedicated limitations section.</li>
+  </ul></div>
+  <div class="later"><span class="label">Later refinements</span>Concurrent: rectified flow (Liu, Gong and Liu, 2022), which adds "reflow" to straighten marginal paths, and stochastic interpolants (Albergo and Vanden-Eijnden, 2022). Minibatch OT couplings (Tong et al.; Pooladian et al., 2023) pair noise and data more cleverly to straighten marginals. Riemannian and discrete flow matching extend the idea to manifolds and tokens. Lipman et al. later published a "Flow Matching Guide and Code" (2024). At scale, Stable Diffusion 3 (Esser et al., 2024) trained rectified-flow transformers on <a href="ldm.html">latents</a>, with <a href="cfg.html">classifier-free guidance</a> applied to velocities, and <a href="pi0.html">π0</a> (2024) used flow matching to generate robot action chunks, following <a href="diffpolicy.html">Diffusion Policy</a>.</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>CNF</dt><dd>Continuous normalising flow: a generative model defined by integrating a learned vector field from a simple prior.</dd>
+    <dt>Probability path <var>p</var><sub><var>t</var></sub></dt><dd>A time-indexed family of densities from noise (<var>t</var> = 0) to data (<var>t</var> = 1).</dd>
+    <dt>FM / CFM</dt><dd>Flow Matching (regress the marginal field, intractable) / Conditional Flow Matching (regress per-sample fields, same gradients).</dd>
+    <dt>OT path</dt><dd>Conditional path with linear mean and standard deviation in <var>t</var>; straight conditional trajectories.</dd>
+    <dt>σ<sub>min</sub></dt><dd>Small standard deviation of the conditional path at <var>t</var> = 1.</dd>
+    <dt>NFE</dt><dd>Number of function (network) evaluations used by the ODE solver per sample.</dd>
+    <dt>dopri5</dt><dd>Dormand–Prince adaptive Runge–Kutta ODE solver.</dd>
+    <dt>Rectified flow</dt><dd>Concurrent formulation with the same straight interpolation (σ<sub>min</sub> = 0), plus an optional "reflow" step.</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+var FM=(function(){
+  function sched(kind,t){ if (kind==='ot') return {a:t,da:1,s:1-t,ds:-1};
+    var s=1-t, Ts=0.1*s+0.5*19.9*s*s, al=Math.exp(-0.5*Ts), b=0.1+19.9*s, a=al, da=0.5*b*al, sg=Math.sqrt(Math.max(1-a*a,1e-12)), dsg=-a*da/sg; return {a:a,da:da,s:sg,ds:dsg}; }
+  // exact marginal velocity for isotropic Gaussian-mixture data (equal weights), dims d
+  function vel(kind,x,t,M,s){ var c=sched(kind,t), v=c.a*c.a*s*s+c.s*c.s, L=[], E=[];
+    for (var k=0;k<M.length;k++){ var d2=0, e=[]; for (var j=0;j<x.length;j++){ var r=x[j]-c.a*M[k][j]; d2+=r*r; e.push(M[k][j]+c.a*s*s/v*r); } L.push(-d2/(2*v)); E.push(e); }
+    var mx=Math.max.apply(null,L), w=L.map(function(l){ return Math.exp(l-mx); }), Z=w.reduce(function(p,q){return p+q;},0);
+    var out=[]; for (var j=0;j<x.length;j++){ var ex1=0; for (var k=0;k<M.length;k++) ex1+=w[k]/Z*E[k][j]; out.push(c.ds/c.s*(x[j]-c.a*ex1)+c.da*ex1); }
+    return out; }
+  function euler(kind,x,N,M,s,keep){ var t=0, T1=0.999, dt=T1/N, path=keep?[x.slice()]:null; x=x.slice();
+    for (var i=0;i<N;i++){ var u=vel(kind,x,t,M,s); for (var j=0;j<x.length;j++) x[j]+=dt*u[j]; t+=dt; if (keep) path.push(x.slice()); }
+    return keep?path:x; }
+  return {vel:vel,euler:euler};
+})();
+var M2=[[0,1.6],[1.386,-0.8],[-1.386,-0.8]];
+(function(){ // 2-D flow
+  var svg=$('#fl'), kind='ot', N=4, timer=null, X0=[];
+  var r=rng(12); for (var i=0;i<500;i++) X0.push([gauss(r),gauss(r)]);
+  function X(x){ return 300+x*62; } function Y(y){ return 150-y*62; }
+  var paths;
+  function compute(){ paths=X0.map(function(x){ return FM.euler(kind,x,N,M2,0.18,true); }); }
+  function draw(frame){ clear(svg); var f=frame==null?N:frame;
+    M2.forEach(function(m){ S('circle',{cx:X(m[0]),cy:Y(m[1]),r:0.18*3*62,'class':'area'},svg); });
+    for (var i=0;i<50;i++){ var d=''; for (var k=0;k<=f;k++){ var p=paths[i][k]; d+=(k?'L':'M')+fmt(Math.max(2,Math.min(598,X(p[0]))),1)+','+fmt(Math.max(2,Math.min(298,Y(p[1]))),1); } S('path',{d:d,'class':'w-faint'},svg); }
+    var hit=0; paths.forEach(function(p){ var q=p[f]; S('circle',{cx:Math.max(2,Math.min(598,X(q[0]))),cy:Math.max(2,Math.min(298,Y(q[1]))),r:2,'class':'f-fire','fill-opacity':0.65},svg);
+      if (M2.some(function(m){ return Math.hypot(q[0]-m[0],q[1]-m[1])<0.18*3; })) hit++; });
+    S('text',{x:12,y:20,'class':'t-s'},svg,(kind==='ot'?'straight (OT) paths':'diffusion (VP) paths')+' · step '+f+' of '+N);
+    if (f===N) $('#fl-r').innerHTML=(kind==='ot'?'Straight paths':'Diffusion paths')+', <b>'+N+'</b> step'+(N>1?'s':'')+': <b>'+fmt(100*hit/paths.length,0)+'%</b> of points end inside a data cluster.'; }
+  function redraw(){ if (timer){ clearInterval(timer); timer=null; $('#fl-go').textContent='Play'; } compute(); draw(); }
+  function setKind(k){ kind=k; $('#fl-ot').classList.toggle('on',k==='ot'); $('#fl-ot').setAttribute('aria-pressed',k==='ot'); $('#fl-vp').classList.toggle('on',k!=='ot'); $('#fl-vp').setAttribute('aria-pressed',k!=='ot'); redraw(); }
+  $('#fl-ot').onclick=function(){ setKind('ot'); }; $('#fl-vp').onclick=function(){ setKind('vp'); };
+  bindRange('fl-n',function(v){ N=v; redraw(); });
+  $('#fl-go').onclick=function(){ var b=this; if (timer){ clearInterval(timer); timer=null; b.textContent='Play'; draw(); return; } var f=0; b.textContent='Stop'; var per=Math.max(1,Math.round(30/N));
+    timer=setInterval(function(){ draw(Math.min(N,Math.floor(f/per))); f++; if (f>N*per){ clearInterval(timer); timer=null; b.textContent='Play'; draw(); } },40); };
+})();
+(function(){ // pairs vs flow in 1-D
+  var svg=$('#pr'), showP=true, showF=true, seed=3, M=[[-1],[1]], s=0.08;
+  function X(t){ return 50+t*500; } function Y(x){ return 135-x*45; }
+  function draw(){ clear(svg); var r=rng(seed);
+    S('line',{x1:X(0),y1:20,x2:X(0),y2:250,'class':'axis'},svg); S('line',{x1:X(1),y1:20,x2:X(1),y2:250,'class':'axis'},svg);
+    S('text',{x:X(0),y:266,'class':'t-s mid'},svg,'t = 0 (noise)'); S('text',{x:X(1),y:266,'class':'t-s mid'},svg,'t = 1 (data)');
+    [-1,1].forEach(function(m){ S('circle',{cx:X(1),cy:Y(m),r:6,'class':'u-on'},svg); });
+    var cross=0, segs=[];
+    if (showP) for (var i=0;i<40;i++){ var x0=Math.max(-2.5,Math.min(2.5,gauss(r))), x1=(r()<0.5?-1:1)+s*gauss(r); segs.push([x0,x1]); S('line',{x1:X(0),y1:Y(x0),x2:X(1),y2:Y(x1),'class':'w-dash','stroke-opacity':0.7},svg); }
+    for (var a=0;a<segs.length;a++) for (var b=a+1;b<segs.length;b++) if ((segs[a][0]-segs[b][0])*(segs[a][1]-segs[b][1])<0) cross++;
+    if (showF) for (var j=0;j<25;j++){ var q=(j+0.5)/25, z=Math.sqrt(2)*inverf(2*q-1), x=[z], t=0, N=200, dt=0.999/N, d='M'+X(0)+','+Y(z);
+      for (var k=0;k<N;k++){ var u=FM.vel('ot',x,t,M,s); x[0]+=dt*u[0]; t+=dt; if (k%4===3) d+='L'+fmt(X(t),1)+','+fmt(Y(x[0]),1); } S('path',{d:d,'class':'w-fire'},svg); }
+    $('#pr-r').innerHTML=(showP?'Among the 40 training pairs, <b>'+cross+'</b> pairs of lines cross. ':'')+(showF?'The 25 flow paths never cross: each noise value has exactly one route.':''); }
+  function inverf(x){ var a=0.147, ln=Math.log(1-x*x), t1=2/(Math.PI*a)+ln/2; return (x<0?-1:1)*Math.sqrt(Math.sqrt(t1*t1-ln/a)-t1); }
+  function tog(id,get,set){ $(id).onclick=function(){ set(!get()); this.classList.toggle('on',get()); this.setAttribute('aria-pressed',get()); draw(); }; }
+  tog('#pr-pairs',function(){return showP;},function(v){showP=v;}); tog('#pr-flow',function(){return showF;},function(v){showF=v;});
+  $('#pr-new').onclick=function(){ seed++; draw(); }; draw();
+})();
+(function(){ // error vs NFE
+  var svg=$('#ne'), s=0.15, timer=null, Ns=[2,4,8,16,32,64,128];
+  function run(){ var r=rng(8), X0=[]; for (var i=0;i<300;i++) X0.push([gauss(r),gauss(r)]);
+    var out={}; ['ot','vp'].forEach(function(kind){ var ref=X0.map(function(x){ return FM.euler(kind,x,2000,M2,s,false); });
+      out[kind]=Ns.map(function(N){ var e=0; X0.forEach(function(x,i){ var y=FM.euler(kind,x,N,M2,s,false); e+=Math.hypot(y[0]-ref[i][0],y[1]-ref[i][1]); }); return e/X0.length; }); });
+    return out; }
+  function draw(){ clear(svg); var R=run(); function X(N){ return 60+(Math.log2(N)-1)/6*480; } var lo=-3, hi=1; function Y(e){ var l=Math.log10(Math.max(e,1e-3)); return 215-(Math.min(l,hi)-lo)/(hi-lo)*180; }
+    S('line',{x1:60,y1:215,x2:540,y2:215,'class':'axis'},svg); S('line',{x1:60,y1:35,x2:60,y2:215,'class':'axis'},svg);
+    Ns.forEach(function(N){ S('text',{x:X(N),y:232,'class':'t-s mid'},svg,N); }); S('text',{x:300,y:252,'class':'t-s mid'},svg,'function evaluations (Euler steps)');
+    for (var e=lo;e<=hi;e++){ S('line',{x1:60,y1:Y(Math.pow(10,e)),x2:540,y2:Y(Math.pow(10,e)),'class':'grid'},svg); S('text',{x:54,y:Y(Math.pow(10,e))+4,'class':'t-s end'},svg,e===0?'1':(e===1?'10':'1e'+e)); }
+    [['ot','w-fire','u-on','OT paths'],['vp','w','u-wire','diffusion (VP) paths']].forEach(function(P,j){ var d=''; R[P[0]].forEach(function(v,i){ d+=(i?'L':'M')+X(Ns[i])+','+Y(v); }); S('path',{d:d,'class':P[1]},svg);
+      R[P[0]].forEach(function(v,i){ S('circle',{cx:X(Ns[i]),cy:Y(v),r:3.5,'class':P[2]},svg); }); S('text',{x:400,y:56+j*18,'class':j?'t-wire':'t-fire'},svg,P[3]); });
+    $('#ne-r').innerHTML='Mean error at 4 steps: OT <b>'+fmt(R.ot[1],3)+'</b>, diffusion <b>'+fmt(R.vp[1],3)+'</b>. At 32 steps: OT <b>'+fmt(R.ot[4],3)+'</b>, diffusion <b>'+fmt(R.vp[4],3)+'</b>.'; }
+  function sch(){ if (timer) clearTimeout(timer); timer=setTimeout(draw,60); }
+  bindRange('ne-s',function(v){ s=v; sch(); }); $('#ne-go').onclick=draw;
+})();
+</script>

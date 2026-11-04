@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Distillation (2015) study guide</title>
+<meta name="description" content="Big models, and especially ensembles of many models, are accurate but too slow and expensive to deploy. Can a small model learn to do what the big one does? This paper says yes, if the small model is trained to copy the big model&#x27;s full set of output probabilities, softened with a &quot;tempera">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Machine learning &amp; training</b> · 2015</p>
+  <h1>Distilling the Knowledge in a Neural Network</h1>
+  <p class="cite">Geoffrey Hinton, Oriol Vinyals, Jeff Dean · NeurIPS 2014 workshop</p>
+  <p class="lede">Big models, and especially ensembles of many models, are accurate but too slow and expensive to deploy. Can a small model learn to do what the big one does? This paper says yes, if the small model is trained to copy the big model's full set of output probabilities, softened with a "temperature", instead of just the right answers. Those soft probabilities carry the big model's sense of which wrong answers are nearly right, and that turns out to be a great deal of knowledge.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/1503.02531">Read the paper (free)</a> <a href="https://lovespark.love/papers/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, independent AI review, but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>When a trained classifier looks at a picture, it does not just name one class: it gives a probability for every class, and the small probabilities it gives to wrong classes reveal what it has learned about how things resemble one another.</p>
+  <p>Those small probabilities are normally so close to zero that they are invisible, so the authors divide the model's raw scores by a "temperature" before turning them into probabilities, which softens the distribution and brings the hidden resemblances into view.</p>
+  <p>A small "student" model trained to match these softened outputs of a big "teacher" model (or an ensemble of them) learns far more per example than one trained on right-or-wrong labels alone, and can even recognise a class it never saw in training.</p>
+  <p>On handwritten digits and on a commercial speech recogniser, a single distilled model recovered most of the accuracy of a much bigger model or a ten-model ensemble, which is why "knowledge distillation" is now a standard way to make large models cheap to run.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1</p>
+  <h2>Training and deployment want different models</h2>
+  <div class="prose">
+    <p>The authors start with an analogy from biology: many insects have a larva that is good at eating and an adult that is good at travelling and breeding. Machine learning has the same split. During <strong>training</strong>, you can afford huge models, or an <strong>ensemble</strong> (many models whose answers are averaged), because the job is to soak up as much structure from the data as possible. At <strong>deployment</strong>, the model must answer millions of users quickly and cheaply.</p>
+    <p>The question is how to move what the big model knows into a small one. A common but misleading view is that a model's "knowledge" is its particular weight values. The paper suggests a better view: the knowledge is the <em>function</em> it has learned, the mapping from inputs to outputs. If the small model reproduces that function, it has the knowledge, whatever its insides look like.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A master chef cannot hand an apprentice the contents of their brain. But the apprentice can learn a lot by tasting every dish the master makes, including the master's comments on near misses ("this is almost a tarte tatin, nothing like a soup").</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Treat a model's knowledge as its input-to-output behaviour, and you can transfer it to a different, smaller model by teaching it to copy that behaviour.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §1–2 · Eq. 1</p>
+  <h2>The knowledge hiding in wrong answers</h2>
+  <div class="prose">
+    <p>A classifier ends with a <strong>softmax</strong>: it takes one raw score per class (called a <strong>logit</strong>) and turns the scores into probabilities that add up to 1. A well-trained model shown a photo of a BMW puts nearly all the probability on "car". But the tiny remainder is not random. The paper's example: a BMW may have only a small chance of being mistaken for a garbage truck, but that mistake is still many times more likely than mistaking it for a carrot.</p>
+    <p>That ranking of mistakes is exactly the kind of thing a small model would struggle to work out from labels alone. The trouble is that the numbers are microscopic, say one in a million versus one in a billion, so they barely affect training.</p>
+    <p>The fix is <strong>temperature</strong>. Before the softmax, divide every logit by a number <var>T</var>. At <var>T</var> = 1 you get the usual sharp probabilities. Raise <var>T</var> and the distribution flattens, so the small differences between wrong answers become large enough to learn from. Try it.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Temperature <var>T</var> <input type="range" id="tp-t" min="0.5" max="20" step="0.5" value="1" data-fmt="1"><output id="tp-t-o">1.0</output></label>
+      <button class="btn on" data-img="bmw">Photo: BMW</button><button class="btn" data-img="two">Handwritten 2</button>
+    </div>
+    <div class="svgbox"><svg id="tp" viewBox="0 0 600 260" role="img" aria-label="Bar chart of class probabilities softened by temperature"></svg></div>
+    <p class="readout" id="tp-r"></p>
+    <figcaption>Bars: probabilities from a softmax at temperature <var>T</var>. The small numbers under each bar are the model's raw logits, which never change. At <var>T</var> = 1 almost everything is on one class; by <var>T</var> = 5 or so the ordering of the wrong classes becomes visible. The logits are made up for illustration, inspired by the paper's BMW and digit examples.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Dividing the logits by a temperature softens a model's probabilities and exposes its knowledge of how classes resemble each other.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Does raising the temperature change which class the model thinks is most likely?</dt>
+    <dd>No. Dividing every logit by the same positive number keeps their order, so the top class stays on top. It only changes how spread out the probabilities are.</dd>
+    <dt>What happens as <var>T</var> becomes very large?</dt>
+    <dd>All probabilities approach 1/(number of classes): the distribution becomes flat and eventually carries no information, so <var>T</var> must be chosen moderately.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §2–3</p>
+  <h2>Distillation: copy the soft answers</h2>
+  <div class="prose">
+    <p>Here is the recipe. Run the big teacher model at a high temperature on a set of examples (the <strong>transfer set</strong>) and record its softened probabilities, the <strong>soft targets</strong>. Train the small student, at the same temperature, to produce the same probabilities. Optionally also train it, at normal temperature, on the true labels; the paper found a small weight on the true labels helped. After training, the student is used at temperature 1 like any other model.</p>
+    <p>Why does this work so well? A hard label ("this is a 2") only says which class is right. A full soft distribution says how much it looks like a 3, a 7 and every other class, so each example carries much more information, and the student's training signal is much less noisy. Below, a small student learns a three-class problem from very few examples. Compare hard labels with soft targets, then try hiding one class entirely from the transfer set.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Transfer examples <input type="range" id="ds-n" min="3" max="30" step="1" value="6"><output id="ds-n-o">6</output></label>
+      <button class="btn" id="ds-hide" aria-pressed="false">Hide all amber examples</button>
+      <button class="btn on" data-tgt="hard">Learn from hard labels</button><button class="btn" data-tgt="soft">Learn from soft targets (T = 4)</button>
+    </div>
+    <div class="svgbox"><svg id="ds" viewBox="0 0 600 280" role="img" aria-label="Teacher and student decision regions for a three-class problem"></svg></div>
+    <p class="readout" id="ds-r"></p>
+    <figcaption>Left: the teacher's answer at every point (three classes: blue, amber, green). Right: the student's answer after training on the transfer examples (circles). Both are simple linear classifiers here, so this is a toy, but it shows the paper's two effects: soft targets let a student match its teacher from a handful of examples, and a student that never sees an amber example can still learn amber from the amber probability inside the other examples' soft targets. With hard labels it almost never predicts amber.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Soft targets carry far more information per example than hard labels, so a student learns more from less data, including about classes it never sees.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>In the paper's digit experiment, the student never saw a single 3 during distillation. How could it still recognise 3s?</dt>
+    <dd>Other digits' soft targets contain small probabilities of "3" (some 8s and 5s look a bit like 3s). Matching those taught the student what makes something 3-like. Its main weakness was a bias for class 3 that was too low, which the authors fixed by raising it.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §3–4 · Table 1</p>
+  <h2>Results: digits and a real speech recogniser</h2>
+  <div class="prose">
+    <p><strong>Handwritten digits (MNIST).</strong> A large, heavily regularised network made 67 errors on the 10,000 test images. A smaller network trained normally made 146. The same small network trained to match the large one's soft targets at temperature 20 made 74, almost as good as its teacher.</p>
+    <p><strong>Speech recognition.</strong> The authors took the acoustic model of a production speech system (Google's, at the time) and trained ten copies to form an ensemble. The ensemble improved accuracy on individual sound frames from 58.9% to 61.1%. A single model distilled from the ensemble reached 60.8%, keeping more than 80% of the improvement, and matched the ensemble's word error rate of 10.7% (versus 10.9% for the baseline). Same size and speed as the original, most of the ensemble's benefit.</p>
+    <p><strong>Soft targets as a regulariser.</strong> Trained on only 3% of the speech data with hard labels, the model badly overfit (44.5% test accuracy). Trained on the same 3% with soft targets from a model that had seen all the data, it reached 57.0%, close to the 58.9% of a model trained on everything.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>Distillation became the standard way to make big models cheap. DistilBERT (Sanh et al., 2019) shrank <a href="bert.html">BERT</a> by 40% while keeping 97% of its language-understanding score. <a href="switch.html">Switch Transformer</a> distilled huge sparse models into dense ones. Today's small language models are often trained on a larger model's outputs, as with the distilled versions of <a href="r1.html">DeepSeek-R1</a>. Later studies (Stanton et al., 2021) found students often do not match their teachers as closely as you might hope, even when they generalise well.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>A distilled model of the same size as the original captured most of a ten-model ensemble's gain, and soft targets let a model trained on 3% of the data nearly match one trained on all of it.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Averaging the predictions of many models improves almost any learner, but ensembles are cumbersome to deploy. Building on Caruana and colleagues' model compression, the paper develops a different compression technique, distillation, that transfers an ensemble's or a large model's knowledge into a single small model. It shows surprising results on MNIST and significantly improves the acoustic model of a heavily used commercial speech system by distilling an ensemble into one model. It also introduces ensembles of a generalist plus many specialist models that learn to distinguish fine-grained classes the full model confuses, which can be trained rapidly and in parallel. Hinton, Vinyals &amp; Dean, NIPS 2014 Deep Learning Workshop (arXiv 1503.02531, 2015).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2 · Eqs. 1–2</p>
+  <h2>Softmax temperature and the distillation objective</h2>
+  <div class="eq"><var>q<sub>i</sub></var> = exp(<var>z<sub>i</sub></var>/<var>T</var>) / Σ<sub><var>j</var></sub> exp(<var>z<sub>j</sub></var>/<var>T</var>) <span class="n">(1)</span></div>
+  <div class="prose">
+    <p>The cumbersome model produces soft targets <var>p<sub>i</sub></var> at high <var>T</var>. The distilled model is trained at the same <var>T</var> to minimise cross-entropy <var>C</var> = −Σ<sub><var>i</var></sub> <var>p<sub>i</sub></var> log <var>q<sub>i</sub></var>, and used at <var>T</var> = 1 afterwards. When true labels are known, the best results came from a weighted average of two objectives: the soft-target cross-entropy at high <var>T</var>, and the hard-label cross-entropy at <var>T</var> = 1 with a considerably lower weight. The per-logit gradient of the soft term is</p>
+  </div>
+  <div class="eq">∂<var>C</var>/∂<var>z<sub>i</sub></var> = (1/<var>T</var>)(<var>q<sub>i</sub></var> − <var>p<sub>i</sub></var>) = (1/<var>T</var>)( e<sup><var>z<sub>i</sub></var>/<var>T</var></sup>/Σ<sub><var>j</var></sub>e<sup><var>z<sub>j</sub></var>/<var>T</var></sup> − e<sup><var>v<sub>i</sub></var>/<var>T</var></sup>/Σ<sub><var>j</var></sub>e<sup><var>v<sub>j</sub></var>/<var>T</var></sup> ) <span class="n">(2)</span></div>
+  <div class="prose">
+    <p>with <var>v</var> the teacher's logits. Because the gradient magnitudes of the soft term scale as 1/<var>T</var><sup>2</sup>, the authors multiply it by <var>T</var><sup>2</sup>, which keeps the relative contribution of hard and soft targets roughly unchanged when <var>T</var> is varied. This <var>T</var><sup>2</sup> factor is a standard detail of distillation implementations and is easy to forget.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §2.1 · Eqs. 3–4</p>
+  <h2>Matching logits is the high-temperature limit</h2>
+  <div class="prose"><p>For <var>T</var> large compared with the logits, e<sup><var>x</var>/<var>T</var></sup> ≈ 1 + <var>x</var>/<var>T</var>, so with <var>N</var> classes</p></div>
+  <div class="eq">∂<var>C</var>/∂<var>z<sub>i</sub></var> ≈ (1/<var>T</var>)( (1 + <var>z<sub>i</sub></var>/<var>T</var>)/(<var>N</var> + Σ<sub><var>j</var></sub><var>z<sub>j</sub></var>/<var>T</var>) − (1 + <var>v<sub>i</sub></var>/<var>T</var>)/(<var>N</var> + Σ<sub><var>j</var></sub><var>v<sub>j</sub></var>/<var>T</var>) ) <span class="n">(3)</span></div>
+  <div class="eq">∂<var>C</var>/∂<var>z<sub>i</sub></var> ≈ (1/(<var>N</var><var>T</var><sup>2</sup>)) (<var>z<sub>i</sub></var> − <var>v<sub>i</sub></var>) &nbsp;&nbsp; if Σ<var>z<sub>j</sub></var> = Σ<var>v<sub>j</sub></var> = 0 <span class="n">(4)</span></div>
+  <div class="prose">
+    <p>So in the high-temperature limit, distillation is equivalent to minimising ½(<var>z<sub>i</sub></var> − <var>v<sub>i</sub></var>)<sup>2</sup>, the logit-matching of Caruana et al. (Buciluǎ, Caruana &amp; Niculescu-Mizil, 2006, "Model compression"). At lower temperatures, distillation pays much less attention to matching logits that are far more negative than the average. That is a potential advantage, since such logits are almost unconstrained by the teacher's training signal and may be noisy, and a potential disadvantage, since they might carry useful knowledge. Empirically, intermediate temperatures worked best when the student was too small to capture all the teacher's knowledge.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label><var>T</var> <input type="range" id="gr-t" min="1" max="30" step="1" value="2"><output id="gr-t-o">2</output></label>
+      <button class="btn" id="gr-new">New logits</button>
+    </div>
+    <div class="svgbox wide"><svg id="gr" viewBox="0 0 640 260" role="img" aria-label="Exact distillation gradient versus the logit-matching approximation for ten classes"></svg></div>
+    <p class="readout" id="gr-r"></p>
+    <figcaption>Ten classes, zero-mean teacher logits <var>v</var> and student logits <var>z</var> (standard deviation about 3). Amber bars: the exact gradient of Eq. 2 multiplied by <var>T</var><sup>2</sup>. Blue ticks: the approximation of Eq. 4 times <var>T</var><sup>2</sup>, i.e. (<var>z<sub>i</sub></var> − <var>v<sub>i</sub></var>)/<var>N</var>. At small <var>T</var> the exact gradient ignores very negative logits (their bars are near zero); as <var>T</var> grows it converges to plain logit matching. The readout also shows why the <var>T</var><sup>2</sup> factor is needed: without it, the raw gradient shrinks like 1/<var>T</var><sup>2</sup>.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §3–4, §6 · Tables 1, 5</p>
+  <h2>MNIST and speech experiments</h2>
+  <div class="prose">
+    <p><strong>MNIST (§3).</strong> Teacher: two hidden layers of 1200 ReLUs, trained on all 60,000 cases with dropout, weight constraints and inputs jittered by up to two pixels: 67 test errors. Student: two hidden layers of 800 ReLUs, no regularisation: 146 errors trained on hard labels; 74 errors when trained with the additional soft-target task at <var>T</var> = 20. Students with 300 or more units per layer did similarly well for all <var>T</var> above 8; with only 30 units per layer, <var>T</var> between 2.5 and 4 worked much better than higher or lower values.</p>
+    <p><strong>Omitted class.</strong> With every 3 removed from the transfer set, the distilled model made 206 errors, 133 of them on the 1010 test 3s. Most errors were caused by the learned bias for class 3 being too low; raising it by 3.5 gave 109 errors, of which 14 were on 3s, i.e. 98.6% of test 3s correct despite never seeing one. With a transfer set containing only 7s and 8s, the error was 47.3%, falling to 13.2% after lowering the biases of 7 and 8 by 7.6.</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Speech system (§4, Table 1)</th><th>Test frame accuracy</th><th>Word error rate</th></tr></thead>
+    <tbody>
+      <tr><td>Baseline</td><td class="num">58.9%</td><td class="num">10.9%</td></tr>
+      <tr><td>10× ensemble</td><td class="num">61.1%</td><td class="num">10.7%</td></tr>
+      <tr><td>Distilled single model</td><td class="num">60.8%</td><td class="num">10.7%</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>The acoustic model: 8 hidden layers of 2560 ReLUs, softmax over 14,000 labels (HMM states), about 85M parameters, trained on about 2000 hours of English speech (about 700M examples). Ensemble members differed only in random initialisation. For distillation the authors tried <var>T</var> ∈ {1, 2, 5, 10} and used a relative weight of 0.5 on the hard-target cross-entropy. More than 80% of the ensemble's frame-accuracy gain transferred.</p>
+    <p><strong>Soft targets as regulariser (§6, Table 5).</strong> 100% of data, hard targets: 63.4% train / 58.9% test frame accuracy. 3% of data, hard targets: 67.3% / 44.5% (severe overfitting). 3% of data, soft targets: 65.4% / 57.0%.</p>
+  </div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §5, §7 · Tables 3–4</p>
+  <h2>Specialists on JFT</h2>
+  <div class="prose">
+    <p>JFT is an internal Google dataset of 100 million labelled images in 15,000 classes. Training an ensemble of full models was impractical (the baseline took about six months on many cores). Instead the authors train one generalist plus 61 <strong>specialists</strong>, each covering 300 easily confused classes plus a "dustbin" class for everything else. Specialists are initialised from the generalist, trained on data enriched with their classes, and can be trained in parallel. The confusable subsets are found by clustering the covariance matrix of the generalist's predictions (§5.3). At test time, the specialists relevant to the generalist's top classes are combined with it by finding a full distribution that minimises a sum of KL divergences to the generalist and active specialists (§5.4).</p>
+    <p>Result (§5.5, Table 3): conditional test accuracy 43.1% → 45.9%, overall top-1 test accuracy 25.0% → 26.1%, a 4.4% relative improvement; gains grew with the number of specialists covering a class (Table 4). The specialists were <em>not</em> distilled back into a single model in this paper; that is described as future work. §6.1 notes that soft targets from the generalist can stop specialists, which see enriched and therefore biased data, from overfitting. §7 contrasts this with <a href="moe.html">mixtures of experts</a>: specialists are assigned by a fixed clustering rather than a learned gating network, which makes them easy to parallelise.</p>
+  </div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · Lineage</p>
+  <h2>Limitations and what came next</h2>
+  <div class="prose"><ul>
+    <li><strong>Priority.</strong> Model compression by training a small net on an ensemble's outputs is due to Buciluǎ, Caruana &amp; Niculescu-Mizil (2006); Ba &amp; Caruana (2014) matched logits with shallow students. This paper's contributions are the temperature, the unifying view (logit matching as a limit), and the large-scale demonstrations.</li>
+    <li><strong>Vocabulary.</strong> "Dark knowledge", the name commonly attached to the information in the small probabilities, comes from Hinton's talks rather than the paper itself.</li>
+    <li><strong>Fidelity.</strong> Stanton et al. (2021, "Does knowledge distillation really work?") found that students often generalise well but agree with their teachers much less than expected, largely because the optimisation is hard, not because the student lacks capacity.</li>
+    <li><strong>Why it works</strong> remains debated: explanations include richer per-example information, label-smoothing-like regularisation (Müller et al., 2019, showed label smoothing hurts subsequent distillation), and "privileged information".</li>
+    <li><strong>Extensions.</strong> Intermediate-feature matching (FitNets, 2015), self-distillation (born-again networks, 2018), sequence-level distillation for translation (Kim &amp; Rush, 2016), task-agnostic language-model distillation (DistilBERT, TinyBERT), and distillation of sparse into dense models in <a href="switch.html">Switch Transformers</a> (which kept about 30% of the quality gain). For large language models, training small models on the outputs or full token distributions of a larger one is now common.</li>
+  </ul></div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why multiply the soft-target loss by <var>T</var><sup>2</sup>?</dt>
+    <dd>Eq. 4 shows its gradients scale as 1/<var>T</var><sup>2</sup>; without compensation, raising <var>T</var> would silently shrink the soft term relative to the hard-label term.</dd>
+    <dt>When might a lower temperature beat logit matching?</dt>
+    <dd>When the student is small: low <var>T</var> lets it ignore the teacher's very negative logits, which are poorly constrained and noisy, and spend capacity on the classes that matter.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Logit</dt><dd>Pre-softmax score <var>z<sub>i</sub></var>.</dd>
+    <dt>Temperature <var>T</var></dt><dd>Divisor of the logits before the softmax; larger means softer.</dd>
+    <dt>Soft targets</dt><dd>Teacher's probabilities at temperature <var>T</var>.</dd>
+    <dt>Transfer set</dt><dd>Inputs on which the student is trained to match the teacher (labelled or not).</dd>
+    <dt>Cumbersome model</dt><dd>The paper's term for the teacher: a large model or an ensemble.</dd>
+    <dt>Specialist</dt><dd>Model trained on a confusable subset of classes plus a dustbin class.</dd>
+    <dt>Frame accuracy</dt><dd>Fraction of 10 ms speech frames assigned the correct HMM state.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p>This is the newest step on its timeline so far.</p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers/">Papers worth reading</a> (<a href="https://lovespark.love/papers/#distill">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+function softmaxT(z,T){ var m=Math.max.apply(null,z), e=z.map(function(x){ return Math.exp((x-m)/T); }), s=e.reduce(function(a,b){return a+b;},0); return e.map(function(x){ return x/s; }); }
+(function(){ // temperature bars
+  var svg=$('#tp'), T=1, img='bmw';
+  var D={ bmw:{names:['car','truck','bus','van','bicycle','dog','cat','apple','carrot'], z:[12,5.5,4.8,6.5,2,-1,-1.5,-4,-5]},
+          two:{names:['0','1','2','3','4','5','6','7','8','9'], z:[1,0.5,14,0.2,-2,-1,-1.5,-6.6,2.5,-4]} };
+  function draw(){ clear(svg); var d=D[img], p=softmaxT(d.z,T), n=d.z.length, w=520/n;
+    S('line',{x1:40,y1:200,x2:580,y2:200,'class':'axis'},svg);
+    [0,0.5,1].forEach(function(k){ S('text',{x:34,y:200-k*170+4,'class':'t-s end'},svg,fmt(k,1)); S('line',{x1:40,y1:200-k*170,x2:580,y2:200-k*170,'class':'grid'},svg); });
+    p.forEach(function(q,i){ var h=q*170, x=50+i*w; S('rect',{x:x,y:200-h,width:w-10,height:Math.max(h,0.5),'class':i===d.z.indexOf(Math.max.apply(null,d.z))?'f-fire':'f-wire'},svg);
+      S('text',{x:x+(w-10)/2,y:200-h-5,'class':'t-s mid'},svg,q<0.001?q.toExponential(0):fmt(q,3));
+      S('text',{x:x+(w-10)/2,y:218,'class':'t mid'},svg,d.names[i]); S('text',{x:x+(w-10)/2,y:234,'class':'t-s mid'},svg,'z='+d.z[i]); });
+    var ent=-p.reduce(function(a,q){ return a+(q>0?q*Math.log2(q):0); },0);
+    var order=d.names.map(function(nm,i){ return [nm,p[i]]; }).sort(function(a,b){ return b[1]-a[1]; }).slice(1,4).map(function(x){ return x[0]; });
+    $('#tp-r').innerHTML='T = <b>'+fmt(T,1)+'</b>. Top class gets <b>'+fmt(Math.max.apply(null,p)*100,1)+'%</b>. Runner-up order: <b>'+order.join(', ')+'</b>. Spread (entropy): <b>'+fmt(ent,2)+'</b> of a possible '+fmt(Math.log2(d.z.length),2)+' bits.'; }
+  bindRange('tp-t',function(v){ T=v; draw(); });
+  $$('[data-img]').forEach(function(b){ b.onclick=function(){ $$('[data-img]').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); img=b.getAttribute('data-img'); draw(); }; });
+})();
+(function(){ // toy distillation
+  var svg=$('#ds'), N=6, hide=false, tgt='hard', Tt=4;
+  var Wt=[[2.2,0.4,0],[-1.6,1.8,0.3],[-0.6,-2.2,-0.3]]; // teacher logits = W·[x,y,1]
+  function tlog(x,y){ return Wt.map(function(w){ return w[0]*x+w[1]*y+w[2]; }); }
+  var r=rng(42), pool=[]; for (var i=0;i<200;i++) pool.push([r()*4-2, r()*4-2]);
+  function argmax(a){ var b=0; for (var i=1;i<a.length;i++) if (a[i]>a[b]) b=i; return b; }
+  function transfer(){ var out=[]; for (var i=0;i<pool.length && out.length<N;i++){ var p=pool[i], c=argmax(tlog(p[0],p[1])); if (hide && c===1) continue; out.push(p); } return out; }
+  function train(pts){ var W=[[0,0,0],[0,0,0],[0,0,0]], T=tgt==='soft'?Tt:1;
+    var tg=pts.map(function(p){ if (tgt==='soft') return softmaxT(tlog(p[0],p[1]),T); var c=argmax(tlog(p[0],p[1])), o=[0,0,0]; o[c]=1; return o; });
+    for (var it=0;it<1500;it++){ var G=[[0,0,0],[0,0,0],[0,0,0]];
+      pts.forEach(function(p,k){ var x=[p[0],p[1],1], z=W.map(function(w){ return w[0]*x[0]+w[1]*x[1]+w[2]; }), q=softmaxT(z,T);
+        for (var c=0;c<3;c++) for (var j=0;j<3;j++) G[c][j]+=(q[c]-tg[k][c])*x[j]/T; });
+      for (var c=0;c<3;c++) for (var j=0;j<3;j++) W[c][j]-=0.5*T*T*G[c][j]/pts.length; }
+    return W; }
+  var cls=['f-wire','f-fire','f-ok'], dot=['u-wire','u-on','f-ok'];
+  function panel(x0,fn,title){ var G=20, sz=12; for (var a=0;a<G;a++) for (var b=0;b<G;b++){ var x=-2+(a+0.5)*4/G, y=-2+(b+0.5)*4/G; S('rect',{x:x0+a*sz,y:30+(G-1-b)*sz,width:sz,height:sz,'class':cls[fn(x,y)],'fill-opacity':0.35},svg); }
+    S('rect',{x:x0,y:30,width:G*sz,height:G*sz,'class':'area'},svg); S('text',{x:x0+G*sz/2,y:20,'class':'t-h mid'},svg,title); }
+  function draw(){ clear(svg); var pts=transfer(), W=train(pts);
+    function sfn(x,y){ return argmax(W.map(function(w){ return w[0]*x+w[1]*y+w[2]; })); } function tfn(x,y){ return argmax(tlog(x,y)); }
+    panel(40,tfn,'teacher'); panel(330,sfn,'student');
+    pts.forEach(function(p){ var c=tfn(p[0],p[1]); [40,330].forEach(function(x0){ S('circle',{cx:x0+(p[0]+2)/4*240,cy:30+(2-p[1])/4*240,r:5,'class':dot[c]},svg); }); });
+    var agree=0, tot=0, amb=0; for (var a=0;a<40;a++) for (var b=0;b<40;b++){ var x=-2+(a+0.5)/10, y=-2+(b+0.5)/10; tot++; if (sfn(x,y)===tfn(x,y)) agree++; if (sfn(x,y)===1) amb++; }
+    $('#ds-r').innerHTML='Student agrees with teacher on <b>'+fmt(100*agree/tot,1)+'%</b> of the square. Trained on <b>'+pts.length+'</b> examples with <b>'+(tgt==='soft'?'soft targets':'hard labels')+'</b>'+(hide?', no amber examples':'')+'. Student predicts amber on <b>'+fmt(100*amb/tot,0)+'%</b> of the square.'; }
+  bindRange('ds-n',function(v){ N=v; draw(); });
+  $('#ds-hide').onclick=function(){ hide=!hide; this.setAttribute('aria-pressed',hide); this.textContent=hide?'Show amber examples':'Hide all amber examples'; draw(); };
+  $$('[data-tgt]').forEach(function(b){ b.onclick=function(){ $$('[data-tgt]').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); tgt=b.getAttribute('data-tgt'); draw(); }; });
+})();
+(function(){ // Eq 2 vs Eq 4
+  var svg=$('#gr'), T=2, seed=3, v, z;
+  function newl(){ var r=rng(seed++); v=[]; z=[]; for (var i=0;i<10;i++){ v.push(gauss(r)*3); z.push(gauss(r)*3); }
+    function zm(a){ var m=a.reduce(function(s,x){return s+x;},0)/a.length; return a.map(function(x){return x-m;}); } v=zm(v); z=zm(z); }
+  function draw(){ clear(svg); var q=softmaxT(z,T), p=softmaxT(v,T), N=10;
+    var ex=q.map(function(qi,i){ return (qi-p[i])/T*T*T; }), ap=z.map(function(zi,i){ return (zi-v[i])/N; });
+    var M=Math.max.apply(null,ex.concat(ap).map(Math.abs))||1;
+    function Y(g){ return 120-g/M*90; }
+    S('line',{x1:40,y1:120,x2:620,y2:120,'class':'axis'},svg);
+    for (var i=0;i<N;i++){ var x=60+i*56, y=Y(ex[i]); S('rect',{x:x,y:Math.min(y,120),width:30,height:Math.max(0.5,Math.abs(y-120)),'class':'f-fire','fill-opacity':0.8},svg);
+      S('line',{x1:x-6,y1:Y(ap[i]),x2:x+36,y2:Y(ap[i]),'class':'w','stroke-width':3},svg);
+      S('text',{x:x+15,y:232,'class':'t-s mid'},svg,'v='+fmt(v[i],1)); S('text',{x:x+15,y:246,'class':'t-s mid'},svg,'z='+fmt(z[i],1)); }
+    S('text',{x:44,y:22,'class':'t-s'},svg,'T² × ∂C/∂z_i   (amber: exact Eq. 2; blue: Eq. 4 approximation)');
+    var num=0, den=0; for (var i=0;i<N;i++){ num+=Math.pow(ex[i]-ap[i],2); den+=ap[i]*ap[i]; }
+    var raw=Math.sqrt(ex.reduce(function(s,g){ return s+g*g/(T*T*T*T); },0));
+    $('#gr-r').innerHTML='T = <b>'+T+'</b>. Relative gap between exact and logit-matching gradient: <b>'+fmt(100*Math.sqrt(num/den),1)+'%</b>. Size of the raw gradient (without T²): <b>'+raw.toExponential(2)+'</b>.'; }
+  bindRange('gr-t',function(x){ T=x; if (!v) newl(); draw(); });
+  $('#gr-new').onclick=function(){ newl(); draw(); };
+})();
+</script>
+
+</body>
+</html>

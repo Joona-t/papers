@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPT-2 (2019) study guide</title>
+<meta name="description" content="Can a language model learn to do tasks such as translating, summarising or answering questions without ever being trained on them? OpenAI trained a 1.5-billion-parameter transformer to do one thing, predict the next word of 40 GB of web pages, and found it could attempt all of these when the task wa">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Language models &amp; AI</b> · 2019</p>
+  <h1>Language Models are Unsupervised Multitask Learners</h1>
+  <p class="cite">Alec Radford, Jeffrey Wu, Rewon Child, David Luan, Dario Amodei, Ilya Sutskever · OpenAI</p>
+  <p class="lede">Can a language model learn to do tasks such as translating, summarising or answering questions without ever being trained on them? OpenAI trained a 1.5-billion-parameter transformer to do one thing, predict the next word of 40 GB of web pages, and found it could attempt all of these when the task was simply written into the prompt. It set new records on 7 of 8 language-modelling benchmarks without seeing their training data.</p>
+  <p class="paperlinks"><a href="https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf">Read the paper (free)</a> <a href="https://lovespark.love/papers/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, independent AI review, but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Until 2019, a model for each language task (translation, question answering, summarising) was trained on a hand-labelled dataset made for that task.</p>
+  <p>The authors argue that ordinary web text already contains countless examples of these tasks, such as a sentence followed by its French translation, so a model that predicts web text well must partly learn to do them.</p>
+  <p>They collected 8 million web pages that Reddit users had linked to, called WebText, and trained a transformer of up to 1.5 billion parameters, GPT-2, simply to predict the next piece of text.</p>
+  <p>With no task-specific training at all ("zero-shot"), GPT-2 beat the best previous results on 7 of 8 language-modelling benchmarks and made a real start on reading comprehension, summarising and translation, getting steadily better as the model grew.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1–2</p>
+  <h2>The task is written in the text</h2>
+  <div class="prose">
+    <p>A <strong>language model</strong> is a program that reads some text and guesses what comes next, one small piece at a time. Ask it to continue "The capital of France is" and a good one puts most of its bets on "Paris".</p>
+    <p>The usual way to build, say, a translator was different: collect a big table of sentence pairs and train a model only on that. The model is a <em>specialist</em>, and it does nothing else.</p>
+    <p>The paper's key observation is that you can describe a task in words, as part of the input. A translation request is just text like "translate to French: the cat", and a question is just text ending in "A:". If the model has read enough of the web, it has seen many passages shaped like that, and the most likely continuation <em>is</em> the answer. The authors even found sentences in their data such as an English quote followed by "in French, that is …" (they list examples in Table 1).</p>
+    <p>Try it on a tiny pretend model below. It has only "read" a dozen sentences, and it predicts the next word by looking for the longest matching phrase it has seen before. Notice how the same final words, "dog is", lead to different guesses depending on what comes before them.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn" data-p="my dog is">my dog is</button>
+      <button class="btn" data-p="in french , dog is">in french , dog is</button>
+      <button class="btn" data-p="q : what is the capital of italy ? a :">q: … capital of italy ? a:</button>
+      <button class="btn" data-p="the capital of">the capital of</button>
+      <button class="btn" id="ng-next">Add the top word</button>
+    </div>
+    <div class="svgbox"><svg id="ng" viewBox="0 0 600 230" role="img" aria-label="Next-word guesses of a tiny pretend language model"></svg></div>
+    <p class="readout" id="ng-r"></p>
+    <figcaption>An illustrative toy, not GPT-2: a word-counting model "trained" on 14 short sentences (French word lessons, quiz questions, everyday sentences). It looks back up to three words and backs off to shorter matches when it has no exact match. Bars show its probability for each possible next word. GPT-2 does something far richer with a neural network, but the lesson carries over: the words before the gap tell the model which "task" it is in.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>A child who has read thousands of recipe books, quiz books and phrase books has never had a lesson in translating, but if you write "Hello in French is …" on the board they will probably say "bonjour". They learned the task as a side effect of reading.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>If a task can be written as text, predicting text well means learning a little of that task, for free.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>In this framing, how do you tell the model which task to do?</dt>
+    <dd>By writing the task into the input, for example with a format like "question … A:" or a sentence pair pattern, so the most likely continuation is the answer.</dd>
+    <dt>Why did the toy give different answers after "dog is"?</dt>
+    <dd>Because it uses the longer context: after "in french , dog is" the only continuation it had seen was "chien", while "my dog is" led to "happy". The earlier words selected the task.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §2.1</p>
+  <h2>WebText: let Reddit pick the pages</h2>
+  <div class="prose">
+    <p>To learn many tasks from reading, the model needs a lot of varied, decent-quality text. The whole web is huge but full of junk, and cleaning it by hand is impossible.</p>
+    <p>The authors used a shortcut. They took every outbound link posted on the discussion site Reddit that had received at least 3 "karma" (net upvotes), on the theory that a human had found the page interesting, funny or useful. After removing duplicates and cleaning, this gave a little over <strong>8 million documents, 40 GB of text</strong>, which they called WebText.</p>
+    <p>They removed all Wikipedia pages, because many of the tests they planned use Wikipedia and they did not want the model to have simply read the answers.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Instead of reading every book in the world, you read only the ones a friend has recommended. You miss some gems, but you skip most of the rubbish.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Human upvotes served as a cheap quality filter, giving a large and varied training set without hand-labelling.</p>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §2.3 · §3.1 · Table 3</p>
+  <h2>Bigger keeps getting better</h2>
+  <div class="prose">
+    <p>The model itself is a <a href="transformer.html">transformer</a>, the same design as <a href="gpt1.html">GPT-1</a> with small changes. The authors trained four sizes, from 117 million to 1.5 billion <strong>parameters</strong> (the adjustable numbers inside the network that training tunes).</p>
+    <p>They then tested each size, with no extra training, on standard language benchmarks. Some measure <strong>perplexity</strong>: roughly, how many words the model is "torn between" at each step, so lower is better. Others measure accuracy on fill-in-the-blank tests. Pick a benchmark below. The dashed line is the best published result before GPT-2, achieved by models trained on that benchmark's own data.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl" id="sc-ctl"></div>
+    <div class="svgbox"><svg id="sc" viewBox="0 0 600 260" role="img" aria-label="Zero-shot benchmark scores of the four GPT-2 sizes against the previous best result"></svg></div>
+    <p class="readout" id="sc-r"></p>
+    <figcaption>Real numbers from Table 3 of the paper. The four dots are the four model sizes; the dashed line is the previous state of the art. On every benchmark the largest model is better than the smallest. One Billion Word is the exception that stays far behind: its sentences are shuffled, which destroys the long-range structure GPT-2 relies on.</figcaption>
+  </figure>
+  <div class="prose">
+    <p>Two details stand out. First, the gains were biggest on small benchmarks and on ones that need long-range context, such as LAMBADA, where you must read a whole paragraph to guess its last word. Second, even the largest model was still improving on its own training data as it grew (Fig. 4): it had not run out of things to learn.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Without seeing any benchmark's training data, the largest GPT-2 set a new record on 7 of 8 language-modelling tests, and every step up in size helped.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Is lower or higher perplexity better, and why?</dt>
+    <dd>Lower. It measures how uncertain the model is about the next word; a perplexity of 10 is like choosing among about ten equally likely words each step.</dd>
+    <dt>Why did GPT-2 do poorly on One Billion Word?</dt>
+    <dd>That benchmark's sentences are shuffled, so there is no long-range context to use; the paper notes this "destructive pre-processing".</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §3.5–3.8</p>
+  <h2>Tasks it was never taught: promising, not yet good</h2>
+  <div class="prose">
+    <p>The more surprising tests asked GPT-2 to do things that are not language modelling at all, using only a cleverly shaped prompt:</p>
+    <ul>
+      <li><strong>Reading comprehension.</strong> Give it a story, a conversation about it, and end with "A:". It scored 55 on the CoQA test's F1 measure, matching or beating 3 of 4 earlier systems that had been trained on more than 127,000 labelled examples.</li>
+      <li><strong>Summarising.</strong> Paste a news article and add "TL;DR:" (internet slang for "too long, didn't read: here's the short version"). The summaries were weak by the standards of trained systems, but removing the "TL;DR:" hint made them clearly worse, showing the hint really does call up the task.</li>
+      <li><strong>Translation.</strong> Show a few "English sentence = French sentence" pairs, then an English sentence and "=". French to English reached 11.5 BLEU (a translation-quality score), far below the best systems but remarkable given that only about 10 MB of the training text was French.</li>
+      <li><strong>Trivia questions.</strong> It answered 4.1% of Natural Questions exactly right; on the 1% of questions it was most confident about, it was right 63.1% of the time.</li>
+    </ul>
+    <p>The authors are frank that most of these results are far from useful. The point is the trend: performance on every one rose with model size, which suggested that much bigger models might cross into usefulness.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>That bet was tested a year later by <a href="gpt3.html">GPT-3</a>: over 100 times larger, and given a few worked examples in the prompt ("few-shot"), it became competitive on many of these tasks. Later still, <a href="instructgpt.html">instruction tuning with human feedback</a> made models follow plain requests instead of needing prompt tricks like "TL;DR:".</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Zero-shot task performance was weak but real, and it climbed steadily with size: the first strong hint that scale alone unlocks new abilities.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What does the "TL;DR:" experiment show?</dt>
+    <dd>That the prompt wording selects the task: with the hint the summaries score higher than without it, so the model has learned what usually follows "TL;DR:" on the web.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §4 · Discussion</p>
+  <h2>Did it just memorise? And should it be released?</h2>
+  <div class="prose">
+    <p>A model that has read 8 million web pages might have read the test questions too. The authors checked by chopping texts into runs of 8 words and seeing how many runs from each test set also appear in WebText. Overlap was small, between 1% and 6% for most test sets (3.2% on average), and removing it changed scores only slightly. Several test sets overlapped more with <em>their own</em> training sets than with WebText.</p>
+    <p>The paper itself is a research report, but GPT-2 is also remembered for how it was released. Worried that fluent fake text could be misused, OpenAI at first published only the smallest model and released the full 1.5-billion-parameter version in stages over 2019. Whatever one thinks of that choice, it started a lasting debate about releasing powerful models.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>The results were mostly genuine generalisation, not memorised test answers; and GPT-2's staged release made "should we publish this model?" a real question.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Language tasks such as question answering, machine translation, reading comprehension and summarisation are usually tackled with supervised learning on task-specific datasets. The authors show that language models begin to learn these tasks without explicit supervision when trained on WebText, a new dataset of millions of web pages. Conditioned on a document and questions, the model reaches 55 F1 on CoQA, matching or exceeding 3 of 4 baselines without their 127k+ training examples. Capacity is essential: performance improves log-linearly across tasks with model size. The largest model, GPT-2 (1.5B parameters), achieves state-of-the-art results on 7 of 8 language-modelling datasets zero-shot while still underfitting WebText, and its samples contain coherent paragraphs. OpenAI technical report, February 2019.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2</p>
+  <h2>Multitask learning as conditional language modelling</h2>
+  <div class="prose">
+    <p>A language model factorises the probability of a symbol sequence autoregressively:</p>
+  </div>
+  <div class="eq"><var>p</var>(<var>x</var>) = ∏<sub><var>i</var>=1</sub><sup><var>n</var></sup> <var>p</var>(<var>s<sub>i</sub></var> | <var>s</var><sub>1</sub>, …, <var>s</var><sub><var>i</var>−1</sub>) <span class="n">(1)</span></div>
+  <div class="prose">
+    <p>A single-task system estimates <var>p</var>(output | input); a general system should estimate <var>p</var>(output | input, task). Earlier work conditioned on the task architecturally (task-specific encoders/decoders) or algorithmically (meta-learning). §2 observes that language offers a flexible way to specify the task, input and output all as one symbol sequence, citing McCann et al.'s decaNLP: a translation example becomes (translate to french, english text, french text) and reading comprehension becomes (answer the question, document, question, answer).</p>
+    <p>The central conjecture: since the supervised objective is the unsupervised objective evaluated on a subset of the sequence, the global minimum of the unsupervised objective is also a minimum of the supervised one. A sufficiently capable LM trained on sufficiently diverse text will therefore learn to infer and perform tasks demonstrated in natural language, in order to predict them better; the authors call this unsupervised multitask learning. Table 1 lists naturally occurring English–French translation pairs found in WebText to make the point concrete.</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why should minimising the unsupervised LM loss also minimise a supervised loss?</dt>
+    <dd>The supervised targets are just some of the tokens of the sequence, so the supervised loss is the LM loss restricted to those positions; a model optimal on all positions is optimal on that subset too (the paper's argument; in practice optimisation is the bottleneck, which is why scale matters).</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §2.1–2.2</p>
+  <h2>WebText and byte-level BPE</h2>
+  <div class="prose">
+    <p><strong>Data.</strong> Outbound links from Reddit with at least 3 karma, about 45 million links, text extracted with the Dragnet and Newspaper extractors. The version used excludes links created after December 2017 and, after de-duplication and heuristic cleaning, has slightly over 8 million documents (40 GB). All Wikipedia documents were removed to reduce test-set overlap.</p>
+    <p><strong>Input representation.</strong> The model should be able to assign probability to any string, so it works over bytes rather than pre-processed words. Plain byte-level LMs were not competitive with word-level ones at the time, so the authors use byte pair encoding (BPE) on UTF-8 bytes. BPE starts from a base vocabulary of 256 byte symbols and repeatedly merges the most frequent adjacent pair. Doing BPE over Unicode code points instead would need a base vocabulary of more than 130,000 symbols, against the 32,000 to 64,000 tokens typical of BPE vocabularies.</p>
+    <p>A naive byte-level BPE wastes vocabulary on variants such as <code>dog.</code> <code>dog!</code> <code>dog?</code>, because the greedy frequency heuristic happily merges across punctuation. GPT-2 blocks merges across character categories, with an exception for spaces, which keeps word pieces clean while preserving full coverage. The final vocabulary has 50,257 tokens. Run both variants below.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" data-bm="1">Block cross-category merges (GPT-2)</button><button class="btn" data-bm="0">Naive byte-level BPE</button><button class="btn" id="bpe-step">Next merge</button><button class="btn" id="bpe-10">10 merges</button><button class="btn" id="bpe-rst">Reset</button></div>
+    <div class="svgbox wide"><svg id="bpe" viewBox="0 0 640 180" role="img" aria-label="Byte pair encoding merges on a short text"></svg></div>
+    <p class="readout" id="bpe-r"></p>
+    <figcaption>BPE on a short training text. Each box is one current token (a dot shows a space). Every merge joins the most frequent adjacent pair (ties broken by first occurrence). With blocking, the text is first split into chunks of letters, digits or punctuation, each optionally preceded by one space, and merges never cross a chunk boundary. In naive mode, watch tokens such as "dog." and "dog!" appear; with blocking, "dog" is learned once and punctuation stays separate.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why not simply use a byte-level model with a 256-symbol vocabulary?</dt>
+    <dd>It can represent anything, but at the time byte-level LMs underperformed word-level ones on large datasets, and sequences become several times longer. BPE keeps full coverage while producing word-like units.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §2.3 · Table 2</p>
+  <h2>Model changes from GPT-1</h2>
+  <div class="prose">
+    <p>The architecture largely follows <a href="gpt1.html">GPT-1</a> (a decoder-only <a href="transformer.html">transformer</a>) with these modifications:</p>
+    <ul>
+      <li><a href="layernorm.html">Layer normalisation</a> moved to the input of each sub-block (pre-activation, as in pre-activation residual networks), plus an extra layer norm after the final self-attention block.</li>
+      <li>Residual-layer weights scaled at initialisation by 1/√<var>N</var>, with <var>N</var> the number of residual layers, to account for accumulation along the residual path.</li>
+      <li>Vocabulary expanded to 50,257; context size increased from 512 to 1,024 tokens; batch size 512.</li>
+    </ul>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Parameters</th><th>Layers</th><th><var>d</var><sub>model</sub></th></tr></thead>
+    <tbody>
+      <tr><td class="num">117M</td><td class="num">12</td><td class="num">768</td></tr>
+      <tr><td class="num">345M</td><td class="num">24</td><td class="num">1024</td></tr>
+      <tr><td class="num">762M</td><td class="num">36</td><td class="num">1280</td></tr>
+      <tr><td class="num">1542M</td><td class="num">48</td><td class="num">1600</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>Table 2 of the paper. The smallest is equivalent to GPT-1, the second to the largest <a href="bert.html">BERT</a>. Learning rates were tuned per size for the best perplexity on a 5% held-out split of WebText; all sizes still underfit WebText, with held-out perplexity improving with size (Fig. 4). (OpenAI's code release later relabelled the two smaller models 124M and 355M after a recount of their parameters.)</p>
+    <p>Pre-norm and scaled residual initialisation became standard for deep transformers; later models such as <a href="llama.html">LLaMA</a> keep pre-norm but swap LayerNorm for <a href="rmsnorm.html">RMSNorm</a>.</p>
+  </div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §3 · Tables 3–4</p>
+  <h2>Zero-shot results</h2>
+  <div class="prose">
+    <p><strong>Language modelling (§3.1, Table 3).</strong> Because byte-level BPE needs no lossy pre-processing, GPT-2 can be evaluated on any benchmark; its log-probabilities are rescaled to the benchmark's own tokenisation, and de-tokenisers invert benchmark-specific artefacts (which alone gives 2.5 to 5 perplexity points). The 1542M model sets the state of the art on 7 of 8 datasets:</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Dataset (metric)</th><th>Prev. SOTA</th><th>117M</th><th>345M</th><th>762M</th><th>1542M</th></tr></thead>
+    <tbody>
+      <tr><td>LAMBADA (PPL)</td><td class="num">99.8</td><td class="num">35.13</td><td class="num">15.60</td><td class="num">10.87</td><td class="num">8.63</td></tr>
+      <tr><td>LAMBADA (ACC)</td><td class="num">59.23</td><td class="num">45.99</td><td class="num">55.48</td><td class="num">60.12</td><td class="num">63.24</td></tr>
+      <tr><td>CBT-CN (ACC)</td><td class="num">85.7</td><td class="num">87.65</td><td class="num">92.35</td><td class="num">93.45</td><td class="num">93.30</td></tr>
+      <tr><td>CBT-NE (ACC)</td><td class="num">82.3</td><td class="num">83.4</td><td class="num">87.1</td><td class="num">88.0</td><td class="num">89.05</td></tr>
+      <tr><td>WikiText-2 (PPL)</td><td class="num">39.14</td><td class="num">29.41</td><td class="num">22.76</td><td class="num">19.93</td><td class="num">18.34</td></tr>
+      <tr><td>PTB (PPL)</td><td class="num">46.54</td><td class="num">65.85</td><td class="num">47.33</td><td class="num">40.31</td><td class="num">35.76</td></tr>
+      <tr><td>enwik8 (BPB)</td><td class="num">0.99</td><td class="num">1.16</td><td class="num">1.01</td><td class="num">0.97</td><td class="num">0.93</td></tr>
+      <tr><td>text8 (BPC)</td><td class="num">1.08</td><td class="num">1.17</td><td class="num">1.06</td><td class="num">1.02</td><td class="num">0.98</td></tr>
+      <tr><td>WikiText-103 (PPL)</td><td class="num">18.3</td><td class="num">37.50</td><td class="num">26.37</td><td class="num">22.05</td><td class="num">17.48</td></tr>
+      <tr><td>1BW (PPL)</td><td class="num">21.8</td><td class="num">75.20</td><td class="num">55.72</td><td class="num">44.575</td><td class="num">42.16</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>Raw LAMBADA accuracy rises from the previous LM result of 19% to 52.66%; the 63.24% in the table adds a stop-word filter that approximates the constraint that the answer must be the final word of a sentence. Winograd Schema (§3.4): 70.70%, a 7-point improvement over the previous best, on a test set of only 273 examples.</p>
+    <p><strong>Task transfer.</strong></p>
+    <ul>
+      <li>CoQA (§3.5): 55 F1 on the development set with greedy decoding, conditioned on document, dialogue history and a final "A:". The paper notes that many answers seem to rely on simple retrieval heuristics such as answering "who" questions with names in the document.</li>
+      <li>CNN/Daily Mail summarisation (§3.6, Table 4): append "TL;DR:", sample 100 tokens with top-<var>k</var> random sampling (<var>k</var> = 2), keep the first 3 generated sentences. ROUGE-1/2/L = 29.34 / 8.27 / 26.58 (average 21.40); with no hint, average 15.03, a drop of 6.4 points. That only just beats picking 3 random sentences from the article (21.40 vs 20.98 average).</li>
+      <li>WMT-14 translation (§3.7): conditioned on example pairs in the format "english sentence = french sentence". En→Fr 5 BLEU; Fr→En 11.5 BLEU, above several unsupervised MT baselines but well below the best unsupervised system at the time (33.5 BLEU). A byte-level language detector found only about 10 MB of French in WebText.</li>
+      <li>Natural Questions (§3.8): 4.1% exact match, 5.3 times a trivial most-common-answer baseline (the smallest model does not beat that baseline's 1.0%), and 63.1% accuracy on its most confident 1% of questions, against 30 to 50% for open-domain QA systems with retrieval.</li>
+    </ul>
+  </div>
+  <figure>
+    <div class="svgbox"><svg id="tldr" viewBox="0 0 600 170" role="img" aria-label="ROUGE scores with and without the TL;DR hint"></svg></div>
+    <figcaption>Table 4: ROUGE-1, ROUGE-2 and ROUGE-L F1 for GPT-2 summaries with the "TL;DR:" hint (amber) and without it (blue). The hint is the only thing that tells the model which task to do.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §4 · Tables 5–6</p>
+  <h2>Generalisation versus memorisation</h2>
+  <div class="prose">
+    <p>To estimate train–test contamination, the authors built Bloom filters over the 8-grams of WebText training text (normalised to lower-case alphanumeric words separated by single spaces), with the false-positive rate bounded above by 1/10<sup>8</sup>. Test sets of common LM benchmarks have 1 to 6% of their 8-grams in WebText train (average 3.2%), while those benchmarks' own training splits overlap their test sets more (average 5.9%); 1BW's test set overlaps its own training set by nearly 13.2%. For LAMBADA the average overlap is 1.2%, and removing examples with any overlap moves accuracy and perplexity only slightly. WebText's own held-out set also tracks its training set closely as models grow (Fig. 4), so the models underfit rather than memorise. The figure below applies the same 8-gram test to text you supply.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>n-gram length <input type="range" id="ov-n" min="3" max="12" step="1" value="8"><output id="ov-n-o">8</output></label><button class="btn" id="ov-go">Recompute</button></div>
+    <div class="prose" style="max-width:none">
+      <label class="eyebrow" for="ov-a">"Training" text</label>
+      <textarea id="ov-a" rows="4" style="width:100%;font:inherit;font-size:.9rem;background:var(--paper);color:var(--ink);border:1px solid var(--rule);padding:6px">The quick brown fox jumps over the lazy dog every single morning before breakfast. Scientists announced on Tuesday that the new telescope had captured the clearest image yet of a distant galaxy.</textarea>
+      <label class="eyebrow" for="ov-b">"Test" text</label>
+      <textarea id="ov-b" rows="3" style="width:100%;font:inherit;font-size:.9rem;background:var(--paper);color:var(--ink);border:1px solid var(--rule);padding:6px">Reports say the new telescope had captured the clearest image yet of a distant galaxy, and a fox was seen nearby.</textarea>
+    </div>
+    <div class="svgbox"><svg id="ov" viewBox="0 0 600 90" role="img" aria-label="Test words coloured by whether they fall in an n-gram also present in the training text"></svg></div>
+    <p class="readout" id="ov-r"></p>
+    <figcaption>Exact set membership stands in for the paper's Bloom filter (which only adds a tiny false-positive rate). Words are lower-cased and stripped of punctuation as in §4. Amber words lie inside at least one n-gram shared with the training text. Shorter n flags more incidental overlap; the paper's choice of 8 targets copied passages rather than common phrases.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is "test overlaps its own training split by 5.9%" an important comparison?</dt>
+    <dd>It shows some overlap is normal even for curated splits, so WebText's 3.2% is not unusually contaminating; models trained on the benchmark's own train set already enjoy more leakage than GPT-2.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t6">
+  <p class="eyebrow"><b>Section</b> · §5–7 and lineage</p>
+  <h2>Limitations and what came next</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Usefulness.</strong> The authors state that zero-shot performance on summarisation, translation and QA is still far from usable; the contribution is a baseline and a trend, with performance rising roughly log-linearly in capacity.</li>
+      <li><strong>Unclear ceiling.</strong> They note it is unknown whether fine-tuning on top would remove the remaining gap, and planned to fine-tune on decaNLP and GLUE.</li>
+      <li><strong>Prompt sensitivity.</strong> Task specification relies on hand-chosen formats ("TL;DR:", "A:", "english = french"), which later work showed can swing results substantially.</li>
+      <li><strong>Data.</strong> Reddit-karma filtering inherits Reddit's demographics and tastes; WebText was not released, prompting open replications such as OpenWebText.</li>
+    </ul>
+  </div>
+  <div class="later"><span class="label">Later refinements</span><a href="scaling.html">Kaplan et al. (2020)</a> turned "bigger is better" into power laws, later revised by <a href="chinchilla.html">Chinchilla</a> towards more data per parameter. <a href="gpt3.html">GPT-3</a> scaled the same recipe roughly 100× and replaced zero-shot prompting with few-shot in-context examples, which narrowed the gap to fine-tuned systems on many tasks. <a href="instructgpt.html">InstructGPT</a> then replaced prompt engineering with instruction following learned from human feedback. On release policy, OpenAI published the 1.5B weights in November 2019 after a staged release, together with a report on misuse and detection.</div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What distinguishes GPT-2's evaluation from GPT-3's "few-shot" one?</dt>
+    <dd>GPT-2 mostly uses zero-shot task cues (a format or hint), with only translation given example pairs; GPT-3 systematically places K demonstrations in the context and compares zero-, one- and few-shot settings.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t7" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Zero-shot</dt><dd>Evaluated on a task without any training examples from that task, here without any parameter updates either.</dd>
+    <dt>Perplexity (PPL)</dt><dd>exp of the average negative log-likelihood per token; lower is better.</dd>
+    <dt>BPB / BPC</dt><dd>Bits per byte / per character, the compression-style metric for enwik8 and text8.</dd>
+    <dt>BPE</dt><dd>Byte pair encoding: a vocabulary built by repeatedly merging the most frequent adjacent symbol pair.</dd>
+    <dt>WebText</dt><dd>8M documents (40 GB) from Reddit outbound links with ≥ 3 karma, Wikipedia removed.</dd>
+    <dt>Pre-norm</dt><dd>Applying layer normalisation at the input of each residual sub-block rather than after the residual sum.</dd>
+    <dt>Bloom filter</dt><dd>A compact probabilistic set that can report false positives but never false negatives.</dd>
+    <dt>Top-<var>k</var> sampling</dt><dd>Sample the next token only from the <var>k</var> most likely tokens.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="gpt1.html">GPT-1 (2018)</a></p>
+  <p><strong>Led to:</strong> <a href="gpt3.html">GPT-3 (2020)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers/">Papers worth reading</a> (<a href="https://lovespark.love/papers/#gpt2">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // tiny backoff n-gram model
+  var corpus=['in french , dog is chien .','in french , cat is chat .','in french , house is maison .','in french , hello is bonjour .','my dog is happy .','my dog is very happy today .','the cat is asleep .','the house is big .','q : what is the capital of france ? a : paris .','q : what is the capital of spain ? a : madrid .','q : what is the capital of italy ? a : rome .','the capital of france is beautiful .','the capital of spain is sunny .','tl;dr : the dog is happy .'];
+  var toks=corpus.map(function(s){ return s.split(' '); });
+  var svg=$('#ng'), cur='my dog is';
+  function dist(ctx){ var c=ctx.split(' ').filter(Boolean);
+    for (var n=Math.min(3,c.length); n>=0; n--){ var key=c.slice(c.length-n).join(' '), cnt={}, tot=0;
+      toks.forEach(function(t){ for (var i=n;i<t.length;i++){ if (t.slice(i-n,i).join(' ')===key){ cnt[t[i]]=(cnt[t[i]]||0)+1; tot++; } } });
+      if (tot>0){ var arr=Object.keys(cnt).map(function(k){ return [k,cnt[k]/tot]; }).sort(function(a,b){ return b[1]-a[1]; }); return {n:n,key:key,arr:arr.slice(0,6)}; } }
+  }
+  function draw(){ clear(svg); var d=dist(cur);
+    S('text',{x:20,y:24,'class':'t-s'},svg,'prompt:'); S('text',{x:80,y:24,'class':'t'},svg,cur.length>70?'…'+cur.slice(-70):cur);
+    S('text',{x:20,y:46,'class':'t-s'},svg,'matched context ('+d.n+' word'+(d.n===1?'':'s')+'): '+(d.key||'(none, word frequencies)'));
+    d.arr.forEach(function(a,i){ var y=66+i*26, w=a[1]*380;
+      S('text',{x:150,y:y+15,'class':'t end'},svg,a[0]); S('rect',{x:160,y:y,width:Math.max(w,2),height:20,'class':i===0?'f-fire':'f-wire','fill-opacity':i===0?1:0.55},svg);
+      S('text',{x:166+w,y:y+15,'class':'t-s'},svg,fmt(a[1]*100,0)+'%'); });
+    $('#ng-r').innerHTML='Most likely next word: <b>'+d.arr[0][0]+'</b>.'; }
+  $$('[data-p]').forEach(function(b){ b.onclick=function(){ cur=b.getAttribute('data-p'); $$('[data-p]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }; });
+  $('#ng-next').onclick=function(){ var d=dist(cur); if (cur.split(' ').length>24) return; cur+=' '+d.arr[0][0]; draw(); };
+  $$('[data-p]')[0].classList.add('on'); draw();
+})();
+(function(){ // Table 3 scaling chart
+  var B=[['LAMBADA acc',59.23,[45.99,55.48,60.12,63.24],1,'%'],['LAMBADA PPL',99.8,[35.13,15.60,10.87,8.63],0,''],['CBT-CN',85.7,[87.65,92.35,93.45,93.30],1,'%'],['CBT-NE',82.3,[83.4,87.1,88.0,89.05],1,'%'],['WikiText-2',39.14,[29.41,22.76,19.93,18.34],0,''],['PTB',46.54,[65.85,47.33,40.31,35.76],0,''],['enwik8 BPB',0.99,[1.16,1.01,0.97,0.93],0,''],['text8 BPC',1.08,[1.17,1.06,1.02,0.98],0,''],['WikiText-103',18.3,[37.50,26.37,22.05,17.48],0,''],['1BW',21.8,[75.20,55.72,44.575,42.16],0,'']];
+  var sizes=[117,345,762,1542], svg=$('#sc'), ctl=$('#sc-ctl'), k=0;
+  B.forEach(function(b,i){ var e=document.createElement('button'); e.className='btn'+(i===0?' on':''); e.textContent=b[0]; e.onclick=function(){ k=i; $$('.btn',ctl).forEach(function(x,j){ x.classList.toggle('on',j===i); }); draw(); }; ctl.appendChild(e); });
+  function draw(){ clear(svg); var b=B[k], vals=b[2].concat([b[1]]), lo=Math.min.apply(null,vals), hi=Math.max.apply(null,vals), pad=(hi-lo)*0.15||1; lo-=pad; hi+=pad;
+    var X=function(s){ return 90+(Math.log(s)-Math.log(100))/(Math.log(1800)-Math.log(100))*460; }, Y=function(v){ return 220-(v-lo)/(hi-lo)*180; };
+    S('line',{x1:90,y1:220,x2:560,y2:220,'class':'axis'},svg); S('line',{x1:90,y1:40,x2:90,y2:220,'class':'axis'},svg);
+    for (var g=0; g<=4; g++){ var v=lo+(hi-lo)*g/4; S('line',{x1:90,y1:Y(v),x2:560,y2:Y(v),'class':'grid'},svg); S('text',{x:84,y:Y(v)+4,'class':'t-s end'},svg,fmt(v,v<5?2:1)); }
+    S('line',{x1:90,y1:Y(b[1]),x2:560,y2:Y(b[1]),'class':'w-dash'},svg); S('text',{x:96,y:Y(b[1])-6,'class':'t-s'},svg,'previous best '+b[1]);
+    var d=''; b[2].forEach(function(v,i){ d+=(i?'L':'M')+X(sizes[i])+','+Y(v); }); S('path',{d:d,'class':'w-fire'},svg);
+    b[2].forEach(function(v,i){ var better=b[3]?v>b[1]:v<b[1]; S('circle',{cx:X(sizes[i]),cy:Y(v),r:6,'class':better?'u-on':'u'},svg); S('text',{x:X(sizes[i]),y:240,'class':'t-s mid'},svg,sizes[i]+'M'); S('text',{x:X(sizes[i]),y:Y(v)-11,'class':'t mid'},svg,v); });
+    S('text',{x:96,y:30,'class':'t-s'},svg,b[0]+(b[3]?' (higher is better)':' (lower is better)')); S('text',{x:560,y:256,'class':'t-s end'},svg,'parameters (log scale)');
+    var big=b[2][3], beat=b[3]?big>b[1]:big<b[1]; $('#sc-r').innerHTML='1.5B model: <b>'+big+'</b> vs previous best <b>'+b[1]+'</b>: '+(beat?'new state of the art.':'still behind.')+' Filled dots beat the previous best.'; }
+  draw();
+})();
+(function(){ // BPE
+  var text='my dog. a dog! his dog? our dog. the dog! big dog? hot dog. old dog! sad dog.', svg=$('#bpe'), block=1, seqs, merges;
+  function reset(){ var chunks = block ? text.match(/ ?[a-z]+| ?[0-9]+| ?[^\sa-z0-9]+|\s+/g) : [text];
+    seqs=chunks.map(function(c){ return c.split(''); }); merges=[]; draw(); }
+  function step(){ var cnt={}, order=[]; seqs.forEach(function(s){ for (var i=0;i<s.length-1;i++){ var k=s[i]+'\u0001'+s[i+1]; if (!(k in cnt)){ cnt[k]=0; order.push(k);} cnt[k]++; } });
+    var best=null; order.forEach(function(k){ if (best===null || cnt[k]>cnt[best]) best=k; }); if (!best || cnt[best]<2) return false;
+    var p=best.split('\u0001'); seqs=seqs.map(function(s){ var o=[]; for (var i=0;i<s.length;i++){ if (i<s.length-1 && s[i]===p[0] && s[i+1]===p[1]){ o.push(p[0]+p[1]); i++; } else o.push(s[i]); } return o; });
+    merges.push(p[0]+p[1]); return true; }
+  function show(t){ return t.replace(/ /g,'·'); }
+  function draw(){ clear(svg); var x=10, y=20, all=[]; seqs.forEach(function(s,ci){ s.forEach(function(t){ all.push([t,ci]); }); });
+    var lastc=-1; all.forEach(function(a){ var t=show(a[0]), w=Math.max(14,t.length*7.4+8); if (block && a[1]!==lastc && lastc>=0) x+=4; lastc=a[1];
+      if (x+w>630){ x=10; y+=30; } var bad=/[a-z][.!?]/.test(a[0]);
+      S('rect',{x:x,y:y,width:w,height:22,'class':bad?'box-fire':(a[0].length>1?'box-wire':'box')},svg); S('text',{x:x+w/2,y:y+15,'class':'t mid'},svg,t); x+=w+3; });
+    var yy=y+44; S('text',{x:10,y:yy,'class':'t-s'},svg,'merges learned ('+merges.length+'):'); var mx=10, my=yy+18;
+    merges.forEach(function(m){ var t=show(m), w=t.length*7+10; if (mx+w>630){ mx=10; my+=18; } S('text',{x:mx,y:my,'class':/[a-z][.!?]/.test(m)?'t-fire':'t-wire'},svg,t); mx+=w; });
+    var n=all.length, tok={}; all.forEach(function(a){ tok[a[0]]=1; });
+    var punct=merges.filter(function(m){ return /[a-z][.!?]/.test(m); });
+    $('#bpe-r').innerHTML='Tokens in text: <b>'+n+'</b> (from '+text.length+' bytes). '+(punct.length?'Word+punctuation tokens learned: <b>'+punct.map(show).join(', ')+'</b>.':'No word+punctuation tokens learned.'); }
+  $$('[data-bm]').forEach(function(b){ b.onclick=function(){ block=+b.getAttribute('data-bm'); $$('[data-bm]').forEach(function(x){ x.classList.toggle('on',x===b); }); reset(); }; });
+  $('#bpe-step').onclick=function(){ step(); draw(); }; $('#bpe-10').onclick=function(){ for (var i=0;i<10;i++) if (!step()) break; draw(); }; $('#bpe-rst').onclick=reset; reset();
+})();
+(function(){ // TL;DR bars (Table 4)
+  var svg=$('#tldr'), m=['ROUGE-1','ROUGE-2','ROUGE-L','average'], a=[29.34,8.27,26.58,21.40], b=[21.58,4.03,19.47,15.03];
+  S('line',{x1:40,y1:140,x2:580,y2:140,'class':'axis'},svg);
+  m.forEach(function(k,i){ var x=70+i*130, ha=a[i]*3.6, hb=b[i]*3.6; S('rect',{x:x,y:140-ha,width:36,height:ha,'class':'f-fire'},svg); S('rect',{x:x+40,y:140-hb,width:36,height:hb,'class':'f-wire'},svg);
+    S('text',{x:x+18,y:134-ha,'class':'t-s mid'},svg,a[i]); S('text',{x:x+58,y:134-hb,'class':'t-s mid'},svg,b[i]); S('text',{x:x+38,y:158,'class':'t mid'},svg,k); });
+  S('rect',{x:420,y:10,width:12,height:12,'class':'f-fire'},svg); S('text',{x:438,y:20,'class':'t-s'},svg,'with TL;DR:'); S('rect',{x:420,y:28,width:12,height:12,'class':'f-wire'},svg); S('text',{x:438,y:38,'class':'t-s'},svg,'no hint');
+})();
+(function(){ // n-gram overlap
+  var svg=$('#ov'), n=8;
+  function norm(s){ return s.toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(Boolean); }
+  function run(){ var A=norm($('#ov-a').value), Bw=norm($('#ov-b').value), set={}; for (var i=0;i+n<=A.length;i++) set[A.slice(i,i+n).join(' ')]=1;
+    var hit=Bw.map(function(){ return 0; }), tot=0, h=0; for (var j=0;j+n<=Bw.length;j++){ tot++; if (set[Bw.slice(j,j+n).join(' ')]){ h++; for (var q=j;q<j+n;q++) hit[q]=1; } }
+    clear(svg); var x=10,y=22; Bw.forEach(function(w,i){ var wd=w.length*7.3+8; if (x+wd>590){ x=10; y+=22; } if (y>84) return; S('text',{x:x,y:y,'class':hit[i]?'t-fire':'t-s'},svg,w); x+=wd; });
+    $('#ov-r').innerHTML=tot? 'Test '+n+'-grams found in training text: <b>'+h+' of '+tot+'</b> ('+fmt(100*h/tot,1)+'%).' : 'Test text is shorter than '+n+' words.'; }
+  bindRange('ov-n',function(v){ n=v; run(); }); $('#ov-go').onclick=run; $('#ov-a').oninput=run; $('#ov-b').oninput=run;
+})();
+</script>
+
+</body>
+</html>

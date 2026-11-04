@@ -1,0 +1,327 @@
+<!--LEDE-->
+Can one learning program, given nothing but the screen pixels and the score, learn to play several different video games? This short workshop paper says yes: a convolutional network trained by Q-learning, with a memory of past experience to learn from, plays seven Atari games with the same settings and beats an expert human on three of them.
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Earlier game-playing programs needed people to hand-pick what to look at, such as where the ball is. This paper gives the computer only the raw screen and the score.</p>
+  <p>A neural network looks at the last four frames and guesses, for each joystick move, how much score that move will lead to. The agent mostly picks the move with the best guess, and sometimes a random one to explore.</p>
+  <p>Every moment of play is saved in a large memory, and the network learns from random handfuls of old moments rather than only from what just happened, which makes learning much steadier.</p>
+  <p>With one design and one set of settings, trained separately on each of seven Atari games, it beats all earlier methods on six of them and an expert human on Breakout, Enduro and Pong.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1</p>
+  <h2>Learning from the screen and the score alone</h2>
+  <div class="prose">
+    <p>The <strong>Atari 2600</strong> was a home games console from 1977. Researchers had built a toolkit that lets a computer program play its games: the program sees the picture on the screen, presses joystick buttons, and is told the score. That is the whole interface.</p>
+    <p>This is a problem of <strong>reinforcement learning</strong>: learning by trial and error from rewards (here, points). It is hard for three reasons. The reward often comes long after the move that earned it. The picture is a big grid of pixels, not a neat description like "ball at position 40". And what the agent sees next depends on what it did, so its experience is a strongly connected chain of moments rather than a shuffled pile of independent examples.</p>
+    <p>Before this paper, the best Atari programs relied on features chosen by people, such as subtracting the background so only moving objects remain. The authors wanted a single program that works on every game without any of that, using the kind of deep network that had just transformed image recognition (see <a href="alexnet.html">AlexNet</a>).</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Imagine being handed a game you have never seen, with the instructions in a language you cannot read. All you can do is watch the screen, wiggle the joystick and notice when the number in the corner goes up. That is exactly the situation this program is in, for every game.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The goal is generality: one learning method, no game-specific knowledge, raw pixels in, joystick moves out.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §2</p>
+  <h2>Q-values: how good is each move from here?</h2>
+  <div class="prose">
+    <p>The method is built on <strong>Q-learning</strong>, an idea from 1989. For every situation and every possible move, keep a number, the <strong>Q-value</strong>: "if I make this move now and play well afterwards, how much reward will I collect?" Rewards that come later are counted a little less than rewards now, by a <strong>discount</strong> factor such as 0.9 per step.</p>
+    <p>You learn Q-values by checking each guess against one step of experience. Make a move, see the reward and where you land, and compare your old guess with "reward just received + discount × best Q-value from the new place". Move the guess a bit toward that. Good news then spreads backwards, one step at a time, from the reward to the moves that led to it.</p>
+    <p>To keep discovering, the agent is <strong>ε-greedy</strong>: with a small probability ε it presses a random button instead of its current favourite. Try it below on a tiny maze, where the "Q-table" is small enough to draw.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn" id="gw-1">Play 1 game</button><button class="btn" id="gw-50">Play 50 games</button><button class="btn" id="gw-rst">Forget everything</button>
+      <label>Explore ε <input type="range" id="gw-eps" min="0" max="0.5" step="0.05" value="0.1" data-fmt="2"><output id="gw-eps-o">0.10</output></label>
+    </div>
+    <div class="svgbox"><svg id="gw" viewBox="0 0 600 260" role="img" aria-label="A small grid maze with learned Q-values and an episode-length chart"></svg></div>
+    <p class="readout" id="gw-r"></p>
+    <figcaption>Tabular Q-learning (learning rate 0.5, discount 0.9) on a toy maze, not from the paper. The agent starts at S; the exit (+1) ends the game, the pit (−1) ends it badly, and each step costs nothing. Each square shows the best Q-value there, and the arrow is the move the agent currently prefers. Right: steps taken per game. Set ε to 0 from the start and the agent may never find the exit; with some exploration the value of the exit spreads back to S.</figcaption>
+  </figure>
+  <div class="prose"><p>An Atari screen has far too many possible pictures to keep one number per picture. So the paper replaces the table with a neural network that takes in the screen and outputs a Q-value for every button. That is the "deep" in deep Q-learning, and the source of the name <strong>Deep Q-Network</strong>, or DQN.</p></div>
+  <p class="takeaway"><span class="label">Takeaway</span>A Q-value scores a move by the reward it eventually leads to. Q-learning improves every guess using the next step's guess, so reward news flows backwards in time.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does the square next to the exit learn a high value before the start square does?</dt>
+    <dd>Each update only looks one step ahead. The square beside the exit sees the reward directly; squares further away only learn once their neighbours' values have risen.</dd>
+    <dt>What goes wrong with no exploration at all?</dt>
+    <dd>The agent keeps repeating whatever it currently thinks is best, so it may never try the moves that lead to the reward and never learn they are good.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §4.1</p>
+  <h2>A network that looks at four frames</h2>
+  <div class="prose">
+    <p>The screen is shrunk to grey and cropped to an 84 × 84 square. A single picture cannot tell you which way the ball is moving, so the network is shown the <strong>last four frames</strong> stacked together. It also only chooses a move every fourth frame and repeats it in between, which lets it play roughly four times as many games for the same computing cost.</p>
+    <p>The network is small by today's standards: two <strong>convolutional</strong> layers (pattern detectors that slide across the image, the same idea as in <a href="lenet.html">LeNet</a>), one layer of 256 units, and one output per joystick action, between 4 and 18 depending on the game. One pass through the network gives the Q-value of every action at once, so picking the best move is cheap.</p>
+    <p>One more trick keeps the settings shared across games: scores are <strong>clipped</strong>. Any gain counts as +1, any loss as −1. A game that awards 10 points per enemy and one that awards 1,000 then look the same to the learner, so a single learning rate suits them all. The price is that the agent cannot tell a big reward from a small one.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A single photo of a tennis match cannot tell you where the ball is heading; a flick-book of four photos can. The network is given a tiny flick-book each time it decides.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Small grey screens, four frames at a time, a compact network with one output per button, and clipped rewards: the same recipe for every game.</p>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §4</p>
+  <h2>Learning from a shuffled memory</h2>
+  <div class="prose">
+    <p>Neural networks learn best from examples that are varied and shuffled. Play gives the opposite: frame after frame of nearly the same scene. A network that learns only from the latest moment keeps adjusting itself to whatever part of the game it is in, and forgets the rest.</p>
+    <p>The paper's fix is <strong>experience replay</strong>. Every step (screen, move, reward, next screen) is stored in a memory that holds the last one million frames. Each learning step picks 32 moments at random from that memory. Each experience gets reused many times, neighbouring moments no longer arrive together, and the network sees a mix of old and new situations.</p>
+    <p>The toy below shows the same effect on a simpler task: learning the shape of a curve while the "agent" drifts slowly back and forth along it, so consecutive examples are always neighbours.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn" id="rp-go" aria-pressed="false">Run</button><button class="btn" id="rp-rst">Restart</button>
+      <label>Learning rate <input type="range" id="rp-lr" min="0.05" max="0.4" step="0.05" value="0.3" data-fmt="2"><output id="rp-lr-o">0.30</output></label>
+    </div>
+    <div class="svgbox"><svg id="rp" viewBox="0 0 600 260" role="img" aria-label="Two learners fitting a curve: one from the latest sample only, one from a replay memory"></svg></div>
+    <p class="readout" id="rp-r"></p>
+    <figcaption>An illustrative toy, not the paper's experiment. The dashed curve is the true value along a line; the agent's position (dot) sweeps slowly left and right, giving one noisy sample per step. Both learners fit the same 7-term smooth curve with the same learning rate. Left: learns only from the newest sample, so it bends to fit wherever the agent is now. Right: stores the last 1,000 samples and learns from 4 random ones per step. At high learning rates the gap is large.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Replay turns a stream of look-alike moments into a shuffled pile of examples, which is what neural networks need to learn steadily.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Name two benefits of experience replay the paper gives.</dt>
+    <dd>Each experience can be used in many updates (data efficiency), and random sampling breaks the strong correlations between consecutive frames. It also averages over many past behaviours, which smooths learning.</dd>
+    <dt>Why does learning only from the newest moment cause forgetting?</dt>
+    <dd>Each update pushes the shared network toward the current situation, and nothing pushes back on the situations it is not seeing right now.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §5 · Table 1</p>
+  <h2>Results, and what the sequel added</h2>
+  <div class="prose">
+    <p>The agent was trained on seven games: Beam Rider, Breakout, Enduro, Pong, Q*bert, Seaquest and Space Invaders. Each game got its own fresh network, but the design and settings were identical (the only exception: in Space Invaders it acts every third frame instead of every fourth, so the flashing lasers are visible).</p>
+    <p>It beat every earlier learning method on six of the seven games, and beat an expert human on Breakout, Enduro and Pong. It was far below human on Q*bert, Seaquest and Space Invaders, games where you need a plan that stretches over a long time. The paper also shows that the network's predicted value rises when an enemy appears in Seaquest and falls once it is destroyed: it has learned something sensible about the game.</p>
+    <p>One honest caveat from the authors: there is no proof this kind of learning settles down. In practice, they saw no runs fall apart.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>Just over a year later, the same team published <a href="dqn-nature.html">the Nature version</a>. It added a <strong>target network</strong> (a frozen copy of the network that supplies the "best Q-value from the next screen" and is refreshed only every few thousand updates), a bigger network, and much longer training, and tested on 49 games. Later work fixed DQN's habit of overestimating values (Double DQN, 2015), replayed surprising memories more often (prioritised replay, 2015, an idea this paper already suggests), and combined many such fixes (Rainbow, 2017).</div>
+  <p class="takeaway"><span class="label">Takeaway</span>One general recipe learned several very different games from pixels. It was weakest where long-term planning matters, and its stability was improved in the 2015 version.</p>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>The first deep learning model to learn control policies directly from high-dimensional sensory input with reinforcement learning. A convolutional network, trained with a variant of Q-learning, maps raw pixels to estimates of future reward. Applied to seven Atari 2600 games from the Arcade Learning Environment with no change of architecture or learning algorithm, it outperforms all previous approaches on six games and surpasses a human expert on three. NIPS Deep Learning Workshop, 2013 (arXiv:1312.5602).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2 · Eqs. 1–3</p>
+  <h2>Q-learning with a function approximator</h2>
+  <div class="prose"><p>The agent interacts with emulator ℰ, observing images <var>x<sub>t</sub></var>, choosing actions <var>a<sub>t</sub></var> and receiving score changes <var>r<sub>t</sub></var>. Since a single screen does not determine the state, the state is the sequence <var>s<sub>t</sub></var> = <var>x</var><sub>1</sub>, <var>a</var><sub>1</sub>, …, <var>a</var><sub><var>t</var>−1</sub>, <var>x<sub>t</sub></var>, giving a large but finite MDP. The return is <var>R<sub>t</sub></var> = Σ<sub><var>t</var>′ ≥ <var>t</var></sub> γ<sup><var>t</var>′−<var>t</var></sup> <var>r<sub>t′</sub></var>, and the optimal action-value function satisfies the Bellman equation</p></div>
+  <div class="eq"><var>Q</var>*(<var>s</var>, <var>a</var>) = 𝔼<sub><var>s′</var>∼ℰ</sub>[ <var>r</var> + γ max<sub><var>a′</var></sub> <var>Q</var>*(<var>s′</var>, <var>a′</var>) | <var>s</var>, <var>a</var> ] <span class="n">(1)</span></div>
+  <div class="prose"><p>A network <var>Q</var>(<var>s</var>, <var>a</var>; θ) ≈ <var>Q</var>*(<var>s</var>, <var>a</var>) is trained by minimising a sequence of losses, with ρ the behaviour distribution over states and actions:</p></div>
+  <div class="eq"><var>L<sub>i</sub></var>(θ<sub><var>i</var></sub>) = 𝔼<sub><var>s</var>,<var>a</var>∼ρ</sub>[ (<var>y<sub>i</sub></var> − <var>Q</var>(<var>s</var>, <var>a</var>; θ<sub><var>i</var></sub>))<sup>2</sup> ], &nbsp; <var>y<sub>i</sub></var> = 𝔼<sub><var>s′</var>∼ℰ</sub>[ <var>r</var> + γ max<sub><var>a′</var></sub> <var>Q</var>(<var>s′</var>, <var>a′</var>; θ<sub><var>i</var>−1</sub>) | <var>s</var>, <var>a</var> ] <span class="n">(2)</span></div>
+  <div class="eq">∇<sub>θ<sub><var>i</var></sub></sub><var>L<sub>i</sub></var> = 𝔼[ (<var>r</var> + γ max<sub><var>a′</var></sub> <var>Q</var>(<var>s′</var>, <var>a′</var>; θ<sub><var>i</var>−1</sub>) − <var>Q</var>(<var>s</var>, <var>a</var>; θ<sub><var>i</var></sub>)) ∇<sub>θ<sub><var>i</var></sub></sub><var>Q</var>(<var>s</var>, <var>a</var>; θ<sub><var>i</var></sub>) ] <span class="n">(3)</span></div>
+  <div class="prose">
+    <p>The target is held at the previous iterate's parameters θ<sub><var>i</var>−1</sub> while optimising <var>L<sub>i</sub></var>, but in practice the paper optimises by single stochastic gradient steps, and with per-step updates "θ<sub><var>i</var>−1</sub>" is simply the current network. Unlike supervised learning, the targets depend on the weights. The method is <strong>model-free</strong> (it never models ℰ) and <strong>off-policy</strong> (it learns the greedy policy while following ε-greedy behaviour). The paper notes that Q-learning with nonlinear approximators was known to be able to diverge (Tsitsiklis and Van Roy, 1997), and that its method has no convergence guarantee.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Raw score change <var>r</var> <input type="range" id="td-r" min="-200" max="200" step="10" value="50"><output id="td-r-o">50</output></label>
+      <label>max<sub>a′</sub> Q(s′, a′) <input type="range" id="td-q2" min="-2" max="6" step="0.1" value="3.0" data-fmt="1"><output id="td-q2-o">3.0</output></label>
+      <label>Q(s, a) <input type="range" id="td-q" min="-2" max="6" step="0.1" value="2.0" data-fmt="1"><output id="td-q-o">2.0</output></label>
+      <button class="btn" id="td-clip" aria-pressed="true">Reward clipping on</button><button class="btn" id="td-term" aria-pressed="false">Terminal s′: no</button>
+    </div>
+    <div class="svgbox"><svg id="td" viewBox="0 0 600 200" role="img" aria-label="Number line showing the current Q estimate, the target, and the update"></svg></div>
+    <p class="readout" id="td-r-out"></p>
+    <figcaption>One update of Algorithm 1 for a single transition, γ = 0.99 as in the later Nature paper (the 2013 paper does not state γ). The target is <var>y</var> = <var>r</var> for terminal transitions and <var>r</var> + γ max<sub><var>a′</var></sub> <var>Q</var> otherwise. Turn clipping off to see how a raw score of 200 would dominate the error; with clipping every positive reward is +1, so errors stay of order 1 in every game.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §4 · Algorithm 1</p>
+  <h2>Experience replay</h2>
+  <pre class="algo">Initialise replay memory 𝒟 with capacity N
+Initialise Q with random weights
+for episode = 1 … M:
+    s₁ = {x₁};  φ₁ = φ(s₁)
+    for t = 1 … T:
+        with probability ε choose random aₜ, else aₜ = argmaxₐ Q(φ(sₜ), a; θ)
+        execute aₜ, observe rₜ and image xₜ₊₁
+        sₜ₊₁ = sₜ, aₜ, xₜ₊₁;  φₜ₊₁ = φ(sₜ₊₁)
+        store (φₜ, aₜ, rₜ, φₜ₊₁) in 𝒟
+        sample random minibatch (φⱼ, aⱼ, rⱼ, φⱼ₊₁) from 𝒟
+        yⱼ = rⱼ                                   <span class="c">if φⱼ₊₁ terminal</span>
+           = rⱼ + γ maxₐ′ Q(φⱼ₊₁, a′; θ)          <span class="c">otherwise</span>
+        gradient step on (yⱼ − Q(φⱼ, aⱼ; θ))²       <span class="c">Eq. 3</span></pre>
+  <div class="prose">
+    <p>The paper gives three advantages over standard online Q-learning: each step of experience is potentially used in many updates; randomising over samples breaks the correlations between consecutive samples and so reduces update variance; and the behaviour distribution is averaged over many previous states, which smooths learning and avoids oscillation or divergence. The last point is specific to on-policy feedback loops: if the maximising action is "move left", the training data become dominated by left-side samples, which can trap learning in a bad feedback loop. Because replayed samples were generated by older parameters, learning must be off-policy, which motivates Q-learning.</p>
+    <p>The memory stores only the last <var>N</var> experiences and samples uniformly, so it does not distinguish important transitions. The authors suggest something like prioritised sweeping as future work.</p>
+  </div>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §4.1 · §5</p>
+  <h2>Preprocessing, architecture and training</h2>
+  <div class="tablebox"><table>
+    <thead><tr><th>Component</th><th>Setting in the paper</th></tr></thead>
+    <tbody>
+      <tr><td>Raw frame</td><td>210 × 160, 128-colour palette</td></tr>
+      <tr><td>φ</td><td>Grey-scale, downsample to 110 × 84, crop an 84 × 84 playing area (square because the GPU convolution code expected square inputs); stack the last 4 frames → 84 × 84 × 4</td></tr>
+      <tr><td>Conv 1</td><td>16 filters 8 × 8, stride 4, ReLU</td></tr>
+      <tr><td>Conv 2</td><td>32 filters 4 × 4, stride 2, ReLU</td></tr>
+      <tr><td>Hidden</td><td>Fully connected, 256 ReLU units</td></tr>
+      <tr><td>Output</td><td>Linear, one unit per valid action (4 to 18)</td></tr>
+      <tr><td>Optimiser</td><td>RMSProp, minibatch 32</td></tr>
+      <tr><td>Exploration</td><td>ε annealed linearly 1 → 0.1 over the first million frames, then fixed at 0.1</td></tr>
+      <tr><td>Training</td><td>10 million frames; replay memory of the 1 million most recent frames</td></tr>
+      <tr><td>Frame skip</td><td><var>k</var> = 4 (3 for Space Invaders), the only per-game difference</td></tr>
+      <tr><td>Rewards</td><td>Clipped to {−1, 0, +1} during training</td></tr>
+    </tbody></table></div>
+  <div class="prose">
+    <p>The architecture takes only the state as input and outputs a Q-value for each action, so all actions are evaluated in one forward pass. Earlier neural Q-learners fed the action as an input and needed one forward pass per action. Frame skipping lets the agent play about <var>k</var> times as many games for roughly the same compute, since stepping the emulator is far cheaper than running the network.</p>
+    <p><strong>Evaluation (§5.1, Fig. 2).</strong> Average episode reward per training epoch (50,000 minibatch updates, about 30 minutes of training) is noisy. A smoother metric is the average of max<sub><var>a</var></sub> <var>Q</var> over a fixed set of states collected by a random policy before training; it rises steadily on all games. The authors report no divergence in any experiment. Fig. 3 shows the predicted value tracking events in a 30-frame Seaquest clip: it jumps when an enemy appears (A), peaks just before a torpedo hits (B) and falls back when the enemy disappears (C).</p>
+  </div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §5.3 · Table 1</p>
+  <h2>Results on seven games</h2>
+  <div class="prose"><p>Table 1 compares average scores (ε = 0.05) with Sarsa and Contingency, two learners on hand-engineered features from Bellemare et al. (2013) and Bellemare et al. (2012); with HyperNEAT (Hausknecht et al.) using hand-designed object detectors ("HNeat Best") or the emulator's special 8-channel object-label representation ("HNeat Pixel"); and with a human expert's median score after around two hours of play. "Best" rows report the single best episode.</p></div>
+  <figure class="live">
+    <div class="ctl" id="tb-ctl"></div>
+    <div class="svgbox"><svg id="tb" viewBox="0 0 600 270" role="img" aria-label="Bar chart of Table 1 scores for a chosen game"></svg></div>
+    <p class="readout" id="tb-r"></p>
+    <figcaption>Values from Table 1 of the paper. Bars are scaled to the largest score shown for that game; Pong runs from −21 to 21, so its bars are drawn from −21. Pick a game to compare DQN's average with the human expert and the strongest prior methods.</figcaption>
+  </figure>
+  <div class="prose">
+    <p>DQN outperforms all other learning methods on six games; on Space Invaders, HNeat Best (1,720) beats DQN's average (581) and even its best episode (1,075), though HNeat Best relies on hand-designed object detectors, and the authors note that HNeat's deterministic policies are unlikely to cope with perturbations. DQN exceeds the human expert on Breakout, Enduro and Pong, is close on Beam Rider, and is far behind on Q*bert, Seaquest and Space Invaders, which the authors attribute to strategies that extend over long time scales.</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is the average maximum Q on held-out states a better progress measure than episode reward?</dt>
+    <dd>Episode reward is very noisy because small weight changes alter which states the policy visits. The Q estimate on a fixed state set changes smoothly, so it shows learning progress more clearly.</dd>
+    <dt>Why must DQN use an off-policy method?</dt>
+    <dd>The minibatches come from the replay memory and were generated by older versions of the policy, so the learner must be able to learn about the current greedy policy from another policy's data.</dd>
+    <dt>What does reward clipping cost?</dt>
+    <dd>The agent cannot distinguish rewards of different magnitude, so it may prefer frequent small rewards over rare large ones.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §6 and lineage</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose"><ul>
+    <li><strong>No stability guarantee.</strong> Bootstrapped targets from the same network that is being trained, plus nonlinear approximation and off-policy data, can diverge in principle. The paper observed no divergence on its seven games.</li>
+    <li><strong>Uniform replay.</strong> All transitions are equally likely to be replayed, and the oldest are overwritten first.</li>
+    <li><strong>Long horizons.</strong> Performance is poor on games needing extended strategies (Q*bert, Seaquest, Space Invaders).</li>
+    <li><strong>Reward clipping</strong> removes magnitude information.</li>
+    <li><strong>Small evaluation.</strong> Seven games, one run each, without error bars.</li>
+  </ul></div>
+  <div class="later"><span class="label">Later refinements</span><a href="dqn-nature.html">Mnih et al. (2015)</a> added a separate target network θ<sup>−</sup> refreshed every <var>C</var> updates, clipping of the error term to [−1, 1], a larger three-convolution network, 50 million training frames, and evaluation on 49 games. After that: Double DQN (van Hasselt et al., 2015) decouples action selection from evaluation to curb maximisation bias; prioritised experience replay (Schaul et al., 2015); dueling networks (Wang et al., 2016); distributional C51 (Bellemare et al., 2017); Rainbow (Hessel et al., 2017) combines six extensions. Policy-gradient methods such as <a href="trpo.html">TRPO</a> and <a href="ppo.html">PPO</a> took a different route that handles continuous actions.</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>MDP</dt><dd>Markov decision process: states, actions, transition probabilities and rewards, with the future depending only on the current state.</dd>
+    <dt>Q(s, a)</dt><dd>Action value: expected discounted return after taking <var>a</var> in <var>s</var> and acting optimally (for Q*) thereafter.</dd>
+    <dt>γ</dt><dd>Discount factor weighting future rewards.</dd>
+    <dt>Bootstrapping</dt><dd>Using the current estimate of the next state's value inside the learning target.</dd>
+    <dt>ε-greedy</dt><dd>Act greedily with probability 1 − ε, uniformly at random otherwise.</dd>
+    <dt>Off-policy</dt><dd>Learning about one policy (greedy) from data generated by another (ε-greedy, older parameters).</dd>
+    <dt>Experience replay</dt><dd>Storing transitions and training on random minibatches drawn from the store.</dd>
+    <dt>Frame skip</dt><dd>Repeating the chosen action for <var>k</var> frames.</dd>
+    <dt>ALE</dt><dd>Arcade Learning Environment, the Atari 2600 emulator interface used for evaluation.</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+(function(){ // gridworld Q-learning
+  var svg=$('#gw'), W=5, H=4, C=52, X0=20, Y0=24, eps=0.1, Q, eps_hist, games, r=rng(11);
+  var walls={'1,1':1,'2,1':1,'3,2':1}, goal=[4,0], pit=[4,1], start=[0,3];
+  var A=[[0,-1],[1,0],[0,1],[-1,0]], AR=['↑','→','↓','←'];
+  function key(x,y){ return x+','+y; }
+  function reset(){ Q={}; for (var x=0;x<W;x++) for (var y=0;y<H;y++) Q[key(x,y)]=[0,0,0,0]; eps_hist=[]; games=0; draw(); $('#gw-r').textContent='The agent knows nothing yet. Press Play.'; }
+  function best(q){ var b=0; for (var i=1;i<4;i++) if (q[i]>q[b]+1e-12) b=i; return b; }
+  function argmaxRand(q){ var m=Math.max.apply(null,q), c=[]; q.forEach(function(v,i){ if (Math.abs(v-m)<1e-12) c.push(i); }); return c[Math.floor(r()*c.length)]; }
+  function episode(){ var s=start.slice(), steps=0, out=0;
+    while (steps<100){ var q=Q[key(s[0],s[1])], a = r()<eps ? Math.floor(r()*4) : argmaxRand(q);
+      var nx=s[0]+A[a][0], ny=s[1]+A[a][1]; if (nx<0||ny<0||nx>=W||ny>=H||walls[key(nx,ny)]) { nx=s[0]; ny=s[1]; }
+      var rew=0, term=false; if (nx===goal[0]&&ny===goal[1]){ rew=1; term=true; } if (nx===pit[0]&&ny===pit[1]){ rew=-1; term=true; }
+      var tgt = term ? rew : rew + 0.9*Math.max.apply(null,Q[key(nx,ny)]);
+      q[a] += 0.5*(tgt-q[a]); s=[nx,ny]; steps++; if (term){ out=rew; break; } }
+    games++; eps_hist.push(steps); if (eps_hist.length>200) eps_hist.shift(); return [steps,out]; }
+  function draw(){ clear(svg);
+    for (var x=0;x<W;x++) for (var y=0;y<H;y++){ var px=X0+x*C, py=Y0+y*C, k=key(x,y);
+      if (walls[k]){ S('rect',{x:px,y:py,width:C,height:C,'class':'f-rule'},svg); continue; }
+      var isG=x===goal[0]&&y===goal[1], isP=x===pit[0]&&y===pit[1];
+      if (isG||isP){ S('rect',{x:px,y:py,width:C,height:C,'class':isG?'box-ok':'box-fire'},svg); S('text',{x:px+C/2,y:py+C/2-3,'class':(isG?'t-ok':'t-fire')+' mid'},svg,isG?'exit':'pit'); S('text',{x:px+C/2,y:py+C/2+13,'class':(isG?'t-ok':'t-fire')+' mid'},svg,isG?'+1':'−1'); continue; }
+      var q=Q[k], m=Math.max.apply(null,q);
+      S('rect',{x:px,y:py,width:C,height:C,'class':m>0?'f-ok':'f-card','fill-opacity':m>0?Math.min(0.5,m*0.5+0.05):1},svg);
+      S('rect',{x:px,y:py,width:C,height:C,'class':'area'},svg);
+      if (q.some(function(v){return v!==0;})) S('text',{x:px+C/2,y:py+20,'class':'t mid'},svg,AR[best(q)]);
+      S('text',{x:px+C/2,y:py+40,'class':'t-s mid'},svg,fmt(m,2));
+      if (x===start[0]&&y===start[1]) S('text',{x:px+5,y:py+13,'class':'t-wire'},svg,'S'); }
+    var gx=330, gy=30, gw=250, gh=180; S('line',{x1:gx,y1:gy+gh,x2:gx+gw,y2:gy+gh,'class':'axis'},svg); S('line',{x1:gx,y1:gy,x2:gx,y2:gy+gh,'class':'axis'},svg);
+    S('text',{x:gx,y:gy-8,'class':'t-s'},svg,'steps per game (max 100)'); S('text',{x:gx+gw,y:gy+gh+18,'class':'t-s end'},svg,'games →');
+    S('text',{x:gx-4,y:gy+4,'class':'t-s end'},svg,'100'); S('text',{x:gx-4,y:gy+gh,'class':'t-s end'},svg,'0');
+    if (eps_hist.length){ var d=''; eps_hist.forEach(function(v,i){ var px=gx+(eps_hist.length===1?0:i/(eps_hist.length-1))*gw, py=gy+gh-v/100*gh; d+=(i?'L':'M')+px+','+py; }); S('path',{d:d,'class':'w-fire'},svg);
+      var opt=gy+gh-7/100*gh; S('line',{x1:gx,y1:opt,x2:gx+gw,y2:opt,'class':'w-dash'},svg); S('text',{x:gx,y:gy+gh+18,'class':'t-s'},svg,'dashed: shortest path (7)'); } }
+  function play(n){ var last; for (var i=0;i<n;i++) last=episode(); draw();
+    var sv=Math.max.apply(null,Q[key(start[0],start[1])]);
+    $('#gw-r').innerHTML='Games played: <b>'+games+'</b>. Last game: <b>'+last[0]+'</b> steps, '+(last[1]>0?'reached the exit':(last[1]<0?'fell in the pit':'ran out of time'))+'. Best Q at S: <b>'+fmt(sv,3)+'</b> (0.9<sup>6</sup> = 0.531 is the value of the 7-step shortest path).'; }
+  bindRange('gw-eps',function(v){ eps=v; });
+  $('#gw-1').onclick=function(){ play(1); }; $('#gw-50').onclick=function(){ play(50); }; $('#gw-rst').onclick=reset; reset();
+})();
+(function(){ // replay vs online toy
+  var svg=$('#rp'), lr=0.3, timer=null, st;
+  function feat(x){ var f=[]; for (var k=0;k<7;k++) f.push(Math.cos(k*Math.PI*x)); return f; }
+  function tgt(x){ return Math.sin(2*Math.PI*x)*0.8+0.3*x; }
+  function pred(w,x){ var f=feat(x), p=0; for (var k=0;k<7;k++) p+=w[k]*f[k]; return p; }
+  function upd(w,b){ b.forEach(function(s){ var f=feat(s[0]), e=s[1]-pred(w,s[0]); for (var k=0;k<7;k++) w[k]+=lr/b.length*e*f[k]; }); }
+  function reset(){ st={r:rng(4),w1:[0,0,0,0,0,0,0],w2:[0,0,0,0,0,0,0],buf:[],x:0.05,dir:1,t:0}; draw(); }
+  function err(w){ var e=0; for (var i=0;i<=50;i++){ var x=i/50; e+=Math.pow(pred(w,x)-tgt(x),2); } return e/51; }
+  function step(){ var s=st; s.x+=s.dir*0.004; if (s.x>1){ s.x=1; s.dir=-1; } if (s.x<0){ s.x=0; s.dir=1; }
+    var y=tgt(s.x)+0.1*gauss(s.r); s.buf.push([s.x,y]); if (s.buf.length>1000) s.buf.shift();
+    upd(s.w1,[[s.x,y]]); var b=[]; for (var i=0;i<4;i++) b.push(s.buf[Math.floor(s.r()*s.buf.length)]); upd(s.w2,b); s.t++; }
+  function panel(x0,w,title,showBuf){ var pw=270, ph=170, y0=40;
+    S('rect',{x:x0,y:y0,width:pw,height:ph,'class':'area'},svg); S('text',{x:x0,y:y0-12,'class':'t-h'},svg,title);
+    var X=function(x){return x0+x*pw;}, Y=function(v){return y0+ph/2-v*70;};
+    if (showBuf) st.buf.forEach(function(s,i){ if (i%5===0) S('circle',{cx:X(s[0]),cy:Y(s[1]),r:1.6,'class':'f-muted','fill-opacity':0.35},svg); });
+    var d='',d2=''; for (var i=0;i<=60;i++){ var x=i/60; d+=(i?'L':'M')+X(x)+','+Y(tgt(x)); d2+=(i?'L':'M')+X(x)+','+Math.max(y0,Math.min(y0+ph,Y(pred(w,x)))); }
+    S('path',{d:d,'class':'w-dash'},svg); S('path',{d:d2,'class':'w-fire'},svg);
+    S('circle',{cx:X(st.x),cy:Y(tgt(st.x)),r:6,'class':'u-wire'},svg);
+    S('text',{x:x0+pw,y:y0+ph+18,'class':'t-s end'},svg,'error '+fmt(err(w),4)); }
+  function draw(){ clear(svg); panel(20,st.w1,'Newest sample only',false); panel(310,st.w2,'Replay memory',true);
+    $('#rp-r').innerHTML='Steps: <b>'+st.t+'</b>. Average squared error over the whole line: newest-only <b>'+fmt(err(st.w1),4)+'</b>, replay <b>'+fmt(err(st.w2),4)+'</b>.'; }
+  bindRange('rp-lr',function(v){ lr=v; });
+  $('#rp-go').onclick=function(){ var b=this; if (timer){ clearInterval(timer); timer=null; b.textContent='Run'; b.setAttribute('aria-pressed','false'); return; }
+    b.textContent='Pause'; b.setAttribute('aria-pressed','true'); timer=setInterval(function(){ for (var i=0;i<12;i++) step(); draw(); if (st.t>6000){ clearInterval(timer); timer=null; b.textContent='Run'; b.setAttribute('aria-pressed','false'); } },30); };
+  $('#rp-rst').onclick=function(){ reset(); };
+  reset(); for (var i=0;i<900;i++) step(); draw();
+})();
+(function(){ // TD target calculator
+  var svg=$('#td'), r=50, q2=3, q=2, clip=true, term=false, g=0.99;
+  function draw(){ clear(svg); var rc = clip ? (r>0?1:(r<0?-1:0)) : r, y = term ? rc : rc + g*q2, d = y - q;
+    var lo=Math.min(-3,y,q)-0.5, hi=Math.max(8,y,q)+0.5, X=function(v){ return 40+(v-lo)/(hi-lo)*520; };
+    S('line',{x1:40,y1:110,x2:560,y2:110,'class':'axis'},svg);
+    var stepT = (hi-lo)>60 ? 50 : ((hi-lo)>20 ? 10 : 1);
+    for (var t=Math.ceil(lo/stepT)*stepT; t<=hi; t+=stepT){ S('line',{x1:X(t),y1:106,x2:X(t),y2:114,'class':'axis'},svg); S('text',{x:X(t),y:130,'class':'t-s mid'},svg,String(t)); }
+    S('circle',{cx:X(q),cy:110,r:8,'class':'u-wire'},svg); S('text',{x:X(q),y:84,'class':'t-wire mid'},svg,'Q(s,a) = '+fmt(q,1));
+    S('circle',{cx:X(y),cy:110,r:8,'class':'u-on'},svg); S('text',{x:X(y),y:Math.abs(X(y)-X(q))<90?60:84,'class':'t-fire mid'},svg,'target y = '+fmt(y,2));
+    if (Math.abs(X(y)-X(q))>18) S('line',{x1:X(q),y1:150,x2:X(y),y2:150,'class':'w-fire','marker-end':'url(#af)'},svg);
+    S('text',{x:300,y:180,'class':'t-s mid'},svg,'gradient step moves Q(s,a) toward y in proportion to the error δ = y − Q');
+    $('#td-r-out').innerHTML='Reward used: <b>'+rc+'</b>'+(clip&&r!==rc?' (clipped from '+r+')':'')+'. y = '+(term?'r':'r + 0.99 × '+fmt(q2,1))+' = <b>'+fmt(y,2)+'</b>. Error δ = <b>'+fmt(d,2)+'</b>; squared loss = <b>'+fmt(d*d,2)+'</b>.'; }
+  bindRange('td-r',function(v){ r=v; draw(); }); bindRange('td-q2',function(v){ q2=v; draw(); }); bindRange('td-q',function(v){ q=v; draw(); });
+  $('#td-clip').onclick=function(){ clip=!clip; this.setAttribute('aria-pressed',clip); this.textContent='Reward clipping '+(clip?'on':'off'); draw(); };
+  $('#td-term').onclick=function(){ term=!term; this.setAttribute('aria-pressed',term); this.textContent='Terminal s′: '+(term?'yes':'no'); draw(); };
+  draw();
+})();
+(function(){ // Table 1 chart
+  var svg=$('#tb'), games=['Beam Rider','Breakout','Enduro','Pong','Q*bert','Seaquest','Space Invaders'], cur=1;
+  var rows=[['Random',[354,1.2,0,-20.4,157,110,179]],['Sarsa',[996,5.2,129,-19,614,665,271]],['Contingency',[1743,6,159,-17,960,723,268]],['HNeat Best',[3616,52,106,19,1800,920,1720]],['HNeat Pixel',[1332,4,91,-16,1325,800,1145]],['DQN',[4092,168,470,20,1952,1705,581]],['DQN Best',[5184,225,661,21,4500,1740,1075]],['Human',[7456,31,368,-3,18900,28010,3690]]];
+  var ctl=$('#tb-ctl'); games.forEach(function(gm,i){ var b=document.createElement('button'); b.className='btn'; b.textContent=gm; b.onclick=function(){ cur=i; draw(); }; ctl.appendChild(b); });
+  function draw(){ $$('#tb-ctl .btn').forEach(function(b,i){ b.setAttribute('aria-pressed', i===cur); }); clear(svg);
+    var base = cur===3 ? -21 : 0, mx=Math.max.apply(null,rows.map(function(r){return r[1][cur];}));
+    rows.forEach(function(r,i){ var v=r[1][cur], y=18+i*30, w=Math.max(1,(v-base)/(mx-base)*330);
+      var cls = r[0]==='DQN'||r[0]==='DQN Best' ? 'f-fire' : (r[0]==='Human' ? 'f-ok' : 'f-wire');
+      S('text',{x:120,y:y+15,'class':'t end'},svg,r[0]); S('rect',{x:130,y:y,width:w,height:20,'class':cls,'fill-opacity':r[0]==='DQN Best'?0.55:0.9},svg);
+      S('text',{x:136+w,y:y+15,'class':'t-s'},svg,String(v)); });
+    S('line',{x1:130,y1:12,x2:130,y2:258,'class':'axis'},svg);
+    var d=rows[5][1][cur], h=rows[7][1][cur], rnd=rows[0][1][cur], prev=Math.max(rows[1][1][cur],rows[2][1][cur]);
+    $('#tb-r').innerHTML=games[cur]+': DQN average <b>'+d+'</b> vs human <b>'+h+'</b> ('+(d>h?'above':'below')+' human); best prior feature-based learner (Sarsa/Contingency) <b>'+prev+'</b>. DQN reaches <b>'+fmt(100*(d-rnd)/(h-rnd),0)+'%</b> of the human-minus-random gap.'; }
+  draw();
+})();
+</script>

@@ -1,0 +1,306 @@
+<!--LEDE-->
+In 2021 GANs still made the best-looking images, and diffusion models trailed on hard datasets like ImageNet. Dhariwal and Nichol close the gap with two moves: a carefully tuned network architecture, and <em>classifier guidance</em>, which uses an image classifier's gradient to steer each denoising step towards the requested class. The result beats the best GAN (BigGAN-deep) on ImageNet at every resolution they test, with a dial that trades variety for fidelity.
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Diffusion models already covered the variety of real data better than GANs, but their individual pictures were not as convincing on big, varied datasets like ImageNet.</p>
+  <p>A systematic search over network designs (more attention, better ways to feed in the noise level and class) closed much of the gap on its own.</p>
+  <p>The bigger step was <strong>classifier guidance</strong>: a separate classifier, trained to recognise classes in noisy images, nudges every denoising step towards "more like a corgi", with a dial for how hard to push.</p>
+  <p>Turning the dial up gives more convincing but less varied images, and the best setting beats BigGAN-deep. A year later, <a href="cfg.html">classifier-free guidance</a> got the same effect without a separate classifier.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1–2</p>
+  <h2>The scoreboard: quality and variety</h2>
+  <div class="prose">
+    <p>Image generators are judged on two things that pull against each other. <strong>Fidelity</strong>: does each picture look real? <strong>Diversity</strong>: do the pictures, taken together, cover everything the real data contains, or does the model play it safe and repeat a few favourites?</p>
+    <p><a href="gan.html">GANs</a> were very good at fidelity but known to drop parts of the data ("mode collapse"). <a href="ddpm.html">Diffusion models</a> covered the data well but, on hard datasets, each picture looked less convincing. The common score, <strong>FID</strong>, mixes both: it compares the statistics of thousands of generated images with real ones, and lower is better. The paper also reports <strong>precision</strong> (roughly, the share of generated images that look like they belong to the real data) and <strong>recall</strong> (roughly, the share of the real data the generator can reach).</p>
+    <p>The authors suspected two reasons diffusion lagged: its networks had been tuned less intensively than GANs', and GANs had a built-in way to trade diversity for fidelity (the "truncation trick") that diffusion lacked.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A street artist who only ever paints the Eiffel Tower paints it beautifully (high precision) but cannot paint Paris (low recall). One who tries everything covers the city but each picture is rougher. FID rewards being good at both.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Generators are judged on how real each image looks and how much of the real variety they cover. Diffusion led on variety; GANs on looks.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §3 · Tables 1–3</p>
+  <h2>A better-tuned network</h2>
+  <div class="prose">
+    <p>The denoising network in diffusion models is a <a href="unet.html">U-Net</a>: it shrinks the image step by step to capture the big picture, then expands it back, with shortcuts that carry fine detail across. The authors tried many changes one at a time and kept the ones that helped:</p>
+    <ul>
+      <li><strong>Attention at more scales.</strong> Attention lets every part of the image consult every other part. Using it at three image sizes instead of one helped.</li>
+      <li><strong>More attention heads.</strong> Splitting attention into more, smaller "heads" that look for different things helped.</li>
+      <li><strong>Better resizing blocks</strong>, borrowed from BigGAN.</li>
+      <li><strong>Adaptive normalisation.</strong> The network is told the noise level (and, when there is one, the class) by letting them rescale and shift its internal signals, rather than just adding them in.</li>
+    </ul>
+    <p>They call the result <strong>ADM</strong> ("ablated diffusion model"). Its improvements alone brought diffusion close to GANs on ImageNet.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Careful engineering of the denoising network was worth a lot: no new theory, just many small, tested improvements.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What does "adaptive" normalisation adapt to?</dt>
+    <dd>The step (noise level) and class: they are turned into a scale and a shift applied to each layer's normalised signals.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §4.1 · Algorithm 1</p>
+  <h2>Steering with a classifier</h2>
+  <div class="prose">
+    <p>Suppose you want a picture of a corgi. Train a separate <strong>classifier</strong>, a network that looks at an image and says how likely each class is. Crucially, train it on <em>noisy</em> images, so it can make sensible guesses at every stage of the denoising.</p>
+    <p>At each denoising step, ask the classifier: "which small change to this noisy picture would make it look more like a corgi?". That direction is called the classifier's <strong>gradient</strong>. Nudge the step a little in that direction. Repeat for every step. A <strong>guidance scale</strong> multiplies the nudge: 0 means no steering, larger means pushing harder.</p>
+    <p>Below is a one-dimensional version. Data come from three overlapping classes. The diffusion model knows nothing about classes; a perfect noisy-image classifier steers it towards the class you pick.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><span>Class:</span><button class="btn" id="cg-0">A</button><button class="btn on" id="cg-1" aria-pressed="true">B</button><button class="btn" id="cg-2">C</button>
+      <label>Guidance scale <input type="range" id="cg-s" min="0" max="10" step="0.5" value="1" data-fmt="1"><output id="cg-s-o">1.0</output></label></div>
+    <div class="svgbox"><svg id="cg" viewBox="0 0 600 262" role="img" aria-label="Histogram of guided samples over three overlapping classes"></svg></div>
+    <p class="readout" id="cg-r"></p>
+    <figcaption>Grey: the whole data distribution, made of three classes (thin outlines). Amber bars: 1,500 samples from a 100-step diffusion sampler with the chosen class and guidance scale. Scale 0 gives all three classes. Scale 1 roughly recovers the chosen class. Larger scales pile samples into the part of the class that is least like its neighbours. Toy illustration with exact denoiser and exact classifier.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>A sculptor (the diffusion model) chips away at a block. A critic standing beside them (the classifier) says after every cut "a bit more corgi-like that way". With a gentle critic you get a varied range of corgis; with a pushy one you get the most stereotypical corgi possible, every time.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Classifier guidance adds, at every step, a nudge in the direction a noisy-image classifier says makes the picture more like the wanted class.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why must the classifier be trained on noisy images?</dt>
+    <dd>It is consulted at every step, including early ones where the picture is mostly noise. An ordinary classifier has never seen such inputs and its gradients would be meaningless there.</dd>
+    <dt>In the figure, what happens to samples near the border with a neighbouring class as the scale grows?</dt>
+    <dd>They are pushed away from the border, towards the region where the classifier is most confident, so the samples get less varied.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §4.3 · Fig. 3 · Table 4</p>
+  <h2>The fidelity–diversity dial</h2>
+  <div class="prose">
+    <p>The guidance scale turned out to be a powerful dial. On an <em>unconditional</em> ImageNet model (one never told the class), a scale of 1 gave pictures the classifier rated about 50% likely to be the right class, yet they often didn't look like it. Scaling up to 10 made them convincingly on-class (the paper's corgi example, Fig. 3).</p>
+    <p>The table below holds the paper's real numbers at 256 × 256. Guidance raises precision (pictures look more real) and lowers recall (less variety). FID, which balances both, is best somewhere in between: for the class-conditional model, a scale of 1.0.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" id="t4-c" aria-pressed="true">Class-conditional model</button><button class="btn" id="t4-u" aria-pressed="false">Unconditional model</button></div>
+    <div class="svgbox"><svg id="t4" viewBox="0 0 600 250" role="img" aria-label="FID, precision and recall at guidance scales none, 1 and 10, from Table 4"></svg></div>
+    <p class="readout" id="t4-r"></p>
+    <figcaption>Data: Table 4 of the paper (ImageNet 256 × 256, models trained for 2M iterations, 250 sampling steps). FID: lower is better. Precision and recall: higher is better.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Turning up guidance buys realism with variety. The best overall score comes from a moderate setting.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §5, §7</p>
+  <h2>Results, costs, and what replaced the classifier</h2>
+  <div class="prose">
+    <p>With both changes, the guided model (ADM-G) beat BigGAN-deep's FID on ImageNet at 128 × 128 (2.97 vs 6.02), 256 × 256 (4.59 vs 6.95) and 512 × 512 (7.72 vs 8.43), while keeping better recall. With only 25 denoising steps it roughly matched BigGAN-deep. Unguided ADM also beat the best GANs on LSUN bedrooms, horses and cats.</p>
+    <p>The costs: sampling still takes many network passes, training uses more compute than a GAN, and guidance needs labelled data plus a second, noise-aware classifier.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span><a href="cfg.html">Classifier-free guidance</a> (Ho and Salimans, 2021) removed the classifier: train one diffusion model both with and without the label, and at each step push away from the unlabelled guess towards the labelled one. It works with text prompts, where a noisy-image classifier is impractical, and became the standard in systems like <a href="ldm.html">Stable Diffusion</a>.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>This paper ended GANs' lead in image quality; its guidance idea survived in classifier-free form.</p>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Diffusion models can achieve image sample quality superior to the state-of-the-art generative models. Unconditional synthesis improves through a series of architecture ablations. For conditional synthesis, classifier guidance, a simple, compute-efficient method that uses gradients from a classifier, trades off diversity for fidelity. FID 2.97 on ImageNet 128 × 128, 4.59 on 256 × 256 and 7.72 on 512 × 512; BigGAN-deep is matched with as few as 25 forward passes per sample while keeping better distribution coverage. Combined with upsampling diffusion models, guidance improves FID to 3.94 at 256 × 256 and 3.85 at 512 × 512. NeurIPS 2021; arXiv:2105.05233.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2 · Eq. 1</p>
+  <h2>Background: learned variances, DDIM, metrics</h2>
+  <div class="prose">
+    <p>The paper builds on <a href="ddpm.html">DDPM</a> with two upgrades from Improved DDPM (Nichol and Dhariwal, 2021). First, learned reverse variances, interpolating in log space between the two DDPM extremes:</p>
+  </div>
+  <div class="eq">Σ<sub>θ</sub>(<var>x</var><sub><var>t</var></sub>, <var>t</var>) = exp( <var>v</var> log β<sub><var>t</var></sub> + (1 − <var>v</var>) log β̃<sub><var>t</var></sub> ) <span class="n">(1)</span></div>
+  <div class="prose">
+    <p>trained with the hybrid objective <var>L</var><sub>simple</sub> + λ<var>L</var><sub>vlb</sub>; this allows sampling with fewer steps without much loss of quality. Second, DDIM (Song et al., 2020), a deterministic sampler that shares the training objective and is used for few-step sampling (25 steps below).</p>
+    <p><strong>Metrics (§2.2).</strong> FID (Inception-V3 pool features), sFID (spatial features, more sensitive to layout), Inception Score, and improved precision/recall (Kynkäänniemi et al., 2019), which separate fidelity (precision) from coverage (recall). FID is the primary metric.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3 · Tables 1–3</p>
+  <h2>Architecture ablations</h2>
+  <div class="prose">
+    <p>Starting from the DDPM U-Net on ImageNet 128 × 128, the authors ablate: depth vs width (deeper helps but trains slower in wall-clock time, so not adopted), number of attention heads / channels per head, attention at 32, 16 and 8 rather than only 16, BigGAN residual blocks for up- and downsampling, and rescaling residual connections by 1/√2. All except the residual rescaling improved FID. The final model uses 64 channels per head, attention at 32, 16 and 8, BigGAN up/downsampling, and adaptive group normalisation:</p>
+  </div>
+  <div class="eq">AdaGN(<var>h</var>, <var>y</var>) = <var>y</var><sub><var>s</var></sub> · GroupNorm(<var>h</var>) + <var>y</var><sub><var>b</var></sub>,&nbsp;&nbsp; [<var>y</var><sub><var>s</var></sub>, <var>y</var><sub><var>b</var></sub>] = Linear(embedding of <var>t</var> and class) <span class="n">(§3.1)</span></div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Ablation (ImageNet 128, FID)</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>Table 1 baseline (1 head, attention at 16 only), 700K / 1200K iters</td><td class="num">15.33 / 13.21</td></tr>
+      <tr><td>Table 1 best combination (4 heads, attn 32/16/8, BigGAN up/down, no rescale)</td><td class="num">−3.14 / −3.00</td></tr>
+      <tr><td>Table 2: 1 head (baseline), and the change with 32 channels per head</td><td class="num">14.08; −1.36</td></tr>
+      <tr><td>Table 3: Addition + GroupNorm (DDPM style)</td><td class="num">15.08</td></tr>
+      <tr><td>Table 3: AdaGN</td><td class="num">13.06</td></tr>
+    </tbody></table></div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Which tested change did not help, and was dropped?</dt>
+    <dd>Rescaling residual connections by 1/√2.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §4.1–4.2 · Eqs. 2–14 · Algorithm 1</p>
+  <h2>Classifier guidance</h2>
+  <div class="prose">
+    <p>Train a classifier <var>p</var><sub>φ</sub>(<var>y</var> | <var>x</var><sub><var>t</var></sub>, <var>t</var>) on noised images (the downsampling half of the U-Net with an attention pool at 8 × 8, trained on the same noising distribution as the diffusion model). A conditional reverse step can be written</p>
+  </div>
+  <div class="eq"><var>p</var><sub>θ,φ</sub>(<var>x</var><sub><var>t</var></sub> | <var>x</var><sub><var>t</var>+1</sub>, <var>y</var>) = <var>Z</var> <var>p</var><sub>θ</sub>(<var>x</var><sub><var>t</var></sub> | <var>x</var><sub><var>t</var>+1</sub>) <var>p</var><sub>φ</sub>(<var>y</var> | <var>x</var><sub><var>t</var></sub>) <span class="n">(2)</span></div>
+  <div class="prose">
+    <p>With <var>p</var><sub>θ</sub>(<var>x</var><sub><var>t</var></sub> | <var>x</var><sub><var>t</var>+1</sub>) = <span class="v">N</span>(μ, Σ) and log <var>p</var><sub>φ</sub> having low curvature relative to Σ<sup>−1</sup> (true in the limit of infinitely many steps, where ‖Σ‖ tends to 0), a first-order Taylor expansion around <var>x</var><sub><var>t</var></sub> = μ gives log <var>p</var><sub>φ</sub>(<var>y</var> | <var>x</var><sub><var>t</var></sub>) ≈ (<var>x</var><sub><var>t</var></sub> − μ)<var>g</var> + C with <var>g</var> = ∇<sub><var>x</var><sub><var>t</var></sub></sub> log <var>p</var><sub>φ</sub>(<var>y</var> | <var>x</var><sub><var>t</var></sub>)|<sub><var>x</var><sub><var>t</var></sub>=μ</sub>. Completing the square, the product is approximately <span class="v">N</span>(μ + Σ<var>g</var>, Σ) (Eqs. 3–10): guidance is a mean shift by the covariance-scaled classifier gradient.</p>
+  </div>
+  <pre class="algo"><span class="c">Algorithm 1  Classifier-guided diffusion sampling</span>
+input: class label y, gradient scale s
+x_T ~ N(0, I)
+for t = T, ..., 1:
+  mu, Sigma = mu_theta(x_t), Sigma_theta(x_t)
+  x_{t-1} ~ N( mu + s * Sigma * grad_{x_t} log p_phi(y | x_t),  Sigma )
+return x_0</pre>
+  <div class="prose">
+    <p><strong>DDIM version (§4.2).</strong> Deterministic samplers have no Σ to scale, so use the score identity ∇ log <var>p</var><sub>θ</sub>(<var>x</var><sub><var>t</var></sub>) = −ε<sub>θ</sub>(<var>x</var><sub><var>t</var></sub>)/√(1 − ᾱ<sub><var>t</var></sub>) and add the classifier's score to the joint:</p>
+  </div>
+  <div class="eq">ε̂(<var>x</var><sub><var>t</var></sub>) := ε<sub>θ</sub>(<var>x</var><sub><var>t</var></sub>) − √(1 − ᾱ<sub><var>t</var></sub>) ∇<sub><var>x</var><sub><var>t</var></sub></sub> log <var>p</var><sub>φ</sub>(<var>y</var> | <var>x</var><sub><var>t</var></sub>) <span class="n">(14)</span></div>
+  <div class="prose"><p>then run ordinary DDIM with ε̂ (Algorithm 2 in the paper). Below, the same 1-D toy as the Plain English tab is run for a sweep of scales <var>s</var> with exact scores, to show the trade-off curve that Fig. 4 shows for ImageNet.</p></div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="sw-go">Run sweep (s = 0 … 10)</button><label>Target class <select id="sw-y" class="btn"><option value="0">A</option><option value="1" selected>B</option><option value="2">C</option></select></label></div>
+    <div class="svgbox"><svg id="sw" viewBox="0 0 600 260" role="img" aria-label="Toy precision and recall analogues against guidance scale"></svg></div>
+    <p class="readout" id="sw-r"></p>
+    <figcaption>For each scale, 800 guided samples (Algorithm 1, 100 steps, σ² = β). Amber "on-class rate": share of samples that a clean-data Bayes classifier assigns to the target class with probability over 0.9 (a precision analogue). Blue "spread": standard deviation of the samples divided by the target class's true standard deviation (a recall analogue; 1 means full coverage of the class). Toy illustration of the shape of Fig. 4, not the paper's measurement.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §4.3 · Figs. 3–5 · Table 4</p>
+  <h2>Why scale the gradient?</h2>
+  <div class="prose">
+    <p>Multiplying the gradient by <var>s</var> is guidance towards a sharpened classifier: <var>s</var>·∇ log <var>p</var>(<var>y</var> | <var>x</var>) = ∇ log [<var>p</var>(<var>y</var> | <var>x</var>)<sup><var>s</var></sup>/<var>Z</var>]. For <var>s</var> &gt; 1 the distribution <var>p</var>(<var>y</var> | <var>x</var>)<sup><var>s</var></sup> concentrates on inputs the classifier is most sure about, so samples become higher-fidelity and less diverse. With an unconditional model, <var>s</var> = 1 gave samples rated about 50% on-class by the classifier but which often did not look on-class; <var>s</var> = 10 gave nearly 100% and visually convincing samples (Fig. 3, Pembroke Welsh corgi; FID 33.0 vs 12.0). Guidance can also be applied to a conditional model, and combining both gives the best results (Table 4).</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Table 4 (ImageNet 256)</th><th>Scale</th><th>FID</th><th>Prec</th><th>Rec</th></tr></thead>
+    <tbody>
+      <tr><td>Unconditional</td><td class="num">–</td><td class="num">26.21</td><td class="num">0.61</td><td class="num">0.63</td></tr>
+      <tr><td>Unconditional</td><td class="num">1.0</td><td class="num">33.03</td><td class="num">0.56</td><td class="num">0.65</td></tr>
+      <tr><td>Unconditional</td><td class="num">10.0</td><td class="num">12.00</td><td class="num">0.76</td><td class="num">0.44</td></tr>
+      <tr><td>Conditional</td><td class="num">–</td><td class="num">10.94</td><td class="num">0.69</td><td class="num">0.63</td></tr>
+      <tr><td>Conditional</td><td class="num">1.0</td><td class="num">4.59</td><td class="num">0.82</td><td class="num">0.52</td></tr>
+      <tr><td>Conditional</td><td class="num">10.0</td><td class="num">9.11</td><td class="num">0.88</td><td class="num">0.32</td></tr>
+    </tbody></table></div>
+  <div class="prose"><p>Fig. 5 compares guidance with BigGAN-deep's truncation trick: guidance is strictly better on the FID–IS trade-off, but not on the precision–recall trade-off beyond a certain precision.</p></div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does the unconditional model at <var>s</var> = 1 have a worse FID than at no guidance?</dt>
+    <dd>At <var>s</var> = 1 the samples are pulled off the model's distribution towards classifier-pleasing regions without becoming convincingly on-class, so they lose diversity and realism; only a stronger push makes them clearly on-class and improves FID.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §5 · Tables 5–6</p>
+  <h2>Results</h2>
+  <div class="tablebox"><table>
+    <thead><tr><th>Table 5</th><th>Model</th><th>FID</th><th>Prec</th><th>Rec</th></tr></thead>
+    <tbody>
+      <tr><td>ImageNet 64</td><td>BigGAN-deep (trained by the authors)</td><td class="num">4.06</td><td class="num">0.79</td><td class="num">0.48</td></tr>
+      <tr><td></td><td>ADM (dropout)</td><td class="num">2.07</td><td class="num">0.74</td><td class="num">0.63</td></tr>
+      <tr><td>ImageNet 128</td><td>BigGAN-deep</td><td class="num">6.02</td><td class="num">0.86</td><td class="num">0.35</td></tr>
+      <tr><td></td><td>ADM-G (25 steps)</td><td class="num">5.98</td><td class="num">0.78</td><td class="num">0.51</td></tr>
+      <tr><td></td><td>ADM-G</td><td class="num">2.97</td><td class="num">0.78</td><td class="num">0.59</td></tr>
+      <tr><td>ImageNet 256</td><td>BigGAN-deep</td><td class="num">6.95</td><td class="num">0.87</td><td class="num">0.28</td></tr>
+      <tr><td></td><td>ADM-G</td><td class="num">4.59</td><td class="num">0.82</td><td class="num">0.52</td></tr>
+      <tr><td>ImageNet 512</td><td>BigGAN-deep</td><td class="num">8.43</td><td class="num">0.88</td><td class="num">0.29</td></tr>
+      <tr><td></td><td>ADM-G</td><td class="num">7.72</td><td class="num">0.87</td><td class="num">0.42</td></tr>
+      <tr><td>LSUN Bedroom</td><td>StyleGAN / ADM (dropout)</td><td class="num">2.35 / 1.90</td><td></td><td></td></tr>
+      <tr><td>LSUN Horse</td><td>StyleGAN2 / ADM (dropout)</td><td class="num">3.84 / 2.57</td><td></td><td></td></tr>
+      <tr><td>LSUN Cat</td><td>StyleGAN2 / ADM (dropout)</td><td class="num">7.25 / 5.57</td><td></td><td></td></tr>
+    </tbody></table></div>
+  <div class="prose">
+    <p><strong>Upsampling (§5.2, Table 6).</strong> A two-stage pipeline (a base model at 64 or 128, then an upsampling diffusion model) with guidance on the base model reaches FID 3.94 at 256 × 256 and 3.85 at 512 × 512 (250 + 250 steps). Guidance and upsampling are complementary. At 256 × 256, upsampling alone improves FID from 10.94 to 7.49 while keeping recall at 0.63, whereas guidance alone raises precision from 0.69 to 0.82 at the cost of recall (0.52). Note how much of the gain at 512 comes from guidance alone (from 23.24 for ADM to 7.72 for ADM-G).</p>
+  </div>
+</section>
+
+<section class="kp" id="t6">
+  <p class="eyebrow"><b>Section</b> · §7 and lineage</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose"><ul>
+    <li><strong>Sampling speed.</strong> Still slower than GANs at sampling time because of multiple denoising steps; 25-step DDIM costs some FID.</li>
+    <li><strong>Training compute.</strong> More than the corresponding GANs, though upsampling stacks narrow the gap.</li>
+    <li><strong>Labels and a second network.</strong> Guidance needs labelled data and a classifier trained on noisy inputs; the authors suggest clustering for synthetic labels on unlabelled data.</li>
+    <li><strong>Adversarial gradients.</strong> Classifier gradients can push towards features that fool the classifier rather than improve images; this was one motivation stated by later work for removing the classifier.</li>
+  </ul></div>
+  <div class="later"><span class="label">Later refinements</span><a href="cfg.html">Classifier-free guidance</a> replaced <var>p</var><sub>φ</sub> with the implicit classifier <var>p</var>(<var>x</var> | <var>y</var>)/<var>p</var>(<var>x</var>), obtained by jointly training conditional and unconditional denoisers. GLIDE (Nichol et al., 2021) compared CLIP guidance with classifier-free guidance for text-to-image and preferred the latter; <a href="ldm.html">latent diffusion</a> adopted it; Imagen, DALL·E 2 and Stable Diffusion all use it. Cascaded diffusion (Ho et al., 2021) pushed the upsampling idea further. The ADM U-Net became the standard backbone until diffusion transformers (DiT, Peebles and Xie, 2022), which reused AdaGN's idea as adaptive LayerNorm.</div>
+</section>
+
+<section class="kp" id="t7" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>ADM / ADM-G / ADM-U</dt><dd>Ablated diffusion model; with classifier guidance; upsampling variant.</dd>
+    <dt>AdaGN</dt><dd>Adaptive group normalisation: GroupNorm followed by a scale and shift predicted from the timestep and class embedding.</dd>
+    <dt>Guidance scale <var>s</var></dt><dd>Multiplier on the classifier gradient; equivalent to guiding with <var>p</var>(<var>y</var> | <var>x</var>)<sup><var>s</var></sup>.</dd>
+    <dt>Precision / recall</dt><dd>Fraction of samples within the real-data manifold; fraction of real data within the sample manifold (Kynkäänniemi et al., 2019).</dd>
+    <dt>sFID</dt><dd>FID on spatial (intermediate) Inception features, more sensitive to spatial structure.</dd>
+    <dt>Truncation trick</dt><dd>Sampling a GAN's latent from a truncated normal to trade diversity for fidelity.</dd>
+    <dt>DDIM</dt><dd>Denoising diffusion implicit model: deterministic sampler allowing far fewer steps.</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+var CG=(function(){ var T=100, beta=[0], al=[1], ab=[1]; for (var t=1;t<=T;t++){ var b=1e-3+(0.2-1e-3)*(t-1)/(T-1); beta.push(b); al.push(1-b); ab.push(ab[t-1]*(1-b)); }
+  var M=[-1.1,0,1.1], SD=[0.35,0.3,0.35], P=[1/3,1/3,1/3];
+  function npdf(x,m,v){ return Math.exp(-0.5*(x-m)*(x-m)/v)/Math.sqrt(2*Math.PI*v); }
+  function comps(x,t){ var a=Math.sqrt(ab[t]), v=1-ab[t], r=[], sc=[], ex=[], tot=0;
+    for (var k=0;k<3;k++){ var vv=ab[t]*SD[k]*SD[k]+v, p=P[k]*npdf(x,a*M[k],vv); r.push(p); tot+=p; sc.push(-(x-a*M[k])/vv); ex.push(M[k]+a*SD[k]*SD[k]/vv*(x-a*M[k])); }
+    r=r.map(function(p){ return p/(tot||1e-300); }); return {r:r,sc:sc,ex:ex,a:a,v:v}; }
+  function sample(n,y,s,seed){ var r=rng(seed), out=[];
+    for (var i=0;i<n;i++){ var x=gauss(r);
+      for (var t=T;t>=1;t--){ var c=comps(x,t), x0=c.r[0]*c.ex[0]+c.r[1]*c.ex[1]+c.r[2]*c.ex[2], e=(x-c.a*x0)/Math.sqrt(c.v);
+        var mu=(x-beta[t]/Math.sqrt(c.v)*e)/Math.sqrt(al[t]), g=c.sc[y]-(c.r[0]*c.sc[0]+c.r[1]*c.sc[1]+c.r[2]*c.sc[2]);
+        x=mu+s*beta[t]*g+(t>1?Math.sqrt(beta[t])*gauss(r):0); }
+      out.push(x); }
+    return out; }
+  function dens(x,k){ return k==null ? P[0]*npdf(x,M[0],SD[0]*SD[0])+P[1]*npdf(x,M[1],SD[1]*SD[1])+P[2]*npdf(x,M[2],SD[2]*SD[2]) : P[k]*npdf(x,M[k],SD[k]*SD[k]); }
+  return {sample:sample,dens:dens,M:M,SD:SD};
+})();
+(function(){
+  var svg=$('#cg'), y=1, s=1, timer=null, names=['A','B','C'];
+  function draw(){ clear(svg); var xs=CG.sample(1500,y,s,9), lo=-2.4, hi=2.4, B=60, bw=(hi-lo)/B, h=[]; for (var i=0;i<B;i++) h.push(0);
+    xs.forEach(function(x){ var b=Math.floor((x-lo)/bw); if (b>=0&&b<B) h[b]++; });
+    function X(u){ return 40+(u-lo)/(hi-lo)*530; } var mx=0; h.forEach(function(c){ mx=Math.max(mx,c/xs.length/bw); }); mx=Math.max(mx,1.5); function Y(p){ return 215-p/mx*180; }
+    h.forEach(function(c,i){ var p=c/xs.length/bw; if (p>0) S('rect',{x:X(lo+i*bw)+0.5,y:Y(p),width:530/B-1,height:215-Y(p),'class':'f-fire','fill-opacity':0.8},svg); });
+    for (var k=0;k<3;k++){ var d=''; for (var i=0;i<=240;i++){ var u=lo+(hi-lo)*i/240; d+=(i?'L':'M')+X(u)+','+Y(CG.dens(u,k)); } S('path',{d:d,'class':'w-dash'},svg); S('text',{x:X(CG.M[k]),y:250,'class':k===y?'t-fire mid':'t-s mid'},svg,'class '+names[k]); }
+    var d=''; for (var i=0;i<=240;i++){ var u=lo+(hi-lo)*i/240; d+=(i?'L':'M')+X(u)+','+Y(CG.dens(u)); } S('path',{d:d,'class':'w-ink'},svg);
+    S('line',{x1:40,y1:215,x2:570,y2:215,'class':'axis'},svg); [-2,-1,0,1,2].forEach(function(u){ S('text',{x:X(u),y:230,'class':'t-s mid'},svg,u); });
+    var m=0; xs.forEach(function(x){ m+=x; }); m/=xs.length; var v=0; xs.forEach(function(x){ v+=(x-m)*(x-m); }); v=Math.sqrt(v/xs.length);
+    var own=xs.filter(function(x){ var p=[0,1,2].map(function(k){ return CG.dens(x,k); }); return p[y]>=Math.max(p[0],p[1],p[2]); }).length/xs.length;
+    $('#cg-r').innerHTML='Scale <b>'+fmt(s,1)+'</b>: <b>'+fmt(100*own,0)+'%</b> of samples fall where class '+names[y]+' is the most likely class; their spread is <b>'+fmt(v,2)+'</b> (class '+names[y]+' alone: '+fmt(CG.SD[y],2)+').'; }
+  function sched(){ if (timer) clearTimeout(timer); timer=setTimeout(draw,40); }
+  [0,1,2].forEach(function(k){ $('#cg-'+k).onclick=function(){ y=k; [0,1,2].forEach(function(j){ $('#cg-'+j).classList.toggle('on',j===k); $('#cg-'+j).setAttribute('aria-pressed',j===k); }); sched(); }; });
+  bindRange('cg-s',function(v){ s=v; sched(); });
+})();
+(function(){
+  var svg=$('#t4'), cond=true;
+  var D={c:[['no guidance',10.94,0.69,0.63],['scale 1.0',4.59,0.82,0.52],['scale 10.0',9.11,0.88,0.32]], u:[['no guidance',26.21,0.61,0.63],['scale 1.0',33.03,0.56,0.65],['scale 10.0',12.00,0.76,0.44]]};
+  function draw(){ clear(svg); var rows=D[cond?'c':'u'];
+    S('text',{x:30,y:24,'class':'t-h'},svg,'FID (lower is better)'); S('text',{x:330,y:24,'class':'t-h'},svg,'Precision and recall');
+    rows.forEach(function(r,i){ var y=55+i*62; S('text',{x:30,y:y,'class':'t-s'},svg,r[0]);
+      S('rect',{x:30,y:y+8,width:r[1]/35*240,height:20,'class':'f-wire'},svg); S('text',{x:36+r[1]/35*240,y:y+23,'class':'t'},svg,fmt(r[1],2));
+      S('rect',{x:330,y:y+4,width:r[2]*240,height:13,'class':'f-fire'},svg); S('text',{x:336+r[2]*240,y:y+15,'class':'t-fire'},svg,'P '+fmt(r[2],2));
+      S('rect',{x:330,y:y+21,width:r[3]*240,height:13,'class':'f-ok'},svg); S('text',{x:336+r[3]*240,y:y+32,'class':'t-ok'},svg,'R '+fmt(r[3],2)); });
+    S('line',{x1:330,y1:40,x2:330,y2:235,'class':'axis'},svg); S('line',{x1:30,y1:40,x2:30,y2:235,'class':'axis'},svg);
+    $('#t4-r').innerHTML= cond ? 'Class-conditional ADM: guidance at scale 1 cuts FID from 10.94 to <b>4.59</b>; at 10, precision rises to 0.88 but recall falls to 0.32 and FID worsens.' : 'Unconditional ADM: scale 1 makes FID worse (33.03); only a strong push (scale 10) helps, to <b>12.00</b>, at a large cost in recall.'; }
+  $('#t4-c').onclick=function(){ cond=true; this.classList.add('on'); this.setAttribute('aria-pressed','true'); $('#t4-u').classList.remove('on'); $('#t4-u').setAttribute('aria-pressed','false'); draw(); };
+  $('#t4-u').onclick=function(){ cond=false; this.classList.add('on'); this.setAttribute('aria-pressed','true'); $('#t4-c').classList.remove('on'); $('#t4-c').setAttribute('aria-pressed','false'); draw(); };
+  draw();
+})();
+(function(){
+  var svg=$('#sw'), Ss=[0,0.5,1,1.5,2,3,4,5,6,8,10];
+  function bayes(x,y){ var p=[0,1,2].map(function(k){ return CG.dens(x,k); }); return p[y]/(p[0]+p[1]+p[2]); }
+  function axes(){ clear(svg); function X(s){ return 60+s/10*480; } function Y(v){ return 215-v*180; }
+    S('line',{x1:60,y1:215,x2:540,y2:215,'class':'axis'},svg); S('line',{x1:60,y1:35,x2:60,y2:215,'class':'axis'},svg);
+    [0,2,4,6,8,10].forEach(function(s){ S('text',{x:X(s),y:232,'class':'t-s mid'},svg,s); }); S('text',{x:300,y:252,'class':'t-s mid'},svg,'guidance scale s');
+    [0,0.5,1].forEach(function(v){ S('text',{x:54,y:Y(v)+4,'class':'t-s end'},svg,v); S('line',{x1:60,y1:Y(v),x2:540,y2:Y(v),'class':'grid'},svg); });
+    S('text',{x:330,y:180,'class':'t-fire'},svg,'on-class rate'); S('text',{x:330,y:198,'class':'t-wire'},svg,'spread / true spread (capped at 1.15)'); return [X,Y]; }
+  function run(){ var y=+$('#sw-y').value, A=axes(), X=A[0], Y=A[1], res=[];
+    Ss.forEach(function(s){ var xs=CG.sample(800,y,s,3), on=0, m=0, v=0; xs.forEach(function(x){ if (bayes(x,y)>0.9) on++; m+=x; }); m/=xs.length; xs.forEach(function(x){ v+=(x-m)*(x-m); }); v=Math.sqrt(v/xs.length)/CG.SD[y]; res.push([s,on/xs.length,v]); });
+    var d1='',d2=''; res.forEach(function(r,i){ d1+=(i?'L':'M')+X(r[0])+','+Y(r[1]); d2+=(i?'L':'M')+X(r[0])+','+Y(Math.min(r[2],1.15)); }); S('path',{d:d1,'class':'w-fire'},svg); S('path',{d:d2,'class':'w'},svg);
+    res.forEach(function(r){ S('circle',{cx:X(r[0]),cy:Y(r[1]),r:3.5,'class':'u-on'},svg); S('circle',{cx:X(r[0]),cy:Y(Math.min(r[2],1.15)),r:3.5,'class':'u-wire'},svg); });
+    $('#sw-r').innerHTML='s = 0: on-class <b>'+fmt(res[0][1],2)+'</b>, spread ratio <b>'+fmt(res[0][2],2)+'</b> (all classes mixed). s = 1: <b>'+fmt(res[2][1],2)+'</b>, <b>'+fmt(res[2][2],2)+'</b>. s = 10: <b>'+fmt(res[10][1],2)+'</b>, <b>'+fmt(res[10][2],2)+'</b>.'; }
+  $('#sw-go').onclick=function(){ $('#sw-r').textContent='Running…'; setTimeout(run,20); };
+  $('#sw-y').onchange=function(){ $('#sw-r').textContent='Running…'; setTimeout(run,20); };
+  run();
+})();
+</script>

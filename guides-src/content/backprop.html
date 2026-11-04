@@ -1,0 +1,277 @@
+<!--LEDE-->
+A four-page letter in <em>Nature</em> shows that a network with hidden layers can learn its own internal features, by sending the output error backwards to work out how much each connection was to blame. This is how essentially every neural network is trained today.
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>A perceptron can only adjust its final layer, so it is stuck with whatever features it is given. Networks with "hidden" layers in the middle could do much more, if only we knew how to train the middle.</p>
+  <p>The fix: run an example forward, measure how wrong the answer is, then pass that error backwards through the network, layer by layer, so every connection learns how much it contributed.</p>
+  <p>Nudge every connection a little in the direction that reduces the error, and repeat over many examples.</p>
+  <p>The hidden units end up inventing useful features nobody programmed, such as "which generation is this person in?" in a family-tree task.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · p. 533</p>
+  <h2>The problem: who trains the middle?</h2>
+  <div class="prose">
+    <p>A neural network is layers of simple units passing numbers along weighted connections. The <strong>input</strong> layer receives the data and the <strong>output</strong> layer gives the answer. In between are <strong>hidden</strong> units: nobody tells them what they should be doing.</p>
+    <p>For the output layer, learning is easy: you know the right answer, so you know which way to push. For hidden units there is no "right answer" to compare against. The <a href="perceptron.html">perceptron</a> dodged this by keeping its middle layer fixed and random, and <a href="perceptrons-book.html">Minsky and Papert</a> showed how much that limits it. The real prize was a way to train the middle.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A restaurant sends out a bad dish. The head chef knows the dish was wrong, but which of the five cooks in the kitchen should change what they do, and by how much? Backpropagation is a fair way to divide up the blame.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Hidden layers make networks powerful, but they need a way to learn without being told what each hidden unit should do.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · p. 534</p>
+  <h2>Pass the blame backwards</h2>
+  <div class="prose">
+    <p>Each training example takes two trips. On the <strong>forward pass</strong>, the input flows through the network and produces an answer. Compare it with the correct answer and you get an <strong>error</strong>.</p>
+    <p>On the <strong>backward pass</strong>, the error flows the other way. Each output unit knows how wrong it was. Each hidden unit then collects blame from the units it feeds, in proportion to how strongly it is connected to them. Every connection learns how much a small change in it would change the error, and moves a small step the helpful way.</p>
+    <p>Below, a tiny network learns XOR ("one or the other, but not both"), the very kind of problem a single-layer perceptron cannot solve. The coloured background shows what it currently answers at each point.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="xr-train" aria-pressed="false">Train</button><button class="btn" id="xr-step">One sweep</button><button class="btn" id="xr-reset">New random start</button></div>
+    <div class="svgbox"><svg id="xr" viewBox="0 0 600 270" role="img" aria-label="A 2-3-1 network learning XOR, with its output map and error curve"></svg></div>
+    <p class="readout" id="xr-r"></p>
+    <figcaption>Left: the network's answer for every point in the square (amber = 1, blue = 0) with the four training points. Centre: the network, line thickness = weight size, amber positive, blue negative. Right: total error after each sweep through the four examples.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Run forward to get the error, run backward to share out the blame, nudge every weight. Repeat.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What travels backwards in backpropagation?</dt>
+    <dd>The error signal: for each unit, how much the total error would change if that unit's input changed.</dd>
+    <dt>Why can this network solve XOR when a perceptron can't?</dt>
+    <dd>Its hidden units learn intermediate features (roughly "at least one is on" and "both are on") that make the final decision a simple straight-line cut.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · p. 535</p>
+  <h2>Walking downhill, with momentum</h2>
+  <div class="prose">
+    <p>Think of the error as a landscape: every possible setting of the weights is a location, and the height is how wrong the network is. Training means walking downhill. The backward pass tells you which way is down; the <strong>learning rate</strong> decides how big a step to take.</p>
+    <p>The paper also adds <strong>momentum</strong>: each step keeps part of the previous step's direction, like a ball rolling downhill that doesn't stop dead in every small dip. Try the sliders: too large a step overshoots, and momentum can carry the ball through a shallow dip to a deeper valley.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Step size <input type="range" id="gd-eta" min="0.01" max="0.6" step="0.01" value="0.08" data-fmt="2"><output id="gd-eta-o">0.08</output></label>
+      <label>Momentum <input type="range" id="gd-mom" min="0" max="0.95" step="0.05" value="0" data-fmt="2"><output id="gd-mom-o">0.00</output></label>
+      <button class="btn" id="gd-go">Roll</button>
+    </div>
+    <div class="svgbox"><svg id="gd" viewBox="0 0 600 240" role="img" aria-label="A ball descending an error curve with a shallow dip and a deeper valley"></svg></div>
+    <p class="readout" id="gd-r"></p>
+    <figcaption>One weight, one error curve. The ball starts on the left. Without momentum it settles in the first shallow dip. With momentum 0.8 it rolls into the middle valley, and at 0.9 on to the deepest one. Real error landscapes have millions of dimensions, but the trade-off is the same.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Learning is downhill walking on an error landscape. Step size and momentum decide whether you get stuck, overshoot, or arrive.</p>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · pp. 534–535 · Figs. 1–4</p>
+  <h2>Hidden units invent their own features</h2>
+  <div class="prose">
+    <p>The paper's title says "learning representations", and this is the real headline. In one test, a network had to say whether a row of six on/off lights was a mirror image of itself. It had only two hidden units. Training found an elegant trick nobody told it: each light's weight is matched by an equal and opposite weight on its mirror partner, and the three sizes are in the ratio 1 : 2 : 4. A mirror-symmetric input cancels out exactly, while any asymmetry leaves a non-zero total, and the 1 : 2 : 4 sizes make sure different asymmetries can never cancel each other by accident.</p>
+    <p>In another test, a network learned two family trees, one English and one Italian, from statements like "Colin's mother is Victoria". Its hidden units came to stand for things like nationality, generation, and which branch of the family a person was in. Nobody named those features; they emerged because they made the task easier.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Backprop doesn't just fit answers; the hidden layers discover meaningful features of the data on their own.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>In the symmetry task, why do mirror partners get equal and opposite weights?</dt>
+    <dd>So that a symmetric input contributes zero total to each hidden unit, while any asymmetry pushes the total away from zero.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · Context</p>
+  <h2>Not the first, but the one that convinced people</h2>
+  <div class="prose">
+    <p>The mathematics was older. Seppo Linnainmaa described the general backward method for computing derivatives in 1970, and Paul Werbos proposed using it to train neural networks in 1974. What this paper added was clear evidence of <em>what it learns</em>: interesting internal representations, in a short paper in a widely read journal, plus a book chapter with many more experiments.</p>
+    <p>The authors also flagged the weak spots: the downhill walk can get stuck in a poor valley (they found this rare in practice), and they said plainly that this is not a realistic model of how brains learn.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>Today's networks use the same backward pass, now done automatically by software ("automatic differentiation"). What changed is around it: ReLU units instead of sigmoids, better optimisers like <a href="adam.html">Adam</a>, normalisation layers, and vastly more data and computing power.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Backprop's idea predates 1986; this paper showed it could make hidden layers learn meaningful features, which is what restarted the field.</p>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>A procedure for networks of neuron-like units repeatedly adjusts weights to minimise a measure of the difference between actual and desired output vectors. As a result, internal hidden units come to represent important features of the task domain, and regularities are captured by the interactions of these units. The ability to create useful new features distinguishes back-propagation from earlier procedures such as the perceptron-convergence procedure. <em>Nature</em> 323 (1986), 533–536.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · p. 533</p>
+  <h2>Units and the error measure</h2>
+  <div class="prose"><p>Layered feed-forward net; units in a layer receive from lower layers only. Biases are weights from a unit with constant output 1. For unit <var>j</var>:</p></div>
+  <div class="eq"><var>x<sub>j</sub></var> = Σ<sub><var>i</var></sub> <var>y<sub>i</sub></var> <var>w<sub>ji</sub></var> <span class="n">(1)</span></div>
+  <div class="eq"><var>y<sub>j</sub></var> = 1 / (1 + e<sup>−<var>x<sub>j</sub></var></sup>) <span class="n">(2)</span></div>
+  <div class="eq">E = ½ Σ<sub><var>c</var></sub> Σ<sub><var>j</var></sub> (<var>y<sub>j,c</sub></var> − <var>d<sub>j,c</sub></var>)<sup>2</sup> <span class="n">(3)</span></div>
+  <div class="prose"><p>Here <var>c</var> indexes input–output cases and <var>d</var> the desired outputs. Any differentiable input–output function with bounded derivative would do; the logistic is used for convenience.</p></div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · p. 534</p>
+  <h2>The backward pass</h2>
+  <div class="prose"><p>For one case, starting at the output units:</p></div>
+  <div class="eq">∂E/∂<var>y<sub>j</sub></var> = <var>y<sub>j</sub></var> − <var>d<sub>j</sub></var> <span class="n">(4)</span></div>
+  <div class="eq">∂E/∂<var>x<sub>j</sub></var> = ∂E/∂<var>y<sub>j</sub></var> · <var>y<sub>j</sub></var>(1 − <var>y<sub>j</sub></var>) <span class="n">(5)</span></div>
+  <div class="eq">∂E/∂<var>w<sub>ji</sub></var> = ∂E/∂<var>x<sub>j</sub></var> · <var>y<sub>i</sub></var> <span class="n">(6)</span></div>
+  <div class="eq">∂E/∂<var>y<sub>i</sub></var> = Σ<sub><var>j</var></sub> ∂E/∂<var>x<sub>j</sub></var> · <var>w<sub>ji</sub></var> <span class="n">(7)</span></div>
+  <div class="prose"><p>Equation 7 is the step that makes it work: the error derivative for a hidden unit is a weighted sum of the derivatives of the units it feeds, so the computation proceeds layer by layer from top to bottom at the same cost as the forward pass. This is reverse-mode automatic differentiation applied to the network.</p>
+  <p>Step through it below on a 2-2-1 network with fixed initial weights, input (1, 0) and target 1.</p></div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="bp-fwd">1 · Forward</button><button class="btn" id="bp-bwd">2 · Backward</button><button class="btn" id="bp-upd">3 · Update (ε = 0.5)</button><button class="btn" id="bp-rst">Reset</button></div>
+    <div class="svgbox wide"><svg id="bp" viewBox="0 0 640 280" role="img" aria-label="A 2-2-1 network with forward activations and backward derivatives annotated"></svg></div>
+    <p class="readout" id="bp-r"></p>
+    <figcaption>Forward annotates each unit with <var>x</var> (total input) and <var>y</var> (output). Backward annotates each unit with ∂E/∂<var>x</var> (amber) and each weight with ∂E/∂<var>w</var>. Update applies Δ<var>w</var> = −ε ∂E/∂<var>w</var>; run forward again to see E fall. Bias weights are omitted from the drawing but included in the computation.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · p. 535</p>
+  <h2>Weight changes and acceleration</h2>
+  <div class="prose"><p>The simplest rule is plain gradient descent, Δ<var>w</var> = −ε ∂E/∂<var>w</var>, with ∂E/∂<var>w</var> accumulated over all cases before changing the weights (a full "sweep"). The paper uses an accelerated version in which the current gradient modifies the velocity of the point in weight space rather than its position:</p></div>
+  <div class="eq">Δ<var>w</var>(<var>t</var>) = −ε ∂E/∂<var>w</var>(<var>t</var>) + α Δ<var>w</var>(<var>t</var> − 1) <span class="n">(9)</span></div>
+  <div class="prose"><p>with α ∈ [0, 1) an exponential decay factor: what is now called momentum. Weights start at small random values; if they started equal, hidden units with identical connections would receive identical gradients and could never differentiate (symmetry breaking).</p></div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · pp. 534–535 · Figs. 1–4</p>
+  <h2>Experiments: symmetry and family trees</h2>
+  <div class="prose">
+    <p><strong>Mirror symmetry (Fig. 1).</strong> Six binary inputs, two hidden units, one output that should be on iff the input is symmetric about its centre. Trained on all 64 vectors with ε = 0.1, α = 0.9, the paper reports a solution after 1,425 sweeps. In the solution, each hidden unit's weights are mirror-antisymmetric with magnitudes in ratio 1 : 2 : 4 (in the paper's Fig. 1 the signs are mixed within one side, e.g. 14.2, −3.6, 7.2, so the ratio holds in some order), so symmetric inputs give each hidden unit zero net input from the array and the shared negative bias keeps both off, turning the output on. The figure below re-runs this experiment with the same equations in your browser.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Random start <input type="range" id="sy-seed" min="1" max="14" step="1" value="7"><output id="sy-seed-o">7</output></label><button class="btn" id="sy-run">Train</button></div>
+    <div class="svgbox wide"><svg id="sy" viewBox="0 0 640 280" role="img" aria-label="Learned input-to-hidden weights for the symmetry task"></svg></div>
+    <p class="readout" id="sy-r"></p>
+    <figcaption>Batch gradient descent with momentum (ε = 0.1, α = 0.9) on all 64 patterns, stopping when every output is on the correct side of 0.5. Bars show each hidden unit's six input weights. Note the mirror-antisymmetry and the magnitudes in roughly 1 : 2 : 4 ratio (their order and signs vary between runs, as they do in the paper's own figure). Some random starts never solve it within 5,000 sweeps: a local minimum, which the paper discusses.</figcaption>
+  </figure>
+  <div class="prose">
+    <p><strong>Family trees (Figs. 2–4).</strong> Two isomorphic trees of 12 people each (English and Italian) and 12 relationship types give 104 triples (person 1, relationship, person 2). The network has 24 local input units for person 1 and 12 for the relationship, each group feeding its own 6-unit distributed encoding, a central layer of 12 units, a 6-unit layer and 24 output units for person 2. Trained on 100 triples, it generalised correctly to the 4 held out. Inspection of the 6 units encoding person 1 found units for nationality, generation and branch of the family, features never given explicitly.</p>
+    <p><strong>Recurrent nets (Fig. 5).</strong> A recurrent network run for <var>T</var> steps is equivalent to a layered net with <var>T</var> layers and tied weights; backprop applies after summing the gradients of corresponding weights. This is the origin of back-propagation through time, used later by <a href="lstm.html">LSTM</a>.</p>
+  </div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · p. 536 and history</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Local minima.</strong> The error surface may have local minima, so gradient descent is not guaranteed to find a global one. The authors report that in many tasks the network very rarely gets stuck in poor local minima, and that extra connections provide paths around them.</li>
+      <li><strong>Biology.</strong> The authors state that the procedure in its current form is not a plausible model of learning in brains, but that it shows what gradient descent in weight space can discover.</li>
+      <li><strong>Priority.</strong> Reverse-mode differentiation: Linnainmaa (1970). Application to neural networks: Werbos (1974 thesis; 1982). Independent rediscoveries: Parker (1985), LeCun (1985). The fuller treatment is Rumelhart, Hinton &amp; Williams, "Learning internal representations by error propagation", in <em>Parallel Distributed Processing</em> (1986).</li>
+    </ul>
+  </div>
+  <div class="later"><span class="label">Later refinements</span>Sigmoid units saturate and make deep stacks hard to train (vanishing gradients, analysed by Hochreiter in 1991 and addressed for sequences by <a href="lstm.html">LSTM</a>). Modern practice replaces them with ReLU-family activations, cross-entropy losses, minibatch stochastic gradients, adaptive optimisers (<a href="adam.html">Adam</a>), normalisation (<a href="batchnorm.html">BatchNorm</a>, <a href="layernorm.html">LayerNorm</a>) and residual connections (<a href="resnet.html">ResNet</a>). Backprop itself is unchanged.</div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is backprop's cost comparable to a forward pass?</dt>
+    <dd>Each weight is used once forward and once backward (Eq. 7 reuses the already computed ∂E/∂<var>x</var> of the layer above), so the cost is linear in the number of weights rather than requiring a separate perturbation per weight.</dd>
+    <dt>What would happen if all weights started at zero?</dt>
+    <dd>All hidden units in a layer would compute the same function and receive the same gradient, so they would stay identical forever.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Hidden unit</dt><dd>A unit that is neither input nor output; its desired state is not specified.</dd>
+    <dt>Forward pass</dt><dd>Computing all activities from input to output.</dd>
+    <dt>Backward pass</dt><dd>Computing ∂E/∂<var>x</var> and ∂E/∂<var>w</var> from output to input.</dd>
+    <dt>Sweep</dt><dd>One pass through all training cases (an epoch).</dd>
+    <dt>ε</dt><dd>Learning rate.</dd>
+    <dt>α</dt><dd>Momentum (acceleration) coefficient.</dd>
+    <dt>Local minimum</dt><dd>A point where every small weight change increases error, though better points exist elsewhere.</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+function MLP(sizes, seed, scale){ var r=rng(seed); this.s=sizes; this.W=[]; this.V=[];
+  for (var l=1;l<sizes.length;l++){ var W=[],V=[]; for (var j=0;j<sizes[l];j++){ var row=[],vr=[]; for (var i=0;i<=sizes[l-1];i++){ row.push((r()-.5)*2*(scale||0.5)); vr.push(0);} W.push(row); V.push(vr);} this.W.push(W); this.V.push(V); } }
+MLP.prototype.fwd=function(x){ var a=[x]; for (var l=0;l<this.W.length;l++){ var prev=a[l].concat([1]); a.push(this.W[l].map(function(w){ var s=0; for (var i=0;i<w.length;i++) s+=w[i]*prev[i]; return sigmoid(s); })); } return a; };
+MLP.prototype.sweep=function(data, eps, al){ var self=this, G=this.W.map(function(L){return L.map(function(r){return r.map(function(){return 0;});});}), E=0;
+  data.forEach(function(c){ var a=self.fwd(c[0]), L=self.W.length, out=a[L], dx=out.map(function(y,j){ E+=.5*Math.pow(y-c[1][j],2); return (y-c[1][j])*y*(1-y); });
+    for (var l=L-1;l>=0;l--){ var prev=a[l].concat([1]); dx.forEach(function(d,j){ prev.forEach(function(p,i){ G[l][j][i]+=d*p; }); });
+      if (l>0){ var nd=a[l].map(function(y,i){ var s=0; dx.forEach(function(d,j){ s+=d*self.W[l][j][i]; }); return s*y*(1-y); }); dx=nd; } } });
+  for (var l=0;l<this.W.length;l++) for (var j=0;j<this.W[l].length;j++) for (var i=0;i<this.W[l][j].length;i++){ this.V[l][j][i]=-eps*G[l][j][i]+al*this.V[l][j][i]; this.W[l][j][i]+=this.V[l][j][i]; }
+  return E; };
+(function(){ // XOR trainer
+  var svg=$('#xr'), data=[[[0,0],[0]],[[0,1],[1]],[[1,0],[1]],[[1,1],[0]]], net, hist, seed=5, timer=null, n=0;
+  function reset(){ net=new MLP([2,3,1],seed++,1); hist=[]; n=0; draw(); }
+  function draw(){ clear(svg); var G=16, sz=12;
+    for (var a=0;a<G;a++) for (var b=0;b<G;b++){ var x=a/(G-1), y=b/(G-1), o=net.fwd([x,y])[2][0];
+      S('rect',{x:20+a*sz,y:20+(G-1-b)*sz,width:sz,height:sz,'class':o>0.5?'f-fire':'f-wire','fill-opacity':Math.abs(o-0.5)*1.6+0.08},svg); }
+    data.forEach(function(c){ var cx=20+c[0][0]*(G-1)*sz+sz/2, cy=20+(G-1-c[0][1]*(G-1))*sz+sz/2; S('circle',{cx:cx,cy:cy,r:8,'class':c[1][0]?'u-on':'u-wire'},svg); });
+    S('text',{x:116,y:228,'class':'t-s mid'},svg,'input 1 →'); S('text',{x:116,y:246,'class':'t-s mid'},svg,'(input 2 ↑)');
+    // network
+    var pos=[[[260,80],[260,170]],[[330,60],[330,125],[330,190]],[[400,125]]];
+    for (var l=0;l<2;l++) net.W[l].forEach(function(row,j){ row.slice(0,-1).forEach(function(w,i){ var p=pos[l][i], q=pos[l+1][j];
+      S('line',{x1:p[0],y1:p[1],x2:q[0],y2:q[1],'stroke-width':Math.min(6,0.6+Math.abs(w)*0.8),'class':w>0?'w-fire':'w'},svg); }); });
+    pos.forEach(function(L){ L.forEach(function(p){ S('circle',{cx:p[0],cy:p[1],r:12,'class':'u'},svg); }); });
+    // error curve
+    S('line',{x1:440,y1:220,x2:590,y2:220,'class':'axis'},svg); S('line',{x1:440,y1:40,x2:440,y2:220,'class':'axis'},svg);
+    S('text',{x:515,y:240,'class':'t-s mid'},svg,'sweeps'); S('text',{x:446,y:34,'class':'t-s'},svg,'error');
+    if (hist.length>1){ var m=Math.max.apply(null,hist), d='';
+      hist.forEach(function(e,k){ d+=(k?'L':'M')+(440+k/(hist.length-1)*150)+','+(220-e/m*170); }); S('path',{d:d,'class':'w-fire'},svg); }
+    var ok=data.every(function(c){ return Math.abs(net.fwd(c[0])[2][0]-c[1][0])<0.5; });
+    $('#xr-r').innerHTML='Sweeps: <b>'+n+'</b>. Error: <b>'+fmt(hist.length?hist[hist.length-1]:0,3)+'</b>. '+(ok?'All four XOR cases correct.':'Not solved yet.');
+    return ok; }
+  function step(k){ for (var i=0;i<(k||1);i++){ hist.push(net.sweep(data,0.5,0.9)); n++; } if (hist.length>300) hist=hist.filter(function(_,i){return i%2===0;}); return draw(); }
+  $('#xr-step').onclick=function(){ step(1); };
+  $('#xr-train').onclick=function(){ var b=this; if (timer){ clearInterval(timer); timer=null; b.textContent='Train'; b.setAttribute('aria-pressed','false'); }
+    else { timer=setInterval(function(){ var ok=step(5); if (ok && n>50 && hist[hist.length-1]<0.02){ clearInterval(timer); timer=null; b.textContent='Train'; b.setAttribute('aria-pressed','false'); } if (n>4000){ clearInterval(timer); timer=null; b.textContent='Train'; } },30); b.textContent='Pause'; b.setAttribute('aria-pressed','true'); } };
+  $('#xr-reset').onclick=reset; reset();
+})();
+(function(){ // downhill ball
+  var svg=$('#gd'), eta=.08, mom=0, timer=null;
+  function f(w){ return 1.1 + 0.3*Math.cos(2.2*w) - 0.5*w + 0.08*w*w; }
+  function df(w){ return -0.66*Math.sin(2.2*w) - 0.5 + 0.16*w; }
+  function X(w){ return 40+(w+2.5)/8*520; } function Y(v){ return 200-v*55; }
+  var path=''; for (var w=-2.5; w<=5.5; w+=0.05) path+=(path?'L':'M')+X(w)+','+Y(f(w));
+  function draw(w,trail){ clear(svg); S('path',{d:path,'class':'w-ink'},svg);
+    trail.forEach(function(t,i){ S('circle',{cx:X(t),cy:Y(f(t)),r:3,'class':'f-muted','fill-opacity':0.5},svg); });
+    S('circle',{cx:X(w),cy:Y(f(w))-9,r:9,'class':'u-on'},svg);
+    S('text',{x:40,y:24,'class':'t-s'},svg,'error'); S('text',{x:560,y:236,'class':'t-s end'},svg,'weight value →'); }
+  function go(){ if (timer) clearInterval(timer); var w=-2.2, v=0, trail=[], k=0;
+    timer=setInterval(function(){ v = -eta*df(w) + mom*v; w += v; trail.push(w); k++; if (w<-2.5) w=-2.5; if (w>5.5) w=5.5; draw(w,trail.slice(-60));
+      if (k>140){ clearInterval(timer); timer=null; $('#gd-r').innerHTML='Ended at weight <b>'+fmt(w)+'</b>, error <b>'+fmt(f(w),3)+'</b>'+(w<0.4?': stuck in the first, shallow dip.':(w<3?': the middle valley.':': the deepest valley.')); } },40); }
+  bindRange('gd-eta',function(v){eta=v;}); bindRange('gd-mom',function(v){mom=v;});
+  $('#gd-go').onclick=go; draw(-2.2,[]); $('#gd-r').textContent='Press Roll.';
+})();
+(function(){ // backprop walkthrough
+  var svg=$('#bp'), W1, W2, st, a, d;
+  function reset(){ W1=[[0.5,-0.4,0.1],[0.3,0.8,-0.2]]; W2=[[0.7,-0.6,0.05]]; st=0; a=null; d=null; draw(); $('#bp-r').textContent='Input (1, 0), target 1. Press Forward.'; }
+  var x=[1,0], t=1;
+  function fwd(){ var xi=x.concat([1]); var hx=W1.map(function(w){return w[0]*xi[0]+w[1]*xi[1]+w[2];}), hy=hx.map(sigmoid); var oi=hy.concat([1]); var ox=W2[0][0]*oi[0]+W2[0][1]*oi[1]+W2[0][2], oy=sigmoid(ox); a={hx:hx,hy:hy,ox:ox,oy:oy,E:.5*Math.pow(oy-t,2)}; d=null; st=1; draw(); $('#bp-r').innerHTML='Output y = <b>'+fmt(a.oy,4)+'</b>, E = ½(y − d)² = <b>'+fmt(a.E,5)+'</b>.'; }
+  function bwd(){ if (!a) return; var dEdy=a.oy-t, dox=dEdy*a.oy*(1-a.oy); var hi=a.hy.concat([1]); var gW2=hi.map(function(h){return dox*h;});
+    var dhy=a.hy.map(function(_,i){return dox*W2[0][i];}), dhx=dhy.map(function(v,i){return v*a.hy[i]*(1-a.hy[i]);}); var xi=x.concat([1]);
+    var gW1=dhx.map(function(g){ return xi.map(function(xv){return g*xv;}); }); d={dox:dox,dhx:dhx,gW1:gW1,gW2:gW2}; st=2; draw();
+    $('#bp-r').innerHTML='∂E/∂x at output = (y − d)·y(1 − y) = <b>'+fmt(dox,4)+'</b>; hidden ∂E/∂x via Eq. 7 then Eq. 5.'; }
+  function upd(){ if (!d) return; var e=0.5; W2[0]=W2[0].map(function(w,i){return w-e*d.gW2[i];}); W1=W1.map(function(r,j){return r.map(function(w,i){return w-e*d.gW1[j][i];});}); var old=a.E; fwd(); $('#bp-r').innerHTML+=' Was <b>'+fmt(old,5)+'</b> before the update.'; }
+  function draw(){ clear(svg); var P={i:[[80,80],[80,200]],h:[[300,70],[300,210]],o:[[520,140]]};
+    for (var j=0;j<2;j++) for (var i=0;i<2;i++){ var p=P.i[i],q=P.h[j]; S('line',{x1:p[0]+18,y1:p[1],x2:q[0]-22,y2:q[1],'class':'w'},svg);
+      var mx=p[0]+(q[0]-p[0])*(j===i?0.45:0.3), my=p[1]+(q[1]-p[1])*(j===i?0.45:0.3); S('text',{x:mx,y:my-6,'class':'t-s mid'},svg,'w='+fmt(W1[j][i]));
+      if (d) S('text',{x:mx,y:my+10,'class':'t-fire mid'},svg,'∂='+fmt(d.gW1[j][i],4)); }
+    for (var j=0;j<2;j++){ var p=P.h[j],q=P.o[0]; S('line',{x1:p[0]+22,y1:p[1],x2:q[0]-24,y2:q[1],'class':'w'},svg); var mx=(p[0]+q[0])/2, my=(p[1]+q[1])/2; S('text',{x:mx,y:my-8,'class':'t-s mid'},svg,'w='+fmt(W2[0][j])); if (d) S('text',{x:mx,y:my+10,'class':'t-fire mid'},svg,'∂='+fmt(d.gW2[j],4)); }
+    P.i.forEach(function(p,i){ S('circle',{cx:p[0],cy:p[1],r:18,'class':x[i]?'u-on':'u'},svg); S('text',{x:p[0],y:p[1]+4,'class':'t mid'},svg,x[i]); S('text',{x:p[0],y:p[1]+36,'class':'t-s mid'},svg,'input '+(i+1)); });
+    P.h.forEach(function(p,j){ S('circle',{cx:p[0],cy:p[1],r:22,'class':'u'},svg); if (a){ S('text',{x:p[0],y:p[1]-30,'class':'t-s mid'},svg,'x='+fmt(a.hx[j],3)+'  y='+fmt(a.hy[j],3)); } if (d) S('text',{x:p[0],y:p[1]+40,'class':'t-fire mid'},svg,'∂E/∂x='+fmt(d.dhx[j],4)); S('text',{x:p[0],y:p[1]+4,'class':'t mid'},svg,'h'+(j+1)); });
+    var o=P.o[0]; S('circle',{cx:o[0],cy:o[1],r:24,'class':'u'},svg); S('text',{x:o[0],y:o[1]+4,'class':'t mid'},svg,'out');
+    if (a) S('text',{x:o[0],y:o[1]-34,'class':'t-s mid'},svg,'x='+fmt(a.ox,3)+'  y='+fmt(a.oy,3));
+    if (d) S('text',{x:o[0],y:o[1]+44,'class':'t-fire mid'},svg,'∂E/∂x='+fmt(d.dox,4));
+    S('text',{x:600,y:40,'class':'t-s end'},svg,'target d = 1'); }
+  $('#bp-fwd').onclick=fwd; $('#bp-bwd').onclick=bwd; $('#bp-upd').onclick=upd; $('#bp-rst').onclick=reset; reset();
+})();
+(function(){ // symmetry experiment
+  var svg=$('#sy'), seed=7, pats=[];
+  for (var k=0;k<64;k++){ var x=[]; for (var i=0;i<6;i++) x.push(k>>i&1); pats.push([x,[(x[0]===x[5]&&x[1]===x[4]&&x[2]===x[3])?1:0]]); }
+  function solved(n){ return pats.every(function(c){ return Math.abs(n.fwd(c[0])[2][0]-c[1][0])<0.5; }); }
+  function run(){ var n=new MLP([6,2,1],seed,0.3), sw=0; while (sw<5000 && !solved(n)){ n.sweep(pats,0.1,0.9); sw++; } return [n,sw,solved(n)]; }
+  function draw(res){ clear(svg); var n=res[0];
+    n.W[0].forEach(function(row,j){ var y0=75+j*125; S('text',{x:20,y:y0-28,'class':'t-h'},svg,'hidden unit '+(j+1)); S('line',{x1:20,y1:y0+20,x2:520,y2:y0+20,'class':'grid'},svg);
+      row.slice(0,6).forEach(function(w,i){ var h=Math.min(40,Math.abs(w)*6), x=40+i*75; S('rect',{x:x,y:w>0?y0+20-h:y0+20,width:40,height:Math.max(h,1),'class':w>0?'f-fire':'f-wire'},svg);
+        S('text',{x:x+20,y:w>0?y0+20+14:y0+20-6,'class':'t-s mid'},svg,fmt(w,1)); });
+      S('text',{x:540,y:y0+24,'class':'t-s'},svg,'bias '+fmt(row[6],1)); });
+    S('text',{x:20,y:272,'class':'t-s'},svg,'inputs 1 … 6 (input 1 mirrors input 6, 2 mirrors 5, 3 mirrors 4)');
+    $('#sy-r').innerHTML = res[2] ? 'Solved after <b>'+res[1]+'</b> sweeps.' : 'Not solved after 5,000 sweeps: <b>stuck</b> in a local minimum. Try another start.'; }
+  bindRange('sy-seed',function(v){ seed=v; });
+  $('#sy-run').onclick=function(){ $('#sy-r').textContent='Training…'; setTimeout(function(){ draw(run()); },20); };
+  draw(run());
+})();
+</script>

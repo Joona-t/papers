@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GAN (2014) study guide</title>
+<meta name="description" content="How do you teach a network to produce realistic new images when you cannot write down a formula for &quot;realistic&quot;? Goodfellow and colleagues train two networks against each other: a generator that turns random noise into samples, and a discriminator that tries to tell those samples from real">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Neural networks</b> · 2014</p>
+  <h1>Generative Adversarial Networks</h1>
+  <p class="cite">Ian Goodfellow et al. · NeurIPS 2014</p>
+  <p class="lede">How do you teach a network to produce realistic new images when you cannot write down a formula for "realistic"? Goodfellow and colleagues train two networks against each other: a generator that turns random noise into samples, and a discriminator that tries to tell those samples from real data. Each improves by exploiting the other's weaknesses, and in the ideal limit the generator's samples become indistinguishable from the real thing.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/1406.2661">Read the paper (free)</a> <a href="https://lovespark.love/papers/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, independent AI review, but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>A <strong>generator</strong> network takes random numbers and turns them into a sample, such as an image. A <strong>discriminator</strong> network looks at a sample and says how likely it is to be real rather than generated.</p>
+  <p>The discriminator is trained to catch fakes; the generator is trained, by backpropagating through the discriminator, to make samples the discriminator calls real.</p>
+  <p>The paper proves that if both networks were flexible enough and trained perfectly, this contest has exactly one end point: the generator produces the data distribution itself, and the discriminator can do no better than guessing, 50/50.</p>
+  <p>In practice the contest can be unstable, the generator can get stuck producing only a few kinds of output, and there is no easy way to measure how good the model is. Later work spent years fixing these problems.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1–2</p>
+  <h2>The problem: making new data</h2>
+  <div class="prose">
+    <p>By 2014, neural networks were very good at <strong>recognising</strong> things: given a photo, say "cat". The reverse, <strong>generating</strong> a new, realistic photo of a cat, was much harder. The approaches of the time mostly tried to write down a probability for every possible image and then adjust it to fit the data. For rich models those probabilities involve sums over astronomically many possibilities, so the methods relied on slow approximations, often long chains of random sampling.</p>
+    <p>This paper sidesteps all of that. It never writes down the probability of an image. It only needs a network that can <em>produce</em> samples, plus a way to tell it whether its samples are any good. The "way to tell it" is a second network.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>The paper's own analogy: the generator is a team of counterfeiters trying to print convincing banknotes, and the discriminator is the police trying to spot fakes. Competition drives both to improve until the fakes cannot be told from genuine notes.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Instead of writing down how probable each image is, train a sample-maker and judge its output with a learned critic.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §3 · Fig. 1 · Algorithm 1</p>
+  <h2>Counterfeiter against detective</h2>
+  <div class="prose">
+    <p>Training alternates two moves. First, show the discriminator a handful of real examples and a handful of generated ones, and nudge it to score real ones near 1 and fakes near 0. Second, generate a fresh batch of fakes and nudge the <em>generator</em> so the discriminator scores them higher. The generator never sees real data directly; everything it learns comes through the discriminator's judgement, passed back by <a href="backprop.html">backpropagation</a>.</p>
+    <p>Below is a complete GAN in one dimension, small enough to watch. Real data are numbers clustered around 1.5 (the dashed bump). The generator takes a random number and stretches and shifts it, so it can learn where to put its output and how spread out to make it. The discriminator's opinion is the amber line: high where it thinks "real", low where it thinks "fake". This mirrors the paper's Fig. 1.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="g1-run" aria-pressed="false">Train</button><button class="btn" id="g1-step">10 rounds</button><button class="btn" id="g1-reset">Reset</button></div>
+    <div class="svgbox"><svg id="g1" viewBox="0 0 600 270" role="img" aria-label="One-dimensional GAN: real data density, generated samples histogram, and discriminator output"></svg></div>
+    <p class="readout" id="g1-r"></p>
+    <figcaption>Dashed: where real data lie. Blue bars: a histogram of 2,000 generator samples. Amber: the discriminator's output D(<var>x</var>), from 0 (sure it is fake) to 1 (sure it is real); the dotted line marks 0.5. Each round is one discriminator update and one generator update, on batches of 128. Notice the generator first squeezes its output into a narrow spike as it races toward the data, then widens to match the spread: a brief, small-scale version of the "collapse" problem discussed below. Illustrative toy: a two-parameter generator and a discriminator that can only draw bell-shaped boundaries.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Alternate: train the detective on real versus fake, then train the counterfeiter to fool the current detective. The detective's verdict is the only teaching signal the generator gets.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>How does the generator know which direction to change its output?</dt>
+    <dd>It backpropagates through the discriminator: the slope of the discriminator's output with respect to the sample tells it which way would look "more real".</dd>
+    <dt>Why does the amber line flatten out near 0.5 when training goes well?</dt>
+    <dd>When fakes and real data overlap completely, no rule can tell them apart, so the best the discriminator can say anywhere is "50/50".</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §4.1 · Proposition 1, Theorem 1</p>
+  <h2>Where the contest ends</h2>
+  <div class="prose">
+    <p>The paper's theory asks: suppose the discriminator were perfect for whatever the generator is currently doing. What would it say? The answer is simple. At each possible sample, compare how common it is among real data with how common it is among fakes. The ideal discriminator outputs real ÷ (real + fake). Where only real data appear, it says 1; where only fakes appear, 0; where both are equally common, ½.</p>
+    <p>Then they show that the generator's best response to such a discriminator is to make its distribution identical to the real data. At that point the detective is reduced to coin-flipping, and nothing either player can change will help it. That is the game's unique ideal end point.</p>
+    <p>Drag the fake distribution around below and watch what the ideal detective would do.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Fake centre <input type="range" id="dt-m" min="-3" max="3" step="0.05" value="1.5" data-fmt="2"><output id="dt-m-o">1.50</output></label>
+      <label>Fake spread <input type="range" id="dt-s" min="0.3" max="2.5" step="0.05" value="1.2" data-fmt="2"><output id="dt-s-o">1.20</output></label>
+    </div>
+    <div class="svgbox"><svg id="dt" viewBox="0 0 600 250" role="img" aria-label="Real and fake distributions with the ideal discriminator"></svg></div>
+    <p class="readout" id="dt-r"></p>
+    <figcaption>Dashed: real data (centre 0, spread 1). Blue: the generator's distribution. Amber: the ideal discriminator real ÷ (real + fake), on a 0 to 1 scale. "Best possible accuracy" is how often that ideal detective would be right on a 50/50 mix of real and fake samples. Set centre 0 and spread 1 to reach the end point.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>The perfect detective compares how common a sample is in real versus fake data; the only way to beat it is to make those two the same everywhere.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>If fakes are twice as common as real data at some point, what does the ideal detective say there?</dt>
+    <dd>real ÷ (real + fake) = 1 ÷ (1 + 2) = ⅓.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §3, §6 · Table 2</p>
+  <h2>What can go wrong</h2>
+  <div class="prose">
+    <p>The proof assumes infinitely flexible networks and a discriminator retrained to perfection at every step. Real training takes small alternating steps, and the authors list the consequences honestly:</p>
+    <ul>
+      <li><strong>The pair must stay in step.</strong> If the generator trains too long against a stale discriminator, it can learn to send many different random inputs to the same output. The paper calls this the "Helvetica scenario"; it is now known as <strong>mode collapse</strong>: a face generator that only makes a few faces.</li>
+      <li><strong>Weak early signal.</strong> At the start, fakes are obviously fake and the discriminator rejects them confidently, which in the original formulation gives the generator almost no gradient. The paper's fix is to train the generator to make the discriminator say "real" rather than to stop it saying "fake"; the end point is the same but the early push is much stronger.</li>
+      <li><strong>No score.</strong> A GAN never computes the probability of an example, so it is hard to measure progress or compare models.</li>
+    </ul>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>The game has the right end point in theory, but in practice the two players can chase each other, collapse to a few outputs, or stall; and you cannot easily score the result.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What is mode collapse?</dt>
+    <dd>The generator maps many different noise inputs to the same or very similar outputs, covering only part of the variety in the real data.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §5, §7 · Fig. 2</p>
+  <h2>Small pictures, big afterlife</h2>
+  <div class="prose">
+    <p>The 2014 samples are small: handwritten digits, low-resolution faces and blurry CIFAR-10 objects (Fig. 2). The authors show the nearest real training image beside each sample, to demonstrate the network is not just copying. On a likelihood-style score (a rough one, they admit) the GAN was competitive with the best methods of the day.</p>
+    <p>The conclusion sketches extensions that all happened: conditional GANs (generate a picture of a particular class), learned inference, and semi-supervised learning.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>Convolutional GANs (DCGAN, 2015), the Wasserstein GAN (2017) for steadier training, and StyleGAN (2019) produced photorealistic faces. GANs led image generation for about five years until diffusion models overtook them on image quality and variety: <a href="beatgans.html">"Diffusion Models Beat GANs"</a> (2021). The adversarial idea lives on in many places, for example as an extra loss that sharpens the auto-encoders inside <a href="ldm.html">latent diffusion</a>.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>GANs showed that a learned critic can replace an explicit probability model; they dominated image synthesis until diffusion models.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>The paper proposes estimating generative models via an adversarial process: simultaneously train a generative model <var>G</var> that captures the data distribution and a discriminative model <var>D</var> that estimates the probability that a sample came from the training data rather than from <var>G</var>. <var>G</var> is trained to maximise the probability of <var>D</var> making a mistake, a two-player minimax game. In the space of arbitrary functions a unique solution exists, with <var>G</var> recovering the data distribution and <var>D</var> equal to ½ everywhere. When <var>G</var> and <var>D</var> are multilayer perceptrons the whole system trains with backpropagation, with no Markov chains or unrolled approximate inference networks. Experiments show the potential via qualitative and quantitative evaluation of samples. NeurIPS (then NIPS) 2014.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §3 · Eq. 1 · Algorithm 1</p>
+  <h2>The value function and training loop</h2>
+  <div class="prose"><p>A prior <var>p<sub>z</sub></var>(<var>z</var>) on noise, a differentiable generator <var>G</var>(<var>z</var>; θ<sub><var>g</var></sub>) inducing a distribution <var>p<sub>g</sub></var> on data space, and a discriminator <var>D</var>(<var>x</var>; θ<sub><var>d</var></sub>) ∈ (0, 1) play</p></div>
+  <div class="eq">min<sub><var>G</var></sub> max<sub><var>D</var></sub> <var>V</var>(<var>D</var>, <var>G</var>) = E<sub><var>x</var>∼<var>p</var><sub>data</sub></sub>[log <var>D</var>(<var>x</var>)] + E<sub><var>z</var>∼<var>p<sub>z</sub></var></sub>[log(1 − <var>D</var>(<var>G</var>(<var>z</var>)))] <span class="n">(1)</span></div>
+  <div class="prose"><p><var>D</var> maximises the log-likelihood of a binary real-versus-fake classifier; <var>G</var> minimises it. Optimising <var>D</var> to completion in the inner loop is prohibitive and overfits on finite data, so the paper alternates:</p></div>
+<pre class="algo"><span class="c">Algorithm 1 (minibatch SGD for GANs)</span>
+for number of training iterations:
+    for k steps:
+        sample m noise vectors z⁽¹⁾…z⁽ᵐ⁾ ∼ p<sub>z</sub>(z), m examples x⁽¹⁾…x⁽ᵐ⁾ ∼ p<sub>data</sub>
+        ascend   ∇<sub>θd</sub> (1/m) Σ [ log D(x⁽ⁱ⁾) + log(1 − D(G(z⁽ⁱ⁾))) ]
+    sample m noise vectors
+    descend  ∇<sub>θg</sub> (1/m) Σ log(1 − D(G(z⁽ⁱ⁾)))
+<span class="c">k = 1 in the experiments (the least expensive option); momentum was used.</span></pre>
+  <div class="prose">
+    <p><strong>The non-saturating generator loss.</strong> Early in training <var>D</var>(<var>G</var>(<var>z</var>)) ≈ 0 and log(1 − <var>D</var>) is flat there, so the generator's gradient vanishes. The paper instead trains <var>G</var> to <em>maximise</em> log <var>D</var>(<var>G</var>(<var>z</var>)), which has the same fixed point of the dynamics but much stronger gradients early on. Strictly, this changes the game from zero-sum minimax to a non-zero-sum one, so the theory of §4 applies to Eq. 1, not to what is usually trained.</p>
+    <p>The figure trains the same one-dimensional GAN as on the Plain English tab: <var>G</var>(<var>z</var>) = <var>az</var> + <var>b</var>, <var>z</var> ∼ 𝒩(0, 1), and <var>D</var>(<var>x</var>) = σ(<var>w</var><sub>1</sub><var>x</var> + <var>w</var><sub>2</sub><var>x</var>² + <var>c</var>), which can represent the exact log density ratio between two Gaussians. Compare the two generator losses and different <var>k</var>.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn" id="g2-loss" aria-pressed="true">G loss: maximise log D(G(z))</button>
+      <label><var>k</var> <input type="range" id="g2-k" min="1" max="5" step="1" value="1"><output id="g2-k-o">1</output></label>
+      <button class="btn" id="g2-run" aria-pressed="false">Train 1,500 iterations</button><button class="btn" id="g2-reset">Reset</button>
+    </div>
+    <div class="svgbox"><svg id="g2" viewBox="0 0 600 270" role="img" aria-label="Generator parameters over training for the two generator losses"></svg></div>
+    <p class="readout" id="g2-r"></p>
+    <figcaption>Top: the generator's mean <var>b</var> (amber) and spread |<var>a</var>| (blue) over iterations; dashed targets are the data's 1.5 and 0.7. Bottom: mean <var>D</var>(<var>G</var>(<var>z</var>)) for fakes. With the original minimax loss, <var>D</var> quickly rejects the fakes and the generator barely moves for hundreds of iterations; with the non-saturating loss it moves at once. SGD with learning rates 0.1 (<var>D</var>) and 0.01 (<var>G</var>), batch 128, slight weight decay on <var>D</var>. Illustrative toy.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Write the derivative of each generator loss with respect to <var>D</var>'s logit <var>ℓ</var> (where <var>D</var> = σ(<var>ℓ</var>)).</dt>
+    <dd>d/d<var>ℓ</var> log(1 − σ(<var>ℓ</var>)) = −σ(<var>ℓ</var>) = −<var>D</var>, tiny when <var>D</var> ≈ 0. d/d<var>ℓ</var> log σ(<var>ℓ</var>) = 1 − <var>D</var>, close to 1 when <var>D</var> ≈ 0. Hence the stronger early gradient.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §4 · Prop. 1, Thm. 1, Prop. 2 · Eqs. 2–6</p>
+  <h2>Theory: optimal discriminator and global optimum</h2>
+  <div class="prose"><p>Working in function space (non-parametric limit). For fixed <var>G</var>, <var>V</var> = ∫ <var>p</var><sub>data</sub>(<var>x</var>) log <var>D</var>(<var>x</var>) + <var>p<sub>g</sub></var>(<var>x</var>) log(1 − <var>D</var>(<var>x</var>)) d<var>x</var>, and <var>y</var> ↦ <var>a</var> log <var>y</var> + <var>b</var> log(1 − <var>y</var>) peaks at <var>a</var>/(<var>a</var> + <var>b</var>), so</p></div>
+  <div class="eq"><var>D</var>*<sub><var>G</var></sub>(<var>x</var>) = <var>p</var><sub>data</sub>(<var>x</var>) / (<var>p</var><sub>data</sub>(<var>x</var>) + <var>p<sub>g</sub></var>(<var>x</var>)) <span class="n">(2)</span></div>
+  <div class="prose"><p>Substituting gives the virtual training criterion <var>C</var>(<var>G</var>) = max<sub><var>D</var></sub> <var>V</var>(<var>G</var>, <var>D</var>) (Eq. 4), and adding and subtracting log 4:</p></div>
+  <div class="eq"><var>C</var>(<var>G</var>) = −log 4 + 2 · JSD(<var>p</var><sub>data</sub> ‖ <var>p<sub>g</sub></var>) <span class="n">(6)</span></div>
+  <div class="prose">
+    <p><strong>Theorem 1:</strong> the global minimum of <var>C</var>(<var>G</var>) is achieved if and only if <var>p<sub>g</sub></var> = <var>p</var><sub>data</sub>, where <var>C</var>(<var>G</var>) = −log 4 and <var>D</var>* = ½. <strong>Proposition 2:</strong> if <var>G</var> and <var>D</var> have enough capacity, <var>D</var> reaches its optimum given <var>G</var> at each step, and <var>p<sub>g</sub></var> is updated to improve <var>C</var>(<var>G</var>), then <var>p<sub>g</sub></var> converges to <var>p</var><sub>data</sub>; the argument uses convexity of <var>V</var> in <var>p<sub>g</sub></var>. The paper flags that with an MLP the optimisation is over θ<sub><var>g</var></sub>, not <var>p<sub>g</sub></var>, so multiple critical points exist and the proof does not cover practice.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Fake mean <input type="range" id="js-m" min="-4" max="4" step="0.05" value="2" data-fmt="2"><output id="js-m-o">2.00</output></label>
+      <label>Fake sd <input type="range" id="js-s" min="0.2" max="3" step="0.05" value="1" data-fmt="2"><output id="js-s-o">1.00</output></label>
+    </div>
+    <div class="svgbox"><svg id="js" viewBox="0 0 600 240" role="img" aria-label="C(G) as a function of the generator mean, with numerical check of Eq. 6"></svg></div>
+    <p class="readout" id="js-r"></p>
+    <figcaption><var>p</var><sub>data</sub> = 𝒩(0, 1), <var>p<sub>g</sub></var> = 𝒩(mean, sd²). The curve is <var>C</var>(<var>G</var>) = <var>V</var>(<var>D</var>*, <var>G</var>) computed by numerical integration as the mean sweeps from −4 to 4 at the chosen sd; the dot is the current setting. The readout checks Eq. 6 by computing the JSD separately. Note the curve flattens toward 0 as the distributions separate: the JSD saturates at log 2, so a generator far from the data gets almost no signal about which way to move, the problem the Wasserstein GAN later targeted.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §5 · Table 1 · Figs. 2–3</p>
+  <h2>Experiments</h2>
+  <div class="prose">
+    <p>Datasets: MNIST, the Toronto Face Database (TFD) and CIFAR-10. Generators used a mixture of rectified linear and sigmoid activations; discriminators used maxout activations with dropout. Noise was fed only at the bottom layer of the generator, although the framework allows noise or dropout in intermediate layers too.</p>
+    <p>Evaluation: fit a Gaussian Parzen window to samples from <var>G</var> and report the log-likelihood of test data under it, with the window width σ chosen by cross-validation. The authors note this estimator has fairly high variance and does not work well in high dimensions, but it was the best available.</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Model (Table 1)</th><th>MNIST</th><th>TFD</th></tr></thead>
+    <tbody>
+      <tr><td>DBN</td><td class="num">138 ± 2</td><td class="num">1909 ± 66</td></tr>
+      <tr><td>Stacked CAE</td><td class="num">121 ± 1.6</td><td class="num">2110 ± 50</td></tr>
+      <tr><td>Deep GSN</td><td class="num">214 ± 1.1</td><td class="num">1890 ± 29</td></tr>
+      <tr><td>Adversarial nets</td><td class="num">225 ± 2</td><td class="num">2057 ± 26</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose"><p>Parzen-window log-likelihood estimates (higher is better; standard errors over examples). Fig. 2 shows uncurated samples with nearest training neighbours to rule out memorisation; Fig. 3 shows digits from linear interpolation in <var>z</var>.</p></div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §6 · Table 2</p>
+  <h2>Advantages and disadvantages, as the authors saw them</h2>
+  <div class="tablebox"><table>
+    <thead><tr><th>Advantages</th><th>Disadvantages</th></tr></thead>
+    <tbody>
+      <tr><td>No Markov chains for training or sampling; gradients by backprop only.</td><td>No explicit representation of <var>p<sub>g</sub></var>(<var>x</var>); likelihoods must be estimated indirectly.</td></tr>
+      <tr><td>No inference needed during learning.</td><td><var>D</var> must be kept well synchronised with <var>G</var>; training <var>G</var> too much without updating <var>D</var> risks the "Helvetica scenario", where <var>G</var> collapses many values of <var>z</var> to the same <var>x</var>.</td></tr>
+      <tr><td>A wide range of differentiable functions can be used for <var>G</var> and <var>D</var>.</td><td></td></tr>
+      <tr><td>Statistical: <var>G</var> is updated only through gradients from <var>D</var>, never by copying data; can represent sharp, even degenerate distributions, whereas Markov-chain methods need blurry ones to mix.</td><td></td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose"><p>Table 2 compares deep directed models, undirected models, generative auto-encoders and adversarial models on training, inference, sampling, evaluating <var>p</var>(<var>x</var>) and model design. §7 lists extensions: conditional generation <var>p</var>(<var>x</var> | <var>c</var>); learned approximate inference of <var>z</var> from <var>x</var>; modelling all conditionals with shared parameters; semi-supervised learning from discriminator features; and efficiency improvements.</p></div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · Later work</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Saturating divergence.</strong> When <var>p</var><sub>data</sub> and <var>p<sub>g</sub></var> have nearly disjoint supports (common for images on low-dimensional manifolds), the JSD is constant at log 2 and an optimal <var>D</var> gives no useful gradient. Arjovsky and colleagues' Wasserstein GAN (2017) replaced it with the earth-mover distance; gradient penalties and spectral normalisation followed.</li>
+      <li><strong>Non-convergent dynamics.</strong> Simultaneous gradient play can cycle rather than converge, as the toy above shows in miniature. Two-timescale learning rates, optimiser tweaks and regularisers became standard.</li>
+      <li><strong>Mode collapse and evaluation.</strong> Inception Score (2016) and FID (2017) replaced Parzen windows; both reward diversity and realism without needing a likelihood.</li>
+      <li><strong>Architecture.</strong> DCGAN (Radford et al., 2015) gave stable convolutional recipes; progressive growing and StyleGAN (Karras et al.) reached photorealism.</li>
+    </ul>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>In 2021 <a href="beatgans.html">Dhariwal and Nichol</a> showed diffusion models beating the best GANs on ImageNet sample quality, and diffusion (<a href="ddpm.html">DDPM</a>, <a href="ldm.html">latent diffusion</a>) became the dominant image generator. GANs remain in use where one-step sampling speed matters, and adversarial losses survive as components (perceptual sharpening in auto-encoders, adversarial distillation of diffusion models). The <a href="vae.html">VAE</a>, published months earlier, is the main contemporary alternative: a likelihood bound with an inference network, at the cost of blurrier samples.</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Generator <var>G</var></dt><dd>Network mapping noise <var>z</var> to a sample; defines <var>p<sub>g</sub></var> implicitly.</dd>
+    <dt>Discriminator <var>D</var></dt><dd>Classifier giving the probability that <var>x</var> is real.</dd>
+    <dt>Value function <var>V</var></dt><dd>Eq. 1; the binary log-likelihood <var>D</var> maximises and <var>G</var> minimises.</dd>
+    <dt><var>D</var>*<sub><var>G</var></sub></dt><dd>Optimal discriminator, <var>p</var><sub>data</sub>/(<var>p</var><sub>data</sub> + <var>p<sub>g</sub></var>) (Eq. 2).</dd>
+    <dt>JSD</dt><dd>Jensen–Shannon divergence; symmetric, bounded by log 2; zero iff the distributions match.</dd>
+    <dt>Non-saturating loss</dt><dd>Generator maximises log <var>D</var>(<var>G</var>(<var>z</var>)) instead of minimising log(1 − <var>D</var>(<var>G</var>(<var>z</var>))).</dd>
+    <dt>Mode collapse</dt><dd>Generator covers only some modes of the data; the paper's "Helvetica scenario".</dd>
+    <dt>Parzen window</dt><dd>Kernel density estimate built from samples, used to approximate a likelihood.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Led to:</strong> <a href="beatgans.html">Diffusion beats GANs (2021)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers/">Papers worth reading</a> (<a href="https://lovespark.love/papers/#gan">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+function GanToy(seed){ this.seed=seed; this.reset(); }
+GanToy.prototype.reset=function(){ this.r=rng(this.seed); this.a=0.3; this.b=-2.5; this.w1=0; this.w2=0; this.c=0; this.t=0; this.dg=0.5; };
+GanToy.prototype.D=function(x){ return sigmoid(this.w1*x+this.w2*x*x+this.c); };
+GanToy.prototype.iter=function(k, ns){ var r=this.r, m=128, MU=1.5, SD=0.7, i, kk;
+  for (kk=0;kk<k;kk++){ var g1=0, g2=0, gc=0;
+    for (i=0;i<m;i++){ var x=MU+SD*gauss(r), d=this.D(x); g1+=(1-d)*x/m; g2+=(1-d)*x*x/m; gc+=(1-d)/m;
+      var xf=this.a*gauss(r)+this.b, df=this.D(xf); g1-=df*xf/m; g2-=df*xf*xf/m; gc-=df/m; }
+    this.w1=(this.w1+0.1*g1)*0.999; this.w2=(this.w2+0.1*g2)*0.999; this.c=(this.c+0.1*gc)*0.999; }
+  var ga=0, gb=0, md=0;
+  for (i=0;i<m;i++){ var z=gauss(r), xf=this.a*z+this.b, d=this.D(xf), dl=this.w1+2*this.w2*xf, s=ns?(1-d)*dl:d*dl; ga+=s*z/m; gb+=s/m; md+=d/m; }
+  this.a+=0.01*ga; this.b+=0.01*gb; this.t++; this.dg=md; };
+(function(){ // plain GAN
+  var svg=$('#g1'), G=new GanToy(5), timer=null, vr=rng(123), Z=[]; for (var i=0;i<2000;i++) Z.push(gauss(vr));
+  function X(x){ return 30+(x+3.5)/7*540; } var y0=225;
+  function draw(){ clear(svg); var nb=70, h=[], i;
+    for (i=0;i<nb;i++) h.push(0); Z.forEach(function(z){ var x=G.a*z+G.b, b=Math.floor((x+3.5)/7*nb); if (b>=0&&b<nb) h[b]++; });
+    var bw=540/nb, dens=h.map(function(c){ return c/2000/(7/nb); });
+    dens.forEach(function(d,i){ var hh=Math.min(190,d*120); if (hh>0) S('rect',{x:30+i*bw,y:y0-hh,width:bw-0.6,height:hh,'class':'f-wire','fill-opacity':0.55},svg); });
+    S('line',{x1:30,y1:y0,x2:570,y2:y0,'class':'axis'},svg);
+    for (var t=-3;t<=3;t++) S('text',{x:X(t),y:y0+16,'class':'t-s mid'},svg,t);
+    var dp='', dd=''; for (var x=-3.5;x<=3.5;x+=0.03){ var pd=Math.exp(-0.5*Math.pow((x-1.5)/0.7,2))/(0.7*Math.sqrt(2*Math.PI)); dp+=(dp?'L':'M')+X(x)+','+(y0-pd*120); dd+=(dd?'L':'M')+X(x)+','+(y0-G.D(x)*170); }
+    S('line',{x1:30,y1:y0-85,x2:570,y2:y0-85,'class':'grid','stroke-dasharray':'2 3'},svg);
+    S('path',{d:dp,'class':'w-dash'},svg); S('path',{d:dd,'class':'w-fire'},svg);
+    S('text',{x:32,y:22,'class':'t-fire'},svg,'D(x): discriminator'); S('text',{x:32,y:38,'class':'t-wire'},svg,'generator samples'); S('text',{x:32,y:54,'class':'t-s'},svg,'dashed: real data · dotted: D = 0.5');
+    $('#g1-r').innerHTML='Round <b>'+G.t+'</b> · generator centre <b>'+fmt(G.b,2)+'</b> (real 1.50) · spread <b>'+fmt(Math.abs(G.a),2)+'</b> (real 0.70) · average D on fakes <b>'+fmt(G.dg,2)+'</b>'; }
+  function stop(){ clearInterval(timer); timer=null; var b=$('#g1-run'); b.textContent='Train'; b.setAttribute('aria-pressed','false'); }
+  $('#g1-run').onclick=function(){ if (timer){ stop(); return; } this.textContent='Pause'; this.setAttribute('aria-pressed','true');
+    timer=setInterval(function(){ for (var k=0;k<12;k++) G.iter(1,true); draw(); if (G.t>=3000) stop(); },30); };
+  $('#g1-step').onclick=function(){ for (var k=0;k<10;k++) G.iter(1,true); draw(); };
+  $('#g1-reset').onclick=function(){ if (timer) stop(); G.reset(); draw(); };
+  draw();
+})();
+(function(){ // ideal detective
+  var svg=$('#dt'), m=1.5, s=1.2;
+  function N(x,mu,sd){ return Math.exp(-0.5*Math.pow((x-mu)/sd,2))/(sd*Math.sqrt(2*Math.PI)); }
+  function draw(){ clear(svg); function X(x){ return 30+(x+5)/10*540; } var y0=210;
+    S('line',{x1:30,y1:y0,x2:570,y2:y0,'class':'axis'},svg); for (var t=-4;t<=4;t+=2) S('text',{x:X(t),y:y0+16,'class':'t-s mid'},svg,t);
+    S('line',{x1:30,y1:y0-90,x2:570,y2:y0-90,'class':'grid','stroke-dasharray':'2 3'},svg); S('text',{x:572,y:y0-94,'class':'t-s end'},svg,'½');
+    var dp='', dg='', dd='', acc=0, dx=0.01;
+    for (var x=-5;x<=5;x+=dx){ var a=N(x,0,1), b=N(x,m,s); dp+=(dp?'L':'M')+X(x)+','+(y0-a*170); dg+=(dg?'L':'M')+X(x)+','+(y0-Math.min(200,b*170)); dd+=(dd?'L':'M')+X(x)+','+(y0-a/(a+b+1e-300)*180); acc+=0.5*Math.max(a,b)*dx; }
+    S('path',{d:dp,'class':'w-dash'},svg); S('path',{d:dg,'class':'w','stroke-width':2},svg); S('path',{d:dd,'class':'w-fire'},svg);
+    S('text',{x:32,y:20,'class':'t-fire'},svg,'ideal detective: real ÷ (real + fake)');
+    $('#dt-r').innerHTML='Best possible accuracy for the detective: <b>'+fmt(acc*100,1)+'%</b>'+(acc<0.505?' · essentially a coin flip: the generator has matched the data.':''); }
+  bindRange('dt-m',function(v){ m=v; draw(); }); bindRange('dt-s',function(v){ s=v; draw(); });
+})();
+(function(){ // loss comparison
+  var svg=$('#g2'), A=new GanToy(5), ns=true, k=1, hist=[], timer=null;
+  function draw(){ clear(svg); var T=1500; function X(t){ return 50+t/T*520; } function Y1(v){ return 140-(v+3)/5*120; } function Y2(v){ return 250-v*80; }
+    S('line',{x1:50,y1:140,x2:570,y2:140,'class':'axis'},svg); S('line',{x1:50,y1:20,x2:50,y2:140,'class':'axis'},svg);
+    S('line',{x1:50,y1:250,x2:570,y2:250,'class':'axis'},svg); S('line',{x1:50,y1:170,x2:50,y2:250,'class':'axis'},svg);
+    [-2,0,2].forEach(function(v){ S('text',{x:44,y:Y1(v)+4,'class':'t-s end'},svg,v); }); [0,1].forEach(function(v){ S('text',{x:44,y:Y2(v)+4,'class':'t-s end'},svg,v); });
+    S('line',{x1:50,y1:Y1(1.5),x2:570,y2:Y1(1.5),'class':'w-dash'},svg); S('line',{x1:50,y1:Y1(0.7),x2:570,y2:Y1(0.7),'class':'w-dash'},svg);
+    S('text',{x:566,y:16,'class':'t-s end'},svg,'amber: mean b · blue: spread |a|'); S('text',{x:566,y:166,'class':'t-s end'},svg,'mean D(G(z))');
+    S('text',{x:570,y:265,'class':'t-s end'},svg,'iterations → 1,500');
+    if (hist.length>1){ var d1='', d2='', d3=''; hist.forEach(function(h,i){ d1+=(i?'L':'M')+X(h[0])+','+Y1(h[1]); d2+=(i?'L':'M')+X(h[0])+','+Y1(h[2]); d3+=(i?'L':'M')+X(h[0])+','+Y2(h[3]); });
+      S('path',{d:d1,'class':'w-fire'},svg); S('path',{d:d2,'class':'w','stroke-width':2},svg); S('path',{d:d3,'class':'w-ok'},svg); }
+    $('#g2-r').innerHTML='Iteration <b>'+A.t+'</b> · b = <b>'+fmt(A.b,2)+'</b> · |a| = <b>'+fmt(Math.abs(A.a),2)+'</b> · mean D(G(z)) = <b>'+fmt(A.dg,3)+'</b>'; }
+  function reset(){ if (timer){ clearInterval(timer); timer=null; } A.reset(); hist=[[0,A.b,Math.abs(A.a),0.5]]; draw(); $('#g2-run').setAttribute('aria-pressed','false'); }
+  $('#g2-loss').onclick=function(){ ns=!ns; this.setAttribute('aria-pressed',ns); this.textContent='G loss: '+(ns?'maximise log D(G(z))':'minimise log(1 − D(G(z))) (Eq. 1)'); reset(); };
+  bindRange('g2-k',function(v){ k=v; if (hist.length) reset(); });
+  $('#g2-reset').onclick=reset;
+  $('#g2-run').onclick=function(){ if (timer) return; var b=this; b.setAttribute('aria-pressed','true'); if (A.t>=1500) reset();
+    timer=setInterval(function(){ for (var i=0;i<15;i++){ A.iter(k,ns); if (A.t%5===0) hist.push([A.t,A.b,Math.abs(A.a),A.dg]); } draw(); if (A.t>=1500){ clearInterval(timer); timer=null; b.setAttribute('aria-pressed','false'); } },20); };
+  reset();
+})();
+(function(){ // C(G) and JSD
+  var svg=$('#js'), m=2, s=1;
+  function N(x,mu,sd){ return Math.exp(-0.5*Math.pow((x-mu)/sd,2))/(sd*Math.sqrt(2*Math.PI)); }
+  function C(mu,sd){ var v=0, js=0, dx=0.02; for (var x=-12;x<=12;x+=dx){ var a=N(x,0,1), b=N(x,mu,sd), mm=(a+b)/2; if (a>1e-300) { v+=a*Math.log(a/(a+b))*dx; js+=0.5*a*Math.log(a/mm)*dx; } if (b>1e-300){ v+=b*Math.log(b/(a+b))*dx; js+=0.5*b*Math.log(b/mm)*dx; } } return [v,js]; }
+  function draw(){ clear(svg); function X(v){ return 50+(v+4)/8*520; } function Y(v){ return 30+(v+Math.log(4))/(Math.log(4))*170*-1+170; }
+    // y range: from -log4 (bottom, y=200) to 0 (top, y=30)
+    Y=function(v){ return 200-(v+Math.log(4))/Math.log(4)*170; };
+    S('line',{x1:50,y1:200,x2:570,y2:200,'class':'axis'},svg); S('line',{x1:50,y1:25,x2:50,y2:200,'class':'axis'},svg);
+    S('text',{x:44,y:204,'class':'t-s end'},svg,'−log 4'); S('text',{x:44,y:Y(0)+4,'class':'t-s end'},svg,'0');
+    S('line',{x1:50,y1:Y(0),x2:570,y2:Y(0),'class':'grid'},svg);
+    for (var t=-4;t<=4;t+=2) S('text',{x:X(t),y:216,'class':'t-s mid'},svg,t); S('text',{x:570,y:232,'class':'t-s end'},svg,'generator mean');
+    var d=''; for (var mu=-4;mu<=4.001;mu+=0.1){ d+=(d?'L':'M')+X(mu)+','+Y(C(mu,s)[0]); } S('path',{d:d,'class':'w-fire'},svg);
+    var c=C(m,s); S('circle',{cx:X(m),cy:Y(c[0]),r:6,'class':'u-wire'},svg); S('text',{x:60,y:40,'class':'t-fire'},svg,'C(G) = V(D*, G)');
+    $('#js-r').innerHTML='C(G) = <b>'+fmt(c[0],4)+'</b> · JSD = <b>'+fmt(c[1],4)+'</b> · −log 4 + 2·JSD = <b>'+fmt(-Math.log(4)+2*c[1],4)+'</b> (Eq. 6) · JSD upper bound log 2 = '+fmt(Math.log(2),4); }
+  bindRange('js-m',function(v){ m=v; draw(); }); bindRange('js-s',function(v){ s=v; draw(); });
+})();
+</script>
+
+</body>
+</html>

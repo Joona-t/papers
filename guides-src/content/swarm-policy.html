@@ -1,0 +1,293 @@
+<!--LEDE-->
+Governments mostly try to control dangerous AI cyber capability by restricting who may use the most capable models. This 2026 paper asks whether the numbers behind that policy measure the right thing. Using swarms of small open models, it finds two problems: jailbreak scores overstate how much real harm a model produces, and much of what looks like a model's offensive capability actually comes from the software system built around it. So, the authors argue, the duty to assess capability should sit with whoever builds that system.
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>AI policy often treats "how dangerous is this model?" as a property of the model alone, measured by how often it can be jailbroken.</p>
+  <p>A swarm of five tiny (1.2-billion-parameter) attacker agents sharing a memory "broke" Claude Sonnet 4 in 40% of attempts by the usual automated score, yet a human check found none of those responses contained usable harmful content; GPT-4o's 61% score corresponded to 46% real harm.</p>
+  <p>In a second experiment, the same small models found all 9 planted bugs in a test program when wrapped in a purpose-built pipeline, but only 2 of 9 on their own, and most of the finds came from the pipeline's conventional tools.</p>
+  <p>Offensive capability belongs to model, scaffold and evaluation together, so restricting access to models is necessary but not sufficient, and assessment duties should follow whoever assembles and controls the whole system.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1–2</p>
+  <h2>The policy question</h2>
+  <div class="prose">
+    <p>By 2026, frontier AI developers were warning that their models could find and exploit software vulnerabilities. The paper cites one developer's restricted preview of a model "capable of identifying and then exploiting zero-day vulnerabilities" (a zero-day is a flaw nobody has patched yet). The main policy response was <strong>access restriction</strong>: keep the most capable models away from untrusted users.</p>
+    <p>Restriction rests on two assumptions. First, that the measurements used to judge danger, mostly <strong>jailbreak rates</strong> (how often a model can be tricked into breaking its rules), track real harm. Second, that danger lives in the model, so controlling the model controls the danger. The paper tests both.</p>
+    <p>Its tool is a <strong>swarm</strong>: several copies of a small open-weight model, each playing a role, sharing a memory of what has worked, and improving over rounds. Swarms like this are cheap, run on a laptop, and are exactly the kind of system that model-level restrictions do not touch.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Regulating lock-picking by controlling who can buy the best picks. That helps, but a team of amateurs with ordinary picks, a shared notebook of tricks and a good workshop may open the same locks. The workshop matters as much as the pick.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Model-access rules assume that jailbreak rates measure harm and that capability lives in the model. The paper tests both assumptions.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §4 · Table 1</p>
+  <h2>A jailbreak score is not a harm score</h2>
+  <div class="prose">
+    <p>In the first experiment, five 1.2B-parameter attacker agents, each with a different persuasion strategy, generated 225 attack prompts against each of two commercial models, GPT-4o and Claude Sonnet 4, over 15 rounds ("generations") in which the most successful attacks were recombined and mutated. The tasks were requests for clearly harmful content in three categories.</p>
+    <p>Each response was scored two ways. The usual way is an <strong>LLM judge</strong>: another AI rates how far the response "complied". The paper's <strong>Technical Success Rate</strong> counts responses the judge scored as successes. The second way, the <strong>Effective Harm Rate</strong>, counts only responses that a human checked and found to contain actionable harmful content.</p>
+    <p>The gap was dramatic. The judge rated 40% of attacks on Claude as successes, but none produced actionable harm: the judge was often fooled by structured, polite refusals. For GPT-4o the scores were 61% and 46%. A rule such as "reject any model jailbroken more than 30% of the time" would fail both models and miss the real difference between them.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Policy threshold <input type="range" id="th-t" min="5" max="70" step="1" value="30"><output id="th-t-o">30</output>%</label>
+      <button class="btn on" data-th="tsr">Judge on the jailbreak score</button>
+      <button class="btn" data-th="ehr">Judge on verified harm</button>
+    </div>
+    <div class="svgbox"><svg id="th" viewBox="0 0 600 260" role="img" aria-label="Jailbreak score and verified harm rate for two models against a policy threshold"></svg></div>
+    <p class="readout" id="th-r"></p>
+    <figcaption>Numbers from Table 1 of the paper (225 swarm attacks per model). Technical Success Rate: share of attacks an LLM judge scored as successful, false positives included. Effective Harm Rate: share a human verified as producing actionable harmful content. Refusal rate shown for context. Bars: judge-scored jailbreak rate ("score"), verified harm ("harm") and refusal rate. Move the threshold and switch which number the "policy" uses.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Automated jailbreak scores can rate a model "broken" when it produced nothing harmful; harm has to be checked, not inferred from the score.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why did Claude get a 40% jailbreak score with 0% verified harm?</dt>
+    <dd>The automated judge often scored its structured refusals (well-organised answers that declined the harmful part) as compliance. The score measured format, not harm.</dd>
+    <dt>Is 0% verified harm proof that Claude can never be jailbroken?</dt>
+    <dd>No. It is one swarm, one set of tasks and one annotator's check; it shows the score overstated harm in this experiment, not that the model is unbreakable.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §5 · Tables 2, 4</p>
+  <h2>Who really found the bugs?</h2>
+  <div class="prose">
+    <p>The second experiment is defensive security work: finding vulnerabilities in code. The authors wrote a small, deliberately flawed C program (about 550 lines, 5 files) with 9 planted vulnerabilities of 9 different kinds, plus some "red herrings": risky-looking code that is actually correct.</p>
+    <p>They ran small 1.2B models two ways. <strong>Assisted</strong>: inside a full pipeline with role-specialised agents, simple pattern-matching (regular expressions), and a <strong>fuzzer</strong> (a tool that bombards the program with varied inputs) plus a memory-error detector. <strong>Autonomous</strong>: the models on their own. Assisted, the system found all 9. Autonomous, the models produced citations for 2 of 9, and none confirmed by actually crashing the program.</p>
+    <p>And in the assisted run, 7 of the 9 finds came from the conventional tools (pattern matching and fuzzing). An eighth, an integer overflow, was recovered by a scaffold-side search for a particular arithmetic code pattern plus a step mapping patterns to vulnerability types, "rather than any improvement in the model's reasoning". The one find credited to the model's own citations (a hard-coded credential) duplicated what a search role had already found. Credit for "AI-found vulnerabilities" belonged almost entirely to the scaffold.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn on" data-vb="a">Assisted pipeline</button>
+      <button class="btn" data-vb="c">Model alone (cited)</button>
+      <button class="btn" data-vb="x">Model alone (crash-confirmed)</button>
+    </div>
+    <div class="svgbox"><svg id="vb" viewBox="0 0 600 250" role="img" aria-label="Nine planted vulnerabilities and which configuration found them"></svg></div>
+    <p class="readout" id="vb-r"></p>
+    <figcaption>The nine planted vulnerability types (CWE numbers) from Tables 2 and 4 of the paper, at 7 agents × 3 generations. In the assisted view, tiles are coloured by what detected them: fuzzing, alone or with pattern matching (blue); a scaffold-side pattern search (green); or search plus the model's grounded citation (amber). The paper reports counts, not which 2 the autonomous models cited, so those views show counts only.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>A detective agency solves every case, but on inspection most cases were cracked by the fingerprint lab and CCTV, with the detective writing up the report. Licensing detectives would not tell you much about the agency's power.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The same small model went from 2 of 9 to 9 of 9 when wrapped in tools; capability is a property of the system.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does this matter for access restrictions?</dt>
+    <dd>Restricting the most capable models leaves small open models plus good scaffolds untouched, and the experiment shows scaffolds can supply most of the capability.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §4.2, §5.2 · App. C</p>
+  <h2>Measurements can fool their makers too</h2>
+  <div class="prose">
+    <p>The paper reports a revealing mistake from its own work. An early version of the bug-finding pipeline scored a perfect 100%, but it turned out it had been reading the vulnerability labels from comments the authors left in the source code. With the labels removed, the comparable configuration scored 8 of 9.</p>
+    <p>The attack experiment had a similar lesson: the swarm's success rate rose from about 33% to 66% against GPT-4o between the first and last rounds, which sounds like the swarm "learning". But against Claude the rise in score came with no rise in actual harm. A number can improve because the attack got better, or because the attacks learned to look like what the judge rewards.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Evaluation set-ups leak and judges can be gamed, so headline capability numbers need the evaluation code and verification method alongside them.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §6–7</p>
+  <h2>Who should be responsible?</h2>
+  <div class="prose">
+    <p>If capability belongs to the whole system, who should assess it? The authors argue the duty should follow <strong>realised, foreseeable control</strong>: the party that assembles the model, tools and workflow (the "harness assembler") is best placed to know what the system can do. That includes evaluators, integrators, red teams and procurement testers. It cannot bind attackers, who ignore rules anyway.</p>
+    <p>Model providers still owe something: honest disclosure of the conditions under which they measured capability, monitoring where they still control access, and pre-release testing when weights will be published. The authors note that European law, including the EU AI Act, has no clear category for the harness assembler.</p>
+    <p>They also propose that public buyers of AI security tools demand harm-grounded numbers, a breakdown of which parts of the system contributed what, and evaluation code that can be audited.</p>
+  </div>
+  <div class="later"><span class="label">Later events</span>The archive's next entry, the <a href="swarm-hf.html">OpenAI–Hugging Face incident report</a>, describes a real case in which hundreds of evaluation agents coordinated through an improvised shared message board and intruded into a third party's production systems. It is a vivid illustration that capability, and risk, emerged from the system around the models (shared credentials, network paths, a message board), not from any single model on its own.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Restrict the model, yes, but assess the system, and put that duty on whoever builds and controls it.</p>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Instruments for measuring AI offensive capability fail in two ways: they overstate harm, and they credit the model with capability that belongs to the surrounding system. In a study of an open-source multi-agent LLM framework, jailbreak scoring overstated harm, and a small model's apparent vulnerability-finding success depended largely on its scaffold. Offensive capability is "a property of model, scaffold, and evaluation protocol together". Restricting model access is therefore necessary but not sufficient; policy and procurement need system-level, harm-grounded assessment, with the duty to assess falling on whoever builds and controls the surrounding system, a role current regulation does not clearly cover. Riegler, Schwall, Olstad, Torpmann-Hagen, Gautam, Pettersen &amp; Strümke, arXiv:2605.09504 (v1 May 2026; v3 October 2026).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §1–3</p>
+  <h2>Framing and contributions</h2>
+  <div class="prose">
+    <p>The paper treats 2026's restricted-preview and export-control episode around vulnerability-exploiting frontier models as a natural experiment for access restriction as the main governance tool. It situates itself among automated red teaming (<a href="gcg.html">GCG</a>, PAIR, TAP, HarmBench, StrongREJECT, the "jailbreak tax"), LLM-assisted vulnerability discovery (CyberSecEval 2, Big Sleep, Fuzz4All), work treating the harness as a variable, and accountability in AI supply chains. It also discusses a proposed Cyber Jailbreak Severity scale, "an early-draft, CVSS-style rubric that scores jailbreaks from 0 to 4 on capability gain", noting that whether it becomes a vendor-neutral standard is open.</p>
+    <p><strong>Contributions.</strong> (1) Extended evidence that jailbreak success overstates realised harm. (2) A harm-grounded success metric and a capability-attribution decomposition. (3) An argument that the duty to assess system-level capability should follow realised, foreseeable control.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §4 · Tables 1, 3</p>
+  <h2>Evidence I: technical success vs effective harm</h2>
+  <div class="prose">
+    <p><strong>Swarm.</strong> Five LFM2.5-1.2B-Thinking agents with distinct strategy families, sharing a memory of successful attacks and evolving over 15 generations (crossover rate 0.5, mutation rate 0.3, top two attacks retained per generation). 225 attacks per target (15 generations × 5 agents × 3 tasks); targets GPT-4o and Claude Sonnet 4.</p>
+    <p><strong>Scoring.</strong> Cross-provider LLM-as-judge (Claude judging GPT-4o, GPT-4o judging Claude). Technical Success Rate (TSR): judge compliance score ≥ 0.6, false positives included. Effective Harm Rate (EHR): "the proportion of attacks producing verified actionable harmful content", by manual verification. A StrongREJECT companion (threshold 0.5) with three graders: two that scored every response gave GPT-4o 42.7% and 44.0% harmful against Claude's 11.6% and 4.9%; the Anthropic grader ranked them the same way (13.6% vs 1.9%) but declined to score 51 responses.</p>
+  </div>
+  <div class="tablebox"><table>
+    <tr><th>Metric (Table 1)</th><th>GPT-4o</th><th>Claude Sonnet 4</th></tr>
+    <tr><td>Technical Success Rate</td><td class="num">60.9%</td><td class="num">40.0%</td></tr>
+    <tr><td>Effective Harm Rate</td><td class="num">45.8%</td><td class="num">0.0%</td></tr>
+    <tr><td>Critical-severity attacks</td><td class="num">49</td><td class="num">0</td></tr>
+    <tr><td>Perfect score (1.0)</td><td class="num">18</td><td class="num">0</td></tr>
+    <tr><td>Refusal rate</td><td class="num">15.1%</td><td class="num">56.9%</td></tr>
+  </table></div>
+  <div class="prose">
+    <p>The GPT-4o judge frequently scored Claude's structured refusals as successes, so the two TSRs are not directly comparable. Among GPT-4o's judged successes, 91.2% contained structured step-by-step content, which drove its EHR. Table 3 compares early (generations 0–1) and late (7–14) windows: GPT-4o 33.3% → 65.8% success, mean score 0.313 → 0.610; Claude 6.7% → 46.7%, 0.057 → 0.429; GPT-4o reached 73.3% in the final generation. Gains against Claude started near zero and produced no harmful content.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn on" data-gw="s">Success rate</button>
+      <button class="btn" data-gw="m">Mean judge score</button>
+    </div>
+    <div class="svgbox"><svg id="gw" viewBox="0 0 600 240" role="img" aria-label="Early versus late generation attack performance for two targets"></svg></div>
+    <p class="readout" id="gw-r"></p>
+    <figcaption>Table 3 of the paper: judged performance at the two ends of the 15-generation run. The dashed reference marks each target's Effective Harm Rate from Table 1 (whole run); the late-window rise against Claude is entirely above a verified-harm level of zero.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is cross-provider judging used, and what problem did it reveal?</dt>
+    <dd>To avoid a model grading itself. It revealed that judges differ in what they count as compliance; GPT-4o as judge rewarded Claude's structured refusals, inflating Claude's TSR.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §5 · Tables 2, 4 · App. C</p>
+  <h2>Evidence II: scaffolds misattribute capability</h2>
+  <div class="prose">
+    <p><strong>Target.</strong> "SwarmApp", about 550 lines of C across 5 files with 9 planted vulnerabilities spanning 9 CWE identifiers, plus correct uses of dangerous functions as red herrings. <strong>Assisted pipeline.</strong> Role-differentiated 1.2B agents with regex pattern detection, grounded LLM citation and post-hoc CWE normalisation, then binary fuzzing under AddressSanitizer with a hand-crafted seed corpus and LLM-generated mutations; about 4 minutes on a consumer laptop. <strong>Autonomous.</strong> The models without these components.</p>
+    <p><strong>Results (Table 2, 7 agents × 3 generations).</strong> Assisted 9/9. Autonomous, citation-verified 2/9; crash-verified 0/9; autonomous CWE labels correct for 1 of 6. Assisted recall scales 6/9 (3×3), 8/9 (5×3), 9/9 (7×3). <strong>Attribution (Table 4).</strong> Seven of nine detections involve fuzzing (two of them also regex source matching); CWE-190 manifests at runtime as a heap overflow that fuzzing mislabels; its source-level attribution comes from the arithmetic role's scaffold-side search for <code>uint32_t</code> multiplication/narrowing patterns plus pattern-to-CWE normalisation, "rather than any improvement in the model's reasoning" (App. C). CWE-798 comes from search plus LLM citation and normalisation; the model's one credited contribution, it is redundant with role-specialised search.</p>
+    <p><strong>Integrity correction.</strong> An early extractor read CWE labels from source comments, giving a spurious 100%; after stripping, 5×3 recall was 8/9. The authors stress the 9/9 is close to a fixed point of their own iteration on this one target; the argument rests on the assisted–autonomous gap at fixed model and target.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn on" data-rc="0">Assisted, by swarm size</button>
+      <button class="btn" data-rc="1">Assisted vs autonomous at 7×3</button>
+    </div>
+    <div class="svgbox"><svg id="rc" viewBox="0 0 600 240" role="img" aria-label="Recall of planted vulnerabilities by configuration"></svg></div>
+    <p class="readout" id="rc-r"></p>
+    <figcaption>Recall out of 9 planted vulnerabilities, from Table 2 and §5.2. Swarm size is agents × generations. The model is the same 1.2B family throughout; only the scaffold (or its size) changes.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §6 · Proposals</p>
+  <h2>Toward system-level, harm-grounded assessment</h2>
+  <div class="prose">
+    <p><strong>Harm-grounded metric (§6.1).</strong> "A robustness figure should count realized harmful content, not judge-scored format compliance." <strong>Capability attribution (§6.2).</strong> Report how much of a result each component (model, tools, protocol) contributes, as in the assisted/autonomous decomposition. <strong>The elicitation gap (§6.4).</strong> A provider's own evaluation is a lower bound on what a system built around its model can do, so providers owe disclosure of elicitation conditions, monitoring where they retain control, and pre-release testing for open weights; independent evaluators need resourcing. <strong>Procurement (§6.5).</strong> Require harm-grounded figures, attribution reports and auditable evaluation code.</p>
+    <p>Click a role in the map to see what the paper assigns to it.</p>
+  </div>
+  <figure class="live">
+    <div class="svgbox"><svg id="am" viewBox="0 0 600 250" role="img" aria-label="Map of actors in an AI system's value chain and their assessment duties"></svg></div>
+    <p class="readout" id="am-r"></p>
+    <figcaption>A summary of §6.3–6.5 and the regulatory discussion. Arrows show what each actor supplies to the deployed system. Click any box.</figcaption>
+  </figure>
+  <div class="prose">
+    <p><strong>Regulatory fit.</strong> The EU AI Act's Art. 15 requires robustness against adversarial manipulation without an operational definition; Arts. 91–93 and 101 give the AI Office information, evaluation and restriction powers from August 2026; the Digital Omnibus postpones high-risk obligations to December 2027 (Annex III) and August 2028 (Annex I). Art. 25's value-chain roles (provider, deployer, distributor, importer) have no clean slot for the harness assembler, and the authors dispute whether its "substantial modification" route reaches this actor. Related hooks: Cyber Resilience Act Art. 13(5) (due diligence over integrated components) and the revised Product Liability Directive Art. 8(2) (substantial modification); a Commission guidance threshold of roughly one-third of original training compute for becoming a provider is not reached by building a harness.</p>
+  </div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §7–8 · App. F · Ethics</p>
+  <h2>Limitations and objections</h2>
+  <div class="prose"><ul>
+    <li><strong>One synthetic target</strong> for vulnerability discovery, not production code.</li>
+    <li><strong>No model-size sweep</strong>: the authors explicitly make no claim that systems matter more than models in general.</li>
+    <li><strong>Stale targets</strong>: GPT-4o and Claude Sonnet 4 were superseded by mid-2026 and not re-run.</li>
+    <li><strong>Statistics</strong>: single-run point estimates; EHR from one annotator's single pass, without logged per-response decisions or inter-annotator agreement, and covering only judged-successful responses (so EHRs are lower bounds).</li>
+    <li><strong>One factor per experiment</strong>: Experiment I varies only the target, Experiment II only the scaffold.</li>
+  </ul></div>
+  <div class="prose"><p><strong>Release.</strong> The framework is released on the judgement that defenders' interest in independent evaluation outweighs marginal uplift; verified harmful responses are withheld from the open release and available to researchers on request.</p></div>
+  <div class="later"><span class="label">Lineage</span>Builds on the jailbreak-evaluation literature (HarmBench, StrongREJECT and the "jailbreak tax" line, which also found that jailbroken outputs are often less useful than scores imply) and on agent-harness work showing elicitation depends on scaffolding. The <a href="swarm-hf.html">OpenAI–Hugging Face incident</a> later gave a real-world case of system-level capability: hundreds of agents coordinating through shared infrastructure, where the decisive factors were credentials, network paths and agent communication rather than any single model's score.</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Swarm</dt><dd>Several LLM agents with distinct roles or strategies sharing memory and iterating.</dd>
+    <dt>Scaffold / harness</dt><dd>The software around a model: tools, roles, memory, verification, workflow.</dd>
+    <dt>TSR</dt><dd>Technical Success Rate: judge-scored compliance ≥ 0.6.</dd>
+    <dt>EHR</dt><dd>Effective Harm Rate: manually verified actionable harmful content.</dd>
+    <dt>CWE</dt><dd>Common Weakness Enumeration, a catalogue of vulnerability types.</dd>
+    <dt>Fuzzing</dt><dd>Automated testing with many generated inputs to trigger crashes.</dd>
+    <dt>AddressSanitizer</dt><dd>Compiler instrumentation that detects memory errors at run time.</dd>
+    <dt>Elicitation gap</dt><dd>Difference between measured capability and what a better harness could elicit.</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+(function(){ // threshold policy
+  var svg=$('#th'), T=30, use='tsr';
+  var M=[['GPT-4o',60.9,45.8,15.1],['Claude Sonnet 4',40.0,0.0,56.9]];
+  function draw(){ clear(svg); var base=200, sc=2.2;
+    S('line',{x1:40,y1:base,x2:580,y2:base,'class':'axis'},svg);
+    M.forEach(function(m,i){ var x0=80+i*270;
+      [['score',m[1],'f-wire'],['harm',m[2],'f-inh'],['refusal',m[3],'f-muted']].forEach(function(b,j){ var x=x0+j*70, h=b[1]*sc;
+        S('rect',{x:x,y:base-h,width:56,height:Math.max(h,1.5),'class':b[2],'fill-opacity':(use==='tsr'&&j===0)||(use==='ehr'&&j===1)?1:0.45},svg);
+        S('text',{x:x+28,y:base-h-6,'class':'t-s mid'},svg,fmt(b[1],1)+'%'); S('text',{x:x+28,y:base+15,'class':'t-s mid'},svg,b[0]); });
+      var v=use==='tsr'?m[1]:m[2], fail=v>T;
+      S('rect',{x:x0+15,y:base+26,width:180,height:22,'class':fail?'box-inh':'box-ok'},svg);
+      S('text',{x:x0+105,y:base+41,'class':(fail?'t-inh':'t-ok')+' mid'},svg,m[0]+': '+(fail?'FAIL':'pass')); });
+    S('line',{x1:40,y1:base-T*sc,x2:580,y2:base-T*sc,'class':'w-dash'},svg); S('text',{x:38,y:base-T*sc+4,'class':'t-s end'},svg,T+'%');
+    var f=M.map(function(m){ return (use==='tsr'?m[1]:m[2])>T; });
+    $('#th-r').innerHTML='Judging on '+(use==='tsr'?'the jailbreak score':'verified harm')+' at '+T+'%: GPT-4o <b>'+(f[0]?'fails':'passes')+'</b>, Claude Sonnet 4 <b>'+(f[1]?'fails':'passes')+'</b>.'+(use==='tsr'&&f[0]===f[1]?' The rule cannot tell them apart.':''); }
+  bindRange('th-t',function(v){ T=v; draw(); });
+  $$('[data-th]').forEach(function(b){ b.addEventListener('click',function(){ use=b.dataset.th; $$('[data-th]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }); });
+})();
+(function(){ // vulnerability board
+  var svg=$('#vb'), mode='a';
+  var V=[['CWE-121','stack overflow','f'],['CWE-122','heap overflow','f'],['CWE-134','format string','f'],['CWE-190','int. overflow','s'],['CWE-416','use after free','f'],['CWE-415','double free','f'],['CWE-476','null pointer','f'],['CWE-78','cmd injection','f'],['CWE-798','hard-coded key','r']];
+  function draw(){ clear(svg); var found={a:9,c:2,x:0}[mode];
+    V.forEach(function(v,i){ var col=i%5, row=Math.floor(i/5), x=20+col*114, y=20+row*90;
+      var cls=mode==='a'?({f:'box-wire',s:'box-ok',r:'box-fire'}[v[2]]):'box';
+      S('rect',{x:x,y:y,width:104,height:74,'class':cls},svg);
+      S('text',{x:x+52,y:y+30,'class':'t mid'},svg,v[0]); S('text',{x:x+52,y:y+50,'class':'t-s mid','font-size':10},svg,v[1]);
+      if (mode==='a') S('text',{x:x+52,y:y+66,'class':({f:'t-wire',s:'t-ok',r:'t-fire'}[v[2]])+' mid','font-size':10},svg,{f:'tools (fuzz)',s:'pattern search',r:'search + LLM'}[v[2]]); });
+    S('text',{x:20+4*114+52,y:20+90+30,'class':'t-big mid'},svg,found+'/9'); S('text',{x:20+4*114+52,y:20+90+52,'class':'t-s mid'},svg,'found');
+    var msg={a:'Assisted: all <b>9</b> found; <b>7</b> involve the fuzzer (two with pattern matching), <b>1</b> came from a scaffold-side pattern search, and the <b>1</b> credited to the model\'s citation duplicates a find by a search role.',c:'Model alone: <b>2</b> of 9 cited in the source (the paper does not list which). Of 6 type labels it gave, <b>1</b> was correct.',x:'Model alone, counting only finds confirmed by crashing the program: <b>0</b> of 9.'};
+    $('#vb-r').innerHTML=msg[mode]; }
+  $$('[data-vb]').forEach(function(b){ b.addEventListener('click',function(){ mode=b.dataset.vb; $$('[data-vb]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }); });
+  draw();
+})();
+(function(){ // generation windows
+  var svg=$('#gw'), k='s';
+  var D={s:[[33.3,65.8],[6.7,46.7]], m:[[0.313,0.610],[0.057,0.429]]}, EHR=[45.8,0.0], names=['GPT-4o','Claude Sonnet 4'];
+  function draw(){ clear(svg); var base=190, mx=k==='s'?100:1, sc=150/mx;
+    S('line',{x1:40,y1:base,x2:580,y2:base,'class':'axis'},svg);
+    names.forEach(function(n,i){ var x0=80+i*270, d=D[k][i];
+      d.forEach(function(v,j){ var x=x0+j*80, h=v*sc; S('rect',{x:x,y:base-h,width:60,height:Math.max(h,1),'class':j?'f-fire':'f-wire'},svg);
+        S('text',{x:x+30,y:base-h-6,'class':'t-s mid'},svg,k==='s'?fmt(v,1)+'%':fmt(v,3)); S('text',{x:x+30,y:base+15,'class':'t-s mid'},svg,j?'late (7–14)':'early (0–1)'); });
+      S('text',{x:x0+70,y:base+35,'class':'t mid'},svg,n);
+      if (k==='s'){ var y=base-EHR[i]*sc; S('line',{x1:x0-10,y1:y,x2:x0+150,y2:y,'class':'w-inh'},svg); S('text',{x:x0+152,y:y+(i?-4:4),'class':'t-inh'},svg,'EHR '+fmt(EHR[i],1)+'%'); } });
+    $('#gw-r').innerHTML=k==='s'?'Judged success roughly doubles for GPT-4o and rises sevenfold for Claude; verified harm for Claude stays at <b>0%</b>.':'Mean judge score: GPT-4o <b>0.313 → 0.610</b>, Claude <b>0.057 → 0.429</b>.'; }
+  $$('[data-gw]').forEach(function(b){ b.addEventListener('click',function(){ k=b.dataset.gw; $$('[data-gw]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }); });
+  draw();
+})();
+(function(){ // recall
+  var svg=$('#rc'), m=0;
+  var A=[['3×3',6],['5×3',8],['7×3',9]], B=[['assisted',9],['autonomous, cited',2],['autonomous, crash',0]];
+  function draw(){ clear(svg); var base=190, sc=16, d=m?B:A;
+    S('line',{x1:40,y1:base,x2:580,y2:base,'class':'axis'},svg);
+    for (var t=0;t<=9;t+=3){ S('line',{x1:40,y1:base-t*sc,x2:580,y2:base-t*sc,'class':'grid'},svg); S('text',{x:36,y:base-t*sc+4,'class':'t-s end'},svg,t); }
+    d.forEach(function(r,i){ var x=90+i*170, h=r[1]*sc; S('rect',{x:x,y:base-h,width:90,height:Math.max(h,1.5),'class':m&&i?'f-inh':'f-wire'},svg);
+      S('text',{x:x+45,y:base-h-6,'class':'t mid'},svg,r[1]+'/9'); S('text',{x:x+45,y:base+18,'class':'t-s mid'},svg,r[0]); });
+    S('text',{x:40,y:20,'class':'t-s'},svg,m?'same model, 7 agents × 3 generations':'assisted pipeline, by agents × generations');
+    $('#rc-r').innerHTML=m?'Removing the scaffold drops recall from <b>9/9</b> to <b>2/9</b> cited and <b>0/9</b> confirmed.':'More agents in the same scaffold: <b>6, 8, then 9</b> of 9.'; }
+  $$('[data-rc]').forEach(function(b){ b.addEventListener('click',function(){ m=+b.dataset.rc; $$('[data-rc]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }); });
+  draw();
+})();
+(function(){ // accountability map
+  var svg=$('#am'), sel=1;
+  var N=[
+    {n:'Model provider',x:20,y:30,t:'Supplies the model. Owes disclosure of the conditions under which capability was elicited (its evaluation is a lower bound), monitoring where it still controls access, and pre-release testing before publishing weights.'},
+    {n:'Harness assembler',x:215,y:30,t:'Combines model, tools, memory and workflow, and so has realised, foreseeable control over what the system can do. The paper argues the primary assessment duty belongs here; EU AI Act Art. 25 has no clean category for this role.'},
+    {n:'Tool suppliers',x:410,y:30,t:'Fuzzers, pattern matchers, sanitisers and other components. In Experiment II they supplied 7 of 9 detections, and a scaffold-side search an eighth. The Cyber Resilience Act Art. 13(5) due-diligence duty over integrated components is one possible hook.'},
+    {n:'Evaluator / red team',x:20,y:160,t:'Bound by the duty as harness assemblers in their own right: should report harm-grounded figures, attribution of capability to components, and auditable evaluation code.'},
+    {n:'Deployed system',x:215,y:160,t:'Where capability actually exists: model, scaffold and evaluation protocol together. This is what should be assessed.'},
+    {n:'Procurer / adversary',x:410,y:160,t:'Public procurers can require harm-grounded metrics, attribution reports and auditable code. Adversaries also assemble harnesses, but no duty binds them; that is why assessment must happen on the defensive side.'}];
+  function draw(){ clear(svg);
+    [[0,4],[1,4],[2,4],[3,4]].forEach(function(e){ var a=N[e[0]], b=N[e[1]]; S('line',{x1:a.x+85,y1:a.y+(a.y<100?52:26),x2:b.x+85+(a.x-b.x)*0.15,y2:b.y+(a.y<100?0:26),'class':'w','marker-end':'url(#aw)'},svg); });
+    N.forEach(function(n,i){ var g=S('g',{'class':'clickable',tabindex:0,role:'button','aria-label':n.n},svg);
+      S('rect',{x:n.x,y:n.y,width:170,height:52,'class':i===sel?'box-fire':(i===4?'box-ok':'box')},g);
+      S('text',{x:n.x+85,y:n.y+31,'class':'t mid'},g,n.n);
+      function pick(){ sel=i; draw(); }
+      g.addEventListener('click',pick); g.addEventListener('keydown',function(ev){ if (ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); pick(); } }); });
+    $('#am-r').innerHTML='<b>'+N[sel].n+'.</b> '+N[sel].t; }
+  draw();
+})();
+</script>

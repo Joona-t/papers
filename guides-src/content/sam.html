@@ -1,0 +1,290 @@
+<!--LEDE-->
+Can one model outline any object in any image, the way large language models answer almost any question, without being retrained for each new kind of picture? Segment Anything builds such a model: you click a point or draw a box and it returns the object's outline. It works on images it has never seen because it was trained on a new dataset of 1.1 billion outlines, which the model itself helped to create.
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>The authors define a simple, general task: given an image and a hint (a click, a box, a rough sketch of a region), produce a sensible outline, or "mask", of the object meant.</p>
+  <p>The model, SAM, studies each image once with a large network, then answers each new hint in about a twentieth of a second, and when a hint is ambiguous it offers three possible answers (part, larger part, whole object).</p>
+  <p>To get enough training data, they ran a "data engine": the model helped people draw outlines, was retrained on them, helped more, and finally drew 1.1 billion outlines on 11 million photos by itself.</p>
+  <p>Tested on 23 segmentation datasets it was never trained on, SAM's outlines from a single click were often as good as or better than specialised tools', though it is not the best at every task.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1 · §2 · Fig. 1</p>
+  <h2>A "foundation model" for outlines</h2>
+  <div class="prose">
+    <p><strong>Segmentation</strong> means finding exactly which pixels belong to an object: not just "there is a cat here" but the cat's precise outline. Earlier tools, like the <a href="unet.html">U-Net</a>, were trained for one job on one kind of image: cells under a microscope, or cars on a road. A new job meant new labelled data and new training.</p>
+    <p>Language models had shown another way. A model trained on enough text can do many tasks it was never specifically trained for, if you phrase the request as a <strong>prompt</strong>. <a href="clip.html">CLIP</a> did something similar for recognising images. The paper asks: can we build the same kind of general-purpose, promptable model for segmentation?</p>
+    <p>It identifies three ingredients, and the paper is organised around them: a <strong>task</strong> general enough to cover many uses (outline whatever the prompt indicates), a <strong>model</strong> that supports it and responds fast enough to use interactively, and the <strong>data</strong> to train it, which did not exist yet.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Think of a skilled assistant with scissors. You don't explain what a "cup" or a "leaf" is; you just point, and they cut out the thing you pointed at. If your point is ambiguous, they hold up a few options.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Make segmentation promptable, like a language model, so one model can serve many tasks without retraining.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §2 · §3 · Fig. 3</p>
+  <h2>Click, and get an outline (or three)</h2>
+  <div class="prose">
+    <p>A prompt can be a click on the object (a <strong>positive point</strong>), a click on something to leave out (a <strong>negative point</strong>), a box, or a rough mask. The trouble is that a single click is often ambiguous. Click on the logo printed on a mug: did you mean the logo, the mug's body, or the whole mug including its handle?</p>
+    <p>SAM's answer is to return <strong>three masks</strong> for a single click, roughly a small part, a larger part and the whole object, each with its own confidence score. Adding more points removes the ambiguity, so it then returns just one. Try it on this toy scene.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" data-pm="1">Next click: include</button><button class="btn" data-pm="0">Next click: exclude</button><button class="btn" id="sa-clear">Clear points</button></div>
+    <div class="svgbox"><svg id="sa" viewBox="0 0 600 342" role="img" aria-label="A toy scene with a mug, a plant and a table; clicks produce candidate masks"></svg></div>
+    <p class="readout" id="sa-r"></p>
+    <figcaption>Click the scene. With one point you get three nested candidates (click a thumbnail to show it); with more points, one mask that contains every "include" point and no "exclude" point. A hand-built stand-in: the scene's parts and their nesting are defined by hand, whereas SAM predicts masks from pixels. Try the logo, then add a point on the handle.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>When a prompt could mean several things, giving a few valid answers beats averaging them into one wrong one.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>You click once on a plant's leaves. What three masks might SAM return?</dt>
+    <dd>Something like one leaf or the leaf cluster, all the foliage, and the whole plant including its pot.</dd>
+    <dt>Why does SAM return only one mask when given several points?</dt>
+    <dd>Several points usually pin down the intended object, so the three candidates would mostly agree.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §3 · Fig. 4</p>
+  <h2>One long look, many quick answers</h2>
+  <div class="prose">
+    <p>SAM has three parts. A large <strong>image encoder</strong> (a <a href="vit.html">Vision Transformer</a>) studies the whole image once and produces a compact summary of it. A small <strong>prompt encoder</strong> turns your clicks or box into numbers. A light <strong>mask decoder</strong> combines the two and draws the masks.</p>
+    <p>The split is the clever part. The heavy encoder runs once per image. After that, each new click needs only the prompt encoder and the decoder, which together take about 50 milliseconds, even inside a web browser on an ordinary processor. That is fast enough to feel instant while someone clicks around an image.</p>
+  </div>
+  <figure>
+    <div class="svgbox"><svg viewBox="0 0 600 190" role="img" aria-label="SAM architecture: heavy image encoder run once, light prompt encoder and mask decoder run per prompt">
+      <rect x="10" y="40" width="80" height="80" class="box"/><text x="50" y="84" class="t mid">image</text>
+      <rect x="120" y="30" width="150" height="100" class="box-wire"/><text x="195" y="70" class="t-h mid">image encoder</text><text x="195" y="90" class="t-s mid">ViT-H, 636 M params</text><text x="195" y="106" class="t-s mid">run once per image</text>
+      <rect x="300" y="55" width="80" height="50" class="box"/><text x="340" y="78" class="t-s mid">image</text><text x="340" y="92" class="t-s mid">embedding</text>
+      <rect x="300" y="140" width="80" height="40" class="box-fire"/><text x="340" y="164" class="t-s mid">prompt enc.</text>
+      <text x="200" y="166" class="t-s mid">clicks, box, mask</text><path d="M250,162 L296,162" class="w" marker-end="url(#aw)"/>
+      <rect x="410" y="60" width="90" height="70" class="box-fire"/><text x="455" y="90" class="t mid">mask</text><text x="455" y="106" class="t mid">decoder</text>
+      <rect x="530" y="40" width="60" height="24" class="box-ok"/><rect x="530" y="72" width="60" height="24" class="box-ok"/><rect x="530" y="104" width="60" height="24" class="box-ok"/><text x="560" y="56" class="t-s mid">mask 1</text><text x="560" y="88" class="t-s mid">mask 2</text><text x="560" y="120" class="t-s mid">mask 3</text>
+      <path d="M90,80 L116,80 M270,80 L296,80 M380,80 L406,88 M380,160 L420,132 M500,82 L526,52 M500,95 L526,84 M500,108 L526,116" class="w" marker-end="url(#aw)"/>
+      <text x="455" y="24" class="t-fire mid">about 50 ms per prompt</text><path d="M400,30 L400,186 L510,186 L510,30" class="w-dash"/>
+    </svg></div>
+    <figcaption>Redrawn after Fig. 4. Everything inside the dashed area reruns for each prompt; the encoder's work is reused. Each mask also comes with a predicted quality score.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Do the expensive understanding once per image; make each question about it cheap.</p>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §4 · §5 · Figs. 5–6</p>
+  <h2>A data engine: the model helps build its own dataset</h2>
+  <div class="prose">
+    <p>No dataset of outlines was anywhere near big enough. Drawing an accurate outline by hand takes a person tens of seconds, and there are millions of objects to outline. So the team built the data in three stages, with the model improving at each one.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" data-de="0">Stage 1: assisted-manual</button><button class="btn" data-de="1">Stage 2: semi-automatic</button><button class="btn" data-de="2">Stage 3: fully automatic</button></div>
+    <div class="svgbox wide"><svg id="de" viewBox="0 0 640 250" role="img" aria-label="Masks and images collected at each stage of the data engine, on a log scale"></svg></div>
+    <p class="readout" id="de-r"></p>
+    <figcaption>Cumulative masks collected (log scale: each grid line is ten times the one before). Numbers from §4 and §5. Stage 3 produced 1.1 billion masks, 99.1% of all masks in the final dataset, SA-1B.</figcaption>
+  </figure>
+  <div class="prose">
+    <p>The result, <strong>SA-1B</strong>, has 11 million licensed, privacy-protected photos (faces and licence plates blurred) and 1.1 billion masks, about 100 per image and roughly 400 times more masks than the largest earlier segmentation dataset. Were the automatic masks any good? When professional annotators corrected a sample, 94% of automatic masks overlapped their corrected versions by more than 90%.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>An apprentice starts by watching the master, then does the easy parts while the master fixes mistakes and handles the hard parts, and finally works alone. Each round, the apprentice learns from the work just done.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The model, the annotators and the dataset improved together until the model could label data at a scale no team of people could.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why did stage 2 ask people to focus on objects the model had missed?</dt>
+    <dd>The model already found the obvious objects confidently. Human effort was most valuable on the less prominent objects, which made the masks per image more diverse.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §7 · §8</p>
+  <h2>How well it generalises, and where it falls short</h2>
+  <div class="prose">
+    <p>The team tested SAM on 23 existing segmentation datasets covering very different images (underwater scenes, X-rays, microscope images, paintings, driving scenes, and more), none of them seen in training. From a single click, SAM beat a strong specialised interactive tool (RITM) on 16 of the 23, and human raters judged SAM's masks to be of higher quality. Without any retraining, simply by choosing what prompts to give, it could also find edges, propose objects, and outline objects found by a separate detector, though specialised systems trained for those tasks remained better.</p>
+    <p>The authors list the weaknesses: SAM can miss fine structures, sometimes adds small stray blobs, produces less crisp boundaries than heavier "zoom-in" methods, and is not fully real-time once you count the big image encoder. Text prompts ("a wheel") worked only in an early, exploratory form.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>SAM 2 (2024) extended promptable segmentation to video, with a memory that tracks an object through frames. Lighter versions (such as MobileSAM and EfficientSAM) replaced the huge image encoder to run on phones. Systems like Grounded-SAM combined it with a text-based object detector to get the "outline every wheel" ability that text prompting in the original only hinted at.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>A single promptable model trained on enormous data generalised well across many kinds of images, though dedicated systems still win on their own specialities.</p>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>The Segment Anything (SA) project introduces a new task, model and dataset for image segmentation. Using the model in a data-collection loop, the authors built the largest segmentation dataset to date: over 1 billion masks on 11 million licensed and privacy-respecting images. The model is designed and trained to be promptable, so it can transfer zero-shot to new image distributions and tasks. Evaluated on numerous tasks, its zero-shot performance is impressive, often competitive with or superior to prior fully supervised results. SAM and SA-1B are released to foster research into foundation models for computer vision. ICCV 2023 (arXiv April 2023).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2</p>
+  <h2>The promptable segmentation task</h2>
+  <div class="prose">
+    <p>A prompt is any information indicating what to segment: foreground/background points, a rough box or mask, free-form text. The task is to return a <strong>valid</strong> mask for any prompt: even when a prompt is ambiguous and could refer to several objects (the paper's example: a point on a shirt could mean the shirt or the person wearing it), "the output should be a reasonable mask for at least one of those objects." This mirrors a language model producing a coherent response to an ambiguous prompt.</p>
+    <p><strong>Pre-training.</strong> For each training mask a sequence of prompts (points, boxes, masks) is simulated and the predicted masks are compared with the ground truth, adapting interactive segmentation; unlike interactive segmentation, the goal is a valid mask for <em>any</em> prompt, even ambiguous ones, which drives the architecture and loss choices. <strong>Zero-shot transfer.</strong> Downstream tasks are solved by prompt engineering: e.g. a detector's boxes as prompts give instance segmentation.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3 · Fig. 4 · App. A</p>
+  <h2>Model</h2>
+  <div class="prose">
+    <p><strong>Image encoder.</strong> An MAE pre-trained ViT-H/16 adapted to high resolution with 14 × 14 windowed attention and four equally spaced global attention blocks. Input 1024 × 1024 (rescaled, longer side, padded); output a 64 × 64 embedding (16× downscale), reduced to 256 channels. ViT-H has 636 M parameters; smaller ViT-B and ViT-L encoders are also reported.</p>
+    <p><strong>Prompt encoder.</strong> Points and boxes: positional encodings summed with learned embeddings per prompt type (foreground point, background point, box corner). Text: CLIP's text encoder. Dense mask prompts: downscaled by convolutions and added element-wise to the image embedding.</p>
+    <p><strong>Mask decoder.</strong> A modified Transformer decoder (two layers) operating on prompt tokens plus learned output tokens: self-attention on tokens, cross-attention token→image and image→token, and an MLP. The image embedding is then upsampled 4× with two transposed convolutions; each output token passes through an MLP to give a dynamic linear classifier, whose dot product with the upsampled embedding gives the mask probability at every location.</p>
+    <p><strong>Ambiguity.</strong> The decoder predicts three masks at once (the authors found three enough for nesting such as whole, part and subpart). During training only the mask with the minimum loss is back-propagated, and a small head predicts each mask's IoU with the target, used to rank masks. With more than one prompt only a single mask is predicted, from a fourth output token, since ambiguity is much rarer and the three outputs usually agree.</p>
+    <p><strong>Loss and training.</strong> Focal loss and dice loss in a 20 : 1 ratio for masks, mean squared error for the IoU head. Interactive simulation: 11 rounds per mask (an initial point or box, then points sampled from error regions of the previous prediction, with the previous mask logits fed back as a prompt, plus two rounds with no new points). Training on SA-1B: 90k iterations (about 2 epochs) across 256 GPUs.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><span>Annotator meant:</span><button class="btn" data-gt="0">subpart (logo)</button><button class="btn on" data-gt="1">part (mug body)</button><button class="btn" data-gt="2">whole (mug)</button><button class="btn" id="ml-avg" aria-pressed="false">Single-output model instead</button></div>
+    <div class="svgbox"><svg id="ml" viewBox="0 0 600 220" role="img" aria-label="Three predicted masks for one click, their IoU with the chosen ground truth, and which one receives gradient"></svg></div>
+    <p class="readout" id="ml-r"></p>
+    <figcaption>A click on the mug's logo is consistent with three ground truths. With three outputs, whichever target the annotator chose, one output already matches it and only that one is trained (min-over-outputs loss). The "single-output" toggle shows the per-pixel average of the three targets, which is roughly what a single mask trained on all three would converge to under a pixel-wise loss: a blurry compromise that matches none. Toy masks on the scene from the Plain English tab.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why backpropagate only the minimum-loss mask rather than all three?</dt>
+    <dd>Each output is then free to specialise on one valid interpretation; penalising all three against a single target would push them to collapse onto it, or to blur together across examples where the target differs.</dd>
+    <dt>What is the IoU head for, given the masks are already predicted?</dt>
+    <dd>It ranks the three candidates when a single answer is needed (e.g. in the automatic stage of the data engine) and filters unconfident masks.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §4–5 · Figs. 5–7</p>
+  <h2>Data engine and SA-1B</h2>
+  <div class="prose">
+    <p><strong>Assisted-manual.</strong> Professional annotators click foreground/background points in a browser tool powered by SAM, refining with pixel-precise brush and eraser, labelling "stuff" and "things" freely and moving on once a mask took over 30 seconds. SAM started from public segmentation datasets and was retrained 6 times on new data; time per mask fell from 34 s to 14 s and masks per image rose from 20 to 44: 4.3 M masks from 120 k images. <strong>Semi-automatic.</strong> Confident masks were pre-filled from a box detector trained on stage-1 masks (with a generic "object" class); annotators labelled the remaining objects. Masks per image rose from 44 to 72: 5.9 M more masks from 180 k images (10.2 M total), with 5 more retrainings. <strong>Fully automatic.</strong> The ambiguity-aware model was prompted with a 32 × 32 grid of points; masks were kept if the predicted IoU was high and the mask was <em>stable</em> (thresholding the probability map at 0.5 − δ and 0.5 + δ gives similar masks); NMS removed duplicates, and overlapping zoomed-in crops helped small masks. Applied to all 11 M images: 1.1 B masks.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Grid points per side <input type="range" id="gr-n" min="2" max="32" step="1" value="3"><output id="gr-n-o">3</output></label></div>
+    <div class="svgbox"><svg id="gr" viewBox="0 0 600 300" role="img" aria-label="Automatic mask generation from a regular grid of point prompts"></svg></div>
+    <p class="readout" id="gr-r"></p>
+    <figcaption>Each grid point is a single-point prompt; each returns up to three nested masks, and duplicates are merged (an idealised NMS). With a sparse grid, small objects such as the logo and the handle are never hit; the paper's 32 × 32 grid, plus zoomed crops, is dense enough for small parts. Toy scene with hand-defined parts.</figcaption>
+  </figure>
+  <div class="prose"><p><strong>SA-1B (§5).</strong> 11 M images averaging 3300 × 4950 pixels, released downsampled to a shortest side of 1500 pixels; about 1.1 B masks (1,129 M), 99.1% generated fully automatically. Quality check: on 500 images (about 50 k masks) professionally corrected, 94% of pairs have IoU above 90% and 97% above 75%. Compared with existing datasets, SA-1B has about 400× more masks than Open Images, more small and medium masks, and mask centres spread more evenly over the image (Figs. 5–7).</p></div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §7 · Tables 3–5 · Figs. 9–12</p>
+  <h2>Zero-shot transfer experiments</h2>
+  <div class="tablebox"><table>
+    <thead><tr><th>Task</th><th>Setup</th><th>SAM</th><th>Reference</th></tr></thead>
+    <tbody>
+      <tr><td>Single-point mask (Fig. 9)</td><td>23 datasets, mIoU</td><td>better than RITM on 16 of 23 (by up to ~47 IoU); higher human ratings</td><td>RITM (interactive)</td></tr>
+      <tr><td>Edge detection (Table 3)</td><td>BSDS500, 16 × 16 grid of points, Sobel on mask probabilities</td><td class="num">ODS 0.768, OIS 0.786, AP 0.794, R50 0.928</td><td>trained edge detectors are better on ODS; SAM never trained for edges</td></tr>
+      <tr><td>Object proposals (Table 4)</td><td>LVIS v1, AR@1000</td><td class="num">59.3</td><td class="num">ViTDet-H 63.0</td></tr>
+      <tr><td>Instance segmentation (Table 5)</td><td>ViTDet boxes as prompts, mask AP</td><td class="num">COCO 46.5, LVIS 44.7</td><td class="num">ViTDet-H 51.0, 46.6</td></tr>
+      <tr><td>Text-to-mask (Fig. 12)</td><td>CLIP image embeddings at training, text embeddings at test</td><td>qualitative only</td><td>"exploratory and not entirely robust"</td></tr>
+    </tbody></table></div>
+  <div class="prose">
+    <p>In the single-point setting, SAM is also evaluated with an "oracle" that picks the most relevant of its three masks; with the oracle it beats RITM on all 23 datasets. On instance segmentation, although SAM's mask AP is lower, human raters scored its masks higher than ViTDet's on LVIS: the authors attribute part of the AP gap to SAM not learning the specific annotation biases (such as coarse COCO masks) that a model trained on that dataset absorbs. Human ratings for SAM's single-point masks fall between 7 and 9 on a 1–10 scale.</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why might lower AP not mean worse masks here?</dt>
+    <dd>AP measures agreement with the benchmark's own annotations, including their systematic quirks; a model trained on that dataset learns the quirks, while a zero-shot model may draw more accurate boundaries that score lower.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §6 · §8 · lineage</p>
+  <h2>Responsible AI, limitations and lineage</h2>
+  <div class="prose">
+    <p><strong>Responsible AI (§6).</strong> SA-1B has a higher share of images from Europe, Asia and Oceania and middle-income countries than earlier datasets; like all of them, it under-represents Africa and low-income countries, though every region still has tens of millions of masks. On perceived gender presentation, single-point mIoU for people is similar (54.4 feminine vs 55.7 masculine) with overlapping confidence intervals; for perceived skin tone differences are not significant; an appendix finds a gap for segmenting clothing (76.3 feminine vs 81.0 masculine at one point), which the authors flag.</p>
+    <p><strong>Limitations (§8).</strong> Misses fine structures, hallucinates small disconnected components, and its boundaries are less crisp than computationally heavier methods that "zoom in"; dedicated interactive methods can beat it when many points are given; the decoder is fast but the full pipeline is not real-time with ViT-H; text-to-mask is exploratory; and SAM targets general segmentation, so domain-specific tools can outperform it in their domains. It is unclear how to design simple prompts for some tasks, such as semantic or panoptic segmentation.</p>
+  </div>
+  <div class="later"><span class="label">Later refinements</span>Lineage: interactive segmentation (RITM and earlier click-based methods); MaskFormer-style decoders with learned mask tokens; MAE pre-training of <a href="vit.html">ViT</a>; promptable models in NLP and <a href="clip.html">CLIP</a>. After: HQ-SAM (2023) added a high-quality output token for crisper boundaries; MobileSAM and EfficientSAM distilled the encoder for edge devices; MedSAM fine-tuned it for medical images, where the original underperforms specialised <a href="unet.html">U-Net</a>-style models; Grounded-SAM paired it with the open-vocabulary detector Grounding DINO for text prompts; SAM 2 (2024) added a streaming memory for promptable video segmentation and was also faster on images.</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Mask</dt><dd>A binary per-pixel map marking one object or region.</dd>
+    <dt>Prompt</dt><dd>Points, box, mask or text indicating what to segment.</dd>
+    <dt>Valid mask</dt><dd>A reasonable mask for at least one object an ambiguous prompt could refer to.</dd>
+    <dt>Output token</dt><dd>Learned decoder query whose final state defines one mask (and its IoU score).</dd>
+    <dt>IoU</dt><dd>Intersection over union of two masks.</dd>
+    <dt>Focal / dice loss</dt><dd>Pixel losses that emphasise hard pixels and region overlap respectively.</dd>
+    <dt>NMS</dt><dd>Non-maximum suppression: removing near-duplicate predictions.</dd>
+    <dt>Data engine</dt><dd>Model-in-the-loop annotation, retraining the model as data accumulates.</dd>
+    <dt>SA-1B</dt><dd>The released dataset: 11 M images, 1.1 B masks.</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+var SW=64, SH=30;
+var SNAMES={wall:'wall',table:'table',logo:'logo',body:'mug body',handle:'handle',mug:'whole mug',pot:'pot',leaves:'leaves',plant:'whole plant'};
+var SSETS={wall:[0],table:[1],logo:[4],body:[2,4],handle:[3],mug:[2,3,4],pot:[5],leaves:[6],plant:[5,6]};
+var SCHAIN={0:['wall'],1:['table'],4:['logo','body','mug'],2:['body','mug'],3:['handle','mug'],5:['pot','plant'],6:['leaves','plant']};
+var SCLS=['f-card','f-muted','f-wire','f-wire','f-fire','f-inh','f-ok'];
+function samRegion(x,y){ x+=0.5; y+=0.5;
+  if (y>=22) return 1;
+  if ((x-15.5)*(x-15.5)/9+(y-14)*(y-14)/6.25<=1) return 4;
+  if (x>=10&&x<=22&&y>=8&&y<=22) return 2;
+  if (x>22&&x<=27&&y>=11&&y<=19&&!(x<=25&&y>=13&&y<=17)) return 3;
+  if (y>=14&&y<22){ var t=(y-14)/8, l=40+t*2, r=52-t*2; if (x>=l&&x<=r) return 5; }
+  if ((x-46)*(x-46)+(y-8)*(y-8)<=36||(x-41)*(x-41)+(y-11)*(y-11)<=12||(x-51)*(x-51)+(y-11)*(y-11)<=12) return 6;
+  return 0; }
+var SMAP=[]; for (var y=0;y<SH;y++){ SMAP.push([]); for (var x=0;x<SW;x++) SMAP[y].push(samRegion(x,y)); }
+function samMask(name){ var s=SSETS[name]; return SMAP.map(function(r){ return r.map(function(v){ return s.indexOf(v)>=0?1:0; }); }); }
+function samChain(x,y){ var c=SCHAIN[SMAP[y][x]].slice(); while (c.length<3) c.push(c[c.length-1]); return c; }
+function samScene(svg,ox,oy,cs,opa){ for (var y=0;y<SH;y++) for (var x=0;x<SW;x++){ var v=SMAP[y][x]; if (v) S('rect',{x:ox+x*cs,y:oy+y*cs,width:cs,height:cs,'class':SCLS[v],'fill-opacity':opa*(v===1?0.4:0.75)},svg); } S('rect',{x:ox,y:oy,width:SW*cs,height:SH*cs,'class':'area'},svg); }
+function samOverlay(svg,ox,oy,cs,m,cls){ for (var y=0;y<SH;y++) for (var x=0;x<SW;x++){ if (m[y][x]>0) S('rect',{x:ox+x*cs,y:oy+y*cs,width:cs,height:cs,'class':cls,'fill-opacity':0.55*m[y][x]},svg); } }
+function samIoU(a,b){ var i=0,u=0; for (var y=0;y<SH;y++) for (var x=0;x<SW;x++){ i+=Math.min(a[y][x],b[y][x]); u+=Math.max(a[y][x],b[y][x]); } return u?i/u:0; }
+(function(){ // click to segment
+  var svg=$('#sa'), pts=[], pos=1, pick=0, cs=8, ox=44, oy=10;
+  function result(){ if (!pts.length) return null;
+    if (pts.length===1 && pts[0][2]) return {multi:samChain(pts[0][0],pts[0][1])};
+    var cand=Object.keys(SSETS).filter(function(k){ return pts.every(function(p){ var inn=SSETS[k].indexOf(SMAP[p[1]][p[0]])>=0; return p[2]?inn:!inn; }); });
+    if (!pts.some(function(p){ return p[2]; })) return {none:'Add at least one "include" point.'};
+    cand.sort(function(a,b){ return SSETS[a].length-SSETS[b].length; });
+    return cand.length?{one:cand[0]}:{none:'No single object contains every include point and avoids every exclude point.'}; }
+  function draw(){ clear(svg); samScene(svg,ox,oy,cs,1); var r=result(), shown=null;
+    if (r&&r.multi){ shown=r.multi[pick]; } else if (r&&r.one){ shown=r.one; }
+    if (shown) samOverlay(svg,ox,oy,cs,samMask(shown),'f-ok');
+    var hit=S('rect',{x:ox,y:oy,width:SW*cs,height:SH*cs,'fill-opacity':0,'class':'f-card clickable'},svg);
+    hit.addEventListener('click',function(e){ var pt=svg.createSVGPoint(); pt.x=e.clientX; pt.y=e.clientY; var q=pt.matrixTransform(svg.getScreenCTM().inverse()); var x=Math.floor((q.x-ox)/cs), y=Math.floor((q.y-oy)/cs); if (x<0||y<0||x>=SW||y>=SH) return; pts.push([x,y,pos]); pick=0; draw(); });
+    pts.forEach(function(p){ S('circle',{cx:ox+p[0]*cs+cs/2,cy:oy+p[1]*cs+cs/2,r:6,'class':p[2]?'u-on':'u','pointer-events':'none'},svg); if (!p[2]) S('path',{d:'M'+(ox+p[0]*cs)+','+(oy+p[1]*cs+cs/2)+' h'+cs,'class':'w-inh','pointer-events':'none'},svg); });
+    if (r&&r.multi){ r.multi.forEach(function(n,k){ var tx=44+k*180, ty=262, tc=2.2; var g=S('g',{'class':'clickable'},svg); S('rect',{x:tx-4,y:ty-4,width:SW*tc+8,height:SH*tc+8,'class':k===pick?'box-fire':'box'},g);
+        for (var y=0;y<SH;y+=1) for (var x=0;x<SW;x+=1){ var on=SSETS[n].indexOf(SMAP[y][x])>=0; if (on) S('rect',{x:tx+x*tc,y:ty+y*tc,width:tc,height:tc,'class':'f-ok'},g); }
+        S('text',{x:tx+SW*tc+12,y:ty+30,'class':'t-s'},g,''); g.addEventListener('click',function(){ pick=k; draw(); }); }); }
+    var msg='Click the scene to place a point.';
+    if (r&&r.multi) msg='One point is ambiguous: three candidates, <b>'+r.multi.map(function(n){ return SNAMES[n]; }).join('</b>, <b>')+'</b>'+(r.multi[0]===r.multi[1]||r.multi[1]===r.multi[2]?' (here the nesting is shallow, so some repeat)':'')+'. Showing <b>'+SNAMES[r.multi[pick]]+'</b>.';
+    else if (r&&r.one) msg='With '+pts.length+' points, one mask: <b>'+SNAMES[r.one]+'</b>.';
+    else if (r&&r.none) msg=r.none;
+    $('#sa-r').innerHTML=msg; }
+  $$('[data-pm]').forEach(function(b){ b.addEventListener('click',function(){ pos=+b.dataset.pm; $$('[data-pm]').forEach(function(x){ x.classList.toggle('on',x===b); }); }); });
+  $('#sa-clear').onclick=function(){ pts=[]; pick=0; draw(); };
+  pts=[[15,14,1]]; draw();
+})();
+(function(){ // data engine
+  var svg=$('#de'), st=0;
+  var S1=[['Stage 1',4.3e6,'120 k images','34 s → 14 s per mask; 20 → 44 masks/image'],['Stage 2',10.2e6,'+180 k images','+5.9 M masks; 44 → 72 masks/image'],['Stage 3',1.1e9,'all 11 M images','fully automatic, 32 × 32 point grid']];
+  function draw(){ clear(svg); var x0=60, x1=620, y0=20, y1=200, lo=6, hi=9.2, Y=function(v){ return y1-(Math.log10(v)-lo)/(hi-lo)*(y1-y0); };
+    for (var e=6;e<=9;e++){ S('line',{x1:x0,y1:Y(Math.pow(10,e)),x2:x1,y2:Y(Math.pow(10,e)),'class':'grid'},svg); S('text',{x:x0-6,y:Y(Math.pow(10,e))+4,'class':'t-s end'},svg,['1 M','10 M','100 M','1 B'][e-6]); }
+    S1.forEach(function(d,i){ var x=x0+30+i*190, on=i<=st, h=y1-Y(d[1]); S('rect',{x:x,y:Y(d[1]),width:110,height:h,'class':on?(i===2?'f-ok':'f-fire'):'f-rule','fill-opacity':on?0.9:0.35},svg);
+      S('text',{x:x+55,y:Y(d[1])-8,'class':on?'t mid':'t-s mid'},svg,i===2?'1.1 B masks':(d[1]/1e6)+' M masks'); S('text',{x:x+55,y:y1+18,'class':'t mid'},svg,d[0]); S('text',{x:x+55,y:y1+34,'class':'t-s mid'},svg,d[2]); });
+    $('#de-r').innerHTML=S1[st][0]+': <b>'+S1[st][3]+'</b>. Cumulative masks: <b>'+(st===2?'1.1 billion':(S1[st][1]/1e6)+' million')+'</b>.'; }
+  $$('[data-de]').forEach(function(b){ b.addEventListener('click',function(){ st=+b.dataset.de; $$('[data-de]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }); });
+  draw();
+})();
+(function(){ // ambiguity-aware loss
+  var svg=$('#ml'), gt=1, avg=false, outs=['logo','body','mug'];
+  function draw(){ clear(svg); var tc=2.6, G=samMask(outs[gt]);
+    var ious=outs.map(function(n){ return samIoU(samMask(n),G); }), best=0; ious.forEach(function(v,i){ if (v>ious[best]) best=i; });
+    if (!avg){ outs.forEach(function(n,k){ var ox=14+k*196, oy=16; S('rect',{x:ox-4,y:oy-4,width:SW*tc+8,height:SH*tc+8,'class':k===best?'box-ok':'box'},svg); samScene(svg,ox,oy,tc,0.35); samOverlay(svg,ox,oy,tc,samMask(n),'f-ok');
+        S('text',{x:ox,y:oy+SH*tc+22,'class':'t'},svg,'output '+(k+1)+': '+SNAMES[n]); S('text',{x:ox,y:oy+SH*tc+40,'class':k===best?'t-ok':'t-s'},svg,'IoU '+fmt(ious[k],2)+(k===best?' · trained':'')); }); }
+    else { var A=SMAP.map(function(r){ return r.map(function(){ return 0; }); }); outs.forEach(function(n){ var m=samMask(n); for (var y=0;y<SH;y++) for (var x=0;x<SW;x++) A[y][x]+=m[y][x]/3; });
+      var ox=14, oy=16; samScene(svg,ox,oy,tc*1.4,0.35); samOverlay(svg,ox,oy,tc*1.4,A,'f-fire');
+      var thr=A.map(function(r){ return r.map(function(v){ return v>=0.5?1:0; }); });
+      var s=outs.map(function(n){ return fmt(samIoU(thr,samMask(n)),2); });
+      S('text',{x:300,y:40,'class':'t'},svg,'average of the three targets'); S('text',{x:300,y:62,'class':'t-s'},svg,'(darker = more of the targets agree)');
+      S('text',{x:300,y:96,'class':'t'},svg,'thresholded at 0.5, IoU with:'); outs.forEach(function(n,k){ S('text',{x:300,y:118+k*20,'class':'t-s'},svg,SNAMES[n]+'  '+s[k]); }); }
+    $('#ml-r').innerHTML = avg ? 'A single output facing all three targets is pulled towards their average: it matches none of them exactly.' : 'Target: <b>'+SNAMES[outs[gt]]+'</b>. Output '+(best+1)+' already matches (IoU '+fmt(ious[best],2)+'), so only it receives the loss; the other outputs are left free to cover the other interpretations.'; }
+  $$('[data-gt]').forEach(function(b){ b.addEventListener('click',function(){ gt=+b.dataset.gt; avg=false; $('#ml-avg').setAttribute('aria-pressed','false'); $$('[data-gt]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }); });
+  $('#ml-avg').onclick=function(){ avg=!avg; this.setAttribute('aria-pressed',avg); draw(); };
+  draw();
+})();
+(function(){ // automatic grid
+  var svg=$('#gr'), n=3;
+  function draw(){ clear(svg); var cs=8, ox=44, oy=10, found={}, raw=0; samScene(svg,ox,oy,cs,0.5);
+    for (var i=0;i<n;i++) for (var j=0;j<n;j++){ var x=Math.floor((j+0.5)/n*SW), y=Math.floor((i+0.5)/n*SH); var c=samChain(x,y); raw+=3; c.forEach(function(k){ found[k]=1; });
+      S('circle',{cx:ox+(j+0.5)/n*SW*cs,cy:oy+(i+0.5)/n*SH*cs,r:n>16?1.8:3,'class':'u-on'},svg); }
+    var all=Object.keys(SSETS), got=all.filter(function(k){ return found[k]; }), miss=all.filter(function(k){ return !found[k]; });
+    all.forEach(function(k,i){ S('text',{x:44+(i%5)*104,y:268+Math.floor(i/5)*18,'class':found[k]?'t-ok':'t-inh'},svg,(found[k]?'✓ ':'✗ ')+SNAMES[k]); });
+    $('#gr-r').innerHTML='<b>'+(n*n)+'</b> prompts → <b>'+raw+'</b> raw masks → <b>'+got.length+'</b> distinct after removing duplicates, of '+all.length+' regions.'+(miss.length?' Missed: <b>'+miss.map(function(k){ return SNAMES[k]; }).join(', ')+'</b>.':' Everything found.'); }
+  bindRange('gr-n',function(v){ n=v; draw(); });
+})();
+</script>

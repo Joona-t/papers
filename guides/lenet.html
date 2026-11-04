@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LeNet (1998) study guide</title>
+<meta name="description" content="Can a machine learn to read handwriting from examples alone, instead of relying on features that engineers design by hand? This long paper says yes: a convolutional network trained end to end with gradient descent beats every other method on handwritten digits, and the same idea, scaled up into a wh">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Computer vision</b> · 1998</p>
+  <h1>Gradient-Based Learning Applied to Document Recognition</h1>
+  <p class="cite">Yann LeCun, Léon Bottou, Yoshua Bengio, Patrick Haffner · Proceedings of the IEEE</p>
+  <p class="lede">Can a machine learn to read handwriting from examples alone, instead of relying on features that engineers design by hand? This long paper says yes: a convolutional network trained end to end with gradient descent beats every other method on handwritten digits, and the same idea, scaled up into a whole trainable system, was reading bank cheques commercially.</p>
+  <p class="paperlinks"><a href="https://leon.bottou.org/publications/pdf/ieee-1998.pdf">Read the paper (free)</a> <a href="https://lovespark.love/papers/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, independent AI review, but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Older handwriting readers had two parts: a feature extractor that engineers designed by hand, and a learning part that only saw those features. The quality of the hand-made part limited everything.</p>
+  <p>A convolutional network instead learns its own features, using small pattern detectors that are slid across the whole image, so the same detector works wherever the pattern appears.</p>
+  <p>Layers of detectors alternate with layers that shrink the image, so small shifts and wobbles in the handwriting matter less and less as the signal moves up.</p>
+  <p>The network, LeNet-5, made fewer mistakes on the MNIST digits than any hand-designed method tested, and joined to other trainable parts it was reading millions of cheques for banks.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §I · Fig. 1</p>
+  <h2>Stop hand-designing the features</h2>
+  <div class="prose">
+    <p>Before this work, a typical character reader was built from two separate pieces. First, a <strong>feature extractor</strong>, written by engineers, turned the raw pixels into a short list of measurements: how many loops, where the strokes end, how slanted the character is. Second, a <strong>classifier</strong>, which could learn from examples, looked at those measurements and named the character.</p>
+    <p>Only the second piece learned. If the engineers forgot a useful measurement, the classifier could never recover it. And every new problem (a new alphabet, a new kind of form) meant designing the features again.</p>
+    <p>The paper's argument is that we now have enough data, fast enough computers, and good enough learning methods to let the machine learn <em>all</em> of it, straight from the pixels. The learning method is the one from <a href="backprop.html">backpropagation</a>: measure the error, work out how each adjustable number contributed to it, and nudge each one to reduce it. This is called <strong>gradient-based learning</strong>, and "end to end" means it is applied to the whole system at once.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Imagine teaching someone to sort post. One way is to hand them a checklist ("look for a loop at the top; check if the bottom is flat") and let them learn only how to combine your checklist answers. The other way is to show them thousands of envelopes and let them work out for themselves what to look at. The second way can discover clues you never thought of.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Let learning reach all the way down to the pixels, rather than only adjusting a final classifier on top of hand-made features.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>In the old two-part design, which part learned from examples?</dt>
+    <dd>Only the classifier. The feature extractor was fixed and designed by hand, so its blind spots could not be fixed by training.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §II-A</p>
+  <h2>One small detector, slid everywhere</h2>
+  <div class="prose">
+    <p>Why not just connect every pixel to every unit of a big network? The paper gives two reasons. A 32 by 32 image has 1,024 pixels, so a first layer of even 100 units would need over 100,000 connections, and it would need huge amounts of data to learn them. Worse, such a network has no idea that a stroke shifted one pixel to the right is still the same stroke; it would have to learn that separately for every position.</p>
+    <p>A <strong>convolutional</strong> layer fixes both. Each unit looks only at a small patch of the image, its <strong>receptive field</strong> (5 by 5 pixels in LeNet-5). And all the units in one layer map use <em>the same</em> weights: one small detector, copied to every position. The result is a <strong>feature map</strong> that shows where in the image the detector's pattern appears. Several detectors give several feature maps.</p>
+    <p>Try it below. Click pixels to draw, pick a detector, and watch the feature map. Hover over the feature map to see which patch each value came from.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" data-cv="0">Vertical edge</button><button class="btn" data-cv="1">Horizontal edge</button><button class="btn" data-cv="2">Diagonal stroke</button><button class="btn" id="cv-clear">Clear</button><button class="btn" id="cv-seven">Draw a 7</button></div>
+    <div class="svgbox"><svg id="cv" viewBox="0 0 600 250" role="img" aria-label="A 12 by 12 drawing, a 3 by 3 detector, and the 10 by 10 feature map it produces"></svg></div>
+    <p class="readout" id="cv-r"></p>
+    <figcaption>A toy with a 3 by 3 detector on a 12 by 12 image (LeNet-5 uses 5 by 5 detectors that it learns; these three are set by hand for illustration). In the feature map, amber means the pattern is present, blue means its opposite is. Draw the same stroke in two different places: the detector fires in both.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Sharing one detector across all positions means far fewer numbers to learn, and a pattern is recognised wherever it appears.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>If you move your drawing two pixels to the right, what happens to the feature map?</dt>
+    <dd>It moves two positions to the right as well, but otherwise looks the same. The layer reacts to shifts by shifting its output.</dd>
+    <dt>Why does weight sharing reduce the amount of training data needed?</dt>
+    <dd>There are far fewer independent weights to pin down, and every position in every image provides evidence about the same shared detector.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §II-A</p>
+  <h2>Blur the details, keep the gist</h2>
+  <div class="prose">
+    <p>Once a detector has found, say, an edge, its <em>exact</em> position does not matter much. What matters is roughly where it is compared with other features: a 7 has a horizontal bar near the top-left of a diagonal stroke. Exact positions are also unreliable, because every writer is different.</p>
+    <p>So LeNet follows each convolutional layer with a <strong>subsampling</strong> layer (today usually called <strong>pooling</strong>). It averages each 2 by 2 block of the feature map into one number, halving the width and height. After this step, a feature that moved by a pixel produces almost the same output.</p>
+    <p>Slide the shift below and compare how similar the shifted digit is to the original at each stage. Raw pixels change a lot; the averaged maps much less.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Shift right <input type="range" id="sh-d" min="0" max="3" step="1" value="1"><output id="sh-d-o">1</output></label><label>Shift down <input type="range" id="sh-v" min="0" max="3" step="1" value="0"><output id="sh-v-o">0</output></label></div>
+    <div class="svgbox"><svg id="sh" viewBox="0 0 600 240" role="img" aria-label="A shifted digit, its edge map, and two rounds of 2 by 2 averaging, with similarity scores"></svg></div>
+    <p class="readout" id="sh-r"></p>
+    <figcaption>Similarity is measured as the cosine between the shifted and unshifted versions (1.00 means identical). The edge map uses the vertical-edge detector from the figure above, made non-negative; each averaging stage takes 2 by 2 blocks. Illustrative toy, not LeNet's learned weights.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>Recognising a friend's face from across a room, you don't check the exact pixel position of their nose. You notice there is a nose roughly below two eyes. Pooling throws away the precise positions and keeps the arrangement.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Alternating detection with shrinking gives features that are increasingly tolerant of shifts and distortions as you go up the network.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What does the network lose by subsampling, and why is that acceptable?</dt>
+    <dd>It loses the exact location of each feature. For recognising a character, the rough relative positions of features are what matter, and exact positions vary between writers anyway.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §II-B · §III · Fig. 2</p>
+  <h2>LeNet-5 and the MNIST test</h2>
+  <div class="prose">
+    <p>LeNet-5 stacks these ideas: detect (6 feature maps), shrink, detect again (16 maps, each combining several of the first ones), shrink, then a few ordinary layers that make the final decision among the ten digits. Not counting the input it has seven layers, and about 60,000 adjustable numbers in total, because sharing keeps the count small.</p>
+    <p>To test it fairly the authors built a new dataset, <strong>MNIST</strong>, by mixing two collections of digits from the US National Institute of Standards and Technology: one written by Census Bureau employees and one by high-school students. It has 60,000 training digits and 10,000 test digits, with the people who wrote the test digits kept separate from those who wrote the training ones. MNIST went on to become the most famous small benchmark in machine learning.</p>
+    <p>LeNet-5 misread <strong>0.95%</strong> of the test digits, about one in a hundred, and <strong>0.8%</strong> when the training set was enlarged with artificially distorted copies of the digits. For comparison, a simple linear classifier got 12% wrong, and comparing each new digit with its few most similar training examples got 5% wrong.</p>
+  </div>
+  <figure>
+    <div class="svgbox wide"><svg viewBox="0 0 640 170" role="img" aria-label="LeNet-5 layer diagram">
+      <rect x="10" y="40" width="64" height="64" class="box"/><text x="42" y="124" class="t-s mid">input</text><text x="42" y="138" class="t-s mid">32×32</text>
+      <rect x="100" y="44" width="56" height="56" class="box-wire"/><rect x="104" y="48" width="56" height="56" class="box-wire"/><text x="130" y="124" class="t-s mid">C1: 6 maps</text><text x="130" y="138" class="t-s mid">28×28</text>
+      <rect x="186" y="58" width="28" height="28" class="box"/><rect x="190" y="62" width="28" height="28" class="box"/><text x="203" y="124" class="t-s mid">S2: 6</text><text x="203" y="138" class="t-s mid">14×14</text>
+      <rect x="248" y="60" width="20" height="20" class="box-wire"/><rect x="252" y="64" width="20" height="20" class="box-wire"/><rect x="256" y="68" width="20" height="20" class="box-wire"/><text x="262" y="124" class="t-s mid">C3: 16</text><text x="262" y="138" class="t-s mid">10×10</text>
+      <rect x="304" y="66" width="10" height="10" class="box"/><rect x="308" y="70" width="10" height="10" class="box"/><rect x="312" y="74" width="10" height="10" class="box"/><text x="313" y="124" class="t-s mid">S4: 16</text><text x="313" y="138" class="t-s mid">5×5</text>
+      <rect x="360" y="22" width="14" height="100" class="box-fire"/><text x="367" y="138" class="t-s mid">C5: 120</text>
+      <rect x="420" y="38" width="14" height="70" class="box-fire"/><text x="427" y="138" class="t-s mid">F6: 84</text>
+      <rect x="480" y="56" width="14" height="34" class="box-ok"/><text x="487" y="138" class="t-s mid">out: 10</text>
+      <path d="M78,72 L96,72" class="w" marker-end="url(#aw)"/><path d="M164,72 L182,72" class="w" marker-end="url(#aw)"/><path d="M222,72 L244,72" class="w" marker-end="url(#aw)"/><path d="M280,76 L300,76" class="w" marker-end="url(#aw)"/><path d="M326,76 L356,72" class="w" marker-end="url(#aw)"/><path d="M378,72 L416,72" class="w" marker-end="url(#aw)"/><path d="M438,72 L476,72" class="w" marker-end="url(#aw)"/>
+      <text x="512" y="62" class="t-s">C = convolution</text><text x="512" y="80" class="t-s">S = subsampling</text><text x="512" y="98" class="t-s">F = full layer</text>
+      <text x="190" y="20" class="t-s mid">feature extraction (learned)</text><text x="440" y="160" class="t-s mid">classifier (learned)</text>
+    </svg></div>
+    <figcaption>Redrawn after the paper's Fig. 2. Every layer is trained; nothing is hand-designed except the shape of the network.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>A small, carefully shaped network that learns everything from pixels made fewer errors than every hand-engineered approach the authors tested.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why did the authors make sure different people wrote the training and test digits?</dt>
+    <dd>Otherwise a method could score well by memorising particular writers' styles, which says little about reading new people's handwriting.</dd>
+    <dt>Why did adding distorted copies of the training digits help?</dt>
+    <dd>It showed the network more of the natural variety in handwriting (slants, squashes, stretches), so it learned to ignore those variations.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §IV–end</p>
+  <h2>From single digits to reading cheques</h2>
+  <div class="prose">
+    <p>Reading a real cheque is harder than reading a single neat digit. You have to find the amount, cut it into characters (where does one end and the next begin?), recognise each one, and check that the result makes sense as an amount of money. Usually each of these steps was a separate program, tuned separately.</p>
+    <p>The second half of the long paper extends "learn everything" to the whole pipeline. It introduces <strong>Graph Transformer Networks</strong>: a way of describing a multi-step system in which every step passes along a set of possible interpretations (for example, several possible ways to cut a word into letters, each with a score), and the whole chain can be trained together by gradient descent, so the error at the end improves every step.</p>
+    <p>The paper's abstract reports that the resulting cheque reader was deployed commercially and "reads several million checks per day". This was one of the first large-scale commercial uses of neural networks.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>For over a decade convolutional networks stayed a niche tool for things like digits and documents. In 2012 <a href="alexnet.html">AlexNet</a> used the same basic design, made much bigger, trained on graphics cards, with a simpler activation function and new tricks against overfitting, and won the ImageNet photo-recognition challenge by a wide margin. The convolution-plus-pooling recipe from this paper is still the backbone of many vision systems, though <a href="vit.html">Vision Transformers</a> later showed that it is not the only way.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The paper's bigger idea is not just one network, but training a whole recognition system end to end so every part serves the final goal.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Multilayer networks trained with back-propagation are a successful gradient-based learning technique and, given an appropriate architecture, can synthesise complex decision surfaces for high-dimensional patterns such as handwritten characters with minimal preprocessing. The paper reviews methods for handwritten character recognition and compares them on a standard digit-recognition task, finding that convolutional networks, designed to deal with the variability of 2D shapes, outperform all other techniques. For real document recognition, which involves field extraction, segmentation, recognition and language modelling, it proposes Graph Transformer Networks (GTN), which allow such multi-module systems to be trained globally to optimise an overall performance measure. Experiments on on-line handwriting recognition and a commercially deployed bank-cheque reader illustrate the approach. <em>Proceedings of the IEEE</em> 86(11), 2278–2324 (1998).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §II-A</p>
+  <h2>Three architectural priors</h2>
+  <div class="prose">
+    <p>The case against a fully connected network on raw pixels (§II-A): a large first layer has tens of thousands of weights and so high capacity and data needs; memory requirements grow accordingly; and, most importantly, it has no built-in invariance to translations or local distortions, so it would need many units with similar weight patterns at different input positions. It also ignores the input topology: pixels can be permuted with no effect on a fully connected net, whereas images have strong 2D local correlations.</p>
+    <p>Convolutional networks build in three priors: <strong>local receptive fields</strong>, <strong>shared weights</strong> (each feature map applies one kernel at every location, so the layer is a convolution followed by an additive bias and a squashing function), and spatial <strong>sub-sampling</strong>. A shift of the input shifts the feature map by the same amount (equivariance), and subsampling reduces sensitivity to shifts and distortions. A subsampling unit in LeNet sums its four inputs, multiplies by a trainable coefficient, adds a trainable bias and applies the sigmoid; so each subsampling map has exactly two parameters.</p>
+    <p>Units use a scaled hyperbolic tangent,</p>
+  </div>
+  <div class="eq"><var>f</var>(<var>a</var>) = <var>A</var> tanh(<var>S a</var>), &nbsp;&nbsp; <var>A</var> = 1.7159 <span class="n">(6)</span></div>
+  <div class="prose"><p>with <var>S</var> setting the slope at the origin; the rationale is in the paper's Appendix A. Inputs are normalised so the foreground is 1.175 and the background slightly negative, which makes the mean input roughly zero and the variance roughly one and so speeds learning. The paper notes the fully trained system has about 340,908 connections but only about 60,000 trainable parameters because of weight sharing.</p></div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Is a convolutional layer invariant or equivariant to translation?</dt>
+    <dd>Equivariant: shifting the input shifts the output. Approximate invariance comes from subsampling and from the stack as a whole, not from a single convolution.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §II-B · Fig. 2 · Table I</p>
+  <h2>LeNet-5, layer by layer</h2>
+  <div class="prose">
+    <p>The input is 32 × 32, larger than the characters, which are at most 20 × 20 pixels centred in a 28 × 28 field. The margin is deliberate: distinctive features such as stroke endpoints and corners can then appear near the centre of the receptive fields of the highest-level feature detectors. C3 does not connect every S2 map to every C3 map. Table I specifies a sparse scheme, which keeps the connection count bounded and "forces a break of symmetry": different C3 maps see different input subsets and so are pushed to extract different, complementary features.</p>
+    <p>Click a layer to see its shape and how its parameter and connection counts arise. Hover over a column of the C3 table to highlight which S2 maps feed it.</p>
+  </div>
+  <figure class="live">
+    <div class="svgbox wide"><svg id="ln" viewBox="0 0 640 330" role="img" aria-label="LeNet-5 layers with a parameter calculator and the C3 connection table"></svg></div>
+    <p class="readout" id="ln-r"></p>
+    <figcaption>Counts are computed from the layer shapes. The parameter counts reproduce those stated in §II-B: 156, 12, 1,516, 32, 48,120 and 10,164, about 60,000 in all. The table at the bottom is Table I: each C3 column lists the S2 maps it reads; six read 3 contiguous maps, six read 4 contiguous, three read 4 non-contiguous, and one reads all six.</figcaption>
+  </figure>
+  <div class="prose"><p>C5 is labelled a convolutional layer even though, with a 5 × 5 input and 5 × 5 kernels, its maps are 1 × 1, because with a larger input it would produce larger maps. F6 has 84 units, and the output is ten Euclidean radial basis function (RBF) units:</p></div>
+  <div class="eq"><var>y<sub>i</sub></var> = Σ<sub><var>j</var></sub> (<var>x<sub>j</sub></var> − <var>w<sub>ij</sub></var>)<sup>2</sup> <span class="n">(7)</span></div>
+  <div class="prose"><p>Each output measures the distance between F6's output and a prototype vector for class <var>i</var>. The prototypes were fixed by hand to stylised 7 × 12 bitmaps of the characters (84 = 7 × 12), coded as ±1, so that confusable characters such as O and 0 have similar codes, which helps a later linguistic stage resolve them. Because <var>y<sub>i</sub></var> is a distance, lower is better: it acts as a penalty, not a score.</p></div>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §II-C · §III-B · Appendix C</p>
+  <h2>Loss and training</h2>
+  <div class="prose"><p>The simplest criterion is the mean penalty of the correct class over the <var>P</var> training patterns,</p></div>
+  <div class="eq"><var>E</var>(<var>W</var>) = (1/<var>P</var>) Σ<sub><var>p</var></sub> <var>y</var><sub><var>D<sub>p</sub></var></sub>(<var>Z<sup>p</sup></var>, <var>W</var>) <span class="n">(8)</span></div>
+  <div class="prose"><p>which is a maximum-likelihood criterion but has two weaknesses: if the RBF prototypes were learnable it has a trivial collapsed solution (all prototypes and F6 outputs equal), and it has no competition between classes. The paper therefore uses a discriminative, MAP-style criterion that additionally pushes up the penalties of incorrect classes:</p></div>
+  <div class="eq"><var>E</var>(<var>W</var>) = (1/<var>P</var>) Σ<sub><var>p</var></sub> [ <var>y</var><sub><var>D<sub>p</sub></var></sub>(<var>Z<sup>p</sup></var>, <var>W</var>) + log( e<sup>−<var>j</var></sup> + Σ<sub><var>i</var></sub> e<sup>−<var>y<sub>i</sub></var>(<var>Z<sup>p</sup></var>, <var>W</var>)</sup> ) ] <span class="n">(9)</span></div>
+  <div class="prose">
+    <p>The constant <var>j</var> plays the role of a "rubbish" class. The second term is a log-sum-exp over negated penalties, so this is the same family of losses as today's softmax cross-entropy.</p>
+    <p><strong>Optimiser.</strong> A stochastic version of the diagonal approximation to Levenberg–Marquardt: each parameter gets its own step size, derived from a running estimate of the diagonal of the Gauss–Newton Hessian, re-estimated on 500 samples before each pass. Global learning-rate schedule: 0.0005 for the first two passes, 0.0002 for the next three, 0.0001 for the next three, 0.00005 for the next four, and 0.00001 thereafter, for 20 passes in all. Test error stabilises near 0.95% after about ten passes; training error reaches 0.35% after 19. Training took two to three days of CPU on a single 200 MHz R10000 processor (§III-D).</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does Eq. 8 alone collapse if prototypes are learnable?</dt>
+    <dd>It only rewards a small distance to the correct prototype, so making every prototype and every F6 output identical drives all penalties to zero without discriminating anything.</dd>
+    <dt>How does the second term in Eq. 9 relate to softmax cross-entropy?</dt>
+    <dd>With scores −<var>y<sub>i</sub></var>, the loss is (minus the correct score) plus log-sum-exp of all scores, which is exactly the negative log of a softmax probability (with an extra constant class).</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §III-A · §III-C · Fig. 9</p>
+  <h2>The MNIST comparison</h2>
+  <div class="prose">
+    <p>MNIST was assembled from NIST Special Databases 1 and 3 (SD-3 written by Census Bureau employees, SD-1 by high-school students, and SD-3 much cleaner). The authors re-mixed them so that the 60,000 training patterns and the 10,000 test patterns each draw on both sources, with disjoint writers. Images are size-normalised to 20 × 20 preserving aspect ratio, then centred by centre of mass in a 28 × 28 field.</p>
+    <p>The comparison (Fig. 9) spans linear classifiers, k-nearest neighbours, PCA with a polynomial classifier, RBF networks, fully connected MLPs, tangent distance, several support vector machines, and three LeNets. Switch views below.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" data-mn="all">All methods</button><button class="btn" data-mn="cnn">Highlight convolutional nets</button><button class="btn" data-mn="svm">Highlight SVMs and tangent distance</button></div>
+    <div class="svgbox wide"><svg id="mn" viewBox="0 0 640 400" role="img" aria-label="MNIST test error rates by method"></svg></div>
+    <p class="readout" id="mn-r"></p>
+    <figcaption>Test error (%) on the 10,000 MNIST test digits, as reported in §III-C. "Deslant" means the inputs were deslanted first; "distort" means training was augmented with artificially distorted digits (60,000 originals plus 540,000 distorted copies for LeNet-5).</figcaption>
+  </figure>
+  <div class="prose"><p>The best result, 0.7%, is boosted LeNet-4: three LeNet-4s, the second trained on a mix of patterns the first got right and wrong, the third on patterns where the first two disagree. The paper's discussion (§III-D) also weighs memory and recognition time, where the convolutional nets compare favourably with memory-hungry k-NN and SVM methods, and shows LeNet-5's robustness to noise and distortion (§III-E).</p></div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §IV onward · lineage</p>
+  <h2>Global training, limitations and lineage</h2>
+  <div class="prose">
+    <p><strong>Graph Transformer Networks (§IV–§VI).</strong> A recognition system is cast as modules that pass <em>graphs</em> rather than fixed-size vectors: each arc carries a hypothesis (such as a candidate segment of a word) with a penalty. Heuristic over-segmentation (§V) produces a segmentation graph; a recognition transformer runs the character recogniser on every arc; a Viterbi transformer picks the lowest-penalty path. §VI shows how to train the whole thing: Viterbi training, discriminative Viterbi training, and discriminative <em>forward</em> training, where the forward algorithm's soft-min over all paths replaces the single best path so that gradients flow to every hypothesis. These are close relatives of what speech recognition later called sequence-discriminative training and of CTC-style losses.</p>
+    <p><strong>Limitations.</strong> The architecture is shaped by hand (sizes, the C3 table, the fixed RBF codes), the network is tiny by later standards, and the evidence is confined to characters and documents. Saturating tanh units and per-parameter second-order step sizes were sensible on CPUs in 1998 but did not carry over to large-scale training.</p>
+  </div>
+  <div class="later"><span class="label">Later refinements</span>The convolutional design dates from LeCun et al. (1989), who trained a convnet on US postal-service zip codes; this paper is its mature, benchmarked form. <a href="alexnet.html">AlexNet</a> (2012) scaled it up on GPUs with ReLUs, max-pooling, dropout and heavy data augmentation; <a href="resnet.html">ResNet</a> (2015) made it 100+ layers deep with skip connections; <a href="unet.html">U-Net</a> turned it into a per-pixel segmenter. Fixed RBF output codes gave way to learned softmax layers, and subsampling with trainable coefficients gave way to max-pooling or strided convolution. <a href="vit.html">ViT</a> (2020) showed that with enough data the convolutional prior can be replaced by attention over patches. The GTN line of thought, globally training structured pipelines, reappears in CTC (Graves et al., 2006) and in today's end-to-end speech and OCR systems.</div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does discriminative forward training give gradients to more hypotheses than Viterbi training?</dt>
+    <dd>Viterbi uses only the single best path, so only its arcs receive gradient. The forward algorithm combines all paths with a smooth log-sum-exp, so every arc contributes in proportion to how likely its paths are.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Receptive field</dt><dd>The input region that one unit sees.</dd>
+    <dt>Feature map</dt><dd>The output plane of one shared kernel applied at every position.</dd>
+    <dt>Weight sharing</dt><dd>Using identical weights at every position of a feature map.</dd>
+    <dt>Subsampling</dt><dd>Averaging (here: sum × trainable coefficient + bias) over 2 × 2 blocks to halve resolution.</dd>
+    <dt>RBF unit</dt><dd>Output unit computing a squared Euclidean distance to a prototype vector.</dd>
+    <dt>MNIST</dt><dd>Modified NIST: 60,000 training and 10,000 test digits, 28 × 28.</dd>
+    <dt>GTN</dt><dd>Graph Transformer Network: modules that map scored graphs to scored graphs, trainable end to end.</dd>
+    <dt>Viterbi transformer</dt><dd>Selects the minimum-penalty path through a graph.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="backprop.html">Backpropagation (1986)</a></p>
+  <p><strong>Led to:</strong> <a href="alexnet.html">AlexNet (2012)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers/">Papers worth reading</a> (<a href="https://lovespark.love/papers/#lenet">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+var LN_SEVEN=['............','.##########.','.#########..','.......##...','......##....','......##....','.....##.....','.....##.....','....##......','....##......','...##.......','............'];
+var LN_K=[[[-1,0,1],[-1,0,1],[-1,0,1]],[[-1,-1,-1],[0,0,0],[1,1,1]],[[1,0,-1],[0,1,0],[-1,0,1]]];
+function lnConv(img,k){ var H=img.length,W=img[0].length,o=[]; for (var y=0;y<H-2;y++){ var row=[]; for (var x=0;x<W-2;x++){ var s=0; for (var i=0;i<3;i++) for (var j=0;j<3;j++) s+=img[y+i][x+j]*k[i][j]; row.push(s);} o.push(row);} return o; }
+(function(){ // convolution playground
+  var svg=$('#cv'), ker=0, hover=null, img;
+  function seven(){ img=LN_SEVEN.map(function(r){ return r.split('').map(function(c){ return c==='#'?1:0; }); }); }
+  seven();
+  var C=16, X0=16, Y0=30, KX=246, OX=400;
+  function draw(){ clear(svg); var k=LN_K[ker], fm=lnConv(img,k);
+    S('text',{x:X0,y:20,'class':'t-s'},svg,'image (click to draw)'); S('text',{x:KX,y:20,'class':'t-s'},svg,'detector'); S('text',{x:OX,y:20,'class':'t-s'},svg,'feature map');
+    for (var y=0;y<12;y++) for (var x=0;x<12;x++){ (function(x,y){ var r=S('rect',{x:X0+x*C,y:Y0+y*C,width:C-1,height:C-1,'class':img[y][x]?'f-ink':'f-rule','fill-opacity':img[y][x]?1:0.45},svg); r.classList.add('clickable'); r.addEventListener('click',function(){ img[y][x]=1-img[y][x]; draw(); }); })(x,y); }
+    if (hover) S('rect',{x:X0+hover[0]*C-1,y:Y0+hover[1]*C-1,width:3*C+1,height:3*C+1,'class':'w-fire'},svg);
+    for (var i=0;i<3;i++) for (var j=0;j<3;j++){ var v=k[i][j]; S('rect',{x:KX+j*30,y:60+i*30,width:28,height:28,'class':v>0?'box-fire':(v<0?'box-wire':'box')},svg); S('text',{x:KX+j*30+14,y:60+i*30+18,'class':'t mid'},svg,v>0?'+'+v:String(v)); }
+    S('text',{x:KX+45,y:170,'class':'t-s mid'},svg,'× patch, then add up'); S('path',{d:'M'+(KX+45)+',180 L'+(KX+45)+',200 L'+(OX-8)+',200','class':'w-dash'},svg);
+    var mx=0; fm.forEach(function(r){ r.forEach(function(v){ mx=Math.max(mx,Math.abs(v)); }); }); mx=mx||1;
+    for (var y=0;y<10;y++) for (var x=0;x<10;x++){ (function(x,y){ var v=fm[y][x]; var r=S('rect',{x:OX+x*C,y:Y0+16+y*C,width:C-1,height:C-1,'class':v>0?'f-fire':(v<0?'f-wire':'f-rule'),'fill-opacity':v===0?0.3:0.15+0.85*Math.abs(v)/mx},svg);
+      r.addEventListener('mouseenter',function(){ hover=[x,y]; draw(); $('#cv-r').innerHTML='Feature-map cell ('+(x+1)+', '+(y+1)+') = <b>'+v+'</b>: the sum of the 3×3 patch outlined on the left, each pixel times the detector weight.'; }); })(x,y); }
+    if (!hover){ var on=0; fm.forEach(function(r){ r.forEach(function(v){ if (v>=2) on++; }); }); $('#cv-r').innerHTML='Detector fires strongly (value 2 or more) at <b>'+on+'</b> of 100 positions. Hover over the feature map for details.'; }
+  }
+  $$('[data-cv]').forEach(function(b){ b.addEventListener('click',function(){ ker=+b.dataset.cv; hover=null; $$('[data-cv]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }); });
+  svg.addEventListener('mouseleave',function(){ if (hover){ hover=null; draw(); } });
+  $('#cv-clear').onclick=function(){ img=img.map(function(r){ return r.map(function(){ return 0; }); }); hover=null; draw(); };
+  $('#cv-seven').onclick=function(){ seven(); hover=null; draw(); };
+  draw();
+})();
+(function(){ // shift and pool
+  var svg=$('#sh'), dx=1, dy=0, base=LN_SEVEN.map(function(r){ return r.split('').map(function(c){ return c==='#'?1:0; }); });
+  function canvas(ox,oy){ var c=[]; for (var y=0;y<16;y++){ var r=[]; for (var x=0;x<16;x++){ var sy=y-oy-1, sx=x-ox-1; r.push(sy>=0&&sy<12&&sx>=0&&sx<12?base[sy][sx]:0); } c.push(r); } return c; }
+  function edge(c){ return lnConv(c,LN_K[0]).map(function(r){ return r.map(function(v){ return Math.abs(v); }); }); }
+  function pool(m){ var o=[]; for (var y=0;y+1<m.length;y+=2){ var r=[]; for (var x=0;x+1<m[0].length;x+=2) r.push((m[y][x]+m[y][x+1]+m[y+1][x]+m[y+1][x+1])/4); o.push(r); } return o; }
+  function flat(m){ return [].concat.apply([],m); }
+  function cos(a,b){ a=flat(a); b=flat(b); var s=0,na=0,nb=0; for (var i=0;i<a.length;i++){ s+=a[i]*b[i]; na+=a[i]*a[i]; nb+=b[i]*b[i]; } return na&&nb?s/Math.sqrt(na*nb):0; }
+  function grid(m,x0,y0,cs,cls,label,sim){ var mx=0; flat(m).forEach(function(v){ mx=Math.max(mx,v); }); mx=mx||1;
+    m.forEach(function(r,y){ r.forEach(function(v,x){ S('rect',{x:x0+x*cs,y:y0+y*cs,width:cs-0.5,height:cs-0.5,'class':v>0?cls:'f-rule','fill-opacity':v>0?0.2+0.8*v/mx:0.35},svg); }); });
+    S('text',{x:x0,y:y0-10,'class':'t-s'},svg,label); if (sim!=null) S('text',{x:x0,y:y0+m.length*cs+18,'class':'t'},svg,'similarity '+fmt(sim,2)); }
+  function draw(){ clear(svg); var c0=canvas(0,0), c1=canvas(dx,dy), e0=edge(c0), e1=edge(c1), p0=pool(e0), p1=pool(e1), q0=pool(p0), q1=pool(p1);
+    var s=[cos(c0,c1),cos(e0,e1),cos(p0,p1),cos(q0,q1)];
+    grid(c1,14,40,9,'f-ink','shifted digit 16×16',s[0]); grid(e1,180,40,10,'f-fire','edge map 14×14',s[1]); grid(p1,350,40,14,'f-fire','averaged 7×7',s[2]); grid(q1,480,40,26,'f-fire','averaged 3×3',s[3]);
+    $('#sh-r').innerHTML='Similarity to the unshifted version: pixels <b>'+fmt(s[0],2)+'</b>, edge map <b>'+fmt(s[1],2)+'</b>, after one averaging <b>'+fmt(s[2],2)+'</b>, after two <b>'+fmt(s[3],2)+'</b>.'; }
+  bindRange('sh-d',function(v){ dx=v; draw(); }); bindRange('sh-v',function(v){ dy=v; draw(); });
+})();
+(function(){ // LeNet-5 calculator
+  var svg=$('#ln'), sel=3, hcol=-1;
+  var T=[[0,1,2],[1,2,3],[2,3,4],[3,4,5],[4,5,0],[5,0,1],[0,1,2,3],[1,2,3,4],[2,3,4,5],[3,4,5,0],[4,5,0,1],[5,0,1,2],[0,1,3,4],[1,2,4,5],[0,2,3,5],[0,1,2,3,4,5]];
+  var c3in=T.reduce(function(a,t){ return a+t.length; },0);
+  var L=[
+    {n:'INPUT',s:'1 × 32×32',p:0,pf:'no weights',c:0,cf:'none'},
+    {n:'C1',s:'6 × 28×28',p:6*(25+1),pf:'6 maps × (5×5 weights + 1 bias) = 156',c:156*28*28,cf:'156 × 28×28 positions'},
+    {n:'S2',s:'6 × 14×14',p:12,pf:'6 maps × (1 coefficient + 1 bias) = 12',c:6*14*14*5,cf:'6 × 14×14 units × (4 inputs + bias)'},
+    {n:'C3',s:'16 × 10×10',p:c3in*25+16,pf:c3in+' input-map links (Table I) × 25 + 16 biases = '+(c3in*25+16),c:(c3in*25+16)*100,cf:'1,516 × 10×10 positions'},
+    {n:'S4',s:'16 × 5×5',p:32,pf:'16 maps × 2 = 32',c:16*25*5,cf:'16 × 5×5 units × (4 inputs + bias)'},
+    {n:'C5',s:'120 × 1×1',p:120*(16*25+1),pf:'120 × (16×5×5 + 1) = 48,120',c:48120,cf:'each weight used once (1×1 maps)'},
+    {n:'F6',s:'84',p:84*(120+1),pf:'84 × (120 + 1) = 10,164',c:10164,cf:'fully connected'},
+    {n:'OUT',s:'10 RBF',p:0,pf:'840 prototype values, fixed by hand (not trained)',c:840,cf:'10 × 84 distance terms'}];
+  function n(x){ return x.toLocaleString('en-GB'); }
+  function draw(){ clear(svg);
+    L.forEach(function(l,i){ var x=12+i*78; var g=S('g',{'class':'clickable'},svg); S('rect',{x:x,y:18,width:70,height:46,'class':i===sel?'box-fire':(l.n[0]==='C'?'box-wire':'box')},g); S('text',{x:x+35,y:38,'class':'t mid'},g,l.n); S('text',{x:x+35,y:55,'class':'t-s mid'},g,l.s.length>10?l.s.replace(' × ','×'):l.s);
+      g.addEventListener('click',function(){ sel=i; draw(); }); });
+    var l=L[sel]; S('text',{x:12,y:90,'class':'t-h'},svg,l.n+'  ·  '+l.s);
+    S('text',{x:12,y:112,'class':'t'},svg,'parameters: '+n(l.p)); S('text',{x:170,y:112,'class':'t-s'},svg,l.pf);
+    S('text',{x:12,y:132,'class':'t'},svg,'connections: '+n(l.c)); S('text',{x:170,y:132,'class':'t-s'},svg,l.cf);
+    var tot=L.reduce(function(a,b){ return a+b.p; },0); S('text',{x:628,y:90,'class':'t-fire end'},svg,'trainable total '+n(tot));
+    // Table I
+    S('text',{x:12,y:166,'class':'t-s'},svg,'Table I: which S2 maps (rows) feed each C3 map (columns)');
+    for (var j=0;j<16;j++){ (function(j){ var x=60+j*34; S('text',{x:x+15,y:186,'class':j===hcol?'t-fire mid':'t-s mid'},svg,j);
+      for (var i=0;i<6;i++){ var on=T[j].indexOf(i)>=0, hi=j===hcol&&on; var r=S('rect',{x:x,y:194+i*20,width:30,height:18,'class':hi?'box-fire':(on?'box-wire':'box'),'fill-opacity':on?1:0.3},svg); }
+      var hit=S('rect',{x:x,y:176,width:30,height:140,'fill-opacity':0,'class':'f-card'},svg); hit.addEventListener('mouseenter',function(){ hcol=j; draw(); $('#ln-r').innerHTML='C3 map <b>'+j+'</b> reads S2 maps <b>'+T[j].join(', ')+'</b>: '+T[j].length+' × 25 weights + 1 bias = <b>'+(T[j].length*25+1)+'</b> parameters.'; }); })(j); }
+    for (var i=0;i<6;i++) S('text',{x:50,y:207+i*20,'class':'t-s end'},svg,'S2 '+i);
+    if (hcol<0) $('#ln-r').innerHTML='Selected <b>'+l.n+'</b>: <b>'+n(l.p)+'</b> trainable parameters, <b>'+n(l.c)+'</b> connections.';
+  }
+  svg.addEventListener('mouseleave',function(){ hcol=-1; draw(); });
+  draw();
+})();
+(function(){ // MNIST errors
+  var svg=$('#mn'), mode='all';
+  var D=[['Linear classifier','lin',12],['Linear, deslant','lin',8.4],['Pairwise linear','lin',7.6],['k-NN Euclidean','knn',5.0],['k-NN, deslant','knn',2.4],['1-hidden MLP, 300 units','mlp',4.7],['1-hidden MLP, 1000 units','mlp',4.5],['RBF network','mlp',3.6],['PCA + polynomial','lin',3.3],['2-hidden MLP 300-100','mlp',3.05],['SVM (Burges & Schölkopf)','svm',1.4],['LeNet-1','cnn',1.7],['Tangent distance','svm',1.1],['SVM (Cortes & Vapnik)','svm',1.1],['RS-SVM','svm',1.1],['LeNet-4','cnn',1.1],['V-SVM','svm',1.0],['LeNet-5','cnn',0.95],['LeNet-5, distort','cnn',0.8],['Boosted LeNet-4, distort','cnn',0.7]];
+  D.sort(function(a,b){ return b[2]-a[2]; });
+  function draw(){ clear(svg); var x0=210, W=400, mx=12;
+    for (var g=0;g<=12;g+=2){ var x=x0+g/mx*W; S('line',{x1:x,y1:14,x2:x,y2:372,'class':'grid'},svg); S('text',{x:x,y:390,'class':'t-s mid'},svg,g+'%'); }
+    D.forEach(function(d,i){ var y=16+i*17.8, hi=mode==='all'||mode===d[1]; S('text',{x:x0-6,y:y+11,'class':hi?'t end':'t-s end'},svg,d[0]);
+      S('rect',{x:x0,y:y+1,width:Math.max(1,d[2]/mx*W),height:13,'class':d[1]==='cnn'?'f-fire':(d[1]==='svm'?'f-ok':'f-wire'),'fill-opacity':hi?0.95:0.2},svg);
+      S('text',{x:x0+d[2]/mx*W+5,y:y+11,'class':'t-s'},svg,(d[2]%1?d[2]:fmt(d[2],1))+'%'); });
+    $('#mn-r').innerHTML = mode==='cnn' ? 'Convolutional nets: from <b>1.7%</b> (LeNet-1, tiny) to <b>0.7%</b> (boosted LeNet-4 with distortions).' : (mode==='svm' ? 'Kernel methods come close (<b>1.0–1.4%</b>, or <b>0.8%</b> for a virtual SVM trained with distortions), at much higher memory and compute cost at recognition time.' : 'Twenty results from §III-C, sorted from worst to best.'); }
+  $$('[data-mn]').forEach(function(b){ b.addEventListener('click',function(){ mode=b.dataset.mn; $$('[data-mn]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }); });
+  draw();
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,277 @@
+<!--LEDE-->
+Neural translators of 2014 squeezed a whole source sentence into one fixed-size list of numbers before writing the translation, and they fell apart on long sentences. Bahdanau, Cho and Bengio let the translator look back at every source word while it writes, choosing where to look for each output word. That learned "where to look" is what we now call attention.
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Neural translation systems read the source sentence into one summary, a fixed-length list of numbers, and then wrote the translation from that summary alone.</p>
+  <p>A summary of fixed size has limited room, so translation quality dropped sharply as sentences got longer.</p>
+  <p>This paper keeps a separate description of every source word and, for each word it writes, lets the translator compute a set of weights saying which source words to focus on, then blends their descriptions accordingly.</p>
+  <p>The weights are learned with no one telling the model which words correspond, yet they line up with sensible word alignments, and long sentences stop being a problem.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1–2</p>
+  <h2>Translating through a keyhole</h2>
+  <div class="prose">
+    <p>In 2014, a new style of translation system had just appeared: the <strong>encoder–decoder</strong>. One neural network, the <strong>encoder</strong>, reads the English sentence word by word and ends with a single summary: a list of, say, 1,000 numbers. A second network, the <strong>decoder</strong>, reads that summary and writes the French sentence word by word.</p>
+    <p>Everything the decoder knows about the source has to pass through that one summary, and it is the same size whether the sentence has 5 words or 50. The authors suspected this was the weak point. In their words, the network must "compress all the necessary information of a source sentence into a fixed-length vector", and they conjectured that this fixed-length vector is a bottleneck.</p>
+    <p>The toy below shows why. Each "sentence" is a list of random words. Version one squashes the whole list into a single fixed-size summary and then tries to read back each word. Version two keeps one note per word and simply looks up the right note.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Summary size <input type="range" id="bn-d" min="16" max="512" step="16" value="128"><output id="bn-d-o">128</output></label><button class="btn" id="bn-re">New random trial</button></div>
+    <div class="svgbox"><svg id="bn" viewBox="0 0 600 250" role="img" aria-label="Recall accuracy versus sentence length for a fixed-size summary and for per-word notes"></svg></div>
+    <p class="readout" id="bn-r"></p>
+    <figcaption>Each word (from a 50-word vocabulary) is a random vector. The fixed summary adds up all the words after scrambling each one by a different random "position" shuffle (a permutation with sign flips); reading word <var>t</var> back means unscrambling with position <var>t</var>'s transformation and picking the closest vocabulary word, while the other words add noise. The per-word notes keep every word separately, so look-up is exact. A bigger summary helps, but every fixed size eventually runs out of room. Illustrative, not a real encoder.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>An interpreter who must listen to a whole speech, close their notebook, and then deliver the translation from memory. Fine for one sentence; hopeless for a paragraph. Let them keep the notebook open and glance back, and length stops mattering.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Forcing a whole sentence through one fixed-size summary throws information away, and the loss grows with sentence length.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why would a bigger summary help but not solve the problem?</dt>
+    <dd>It gives more room, so the breakdown happens at longer sentences, but any fixed size is eventually too small for long enough input.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §3.1</p>
+  <h2>Look back while you write</h2>
+  <div class="prose">
+    <p>The fix: don't throw away the per-word information. The encoder produces a description for every source word (the paper calls these <strong>annotations</strong>). Then, each time the decoder is about to write a word, it does three things:</p>
+    <ol>
+      <li>It <strong>scores</strong> every source word: how relevant is this word to what I am about to write, given what I have written so far?</li>
+      <li>It turns the scores into <strong>weights</strong> that are positive and add up to 1 (a "softmax", which also exaggerates the differences so the best few dominate).</li>
+      <li>It forms a <strong>context</strong>: a blend of the source-word descriptions, mixed according to the weights. Then it writes the next word using that context.</li>
+    </ol>
+    <p>The scoring rule is itself a small neural network, trained along with everything else. Nobody tells it which English word matches which French word; it works that out because doing so helps it translate. The paper calls this <strong>learning to align</strong>. Everyone else soon called it <strong>attention</strong>.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="al-soft" aria-pressed="true">Soft weights (the paper)</button><button class="btn" id="al-hard" aria-pressed="false">Hard: pick one word only</button><button class="btn" id="al-all">Show whole grid</button></div>
+    <div class="svgbox wide"><svg id="al" viewBox="0 0 640 330" role="img" aria-label="Attention weights between an English sentence and its French translation"></svg></div>
+    <p class="readout" id="al-r"></p>
+    <figcaption>The sentence from the paper's Fig. 3: "The agreement on the European Economic Area was signed in August 1992." Click a French word (left) to see how much weight it puts on each English word (darker = more). Weights here are hand-set to match the pattern the paper describes; the real figure comes from the trained model. Note the reversed block for "zone économique européenne", and "l'" looking at both "the" and the following noun.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>For every word it writes, the decoder learns where to look in the source and blends what it finds there. That is attention.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why do the weights need to add up to 1?</dt>
+    <dd>So that the context is an average of source-word descriptions: a blend in which focusing more on one word means focusing less on others.</dd>
+    <dt>Who decides which source words match which output words?</dt>
+    <dd>No one. The scoring network is trained only to make good translations; sensible alignments emerge because they help.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §3.2</p>
+  <h2>Describing each word with both sides of the sentence</h2>
+  <div class="prose">
+    <p>For the look-back to work, each source word's description should say something about the word in its setting, not just the word alone. "Bank" means different things in "river bank" and "bank loan".</p>
+    <p>So the encoder reads the sentence twice: once left to right and once right to left (a <strong>bidirectional</strong> recurrent network). Each word's description is the two readings stuck together: one summarising everything up to and including that word, the other everything from that word to the end. The description is mostly about the word itself and its near neighbours, because recurrent networks remember recent words best.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Highlighting a word in a paragraph and writing a margin note that says what it means here, having read the text both forwards and backwards.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Each source word gets its own description that reflects the words on both sides of it, ready for the decoder to consult.</p>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §5 · Table 1 · Figs. 2–3</p>
+  <h2>Long sentences stop being a problem</h2>
+  <div class="prose">
+    <p>The authors trained English-to-French systems on a large collection of parallel text from the WMT 2014 shared task. Scores are given in <strong>BLEU</strong>, a standard measure of how many word sequences a machine translation shares with human reference translations (higher is better).</p>
+    <p>The old encoder–decoder, trained on sentences up to 50 words, scored 17.8 BLEU. The attention model with the same training data scored 26.8, and a version trained longer scored 28.5. More tellingly, the old system's quality fell steeply as sentences got longer, while the attention model's barely changed, even beyond 50 words (Fig. 2).</p>
+    <p>The best attention model still trailed Moses, a mature phrase-based translation system built over many years, on all sentences (28.5 vs 33.3 BLEU), but matched and slightly beat it when sentences with rare words were left out, even though Moses had also used an extra 418 million words of French text.</p>
+    <p>The learned weights, drawn as grids (Fig. 3), mostly run along the diagonal, as you'd expect for English and French, but bend where word order differs, such as adjectives that come after the noun in French.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>With attention, translation quality no longer collapsed on long sentences, and the weights turned out to be readable word alignments.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is the attention grid mostly diagonal for English to French?</dt>
+    <dd>The two languages mostly keep the same word order, so the n-th French word usually corresponds to a word near the n-th English word.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §6–7 · What came next</p>
+  <h2>From a helper to the whole machine</h2>
+  <div class="prose">
+    <p>Here attention is an add-on to recurrent networks, which still read the sentence one word at a time. Within three years, the <a href="transformer.html">Transformer</a> asked: what if attention is all you need? It dropped the recurrent parts entirely and let every word attend to every other word, in parallel. Today's large language models are built from that.</p>
+    <p>The paper's own limits were practical: the vocabulary was capped at 30,000 words, so rarer words became an "unknown" token, which the authors name as the main challenge left. And computing a weight for every source word at every output step costs time proportional to the product of the two lengths, which they judged fine for sentences but possibly limiting elsewhere.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>A year later, Luong, Pham and Manning (2015) showed a simpler scoring rule, a plain dot product between the decoder state and each source description, worked as well or better. The Transformer uses a scaled version of that dot product rather than this paper's small scoring network. Rare words were tackled by splitting words into smaller pieces (subword units), now standard.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>This paper introduced learned soft attention as a fix for translation; it went on to become the core operation of modern language models.</p>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Neural machine translation builds a single network, jointly tuned to maximise translation performance; existing models are encoder–decoders that encode a source sentence into a fixed-length vector. The authors conjecture that the fixed-length vector is a bottleneck and propose letting the model automatically (soft-)search for parts of the source sentence relevant to predicting each target word, without forming hard segments explicitly. The resulting system matches the English–French performance of the existing phrase-based state of the art, and qualitative analysis shows the soft alignments agree with intuition. ICLR 2015 (arXiv 1409.0473, Sept 2014).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2.1 · Eqs. 1–3</p>
+  <h2>The RNN encoder–decoder baseline</h2>
+  <div class="prose"><p>Given source <var>x</var> = (<var>x</var><sub>1</sub>, …, <var>x</var><sub><var>T<sub>x</sub></var></sub>), an encoder RNN computes hidden states and a summary</p></div>
+  <div class="eq"><var>h<sub>t</sub></var> = <var>f</var>(<var>x<sub>t</sub></var>, <var>h</var><sub><var>t</var>−1</sub>), &nbsp; <var>c</var> = <var>q</var>({<var>h</var><sub>1</sub>, …, <var>h</var><sub><var>T<sub>x</sub></var></sub>}) <span class="n">(1)</span></div>
+  <div class="eq"><var>p</var>(<var>y</var>) = ∏<sub><var>t</var></sub> <var>p</var>(<var>y<sub>t</sub></var> | {<var>y</var><sub>1</sub>, …, <var>y</var><sub><var>t</var>−1</sub>}, <var>c</var>), &nbsp; <var>p</var>(<var>y<sub>t</sub></var> | …) = <var>g</var>(<var>y</var><sub><var>t</var>−1</sub>, <var>s<sub>t</sub></var>, <var>c</var>) <span class="n">(2–3)</span></div>
+  <div class="prose"><p>Typically <var>q</var> just takes the last state, <var>c</var> = <var>h</var><sub><var>T<sub>x</sub></var></sub> (Sutskever et al. 2014 used LSTMs; Cho et al. 2014 the gated unit later called the GRU). The single <var>c</var> is shared by every decoding step.</p></div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3.1 · Eqs. 4–6 · App. A</p>
+  <h2>The decoder with an alignment model</h2>
+  <div class="prose"><p>The proposed model conditions each target word on a distinct context <var>c<sub>i</sub></var>:</p></div>
+  <div class="eq"><var>p</var>(<var>y<sub>i</sub></var> | <var>y</var><sub>1</sub>, …, <var>y</var><sub><var>i</var>−1</sub>, <var>x</var>) = <var>g</var>(<var>y</var><sub><var>i</var>−1</sub>, <var>s<sub>i</sub></var>, <var>c<sub>i</sub></var>), &nbsp; <var>s<sub>i</sub></var> = <var>f</var>(<var>s</var><sub><var>i</var>−1</sub>, <var>y</var><sub><var>i</var>−1</sub>, <var>c<sub>i</sub></var>) <span class="n">(4)</span></div>
+  <div class="eq"><var>c<sub>i</sub></var> = Σ<sub><var>j</var>=1</sub><sup><var>T<sub>x</sub></var></sup> α<sub><var>ij</var></sub> <var>h<sub>j</sub></var> <span class="n">(5)</span></div>
+  <div class="eq">α<sub><var>ij</var></sub> = exp(<var>e<sub>ij</sub></var>) / Σ<sub><var>k</var>=1</sub><sup><var>T<sub>x</sub></var></sup> exp(<var>e<sub>ik</sub></var>), &nbsp; <var>e<sub>ij</sub></var> = <var>a</var>(<var>s</var><sub><var>i</var>−1</sub>, <var>h<sub>j</sub></var>) <span class="n">(6)</span></div>
+  <div class="eq"><var>a</var>(<var>s</var><sub><var>i</var>−1</sub>, <var>h<sub>j</sub></var>) = <var>v<sub>a</sub></var><sup>⊤</sup> tanh(<var>W<sub>a</sub></var> <var>s</var><sub><var>i</var>−1</sub> + <var>U<sub>a</sub></var> <var>h<sub>j</sub></var>), &nbsp; <var>W<sub>a</sub></var> ∈ ℝ<sup><var>n′</var>×<var>n</var></sup>, <var>U<sub>a</sub></var> ∈ ℝ<sup><var>n′</var>×2<var>n</var></sup>, <var>v<sub>a</sub></var> ∈ ℝ<sup><var>n′</var></sup></div>
+  <div class="prose">
+    <p>The alignment model <var>a</var> is a one-hidden-layer MLP (the "additive" or "concat" score), trained jointly by backpropagation; because α is a deterministic soft function, no latent alignment variable or sampling is needed. The paper interprets <var>c<sub>i</sub></var> as an <em>expected annotation</em>, the expectation of <var>h<sub>j</sub></var> under the alignment distribution α<sub><var>i</var>·</sub>. Since <var>a</var> must be evaluated <var>T<sub>x</sub></var> × <var>T<sub>y</sub></var> times per sentence pair, <var>U<sub>a</sub>h<sub>j</sub></var> does not depend on <var>i</var> and can be precomputed (App. A.1.2). Note the score uses the <em>previous</em> decoder state <var>s</var><sub><var>i</var>−1</sub>: the model decides where to look before updating its state.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Decoder state direction <input type="range" id="am-a" min="0" max="360" step="2" value="40"><output id="am-a-o">40</output>°</label><label>Score scale <input type="range" id="am-k" min="0.2" max="3" step="0.1" value="1" data-fmt="1"><output id="am-k-o">1.0</output></label></div>
+    <div class="svgbox"><svg id="am" viewBox="0 0 600 270" role="img" aria-label="Additive alignment scores, softmax weights and the resulting context vector"></svg></div>
+    <p class="readout" id="am-r"></p>
+    <figcaption>Five annotations <var>h<sub>j</sub></var> (here 2-D unit vectors for display) and a decoder state <var>s</var><sub><var>i</var>−1</sub> (the amber arrow). Scores use the paper's form <var>v<sub>a</sub></var><sup>⊤</sup>tanh(<var>W<sub>a</sub>s</var> + <var>U<sub>a</sub>h<sub>j</sub></var>) with <var>n′</var> = 8 hand-chosen hidden units (plus a bias, so that the toy rewards <var>h<sub>j</sub></var> pointing the same way as <var>s</var>); trained weights would learn whatever compatibility helps translation. The ring is <var>c<sub>i</sub></var>, always inside the hull of the annotations. Raise the scale to sharpen α towards a hard choice.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why must <var>c<sub>i</sub></var> lie in the convex hull of the annotations?</dt>
+    <dd>The α<sub><var>ij</var></sub> are non-negative and sum to 1, so <var>c<sub>i</sub></var> is a convex combination of the <var>h<sub>j</sub></var>.</dd>
+    <dt>What is gained by computing <var>e<sub>ij</sub></var> from <var>s</var><sub><var>i</var>−1</sub> instead of <var>s<sub>i</sub></var>?</dt>
+    <dd><var>s<sub>i</sub></var> itself depends on <var>c<sub>i</sub></var> (Eq. 4), so scoring with it would be circular; using <var>s</var><sub><var>i</var>−1</sub> keeps the computation a single forward pass. Luong et al. (2015) later scored with the current state by reordering the computation.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §3.2 · §4 · App. A–B</p>
+  <h2>Encoder, data and training</h2>
+  <div class="prose">
+    <p><strong>Encoder.</strong> A bidirectional RNN; the annotation for word <var>j</var> is the concatenation <var>h<sub>j</sub></var> = [<var>h⃗<sub>j</sub></var><sup>⊤</sup>; <var>h⃖<sub>j</sub></var><sup>⊤</sup>]<sup>⊤</sup>. Both directions and the decoder use gated hidden units (the GRU of Cho et al., 2014) with <var>n</var> = 1,000 units each; <var>n′</var> = 1,000 for the alignment MLP. The decoder's initial state is <var>s</var><sub>0</sub> = tanh(<var>W<sub>s</sub></var> <var>h⃖</var><sub>1</sub>). The output <var>g</var> uses a single maxout hidden layer followed by softmax over the target vocabulary.</p>
+    <p><strong>Data (§4.1).</strong> WMT'14 English–French parallel corpora (Europarl, news commentary, UN, two crawled corpora), 850M words, reduced to 348M by the data-selection method of Axelrod et al. (2011). 30,000-word shortlists per language; everything else maps to [UNK]. Development: news-test-2012 + 2013. Test: news-test-2014, 3,003 sentences.</p>
+    <p><strong>Training (App. B).</strong> Minibatch SGD with Adadelta (ε = 10<sup>−6</sup>, ρ = 0.95), minibatches of 80 sentences, gradient norm clipped to 1; about 5 days per model. Decoding with beam search. Two length regimes: models trained on sentences up to 30 words (RNNencdec-30, RNNsearch-30) and up to 50 words (-50).</p>
+  </div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §5 · Table 1 · Figs. 2–3</p>
+  <h2>Results</h2>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" id="bl-all">All sentences</button><button class="btn" id="bl-nounk">No [UNK] sentences</button></div>
+    <div class="svgbox"><svg id="bl" viewBox="0 0 600 240" role="img" aria-label="BLEU scores from Table 1"></svg></div>
+    <p class="readout" id="bl-r"></p>
+    <figcaption>Test-set BLEU from Table 1. "No [UNK]" restricts to sentences without unknown words in source or reference. RNNsearch-50* was trained much longer, until development performance stopped improving. Moses additionally used a separate 418M-word monolingual corpus.</figcaption>
+  </figure>
+  <div class="prose">
+    <p><strong>Length robustness (Fig. 2).</strong> BLEU against sentence length: both RNNencdec models degrade sharply as length grows, RNNsearch-30 degrades more gently, and RNNsearch-50 shows no deterioration even for sentences of 50 words or more. Appendix C shows long-sentence translations where RNNencdec drifts from the source meaning after about 30 words.</p>
+    <p><strong>Alignments (§5.2.1, Fig. 3).</strong> Visualised α matrices are largely monotonic with non-trivial reorderings. In "European Economic Area" → "zone économique européenne", the model aligns "zone" to "Area", then steps back through the two adjectives. For "the man" → "l'homme", a hard alignment of "the" to "l'" is insufficient, since the article form depends on the following noun; soft alignment lets the model attend to both "the" and "man".</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>RNNsearch-30 beats RNNencdec-50 on all sentences (21.5 vs 17.8). Why is that notable?</dt>
+    <dd>The attention model trained only on sentences of up to 30 words outperforms a fixed-vector model trained on longer ones, consistent with the bottleneck being the fixed-length vector, not the amount of training data.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §6–7 · Lineage</p>
+  <h2>Limitations and what replaced what</h2>
+  <div class="prose"><ul>
+    <li><strong>Rare words.</strong> The 30k shortlist and [UNK] handling is the main weakness the conclusion names. It was later addressed by subword segmentation (byte-pair encoding, Sennrich et al., 2016) and word pieces.</li>
+    <li><strong>Cost.</strong> Attention needs <var>T<sub>x</sub></var>·<var>T<sub>y</sub></var> score evaluations; the authors (§6.1) consider this acceptable for 15–40-word sentences but a possible limitation for other tasks. This quadratic cost, now <var>n</var><sup>2</sup> for self-attention, is what <a href="flash.html">FlashAttention</a> engineers around.</li>
+    <li><strong>Precursors.</strong> Graves (2013) used a learned soft window over the input for handwriting synthesis; the paper discusses it in §6.1 and notes its alignment is constrained to move monotonically, whereas here any source position can be chosen at each step.</li>
+    <li><strong>Score functions.</strong> Luong, Pham &amp; Manning (2015) compared dot, general (<var>s</var><sup>⊤</sup><var>W h</var>) and concat (this paper's additive) scores, and global versus local attention. Google's GNMT (Wu et al., 2016) scaled attention-based RNN translation to production.</li>
+    <li><strong>Self-attention.</strong> <a href="transformer.html">Vaswani et al. (2017)</a> removed recurrence, applied attention within a sequence as well as between encoder and decoder, used scaled dot-product scores and multiple heads. The additive score survives mostly in textbooks.</li>
+  </ul></div>
+  <div class="later"><span class="label">Later refinement</span>The paper's title and equations speak of alignment, but §3.1 already describes the mechanism as attention: "the decoder decides parts of the source sentence to pay attention to". The later field adopted that name. Later work also cautioned that attention weights are not always faithful explanations of a model's decisions (Jain &amp; Wallace, 2019).</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>NMT</dt><dd>Neural machine translation: one network trained end to end to map source to target sentences.</dd>
+    <dt>Encoder–decoder</dt><dd>One RNN reads the source, another generates the target conditioned on it.</dd>
+    <dt>Annotation h<sub>j</sub></dt><dd>The bidirectional encoder state for source word j.</dd>
+    <dt>Alignment model a</dt><dd>MLP scoring how well source position j matches target position i.</dd>
+    <dt>Soft alignment</dt><dd>A probability distribution over source positions, rather than one chosen position.</dd>
+    <dt>Context c<sub>i</sub></dt><dd>Weighted average of annotations used to emit target word i.</dd>
+    <dt>BLEU</dt><dd>Modified n-gram precision against reference translations with a brevity penalty.</dd>
+    <dt>Maxout</dt><dd>A unit outputting the maximum of several linear functions.</dd>
+    <dt>Moses</dt><dd>Open-source phrase-based statistical MT system, the conventional baseline.</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+(function(){ // bottleneck toy
+  var svg=$('#bn'), d=128, seed=1, Vn=50, Ts=[]; for (var t=2;t<=60;t+=2) Ts.push(t);
+  function sim(){ var r=rng(seed*7919+d), vocab=[], k, i, j;
+    for (k=0;k<Vn;k++){ var v=[]; for (i=0;i<d;i++) v.push(gauss(r)); var n=Math.sqrt(v.reduce(function(s,x){return s+x*x;},0)); vocab.push(v.map(function(x){return x/n;})); }
+    // position t scrambles a vector by a random permutation with random sign flips (an orthogonal transformation)
+    var P=[]; for (var t=0;t<60;t++){ var perm=[]; for (i=0;i<d;i++) perm.push(i); for (i=d-1;i>0;i--){ j=Math.floor(r()*(i+1)); var tmp=perm[i]; perm[i]=perm[j]; perm[j]=tmp; } var sg=[]; for (i=0;i<d;i++) sg.push(r()<0.5?-1:1); P.push([perm,sg]); }
+    var trials=6, acc=[];
+    Ts.forEach(function(T){ var ok=0, tot=0;
+      for (var tr=0;tr<trials;tr++){ var seq=[]; for (var t=0;t<T;t++) seq.push(Math.floor(r()*Vn));
+        var s=new Array(d).fill(0); for (t=0;t<T;t++){ var pp=P[t], v=vocab[seq[t]]; for (i=0;i<d;i++) s[pp[0][i]]+=pp[1][i]*v[i]; }
+        for (t=0;t<T;t++){ var q=P[t], u=new Array(d); for (i=0;i<d;i++) u[i]=q[1][i]*s[q[0][i]];
+          var best=-1, bs=-1e9; for (k=0;k<Vn;k++){ var dp=0; for (j=0;j<d;j++) dp+=vocab[k][j]*u[j]; if (dp>bs){ bs=dp; best=k; } } if (best===seq[t]) ok++; tot++; } }
+      acc.push(ok/tot); });
+    return acc; }
+  function draw(){ var acc=sim(); clear(svg); var x0=60,x1=580,y0=210,y1=20; function X(T){ return x0+(T/60)*(x1-x0); } function Y(a){ return y0-a*(y0-y1); }
+    [0,0.25,0.5,0.75,1].forEach(function(a){ S('line',{x1:x0,y1:Y(a),x2:x1,y2:Y(a),'class':'grid'},svg); S('text',{x:x0-6,y:Y(a)+4,'class':'t-s end'},svg,Math.round(a*100)+'%'); });
+    [0,10,20,30,40,50,60].forEach(function(T){ S('text',{x:X(T),y:y0+16,'class':'t-s mid'},svg,T); });
+    S('text',{x:(x0+x1)/2,y:244,'class':'t-s mid'},svg,'sentence length (words)');
+    S('line',{x1:X(2),y1:Y(1),x2:X(60),y2:Y(1),'class':'w-ok'},svg); S('text',{x:X(60),y:Y(1)-6,'class':'t-ok end'},svg,'per-word notes (look back): 100%');
+    var dd=''; acc.forEach(function(a,i){ dd+=(i?'L':'M')+X(Ts[i])+','+Y(a); }); S('path',{d:dd,'class':'w-fire'},svg);
+    acc.forEach(function(a,i){ S('circle',{cx:X(Ts[i]),cy:Y(a),r:2.5,'class':'f-fire'},svg); });
+    S('text',{x:X(40),y:Y(acc[19])-10,'class':'t-fire'},svg,'one fixed summary');
+    var half=Ts.filter(function(T,i){ return acc[i]<0.5; })[0];
+    $('#bn-r').innerHTML='Summary of <b>'+d+'</b> numbers: recall is <b>'+Math.round(acc[2]*100)+'%</b> at 6 words, <b>'+Math.round(acc[14]*100)+'%</b> at 30 words, <b>'+Math.round(acc[29]*100)+'%</b> at 60 words'+(half?'; it drops below half at about '+half+' words.':'.'); }
+  bindRange('bn-d',function(v){ d=v; draw(); });
+  $('#bn-re').onclick=function(){ seed++; draw(); };
+})();
+(function(){ // alignment grid
+  var en=['The','agreement','on','the','European','Economic','Area','was','signed','in','August','1992','.'];
+  var fr=["L'",'accord','sur','la','zone','économique','européenne','a','été','signé','en','août','1992','.'];
+  var A={0:{0:0.55,1:0.4},1:{1:0.9},2:{2:0.9},3:{3:0.7,6:0.2},4:{6:0.85},5:{5:0.85},6:{4:0.85},7:{7:0.8},8:{7:0.5,8:0.35},9:{8:0.9},10:{9:0.9},11:{10:0.9},12:{11:0.9},13:{12:0.95}};
+  var M=fr.map(function(_,i){ var row=en.map(function(_,j){ return (A[i][j]||0)+0.02; }); var s=row.reduce(function(a,b){return a+b;},0); return row.map(function(x){return x/s;}); });
+  var svg=$('#al'), sel=4, mode='soft', all=false;
+  function draw(){ clear(svg); var x0=130, y0=78, cw=38, ch=17;
+    en.forEach(function(w,j){ var t=S('text',{x:0,y:0,'class':'t-s',transform:'translate('+(x0+j*cw+cw/2+4)+','+(y0-6)+') rotate(-50)'},svg,w); });
+    fr.forEach(function(w,i){ var tx=S('text',{x:x0-8,y:y0+i*ch+12,'class':(i===sel?'t-fire':'t')+' end clickable'},svg,w); tx.addEventListener('click',function(){ sel=i; all=false; draw(); });
+      var row=M[i], mx=row.indexOf(Math.max.apply(null,row));
+      row.forEach(function(a,j){ var v=mode==='hard'?(j===mx?1:0):a; var show=all||i===sel;
+        var rc=S('rect',{x:x0+j*cw,y:y0+i*ch,width:cw-2,height:ch-2,'class':show&&v>0.03?'f-fire':'f-rule','fill-opacity':show?Math.max(0.12,v):0.25},svg);
+        rc.classList.add('clickable'); rc.addEventListener('click',function(){ sel=i; all=false; draw(); }); }); });
+    var row=M[sel], top=row.map(function(a,j){ return [a,j]; }).sort(function(a,b){ return b[0]-a[0]; }).slice(0,2);
+    $('#al-r').innerHTML = all ? 'The whole grid: mostly diagonal, with a reversed block where French puts adjectives after the noun.' :
+      'Writing <b>'+fr[sel]+'</b>: '+(mode==='hard'?'hard choice looks only at <b>'+en[top[0][1]]+'</b>.':'weight '+fmt(top[0][0],2)+' on <b>'+en[top[0][1]]+'</b>, '+fmt(top[1][0],2)+' on <b>'+en[top[1][1]]+'</b>.')+(sel===0?' The article form (le / la / l\') depends on the next noun, so soft weights help here.':''); }
+  function setMode(m){ mode=m; $('#al-soft').setAttribute('aria-pressed',m==='soft'); $('#al-hard').setAttribute('aria-pressed',m==='hard'); draw(); }
+  $('#al-soft').onclick=function(){ setMode('soft'); }; $('#al-hard').onclick=function(){ setMode('hard'); };
+  $('#al-all').onclick=function(){ all=!all; draw(); };
+  draw();
+})();
+(function(){ // additive alignment toy
+  var svg=$('#am'), ang=40, kk=1, words=['the','cat','sat','on','mat'], angs=[200,95,10,300,150];
+  var H=angs.map(function(a){ a=a*Math.PI/180; return [Math.cos(a),Math.sin(a)]; });
+  var U=[]; for (var k=0;k<8;k++){ var t=k*Math.PI/4; U.push([Math.cos(t),Math.sin(t)]); }
+  function score(s,h){ var e=0; for (var k=0;k<8;k++){ var u=U[k]; e+=Math.tanh(2*(u[0]*s[0]+u[1]*s[1])+2*(u[0]*h[0]+u[1]*h[1])-2.5); } return e; }
+  function draw(){ clear(svg); var a=ang*Math.PI/180, s=[Math.cos(a),Math.sin(a)];
+    var e=H.map(function(h){ return kk*score(s,h); }), m=Math.max.apply(null,e), ex=e.map(function(x){return Math.exp(x-m);}), Z=ex.reduce(function(p,q){return p+q;},0), al=ex.map(function(x){return x/Z;});
+    var c=[0,0]; al.forEach(function(w,j){ c[0]+=w*H[j][0]; c[1]+=w*H[j][1]; });
+    var cx=150, cy=135, R=95; S('circle',{cx:cx,cy:cy,r:R,'class':'grid'},svg); S('line',{x1:cx-R-10,y1:cy,x2:cx+R+10,y2:cy,'class':'grid'},svg); S('line',{x1:cx,y1:cy-R-10,x2:cx,y2:cy+R+10,'class':'grid'},svg);
+    var hull=''; angs.slice().map(function(x,j){return [x,j];}).sort(function(p,q){return p[0]-q[0];}).forEach(function(p,i){ hull+=(i?'L':'M')+(cx+H[p[1]][0]*R)+','+(cy-H[p[1]][1]*R); }); S('path',{d:hull+'Z','class':'area'},svg);
+    H.forEach(function(h,j){ S('circle',{cx:cx+h[0]*R,cy:cy-h[1]*R,r:4+al[j]*10,'class':'u-wire','fill-opacity':0.3+0.7*al[j]},svg); S('text',{x:cx+h[0]*(R+30),y:cy-h[1]*(R+22)+4,'class':'t-wire mid'},svg,'h'+(j+1)+' '+words[j]); });
+    S('line',{x1:cx,y1:cy,x2:cx+s[0]*R*0.8,y2:cy-s[1]*R*0.8,'class':'w-fire','marker-end':'url(#af)'},svg);
+    S('circle',{cx:cx+c[0]*R,cy:cy-c[1]*R,r:7,'class':'w-ink'},svg); S('text',{x:cx+c[0]*R+10,y:cy-c[1]*R-8,'class':'t'},svg,'c');
+    var bx=340; S('text',{x:bx,y:22,'class':'t-h'},svg,'score e_j  →  weight α_j');
+    al.forEach(function(w,j){ var y=40+j*42; S('text',{x:bx,y:y+16,'class':'t'},svg,'h'+(j+1)); S('text',{x:bx+30,y:y+16,'class':'t-s'},svg,fmt(e[j],2));
+      S('rect',{x:bx+80,y:y+2,width:140,height:20,'class':'f-rule'},svg); S('rect',{x:bx+80,y:y+2,width:140*w,height:20,'class':'f-fire'},svg); S('text',{x:bx+226,y:y+16,'class':'t-s'},svg,fmt(w,2)); });
+    var ent=-al.reduce(function(p,w){ return p+(w>0?w*Math.log(w):0); },0);
+    $('#am-r').innerHTML='Largest weight <b>'+fmt(Math.max.apply(null,al),2)+'</b> on h'+(al.indexOf(Math.max.apply(null,al))+1)+'; entropy of α = <b>'+fmt(ent,2)+'</b> nats (uniform would be '+fmt(Math.log(5),2)+'). |c| = '+fmt(Math.hypot(c[0],c[1]),2)+'.'; }
+  bindRange('am-a',function(v){ ang=v; draw(); }); bindRange('am-k',function(v){ kk=v; draw(); });
+})();
+(function(){ // BLEU table 1
+  var svg=$('#bl'), rows=[['RNNencdec-30',13.93,24.19],['RNNsearch-30',21.50,31.44],['RNNencdec-50',17.82,26.71],['RNNsearch-50',26.75,34.16],['RNNsearch-50*',28.45,36.15],['Moses',33.30,35.63]], col=1;
+  function draw(){ clear(svg); var x0=120, sc=440/40;
+    [0,10,20,30,40].forEach(function(v){ S('line',{x1:x0+v*sc,y1:10,x2:x0+v*sc,y2:212,'class':'grid'},svg); S('text',{x:x0+v*sc,y:228,'class':'t-s mid'},svg,v); });
+    rows.forEach(function(r,i){ var y=14+i*33, v=r[col]; S('text',{x:x0-8,y:y+17,'class':'t end'},svg,r[0]);
+      S('rect',{x:x0,y:y,width:v*sc,height:24,'class':r[0]==='Moses'?'f-muted':(/search/.test(r[0])?'f-fire':'f-wire')},svg); S('text',{x:x0+v*sc+6,y:y+17,'class':'t-s'},svg,fmt(v,2)); });
+    $('#bl-r').innerHTML=col===1?'All sentences: attention adds <b>+8.9</b> BLEU at length 50 (17.82 → 26.75).':'Without [UNK] sentences RNNsearch-50* (<b>36.15</b>) edges past Moses (<b>35.63</b>).';
+    $('#bl-all').classList.toggle('on',col===1); $('#bl-nounk').classList.toggle('on',col===2); }
+  $('#bl-all').onclick=function(){ col=1; draw(); }; $('#bl-nounk').onclick=function(){ col=2; draw(); }; draw();
+})();
+</script>

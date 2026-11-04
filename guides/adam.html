@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adam (2014) study guide</title>
+<meta name="description" content="How big a step should each of a network&#x27;s millions of weights take when it learns? Adam&#x27;s answer is to let every weight set its own step size, using a running average of its recent gradients and a running average of their squares. The recipe is a few lines long, needs almost no tuning, and">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Machine learning &amp; training</b> · 2014</p>
+  <h1>Adam: A Method for Stochastic Optimization</h1>
+  <p class="cite">Diederik Kingma, Jimmy Ba · ICLR 2015</p>
+  <p class="lede">How big a step should each of a network's millions of weights take when it learns? Adam's answer is to let every weight set its own step size, using a running average of its recent gradients and a running average of their squares. The recipe is a few lines long, needs almost no tuning, and became the default way to train neural networks for a decade, even though its original convergence proof turned out to be wrong.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/1412.6980">Read the paper (free)</a> <a href="https://lovespark.love/papers/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, independent AI review, but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Training a network means nudging millions of numbers ("weights") downhill on an error landscape, and plain gradient descent uses one step size for all of them, which is a poor fit when some weights get huge, noisy signals and others get tiny, rare ones.</p>
+  <p>Adam keeps two running averages for every weight: the average recent slope (which way to go) and the average recent squared slope (how big and how noisy the slopes usually are).</p>
+  <p>Each step moves the weight by the first average divided by the square root of the second, so every weight takes a step of roughly the same, sensible size, no matter how large its raw gradients are.</p>
+  <p>A small correction fixes the fact that both averages start at zero, and with default settings that rarely need changing it trained logistic regression, multilayer networks and convolutional networks as fast as or faster than the alternatives.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1</p>
+  <h2>One step size does not fit all</h2>
+  <div class="prose">
+    <p>A neural network learns by <strong>gradient descent</strong>. For every weight, the <strong>gradient</strong> says which direction would reduce the error and how steeply. You move each weight a little in that direction, multiplied by a single number called the <strong>learning rate</strong>, and repeat millions of times.</p>
+    <p>In practice the gradient is computed on a small random batch of examples rather than the whole dataset, so it is <strong>noisy</strong>: a wobbly estimate of the true slope. That is why this is called <em>stochastic</em> (random) optimisation, the word in the paper's title.</p>
+    <p>The trouble is that different weights live in very different worlds. Some get large gradients on every batch. Others, say the weight for a rare word, get a useful signal only once in a while. A learning rate small enough to keep the first group stable leaves the second group crawling. A learning rate big enough for the second makes the first explode.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Imagine one volume knob that controls every instrument in an orchestra at once. The drums are deafening and the flute is inaudible. What you want is a separate knob per instrument that adjusts itself to how loud that instrument has recently been.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Gradient descent with one shared step size struggles when weights see gradients of very different sizes or noise levels.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §2 · Algorithm 1</p>
+  <h2>Two running averages per weight</h2>
+  <div class="prose">
+    <p>Adam stands for <strong>adaptive moment estimation</strong>. A "moment" is a statistician's word for a kind of average. Adam keeps two for each weight:</p>
+    <ul>
+      <li>The <strong>first moment</strong>, <var>m</var>: a running average of recent gradients. Noise in different batches points in different directions and partly cancels, so <var>m</var> tracks the consistent direction. This is the same idea as <strong>momentum</strong>, a ball that keeps rolling the way it has been going.</li>
+      <li>The <strong>second moment</strong>, <var>v</var>: a running average of recent <em>squared</em> gradients. Squaring removes the sign, so <var>v</var> measures how big the gradients typically are, whether they agree or not.</li>
+    </ul>
+    <p>"Running average" here means an exponential moving average: each step, keep 90% of the old value and mix in 10% of the new gradient (for <var>m</var>), or keep 99.9% and mix in 0.1% of the new squared gradient (for <var>v</var>). Old information fades gradually instead of being forgotten all at once.</p>
+    <p>The step is then <var>m</var> divided by the square root of <var>v</var>, times a base step size α (0.001 by default). Dividing by √<var>v</var> undoes the weight's typical gradient size, so a weight with huge gradients and a weight with tiny ones both move by roughly α per step.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Learning rate <input type="range" id="rv-lr" min="0.01" max="0.3" step="0.01" value="0.08" data-fmt="2"><output id="rv-lr-o">0.08</output></label>
+      <button class="btn" id="rv-go">Race 80 steps</button>
+    </div>
+    <div class="svgbox"><svg id="rv" viewBox="0 0 600 280" role="img" aria-label="Three optimisers descending a long, narrow valley"></svg></div>
+    <p class="readout" id="rv-r"></p>
+    <figcaption>A toy error landscape: a long valley that is 200 times steeper across (up and down) than along it (left to right). The minimum is the cross. All three start top left. Plain gradient descent (blue) uses the learning rate directly; momentum (dashed) uses it with momentum 0.9; Adam (amber) uses it as α with the default β values. Plain gradient descent creeps along the flat direction, and above a learning rate of 0.1 it bounces out of the valley because the steep direction cannot tolerate the step. Momentum helps a lot until about 0.19, where it too blows up. Adam's per-direction scaling keeps its step near α in both directions, so it never diverges; at large α it just jitters around the minimum. Illustrative; not from the paper.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Adam averages the gradient to find a steady direction, and divides by the typical gradient size so every weight gets a step of about the same length.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>A weight's gradients alternate +5, −5, +5, −5. Roughly what are <var>m</var> and <var>v</var>?</dt>
+    <dd><var>m</var> stays near zero, because the signs cancel; <var>v</var> settles near 25. So the step <var>m</var>/√<var>v</var> is tiny: Adam slows down when the gradient has no consistent direction.</dd>
+    <dt>Why does dividing by √<var>v</var> rather than <var>v</var> give a step of about α?</dt>
+    <dd><var>v</var> is in squared units. Its square root is in the same units as the gradient, so <var>m</var>/√<var>v</var> is a pure number near ±1 when gradients are consistent.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §2.1</p>
+  <h2>A step size you can reason about</h2>
+  <div class="prose">
+    <p>Because of that division, the size of each step barely depends on how large the gradients are. If you multiplied every gradient by 1,000, both the top (<var>m</var>) and the bottom (√<var>v</var>) would grow 1,000 times and the step would not change at all. The paper points out that this makes α easy to interpret: it is roughly the most a weight will move in one step, a kind of "trust region" you can set in advance from knowing what sensible weight values look like.</p>
+    <p>The ratio <var>m</var>/√<var>v</var> also behaves like a <strong>signal-to-noise ratio</strong>. When recent gradients agree, the ratio is near 1 and Adam takes a full step. When they disagree, which tends to happen near the bottom of the valley where the noise dominates, the ratio shrinks and Adam automatically takes smaller steps. The paper calls this a form of automatic annealing (gradually cooling down).</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A hiker in fog asks ten passers-by which way the village is. If all ten point the same way, she strides confidently. If they point in all directions, she shuffles. The length of her stride depends on how much the answers agree, not on how loudly people shout.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Adam's step is roughly α when the gradient is consistent and smaller when it is noisy, and it does not care about the overall scale of the gradients.</p>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §3 · Fig. 4</p>
+  <h2>Fixing the slow start</h2>
+  <div class="prose">
+    <p>Both running averages start at zero. After one step, <var>m</var> is only 10% of the first gradient and <var>v</var> only 0.1% of its square. They are biased towards zero, and badly so for the slow-moving <var>v</var>, which takes thousands of steps to warm up.</p>
+    <p>That bias does not cancel. On the very first step, the top is 0.1 × the gradient and the bottom is √0.001 ≈ 0.032 × the gradient, so the step comes out about three times too large. The paper's fix, called <strong>bias correction</strong>, divides each average by exactly how much of it has "filled up" so far. After one step that is 10% for <var>m</var> and 0.1% for <var>v</var>; after many steps the correction fades to nothing.</p>
+    <p>Try it below. The gradient is a steady 1 with some noise. Watch the uncorrected step overshoot early on.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>β₁ (first average) <input type="range" id="bc-b1" min="0" max="0.99" step="0.01" value="0.9" data-fmt="2"><output id="bc-b1-o">0.90</output></label>
+      <label>β₂ (second average) <input type="range" id="bc-b2" min="0.9" max="0.9999" step="0.0001" value="0.999" data-fmt="4"><output id="bc-b2-o">0.9990</output></label>
+      <button class="btn" id="bc-tog" aria-pressed="true">Bias correction: on</button>
+    </div>
+    <div class="svgbox"><svg id="bc" viewBox="0 0 600 260" role="img" aria-label="Step size over the first 60 steps with and without bias correction"></svg></div>
+    <p class="readout" id="bc-r"></p>
+    <figcaption>Each bar is the size of Adam's step, in units of α, over the first 60 steps for a weight whose gradient is 1 plus noise. The dashed line at 1 is the step you would expect for a consistent gradient. Toggle correction off and the early steps balloon, worst when β₂ is close to 1. The paper's Fig. 4 shows the same effect causing unstable training of a variational autoencoder.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Averages that start at zero are biased; Adam divides them by how full they are, which matters most for the slow second average.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is the first uncorrected step too big rather than too small, when both averages are too small?</dt>
+    <dd>The second average is shrunk far more (to 0.1%) than the first (to 10%), and it sits under a square root in the denominator. 0.1 / √0.001 ≈ 3.16, so the step is about three times too large.</dd>
+    <dt>Does bias correction still matter after 100,000 steps?</dt>
+    <dd>No. The correction factors 1 − β<sup><var>t</var></sup> are essentially 1 by then. It only changes the early steps.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §4, §6</p>
+  <h2>Fast in practice, flawed in theory</h2>
+  <div class="prose">
+    <p>The paper tested Adam on logistic regression for handwritten digits and movie reviews, on multilayer networks with and without dropout, and on convolutional networks for small images. Adam was as fast as or faster than the best alternative in each case, and it did this with the same default settings that rarely needed changing. That robustness is why it spread so widely.</p>
+    <p>The paper also included a mathematical guarantee that, for a simplified class of problems (convex ones, where the landscape is a single bowl), Adam would get as close to the best answer as the best methods known. In 2018 Reddi, Kale and Kumar showed that this proof contained an error, and built a simple bowl-shaped problem on which Adam goes to the <em>worst</em> possible answer. The cause: Adam's averages can forget a rare but large gradient, so its effective step size can grow again when it should be shrinking.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>Reddi et al.'s fix, AMSGrad, keeps the largest second average seen so far, so step sizes never grow. In practice, though, the bigger change came from <a href="adamw.html">AdamW</a> (Loshchilov and Hutter), which fixed how Adam interacts with weight decay. AdamW is what most large language models, including <a href="chinchilla.html">Chinchilla</a>, are trained with.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Adam's practical success outlived its proof: it works very well on real networks, but it is not guaranteed to converge even on simple problems.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>In one sentence, why can Adam fail on the Reddi counterexample?</dt>
+    <dd>A large, informative gradient that appears only rarely is quickly forgotten by the running average of squares, so the many small misleading gradients in between get relatively large steps and win.</dd>
+  </dl></details>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Adam is a first-order method for stochastic objectives based on adaptive estimates of lower-order moments of the gradient. It is simple, computationally efficient, has small memory requirements, is invariant to diagonal rescaling of the gradients, and suits problems that are large in data or parameters, non-stationary, or have very noisy or sparse gradients. Hyperparameters have intuitive interpretations and typically need little tuning. The paper relates Adam to AdaGrad and RMSProp, gives a regret bound in the online convex setting, reports experiments, and introduces AdaMax, an infinity-norm variant. Kingma &amp; Ba, ICLR 2015 (arXiv 1412.6980, final revision v9, 2017).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2 · Algorithm 1</p>
+  <h2>The algorithm</h2>
+  <div class="prose"><p>Given step size α, decay rates β<sub>1</sub>, β<sub>2</sub> ∈ [0, 1), a stochastic objective <var>f</var>(θ) with realisations <var>f</var><sub>1</sub>, …, <var>f<sub>T</sub></var>, and initial θ<sub>0</sub>. All operations are element-wise.</p></div>
+  <pre class="algo"><span class="c"># defaults: α = 0.001, β1 = 0.9, β2 = 0.999, ε = 1e-8</span>
+m0 ← 0;  v0 ← 0;  t ← 0
+while θ not converged:
+    t  ← t + 1
+    gt ← ∇θ ft(θ(t−1))
+    mt ← β1·m(t−1) + (1 − β1)·gt          <span class="c"># biased first moment</span>
+    vt ← β2·v(t−1) + (1 − β2)·gt²         <span class="c"># biased second raw moment</span>
+    m̂t ← mt / (1 − β1^t)                  <span class="c"># bias-corrected</span>
+    v̂t ← vt / (1 − β2^t)
+    θt ← θ(t−1) − α·m̂t / (√v̂t + ε)</pre>
+  <div class="prose"><p>The paper notes the last three lines can be folded into α<sub><var>t</var></sub> = α·√(1 − β<sub>2</sub><sup><var>t</var></sup>)/(1 − β<sub>1</sub><sup><var>t</var></sup>) and θ<sub><var>t</var></sub> ← θ<sub><var>t</var>−1</sub> − α<sub><var>t</var></sub> <var>m<sub>t</sub></var>/(√<var>v<sub>t</sub></var> + ε̂), which is how most libraries implement it (with ε moved slightly). Memory cost is two extra vectors the size of θ.</p>
+  <p>Step through it below for one scalar parameter. Choose a gradient pattern, then scale every gradient by <var>c</var> to see the invariance of §2.1.</p></div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn on" data-pat="steady">Steady</button><button class="btn" data-pat="noisy">Noisy</button><button class="btn" data-pat="sparse">Sparse</button>
+      <label>Scale <var>c</var> <input type="range" id="st-c" min="-3" max="3" step="1" value="0"><output id="st-c-o">0</output></label>
+      <button class="btn" id="st-next">Next step</button><button class="btn" id="st-rst">Reset</button>
+    </div>
+    <div class="svgbox wide"><svg id="st" viewBox="0 0 640 250" role="img" aria-label="Table of Adam's internal quantities for the first steps"></svg></div>
+    <p class="readout" id="st-r"></p>
+    <figcaption>Columns follow Algorithm 1 with default β values, ε = 10⁻⁸ and α = 0.001. "Steady" gives <var>g</var> = 1 every step; "Noisy" gives 1 ± 2 alternating with small jitter; "Sparse" gives 1 on step 1 and every 10th step, else 0. The scale slider multiplies every gradient by 10<sup><var>c</var></sup>: <var>m</var> and <var>v</var> change, the step Δ does not (until ε matters, at very small gradients).</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §2.1</p>
+  <h2>Effective step size and the signal-to-noise ratio</h2>
+  <div class="prose"><p>With ε = 0, the step is Δ<sub><var>t</var></sub> = α·<var>m̂<sub>t</sub></var>/√<var>v̂<sub>t</sub></var>. The paper gives two upper bounds:</p></div>
+  <div class="eq">|Δ<sub><var>t</var></sub>| ≤ α·(1 − β<sub>1</sub>)/√(1 − β<sub>2</sub>) &nbsp; if (1 − β<sub>1</sub>) &gt; √(1 − β<sub>2</sub>), &nbsp;&nbsp; otherwise |Δ<sub><var>t</var></sub>| ≤ α</div>
+  <div class="prose">
+    <p>The first case only arises under severe sparsity, when a gradient has been zero for all but the current step. With the defaults, (1 − β<sub>1</sub>) = 0.1 exceeds √(1 − β<sub>2</sub>) ≈ 0.032, so the first bound is the operative one: an isolated gradient spike after a long run of zeros can produce a step of up to about 0.1/0.032 ≈ 3.16α once both bias corrections have faded (large <var>t</var>). In the common case |𝔼[<var>g</var>]/√𝔼[<var>g</var><sup>2</sup>]| ≤ 1 gives |Δ<sub><var>t</var></sub>| ≲ α, so α sets an approximate trust region in parameter space.</p>
+    <p>The paper calls <var>m̂<sub>t</sub></var>/√<var>v̂<sub>t</sub></var> the signal-to-noise ratio (SNR). As the optimum is approached, the SNR typically falls and steps shrink: a built-in annealing. Invariance: replacing <var>g</var> by <var>c·g</var> scales <var>m̂</var> by <var>c</var> and √<var>v̂</var> by |<var>c</var>|, leaving Δ unchanged. More generally Adam is invariant to any diagonal rescaling of the gradient, since the normalisation is per coordinate.</p>
+    <p>Section 5 relates the preconditioner 1/√<var>v̂</var> to a diagonal approximation of the Fisher information, but with the square root it is more conservative than natural-gradient preconditioning (which would use 1/<var>v̂</var>).</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is Adam not invariant to a full (non-diagonal) linear change of coordinates, as Newton's method is?</dt>
+    <dd>Its preconditioner is diagonal: it rescales each coordinate independently from that coordinate's own gradient history. A rotation mixes coordinates, changing each coordinate's statistics, and Adam's diagonal estimate cannot undo it.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §3, §5</p>
+  <h2>Bias correction, and Adam's relatives</h2>
+  <div class="prose"><p>Unrolling the second-moment recursion with <var>v</var><sub>0</sub> = 0:</p></div>
+  <div class="eq"><var>v<sub>t</sub></var> = (1 − β<sub>2</sub>) Σ<sub><var>i</var>=1</sub><sup><var>t</var></sup> β<sub>2</sub><sup><var>t</var>−<var>i</var></sup> <var>g<sub>i</sub></var><sup>2</sup></div>
+  <div class="eq">𝔼[<var>v<sub>t</sub></var>] = 𝔼[<var>g<sub>t</sub></var><sup>2</sup>]·(1 − β<sub>2</sub><sup><var>t</var></sup>) + ζ</div>
+  <div class="prose">
+    <p>where ζ = 0 if the second moment is stationary, and is small otherwise because β<sub>2</sub> gives little weight to the distant past. Dividing by (1 − β<sub>2</sub><sup><var>t</var></sup>) removes the bias; the same argument gives the correction for <var>m</var>. The practical case is β<sub>2</sub> close to 1, required for robust estimates with sparse gradients, which is exactly when the uncorrected bias is largest and lasts longest. §6.4 (Fig. 4) trains a variational autoencoder (one 500-unit softplus hidden layer, 50-dimensional latent) over β<sub>1</sub> ∈ [0, 0.9], β<sub>2</sub> ∈ {0.99, 0.999, 0.9999} and log<sub>10</sub>α ∈ [−5, −1]: without correction, β<sub>2</sub> near 1 leads to instability, especially early in training, and the best results came from small 1 − β<sub>2</sub> with correction.</p>
+    <p><strong>RMSProp</strong> (Tieleman &amp; Hinton, 2012) is Adam without bias correction and with momentum applied to the rescaled gradient rather than the gradient. <strong>AdaGrad</strong> (Duchi et al., 2011) divides by the root of the <em>sum</em> of all past squared gradients. The paper shows that Adam with β<sub>1</sub> = 0, (1 − β<sub>2</sub>) infinitesimal and α<sub><var>t</var></sub> = α/√<var>t</var> reduces to AdaGrad, and that this correspondence needs bias correction. Adam thus aims to combine AdaGrad's strength on sparse gradients with RMSProp's on non-stationary objectives.</p>
+  </div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §4 · Reddi et al. (2018)</p>
+  <h2>The regret bound, and why it fails</h2>
+  <div class="prose">
+    <p>§4 analyses Adam in Zinkevich's online convex optimisation framework, with regret <var>R</var>(<var>T</var>) = Σ<sub><var>t</var></sub> [<var>f<sub>t</sub></var>(θ<sub><var>t</var></sub>) − <var>f<sub>t</sub></var>(θ*)]. Theorem 4.1 assumes bounded gradients (‖∇<var>f<sub>t</sub></var>‖<sub>2</sub> ≤ <var>G</var>, ‖∇<var>f<sub>t</sub></var>‖<sub>∞</sub> ≤ <var>G</var><sub>∞</sub>), bounded distances between iterates, β<sub>1</sub><sup>2</sup>/√β<sub>2</sub> &lt; 1, α<sub><var>t</var></sub> = α/√<var>t</var> and a decaying β<sub>1,<var>t</var></sub> = β<sub>1</sub>λ<sup><var>t</var>−1</sup>, and claims <var>R</var>(<var>T</var>) = O(√<var>T</var>), with a data-dependent bound that can be much better than O(√(<var>dT</var>)) for sparse gradients. Corollary 4.2: <var>R</var>(<var>T</var>)/<var>T</var> = O(1/√<var>T</var>).</p>
+    <p>Reddi, Kale &amp; Kumar ("On the Convergence of Adam and Beyond", ICLR 2018) identified the error. Define</p>
+  </div>
+  <div class="eq">Γ<sub><var>t</var>+1</sub> = √<var>V</var><sub><var>t</var>+1</sub>/α<sub><var>t</var>+1</sub> − √<var>V<sub>t</sub></var>/α<sub><var>t</var></sub></div>
+  <div class="prose">
+    <p>the change in the inverse effective learning rate. The proof implicitly assumes Γ<sub><var>t</var></sub> ⪰ 0 (step sizes never increase). That holds for SGD and AdaGrad but not for exponential moving averages: <var>v<sub>t</sub></var> can fall, so the effective step can grow. Their Theorem 1 gives an explicit counterexample on ℱ = [−1, 1]: <var>f<sub>t</sub></var>(<var>x</var>) = <var>Cx</var> when <var>t</var> mod 3 = 1 and −<var>x</var> otherwise, with <var>C</var> &gt; 2. The average gradient is (<var>C</var> − 2)/3 &gt; 0, so the optimum is <var>x</var> = −1, yet with β<sub>1</sub> = 0 and β<sub>2</sub> = 1/(1 + <var>C</var><sup>2</sup>) Adam converges to <var>x</var> = +1. Theorem 2 extends this to any β<sub>1</sub> &lt; √β<sub>2</sub>, and Theorem 3 gives a stochastic version. Their fix, <strong>AMSGrad</strong>, uses <var>v̂<sub>t</sub></var> = max(<var>v̂</var><sub><var>t</var>−1</sub>, <var>v<sub>t</sub></var>), which forces Γ<sub><var>t</var></sub> ⪰ 0.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label><var>C</var> <input type="range" id="rd-c" min="2.5" max="10" step="0.5" value="4" data-fmt="1"><output id="rd-c-o">4.0</output></label>
+      <button class="btn" id="rd-go">Run 600 steps</button>
+    </div>
+    <div class="svgbox"><svg id="rd" viewBox="0 0 600 260" role="img" aria-label="Adam and AMSGrad iterates on the Reddi counterexample"></svg></div>
+    <p class="readout" id="rd-r"></p>
+    <figcaption>Re-run of Reddi et al.'s Theorem 1 setting: projected updates on [−1, 1], β<sub>1</sub> = 0, β<sub>2</sub> = 1/(1 + <var>C</var><sup>2</sup>), α<sub><var>t</var></sub> = 0.5/√<var>t</var>, <var>x</var><sub>0</sub> = 0, in Reddi et al.'s formulation without bias correction (adding it changes nothing visible here). Amber: Adam, which drifts to +1. Green: AMSGrad, which finds the optimum −1. The large gradient <var>C</var> arrives every third step, but β<sub>2</sub> is so small that <var>v</var> forgets it within a step, so the two −1 gradients each get a step as large as the one <var>C</var> gets.</figcaption>
+  </figure>
+  <div class="later"><span class="label">Later refinement</span>The guarantees were later repaired in other ways: with β<sub>2</sub> increasing towards 1 at a suitable rate, or with problem-dependent conditions on β<sub>1</sub> and β<sub>2</sub>, Adam does converge (for example Zhang et al., 2022, "Adam can converge without any modification on update rules"). The counterexample is real, but it needs hyperparameters (here β<sub>2</sub> = 1/17 for <var>C</var> = 4) far from the defaults.</div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §6 · Figs. 1–3 · §7</p>
+  <h2>Experiments and extensions</h2>
+  <div class="prose">
+    <p>Hyperparameters for every method were chosen from a dense grid and the best result reported.</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Setting</th><th>Model</th><th>Finding</th></tr></thead>
+    <tbody>
+      <tr><td>§6.1, Fig. 1 left</td><td>L2-regularised multiclass logistic regression, MNIST, minibatch 128, α<sub><var>t</var></sub> = α/√<var>t</var></td><td>Adam converges like SGD with Nesterov momentum, both faster than AdaGrad.</td></tr>
+      <tr><td>§6.1, Fig. 1 right</td><td>Logistic regression on IMDB bag-of-words (10,000 features, 50% input dropout)</td><td>Sparse features: AdaGrad beats SGD+Nesterov by a large margin; Adam matches AdaGrad.</td></tr>
+      <tr><td>§6.2, Fig. 2</td><td>MLP, two hidden layers of 1000 ReLUs, MNIST, minibatch 128</td><td>With dropout, Adam beats AdaGrad, RMSProp, SGD+Nesterov and AdaDelta; SFO fails to converge. Deterministic loss: Adam beats SFO in iterations and wall clock (SFO is 5–10× slower per iteration).</td></tr>
+      <tr><td>§6.3, Fig. 3</td><td>CNN c64-c64-c128-1000 on CIFAR-10, whitened input, dropout</td><td>Adam and SGD both much faster than AdaGrad over 45 epochs; Adam marginally better than SGD+momentum. The authors observe <var>v̂</var> vanishes to ε within a few epochs here, so the first moment does most of the work.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p><strong>AdaMax (§7.1, Algorithm 2).</strong> Generalise the L<sup>2</sup> norm in <var>v</var> to L<sup><var>p</var></sup> and let <var>p</var> → ∞. The recursion becomes</p>
+  </div>
+  <div class="eq"><var>u<sub>t</sub></var> = max(β<sub>2</sub>·<var>u</var><sub><var>t</var>−1</sub>, |<var>g<sub>t</sub></var>|), &nbsp;&nbsp; θ<sub><var>t</var></sub> ← θ<sub><var>t</var>−1</sub> − (α/(1 − β<sub>1</sub><sup><var>t</var></sup>))·<var>m<sub>t</sub></var>/<var>u<sub>t</sub></var></div>
+  <div class="prose">
+    <p>which needs no bias correction for <var>u</var> and has the simpler bound |Δ<sub><var>t</var></sub>| ≤ α; suggested defaults α = 0.002, β<sub>1</sub> = 0.9, β<sub>2</sub> = 0.999. <strong>Temporal averaging (§7.2)</strong>: keep an exponential moving average of θ with its own bias correction, a Polyak–Ruppert-style trick to reduce noise in the final iterate (now standard as "EMA weights").</p>
+  </div>
+</section>
+
+<section class="kp" id="t6">
+  <p class="eyebrow"><b>Section</b> · Lineage</p>
+  <h2>Limitations and what came next</h2>
+  <div class="prose"><ul>
+    <li><strong>Convergence.</strong> The §4 proof is wrong (Reddi et al., 2018); see above. Non-convex guarantees, which are what matter for deep nets, were not attempted.</li>
+    <li><strong>Generalisation.</strong> Wilson et al. (2017, "The marginal value of adaptive gradient methods") found adaptive methods often generalised worse than well-tuned SGD on image classification. Loshchilov &amp; Hutter traced much of this to how L2 regularisation interacts with Adam's preconditioner, giving <a href="adamw.html">AdamW</a>, now the default for large models.</li>
+    <li><strong>ε and the denominator.</strong> ε is not just a numerical guard: in the CIFAR-10 experiment the paper itself notes <var>v̂</var> falls to the scale of ε, where Adam behaves more like momentum SGD. Later implementations expose ε as a tunable hyperparameter.</li>
+    <li><strong>Memory.</strong> Two extra state vectors per parameter, a real cost at billions of parameters. Adafactor (Shazeer &amp; Stern, 2018) factorises <var>v</var> to save memory, and was used for the largest models in <a href="scaling.html">Kaplan et al.'s scaling-law study</a>. 8-bit optimiser states (Dettmers et al., 2022) shrink it further.</li>
+    <li><strong>Large-batch and stability variants.</strong> LAMB (You et al., 2019) adds per-layer trust ratios; Lion (Chen et al., 2023) uses only the sign of a momentum; β<sub>2</sub> = 0.95 rather than 0.999 became common for large language models for stability.</li>
+  </ul></div>
+  <p class="takeaway"><span class="label">Takeaway</span>Adam's core (per-coordinate normalisation by an EMA of squared gradients, with bias correction) survives almost untouched; what changed is weight decay, β<sub>2</sub> and how the theory is justified.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>AMSGrad is provably convergent on the counterexample. Why didn't it replace Adam?</dt>
+    <dd>On practical deep learning problems it gave little or no benefit, and the counterexample requires a very small β<sub>2</sub>; with β<sub>2</sub> = 0.999 the failure mode rarely bites.</dd>
+    <dt>Which part of Algorithm 1 makes Adam invariant to rescaling the loss by a constant?</dt>
+    <dd>The ratio <var>m̂</var>/√<var>v̂</var>: the numerator scales with the constant and the denominator with its absolute value.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t7" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>First moment <var>m</var></dt><dd>Exponential moving average of gradients (momentum).</dd>
+    <dt>Second raw moment <var>v</var></dt><dd>Exponential moving average of element-wise squared gradients (uncentred variance).</dd>
+    <dt>β<sub>1</sub>, β<sub>2</sub></dt><dd>Decay rates of the two averages; their effective memory is about 1/(1 − β) steps (10 and 1000 by default).</dd>
+    <dt>Bias correction</dt><dd>Division by 1 − β<sup><var>t</var></sup> to undo the zero initialisation of the averages.</dd>
+    <dt>SNR</dt><dd>The paper's name for <var>m̂</var>/√<var>v̂</var>.</dd>
+    <dt>Regret</dt><dd>Cumulative excess loss of the online iterates over the best fixed parameter in hindsight.</dd>
+    <dt>AdaGrad / RMSProp</dt><dd>Earlier adaptive methods dividing by the root of the sum / EMA of squared gradients.</dd>
+    <dt>AMSGrad</dt><dd>Reddi et al.'s variant using the running maximum of <var>v</var>.</dd>
+    <dt>AdaMax</dt><dd>The paper's infinity-norm variant.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Led to:</strong> <a href="adamw.html">AdamW (2017)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers/">Papers worth reading</a> (<a href="https://lovespark.love/papers/#adam">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // ravine race
+  var svg=$('#rv'), lr=0.08, timer=null;
+  var A=0.1, Bc=20; // f = 0.5*(A x^2 + Bc y^2)
+  function f(p){ return 0.5*(A*p[0]*p[0]+Bc*p[1]*p[1]); }
+  function g(p){ return [A*p[0], Bc*p[1]]; }
+  function X(x){ return 40+(x+6)/12*520; } function Y(y){ return 140-y*55; }
+  function base(){ clear(svg);
+    [0.05,0.2,0.5,1,1.7].forEach(function(c){ var rx=Math.sqrt(2*c/A), ry=Math.sqrt(2*c/Bc);
+      S('ellipse',{cx:X(0),cy:Y(0),rx:rx/12*520,ry:ry*55,'class':'grid'},svg); });
+    S('rect',{x:40,y:30,width:520,height:220,'class':'area'},svg);
+    S('text',{x:X(0),y:Y(0)+5,'class':'t mid'},svg,'×');
+    S('text',{x:44,y:22,'class':'t-s'},svg,'top view of the error landscape (contours)');
+  }
+  function sim(){ var p0=[-5.5,1.5], res={sgd:[p0.slice()],mom:[p0.slice()],adam:[p0.slice()]};
+    var p=p0.slice(); for (var k=0;k<80;k++){ var gr=g(p); p=[p[0]-lr*gr[0],p[1]-lr*gr[1]]; res.sgd.push(p.slice()); }
+    p=p0.slice(); var v=[0,0]; for (var k=0;k<80;k++){ var gr=g(p); v=[0.9*v[0]-lr*gr[0],0.9*v[1]-lr*gr[1]]; p=[p[0]+v[0],p[1]+v[1]]; res.mom.push(p.slice()); }
+    p=p0.slice(); var m=[0,0], s=[0,0]; for (var t=1;t<=80;t++){ var gr=g(p); for (var i=0;i<2;i++){ m[i]=0.9*m[i]+0.1*gr[i]; s[i]=0.999*s[i]+0.001*gr[i]*gr[i]; var mh=m[i]/(1-Math.pow(0.9,t)), vh=s[i]/(1-Math.pow(0.999,t)); p[i]-=lr*mh/(Math.sqrt(vh)+1e-8); } res.adam.push(p.slice()); }
+    return res; }
+  function clip(p){ return [Math.max(-6,Math.min(6,p[0])), Math.max(-2,Math.min(2,p[1]))]; }
+  function path(pts,cls,dash){ var d=''; pts.forEach(function(q,i){ q=clip(q); d+=(i?'L':'M')+fmt(X(q[0]),1)+','+fmt(Y(q[1]),1); }); var a={d:d,'class':cls}; if (dash) a['stroke-dasharray']='5 4'; S('path',a,svg); }
+  function draw(res,n){ base(); path(res.sgd.slice(0,n+1),'w'); path(res.mom.slice(0,n+1),'w',true); path(res.adam.slice(0,n+1),'w-fire');
+    [['sgd','u-wire'],['mom','u'],['adam','u-on']].forEach(function(z){ var q=clip(res[z[0]][n]); S('circle',{cx:X(q[0]),cy:Y(q[1]),r:5,'class':z[1]},svg); });
+    S('text',{x:556,y:270,'class':'t-s end'},svg,'step '+n+' of 80');
+    function L(p){ var v=f(p); return isFinite(v)&&v<1e6?fmt(v,3):'diverged'; }
+    $('#rv-r').innerHTML='Error after '+n+' steps: gradient descent <b>'+L(res.sgd[n])+'</b>, momentum <b>'+L(res.mom[n])+'</b>, Adam <b>'+L(res.adam[n])+'</b> (start '+fmt(f(res.sgd[0]),1)+').'; }
+  function go(){ if (timer) clearInterval(timer); var res=sim(), n=0; timer=setInterval(function(){ draw(res,n); n++; if (n>80){ clearInterval(timer); timer=null; } },40); }
+  bindRange('rv-lr',function(v){ lr=v; if (!timer) draw(sim(),80); });
+  $('#rv-go').onclick=go;
+})();
+(function(){ // bias correction
+  var svg=$('#bc'), b1=0.9, b2=0.999, on=true;
+  var r=rng(11), noise=[]; for (var i=0;i<60;i++) noise.push(0.3*gauss(r));
+  function draw(){ clear(svg); var m=0,v=0, steps=[];
+    for (var t=1;t<=60;t++){ var g=1+noise[t-1]; m=b1*m+(1-b1)*g; v=b2*v+(1-b2)*g*g; var mh=on?m/(1-Math.pow(b1,t)):m, vh=on?v/(1-Math.pow(b2,t)):v; steps.push(mh/Math.sqrt(vh)); }
+    var ymax=Math.max(4, Math.min(40, Math.ceil(Math.max.apply(null,steps)))); function Y(s){ return 220-Math.min(s,ymax)/ymax*190; }
+    S('line',{x1:50,y1:220,x2:580,y2:220,'class':'axis'},svg); S('line',{x1:50,y1:30,x2:50,y2:220,'class':'axis'},svg);
+    [0,ymax/2,ymax].forEach(function(k){ S('text',{x:44,y:Y(k)+4,'class':'t-s end'},svg,fmt(k,k%1?1:0)+'α'); });
+    steps.forEach(function(s,i){ var y=Y(s); S('rect',{x:54+i*8.7,y:y,width:6.5,height:220-y,'class':s>1.5?'f-inh':'f-fire'},svg); });
+    S('line',{x1:50,y1:Y(1),x2:580,y2:Y(1),'class':'w-dash'},svg);
+    S('text',{x:315,y:244,'class':'t-s mid'},svg,'step number (1 to 60)');
+    S('text',{x:576,y:24,'class':'t-s end'},svg,on?'with bias correction':'without bias correction');
+    $('#bc-r').innerHTML='First step: <b>'+fmt(steps[0],2)+'α</b>. Largest step: <b>'+fmt(Math.max.apply(null,steps),2)+'α</b>. Step 60: <b>'+fmt(steps[59],2)+'α</b>.'+(Math.max.apply(null,steps)>ymax?' (bars clipped at '+ymax+'α)':''); }
+  bindRange('bc-b1',function(v){ b1=v; draw(); }); bindRange('bc-b2',function(v){ b2=v; draw(); });
+  $('#bc-tog').onclick=function(){ on=!on; this.setAttribute('aria-pressed',on); this.textContent='Bias correction: '+(on?'on':'off'); draw(); };
+})();
+(function(){ // Algorithm 1 step-through
+  var svg=$('#st'), pat='steady', c=0, t=0, rows=[], m=0, v=0;
+  function grad(t){ if (pat==='steady') return 1; if (pat==='noisy') return (t%2?3:-1)+0.1*Math.sin(t*1.7); return (t===1||t%10===0)?1:0; }
+  function reset(){ t=0; rows=[]; m=0; v=0; draw(); }
+  function next(){ t++; var g=grad(t)*Math.pow(10,c); m=0.9*m+0.1*g; v=0.999*v+0.001*g*g; var mh=m/(1-Math.pow(0.9,t)), vh=v/(1-Math.pow(0.999,t)); var d=-0.001*mh/(Math.sqrt(vh)+1e-8); rows.push([t,g,m,v,mh,vh,d]); if (rows.length>8) rows.shift(); draw(); }
+  function e(x){ if (x===0) return '0'; var a=Math.abs(x); if (a>=0.01&&a<1000) return fmt(x,a<1?4:2); return x.toExponential(2); }
+  function draw(){ clear(svg); var hd=['t','g','m','v','m̂','v̂','Δθ'], xs=[30,110,200,300,400,490,590];
+    hd.forEach(function(h,i){ S('text',{x:xs[i],y:26,'class':'t-h end'},svg,h); }); S('line',{x1:10,y1:36,x2:630,y2:36,'class':'grid'},svg);
+    rows.forEach(function(r,j){ r.forEach(function(val,i){ S('text',{x:xs[i],y:60+j*24,'class':i===6?'t-fire end':'t end'},svg,i===0?val:e(val)); }); });
+    if (!rows.length) S('text',{x:320,y:130,'class':'t-s mid'},svg,'Press Next step');
+    var last=rows[rows.length-1];
+    $('#st-r').innerHTML = last ? 'Step '+last[0]+': update Δθ = <b>'+e(last[6])+'</b> = −α·m̂/(√v̂+ε). Gradients ×10<sup>'+c+'</sup>.' : 'Gradients scaled by 10<sup>'+c+'</sup>.'; }
+  $$('[data-pat]').forEach(function(b){ b.onclick=function(){ $$('[data-pat]').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); pat=b.getAttribute('data-pat'); reset(); }; });
+  bindRange('st-c',function(v){ c=v; reset(); });
+  $('#st-next').onclick=next; $('#st-rst').onclick=reset; next(); next(); next();
+})();
+(function(){ // Reddi counterexample
+  var svg=$('#rd'), C=4, timer=null;
+  function sim(ams){ var b2=1/(1+C*C), x=0, v=0, vh=0, xs=[0]; for (var t=1;t<=600;t++){ var g=(t%3===1)?C:-1; v=b2*v+(1-b2)*g*g; var d=v; if (ams){ vh=Math.max(vh,v); d=vh; } x=x-0.5/Math.sqrt(t)*g/Math.sqrt(d+1e-12); x=Math.max(-1,Math.min(1,x)); xs.push(x); } return xs; }
+  function X(t){ return 50+t/600*520; } function Y(x){ return 130-x*95; }
+  function draw(a,b,n){ clear(svg);
+    S('line',{x1:50,y1:Y(-1),x2:570,y2:Y(-1),'class':'grid'},svg); S('line',{x1:50,y1:Y(1),x2:570,y2:Y(1),'class':'grid'},svg); S('line',{x1:50,y1:Y(0),x2:570,y2:Y(0),'class':'w-dash'},svg);
+    S('line',{x1:50,y1:25,x2:50,y2:235,'class':'axis'},svg);
+    S('text',{x:44,y:Y(1)+4,'class':'t-s end'},svg,'+1'); S('text',{x:44,y:Y(0)+4,'class':'t-s end'},svg,'0'); S('text',{x:44,y:Y(-1)+4,'class':'t-s end'},svg,'−1');
+    S('text',{x:566,y:Y(-1)+16,'class':'t-ok end'},svg,'optimum x* = −1'); S('text',{x:310,y:254,'class':'t-s mid'},svg,'step t');
+    function pl(xs,cls){ var d=''; for (var i=0;i<=n;i+=1) d+=(i?'L':'M')+fmt(X(i),1)+','+fmt(Y(xs[i]),1); S('path',{d:d,'class':cls},svg); }
+    pl(a,'w-fire'); pl(b,'w-ok');
+    S('text',{x:566,y:Y(1)-8,'class':'t-fire end'},svg,'Adam'); S('text',{x:566,y:Y(-1)-8,'class':'t-ok end'},svg,'AMSGrad');
+    $('#rd-r').innerHTML='Step '+n+': Adam x = <b>'+fmt(a[n],3)+'</b>, AMSGrad x = <b>'+fmt(b[n],3)+'</b>. β₂ = 1/(1+C²) = <b>'+fmt(1/(1+C*C),4)+'</b>; mean gradient (C−2)/3 = <b>'+fmt((C-2)/3,2)+'</b> &gt; 0.'; }
+  function go(){ if (timer) clearInterval(timer); var a=sim(false), b=sim(true), n=0; timer=setInterval(function(){ n=Math.min(600,n+12); draw(a,b,n); if (n>=600){ clearInterval(timer); timer=null; } },30); }
+  bindRange('rd-c',function(v){ C=v; if (!timer) draw(sim(false),sim(true),600); });
+  $('#rd-go').onclick=go;
+})();
+</script>
+
+</body>
+</html>

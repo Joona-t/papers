@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ResNet (2015) study guide</title>
+<meta name="description" content="If deeper networks are more powerful, why does simply stacking more layers make them worse, even on the training data? This paper&#x27;s answer is to let each block of layers learn only a correction to its input, carried forward by a shortcut. With that change, networks of 152 layers train easily an">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Computer vision</b> · 2015</p>
+  <h1>Deep Residual Learning for Image Recognition</h1>
+  <p class="cite">Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun · CVPR 2016</p>
+  <p class="lede">If deeper networks are more powerful, why does simply stacking more layers make them worse, even on the training data? This paper's answer is to let each block of layers learn only a correction to its input, carried forward by a shortcut. With that change, networks of 152 layers train easily and won the 2015 ImageNet competition, and the same shortcut now sits inside nearly every large model, transformers included.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/1512.03385">Read the paper (free)</a> <a href="https://lovespark.love/papers/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, independent AI review, but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Making a network deeper should never hurt, because the extra layers could simply pass their input through unchanged; yet in practice a 56-layer network did worse than a 20-layer one, even on the examples it was trained on.</p>
+  <p>The fix is a shortcut around every couple of layers: the block's output is its input plus whatever the layers add, so the layers only have to learn a correction (a "residual").</p>
+  <p>If a block has nothing useful to add, it can learn to add almost nothing, which is far easier than learning to copy its input exactly.</p>
+  <p>With these shortcuts, accuracy kept improving up to 152 layers, and an ensemble got 3.57% top-5 error on ImageNet, winning the 2015 competition.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1 · Fig. 1</p>
+  <h2>The puzzle: deeper got worse</h2>
+  <div class="prose">
+    <p>After <a href="alexnet.html">AlexNet</a>, the lesson seemed to be "deeper is better": more layers can build more complex features out of simpler ones. By 2015 the best networks had around 20 to 30 layers. But going further ran into a wall.</p>
+    <p>The authors trained a 20-layer and a 56-layer network on a small photo dataset (CIFAR-10). The deeper one made <em>more</em> mistakes, and not only on new photos: it also did worse on the very photos it was trained on (Fig. 1). That rules out the usual suspect, <strong>overfitting</strong>, where a model memorises its training data but fails on new data. Here the deeper model could not even fit its training data as well. The paper calls this the <strong>degradation problem</strong>.</p>
+    <p>This is strange, because the deeper network could in principle copy the shallow one: use the same 20 layers, and make the other 36 pass their input straight through. So a solution at least as good exists. The training method just doesn't find it.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Imagine passing a message along a line of 56 people, each allowed to improve the wording. In principle, anyone with nothing to add can repeat it exactly. In practice, everyone changes it a little, and by the end it is garbled. Twenty people do better than fifty-six.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The trouble with very deep networks was not memorising too much; it was that training could not find good settings at all.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>How do we know the 56-layer network's problem is not overfitting?</dt>
+    <dd>Its error on the training data itself is higher than the 20-layer network's. Overfitting would show low training error but high test error.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §3.1–3.2 · Fig. 2</p>
+  <h2>Learn the correction, not the whole thing</h2>
+  <div class="prose">
+    <p>The fix is almost embarrassingly simple. Take a block of two layers. Normally its output is whatever the layers compute. In a <strong>residual block</strong>, a <strong>shortcut</strong> carries the block's input around the layers and adds it back on at the end:</p>
+    <p style="text-align:center"><strong>output = input + (what the layers compute)</strong></p>
+    <p>Now the layers only have to learn the <em>difference</em> between what comes in and what should go out, called the <strong>residual</strong>. If the best thing a block can do is pass its input along unchanged, the layers just need to output zeros, which is easy: small weights already give nearly zero. Without the shortcut, the layers would have to learn to reproduce their input exactly, which is surprisingly hard for a stack of layers with nonlinear switches in between.</p>
+    <p>The figure shows what happens to a simple input signal (a wave) as it passes through many layers of a network with random starting weights, with and without shortcuts.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Layers passed through <input type="range" id="sg-l" min="0" max="30" step="1" value="20"><output id="sg-l-o">20</output></label><label>Random start <input type="range" id="sg-s" min="1" max="9" step="1" value="2"><output id="sg-s-o">2</output></label></div>
+    <div class="svgbox"><svg id="sg" viewBox="0 0 600 250" role="img" aria-label="One unit's response to the input after many layers, plain versus residual"></svg></div>
+    <p class="readout" id="sg-r"></p>
+    <figcaption>Each panel plots one unit (of six) after the chosen number of layers, as the network's input slides from −1 to 1. Grey dashed: the same unit after the first layer. Note the readout: in the plain stack the variation usually collapses towards a near-constant output as layers are added, so information about the input is lost; with shortcuts the variation is kept (and reshaped) because every block adds to what came in. Untrained toy with tanh units; illustrative of the starting point, not a trained ResNet.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>Editing a document with "track changes" is easier than retyping it from memory. Each block of a ResNet gets the original handed to it and only writes in its edits.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>A shortcut makes "do nothing" the easy default, so extra layers can't make things much worse, and can make them better.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>A block's ideal output is its input plus a small tweak. What do the layers in a residual block learn?</dt>
+    <dd>Only the small tweak. The shortcut supplies the input itself.</dd>
+    <dt>Does the shortcut add extra adjustable numbers?</dt>
+    <dd>No. When input and output have the same size it is a plain addition, with no weights at all.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §4.1 · Table 2 · Fig. 4</p>
+  <h2>Shortcuts make depth pay off</h2>
+  <div class="prose">
+    <p>The authors compared networks that were identical except for the shortcuts. Without them ("plain" networks), the 34-layer version was worse than the 18-layer one on ImageNet. With them, the 34-layer ResNet was clearly better than the 18-layer ResNet, and much better than plain-34: 25.0% versus 28.5% top-1 error (Table 2). The degradation problem had flipped around.</p>
+    <p>You can rerun a tiny version of this experiment below. Two networks of the same depth learn to fit a wiggly curve: one plain, one with shortcuts around every layer. Try a few depths.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Depth <input type="range" id="rt-l" min="2" max="30" step="1" value="20"><output id="rt-l-o">20</output></label><button class="btn" id="rt-go">Train both</button></div>
+    <div class="svgbox"><svg id="rt" viewBox="0 0 600 260" role="img" aria-label="A plain and a residual network learning the same curve, with their error over time"></svg></div>
+    <p class="readout" id="rt-r"></p>
+    <figcaption>Left: the target curve (dots) and each network's current fit. Right: training error over 900 steps (log scale). Both use six tanh units per layer, the same random start, momentum and step size, and gradient clipping to keep training stable; real ResNets use batch normalisation instead. At depth 2–3 the two are similar; at 10 and beyond the residual network fits far better while the plain one stalls. A toy re-run of the idea, not the paper's experiment.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>With shortcuts, deeper networks finally behaved as theory promised: more layers, lower error.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is "same layers, with and without shortcuts" such a convincing comparison?</dt>
+    <dd>Everything else (number of weights, computation, training recipe) is held equal, so any difference must come from the shortcuts.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §3.3 · §4.1 · Table 1 · Fig. 5</p>
+  <h2>Going to 152 layers</h2>
+  <div class="prose">
+    <p>To go much deeper without the cost exploding, the deeper ResNets use a <strong>bottleneck block</strong>: first squeeze the number of channels down by four times with a cheap layer, do the expensive 3 by 3 processing on the slim version, then expand back. A 152-layer ResNet built this way needs fewer calculations per image (11.3 billion) than the 19-layer VGG network from the year before (19.6 billion).</p>
+    <p>Accuracy kept improving with depth: 50, 101, then 152 layers each did better. A combination of ResNets reached <strong>3.57%</strong> top-5 error on the ImageNet test set and won the 2015 competition. Three years earlier, <a href="alexnet.html">AlexNet</a> had won with 15.3%.</p>
+  </div>
+  <figure>
+    <div class="svgbox"><svg viewBox="0 0 600 200" role="img" aria-label="Basic residual block and bottleneck block">
+      <text x="150" y="18" class="t-h mid">basic block (ResNet-18/34)</text>
+      <rect x="90" y="40" width="120" height="30" class="box-wire"/><text x="150" y="60" class="t mid">3×3, 64</text>
+      <rect x="90" y="100" width="120" height="30" class="box-wire"/><text x="150" y="120" class="t mid">3×3, 64</text>
+      <path d="M150,28 L150,38 M150,72 L150,98 M150,132 L150,154" class="w" marker-end="url(#aw)"/>
+      <path d="M150,32 C250,32 250,166 160,166" class="w-fire" marker-end="url(#af)"/><circle cx="150" cy="166" r="9" class="u"/><text x="150" y="170" class="t mid">+</text><text x="244" y="104" class="t-fire">identity</text>
+      <text x="440" y="18" class="t-h mid">bottleneck (ResNet-50/101/152)</text>
+      <rect x="380" y="30" width="120" height="26" class="box"/><text x="440" y="48" class="t mid">1×1, 64</text>
+      <rect x="380" y="74" width="120" height="26" class="box-wire"/><text x="440" y="92" class="t mid">3×3, 64</text>
+      <rect x="380" y="118" width="120" height="26" class="box"/><text x="440" y="136" class="t mid">1×1, 256</text>
+      <path d="M440,22 L440,28 M440,58 L440,72 M440,102 L440,116 M440,146 L440,156" class="w" marker-end="url(#aw)"/>
+      <path d="M440,24 C550,24 550,166 450,166" class="w-fire" marker-end="url(#af)"/><circle cx="440" cy="166" r="9" class="u"/><text x="440" y="170" class="t mid">+</text><text x="534" y="96" class="t-fire">identity</text>
+      <text x="300" y="194" class="t-s mid">each layer: convolution, batch normalisation, ReLU (the last ReLU comes after the addition)</text>
+    </svg></div>
+    <figcaption>Redrawn after Fig. 2 and Fig. 5. The bottleneck block takes 256 channels in, works at 64, and returns 256.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Shortcuts plus cheap bottleneck blocks turned "very deep" from a liability into the winning design.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §4.3 · legacy</p>
+  <h2>A shortcut that ended up everywhere</h2>
+  <div class="prose">
+    <p>The same networks, used as the backbone for finding and outlining objects, gave a 28% relative improvement on the COCO object detection benchmark just by swapping in the deeper ResNet (§4.3). The team also won the 2015 ImageNet detection and localisation tasks and the COCO detection and segmentation tasks.</p>
+    <p>The deeper legacy is the shortcut itself. Almost every large network built since adds each layer's output back onto its input. The <a href="transformer.html">Transformer</a> behind today's language models does exactly this around every attention and feed-forward layer, and so do <a href="vit.html">Vision Transformers</a> and the <a href="unet.html">U-Net</a>-style networks inside image generators.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>A follow-up by the same authors in 2016 ("Identity Mappings in Deep Residual Networks") moved the normalisation and activation inside the branch so the shortcut path is a completely clean addition from start to end. That "pre-activation" version trained a 1,001-layer network well. Transformers today use the same idea under the name "pre-norm".</div>
+  <p class="takeaway"><span class="label">Takeaway</span>"Add the input back" is one of the most reused ideas in deep learning.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Deeper networks are harder to train. The paper reformulates layers as learning residual functions with reference to their inputs, instead of unreferenced functions, and gives empirical evidence that such residual networks are easier to optimise and gain accuracy from considerably increased depth. On ImageNet, residual nets of up to 152 layers (8× deeper than VGG, yet of lower complexity) are evaluated; an ensemble achieves 3.57% top-5 error on the test set and won ILSVRC 2015 classification. Analyses on CIFAR-10 cover 100- and 1,000-layer nets. The representations give a 28% relative improvement on COCO detection and underpinned first places in ImageNet detection and localisation and COCO detection and segmentation. CVPR 2016 (arXiv December 2015).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §1 · §3.1–3.2 · Eqs. 1–2</p>
+  <h2>Degradation and the residual reformulation</h2>
+  <div class="prose">
+    <p><strong>Degradation (§1).</strong> With depth, accuracy saturates and then degrades rapidly; this is "not caused by overfitting", since training error rises too (Fig. 1, Fig. 4 left). Vanishing/exploding gradients at initialisation are largely handled by normalised initialisation and batch normalisation, so the networks do start converging; the issue is what they converge to.</p>
+    <p><strong>Construction argument.</strong> Given a shallower model, a deeper one built by adding identity layers has no higher training error. Hence degradation indicates that solvers have difficulty approximating identity mappings with stacks of nonlinear layers. If the desired mapping is <var>H</var>(<var>x</var>), let the stack fit <var>F</var>(<var>x</var>) := <var>H</var>(<var>x</var>) − <var>x</var>. When identity is (near-)optimal, pushing <var>F</var> to zero is easier than fitting identity; the paper's later response analysis supports that learned residuals are small.</p>
+  </div>
+  <div class="eq"><b>y</b> = <var>F</var>(<b>x</b>, {<var>W<sub>i</sub></var>}) + <b>x</b> <span class="n">(1)</span></div>
+  <div class="eq"><b>y</b> = <var>F</var>(<b>x</b>, {<var>W<sub>i</sub></var>}) + <var>W<sub>s</sub></var><b>x</b> <span class="n">(2)</span></div>
+  <div class="prose"><p>For a two-layer block <var>F</var> = <var>W</var><sub>2</sub> σ(<var>W</var><sub>1</sub><b>x</b>) with σ = ReLU (biases omitted), and a second ReLU is applied after the addition. Eq. 1's shortcut adds neither parameters nor computation (apart from an element-wise add). Eq. 2's linear projection <var>W<sub>s</sub></var> is used only to match dimensions. <var>F</var> must span at least two layers: with one layer, Eq. 1 is just a linear layer <b>y</b> = <var>W</var><sub>1</sub><b>x</b> + <b>x</b>, for which the authors saw no advantage.</p></div>
+  <figure class="live">
+    <div class="ctl"><label>Block weight <var>w</var> <input type="range" id="id-w" min="-0.5" max="1.5" step="0.01" value="0.3" data-fmt="2"><output id="id-w-o">0.30</output></label><label>Depth <input type="range" id="id-n" min="1" max="50" step="1" value="30"><output id="id-n-o">30</output></label></div>
+    <div class="svgbox"><svg id="idf" viewBox="0 0 600 220" role="img" aria-label="Scalar gain through a stack of linear blocks, plain versus residual"></svg></div>
+    <p class="readout" id="id-r"></p>
+    <figcaption>The simplest possible case: scalar linear blocks. A plain block computes <var>wx</var>; a residual block computes <var>x</var> + <var>wx</var> (with <var>w</var> here meaning the branch weight). Curves show the end-to-end gain (log scale) as each design's weight varies; the marker is the slider value. Both bands narrow as depth grows; the difference is where they sit. A plain stack is near identity only around <var>w</var> = 1; a residual stack is near identity around <var>w</var> = 0, which is where small random initial weights and weight decay naturally put it. Illustrative only: real blocks are nonlinear and use batch normalisation.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does the paper insist <var>F</var> has at least two layers?</dt>
+    <dd>With a single linear layer, <var>W</var><b>x</b> + <b>x</b> = (<var>W</var> + <var>I</var>)<b>x</b> is just a reparameterised linear layer, with no nonlinearity inside the residual branch.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3.3 · Table 1 · Fig. 3 · Fig. 5</p>
+  <h2>Architectures and the bottleneck</h2>
+  <div class="prose">
+    <p><strong>Plain baseline.</strong> Inspired by VGG: mostly 3×3 convolutions; same output size implies same number of filters; halving the feature map doubles the filters; downsampling by stride-2 convolutions; global average pooling and a 1000-way fully connected layer. The 34-layer plain net has 3.6 billion FLOPs (multiply-adds), 18% of VGG-19's 19.6 billion.</p>
+    <p><strong>Shortcuts across dimension changes.</strong> (A) identity with zero-padding for extra channels, parameter-free; (B) 1×1 projection shortcuts only where dimensions increase; (C) projections everywhere. On ImageNet B is slightly better than A and C marginally better than B (Table 3), small enough that projections are judged "not essential"; C is not used further to save memory and time.</p>
+    <p><strong>Stages (Table 1).</strong> Basic blocks for 18/34 ([2,2,2,2] and [3,4,6,3]); bottleneck blocks for 50/101/152 ([3,4,6,3], [3,4,23,3], [3,8,36,3]) across conv2_x to conv5_x at widths 64, 128, 256, 512 (×4 output in bottlenecks). FLOPs: 1.8, 3.6, 3.8, 7.6 and 11.3 × 10<sup>9</sup>. Parameter-free identity shortcuts matter most for bottlenecks: replacing them with projections would roughly double the cost, since the shortcut connects the two high-dimensional ends.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Bottleneck width <var>d</var> <input type="range" id="bn-d" min="16" max="512" step="16" value="64"><output id="bn-d-o">64</output></label></div>
+    <div class="svgbox"><svg id="bn" viewBox="0 0 600 220" role="img" aria-label="Parameter counts of a basic block and a bottleneck block"></svg></div>
+    <p class="readout" id="bn-r"></p>
+    <figcaption>Weights per block (biases and batch-norm parameters ignored). Bottleneck: 1×1 from 4<var>d</var> to <var>d</var>, 3×3 at <var>d</var>, 1×1 back to 4<var>d</var>. The paper's comparison (Fig. 5) is a basic block at width <var>d</var> versus a bottleneck at the same inner width: "similar time complexity" while the bottleneck carries a 4× wider representation. The third bar shows what a basic block at the full width 4<var>d</var> would cost.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §3.4 · §4.1 · Tables 2–5</p>
+  <h2>ImageNet training and results</h2>
+  <div class="prose">
+    <p><strong>Recipe (§3.4).</strong> Shorter side resized to a random value in [256, 480] for scale augmentation; random 224 × 224 crop or its flip, per-pixel mean subtracted; AlexNet-style colour augmentation. Batch normalisation after each convolution and before activation; He initialisation; SGD, batch 256, learning rate 0.1 divided by 10 when error plateaus, up to 60 × 10<sup>4</sup> iterations, weight decay 0.0001, momentum 0.9, no dropout. Testing uses 10-crop for comparisons and fully convolutional multi-scale evaluation for the best results.</p>
+    <p><strong>Why the plain net fails (§4.1).</strong> Because of BN, forward signals have non-zero variance and backward gradients have healthy norms, so the authors argue vanishing gradients are unlikely to be the cause. Plain-34 still reaches competitive accuracy, so the solver works to some degree; they conjecture deep plain nets may have exponentially low convergence rates, and leave the reason open.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" data-rv="in">ImageNet (Tables 2–3)</button><button class="btn" data-rv="cf">CIFAR-10 (Table 6)</button></div>
+    <div class="svgbox wide"><svg id="rv" viewBox="0 0 640 300" role="img" aria-label="Reported error rates by depth"></svg></div>
+    <p class="readout" id="rv-r"></p>
+    <figcaption>ImageNet: top-1 error, 10-crop testing, validation set (Tables 2 and 3; ResNet-34 uses option A here, 50–152 use option B). CIFAR-10: test error of ResNets with 6<var>n</var>+2 layers (Table 6; the 110-layer figure is the best of 5 runs, mean 6.61 ± 0.16).</figcaption>
+  </figure>
+  <div class="prose"><p>Single-model ResNet-152 reaches 19.38% top-1 and 4.49% top-5 on validation (Table 4); an ensemble of six models of different depths (two of them 152-layer) gives 3.57% top-5 on the test set (Table 5).</p></div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Plain-18 and ResNet-18 have nearly the same error (27.94 vs 27.88). What does ResNet-18 still gain?</dt>
+    <dd>Faster convergence early in training (§4.1): when the net is not overly deep, SGD can find good solutions for the plain net too, but the residual one gets there sooner.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §4.2 · Table 6 · Figs. 6–7</p>
+  <h2>CIFAR-10 and what the layers learn</h2>
+  <div class="prose">
+    <p>A deliberately simple CIFAR-10 architecture: a 3×3 conv, then three stages of 2<var>n</var> layers on 32×32, 16×16 and 8×8 maps with 16, 32, 64 filters, global average pooling and a 10-way classifier, for 6<var>n</var> + 2 layers; option A shortcuts. Plain nets degrade with depth (Fig. 6 left); ResNets improve up to 110 layers (6.43%).</p>
+    <p><strong>Layer responses (Fig. 7).</strong> The standard deviation of each 3×3 layer's output (after BN, before the addition) is generally smaller for ResNets than for plain nets, and smaller still for deeper ResNets: individual blocks modify the signal less. This supports the premise that residual functions are generally closer to zero than non-residual ones.</p>
+    <p><strong>1,202 layers.</strong> With <var>n</var> = 200 the network trains without optimisation difficulty (training error below 0.1%), but test error is 7.93%, worse than the 110-layer net. The authors attribute this to overfitting: 19.4 M parameters is large for a small dataset, and they did not use strong regularisers such as maxout or dropout.</p>
+  </div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §4.3 · lineage</p>
+  <h2>Detection, limitations and lineage</h2>
+  <div class="prose">
+    <p><strong>Detection (§4.3).</strong> Replacing VGG-16 with ResNet-101 in Faster R-CNN raises COCO mAP@[.5, .95] from 21.2% to 27.2%, the 6.0-point (28% relative) gain quoted in the abstract; mAP@.5 goes from 41.5% to 48.4%.</p>
+    <p><strong>Limitations.</strong> The paper is empirical: it shows that residual nets optimise better but does not explain why deep plain nets fail, and the 1,202-layer result shows that depth alone, without regularisation, stops paying. Post-addition ReLU means the shortcut path is not a pure identity end to end.</p>
+  </div>
+  <div class="later"><span class="label">Later refinements</span>Highway networks (Srivastava et al., 2015) had already used gated shortcuts; ResNet's gates are always open and parameter-free. He et al.'s follow-up, "Identity Mappings in Deep Residual Networks" (2016), analysed signal propagation and introduced pre-activation blocks (BN and ReLU before each convolution, nothing after the addition), training a 1,001-layer CIFAR network to 4.62% error. Wide ResNets (2016) traded depth for width; ResNeXt (2017) used grouped convolutions; DenseNet (2017) concatenated instead of adding. Later analysis by Veit et al. (2016) argued residual nets behave like ensembles of shallower paths. Most importantly, the <a href="transformer.html">Transformer</a> wraps every sublayer in a residual connection, which <a href="vit.html">ViT</a>'s Eqs. 2–3 show explicitly; pre-norm placement there mirrors the pre-activation idea. Normalisation-free schemes (e.g. Fixup, 2019) initialise the last layer of each branch at zero so every block starts as an exact identity.</div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>In a pre-activation ResNet, what is the gradient of the loss with respect to an early block's output?</dt>
+    <dd>It contains a term passed straight through the identity path from the top, plus the sum of the branch contributions, so it cannot vanish through the shortcut path even if every branch's gradient is small.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Degradation</dt><dd>Higher training error for deeper plain networks.</dd>
+    <dt>Residual</dt><dd><var>F</var>(<var>x</var>) = <var>H</var>(<var>x</var>) − <var>x</var>, what a block adds to its input.</dd>
+    <dt>Identity shortcut</dt><dd>A parameter-free connection adding a block's input to its output.</dd>
+    <dt>Projection shortcut</dt><dd>A 1×1 convolution on the shortcut to match dimensions (<var>W<sub>s</sub></var>).</dd>
+    <dt>Bottleneck</dt><dd>1×1 reduce, 3×3, 1×1 expand block used in ResNet-50/101/152.</dd>
+    <dt>10-crop</dt><dd>Averaging predictions over four corners, centre and their flips.</dd>
+    <dt>FLOPs</dt><dd>Here, multiply-adds per forward pass of one image.</dd>
+    <dt>Pre-activation</dt><dd>Block ordering BN → ReLU → conv, leaving the shortcut path a pure identity.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="alexnet.html">AlexNet (2012)</a></p>
+  <p><strong>Led to:</strong> <a href="vit.html">ViT (2020)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers/">Papers worth reading</a> (<a href="https://lovespark.love/papers/#resnet">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+function RNet(L,res,seed){ var r=rng(seed), W=6; this.L=L; this.res=res; this.W=W;
+  this.win=[]; this.bin=[]; for (var i=0;i<W;i++){ this.win.push(gauss(r)*1.5); this.bin.push(gauss(r)*0.5); }
+  this.Ws=[]; this.bs=[]; for (var l=0;l<L;l++){ var M=[]; for (var i=0;i<W;i++){ var row=[]; for (var j=0;j<W;j++) row.push(gauss(r)*Math.sqrt(1/W)); M.push(row); } this.Ws.push(M); this.bs.push([0,0,0,0,0,0]); }
+  this.wo=[]; for (var i=0;i<W;i++) this.wo.push(gauss(r)*Math.sqrt(1/W)); this.bo=0; this.v=null; }
+RNet.prototype.fwd=function(x){ var W=this.W, h=[], H=[], A=[]; for (var i=0;i<W;i++) h.push(Math.tanh(this.win[i]*x+this.bin[i])); H.push(h);
+  for (var l=0;l<this.L;l++){ var M=this.Ws[l], b=this.bs[l], a=[], n=[]; for (var i=0;i<W;i++){ var s=b[i]; for (var j=0;j<W;j++) s+=M[i][j]*h[j]; var t=Math.tanh(s); a.push(t); n.push(this.res?h[i]+t:t); } A.push(a); h=n; H.push(h); }
+  var y=this.bo; for (var i=0;i<W;i++) y+=this.wo[i]*h[i]; return {y:y,H:H,A:A}; };
+RNet.prototype.step=function(X,Y,lr,mu,clip){ var W=this.W, L=this.L, self=this, E=0;
+  var g={win:[0,0,0,0,0,0],bin:[0,0,0,0,0,0],Ws:this.Ws.map(function(M){ return M.map(function(r){ return r.map(function(){ return 0; }); }); }),bs:this.bs.map(function(){ return [0,0,0,0,0,0]; }),wo:[0,0,0,0,0,0],bo:0};
+  X.forEach(function(x,k){ var f=self.fwd(x), e=f.y-Y[k]; E+=e*e/X.length; var d=2*e/X.length; g.bo+=d; var dh=[]; for (var i=0;i<W;i++){ g.wo[i]+=d*f.H[L][i]; dh.push(d*self.wo[i]); }
+    for (var l=L-1;l>=0;l--){ var a=f.A[l], hp=f.H[l], M=self.Ws[l], ds=[]; for (var i=0;i<W;i++) ds.push(dh[i]*(1-a[i]*a[i])); var nh=[];
+      for (var j=0;j<W;j++){ var s=self.res?dh[j]:0; for (var i=0;i<W;i++) s+=ds[i]*M[i][j]; nh.push(s); }
+      for (var i=0;i<W;i++){ g.bs[l][i]+=ds[i]; for (var j=0;j<W;j++) g.Ws[l][i][j]+=ds[i]*hp[j]; } dh=nh; }
+    for (var i=0;i<W;i++){ var h0=f.H[0][i], dd=dh[i]*(1-h0*h0); g.win[i]+=dd*x; g.bin[i]+=dd; } });
+  var ss=g.bo*g.bo; function sq(a){ a.forEach(function(v){ if (Array.isArray(v)) sq(v); else ss+=v*v; }); } sq([g.win,g.bin,g.Ws,g.bs,g.wo]);
+  var f=Math.sqrt(ss)>clip?clip/Math.sqrt(ss):1, keys=['win','bin','Ws','bs','wo'];
+  function z(a){ return Array.isArray(a)?a.map(z):0; }
+  if (!this.v){ this.v={bo:0}; keys.forEach(function(k){ self.v[k]=z(g[k]); }); }
+  function upd(p,gg,vv){ for (var i=0;i<p.length;i++){ if (Array.isArray(p[i])) upd(p[i],gg[i],vv[i]); else { vv[i]=mu*vv[i]-lr*f*gg[i]; p[i]+=vv[i]; } } }
+  keys.forEach(function(k){ upd(self[k],g[k],self.v[k]); }); this.v.bo=mu*this.v.bo-lr*f*g.bo; this.bo+=this.v.bo; return E; };
+var RX=[], RY=[]; for (var i=0;i<40;i++){ var x=-1+2*i/39; RX.push(x); RY.push(Math.sin(3*x)*0.8+0.3*Math.sin(9*x)); }
+(function(){ // signal through depth at init
+  var svg=$('#sg'), L=20, seed=2;
+  function draw(){ clear(svg); var nets=[new RNet(30,0,seed), new RNet(30,1,seed)];
+    nets.forEach(function(net,k){ var ox=k*300, xs=[], hL=[], h1=[]; for (var i=0;i<=60;i++){ var x=-1+i/30, f=net.fwd(x); xs.push(x); hL.push(f.H[L][0]); h1.push(f.H[Math.min(1,L)][0]); }
+      var all=hL.concat(h1), mn=Math.min.apply(null,all), mx=Math.max.apply(null,all), pad=(mx-mn)*0.1||0.5; mn-=pad; mx+=pad;
+      var X=function(x){ return ox+30+(x+1)/2*250; }, Y=function(v){ return 210-(v-mn)/(mx-mn)*160; };
+      S('rect',{x:ox+30,y:50,width:250,height:160,'class':'box'},svg);
+      var d='',e=''; xs.forEach(function(x,i){ d+=(i?'L':'M')+X(x)+','+Y(hL[i]); e+=(i?'L':'M')+X(x)+','+Y(h1[i]); });
+      S('path',{d:e,'class':'w-dash'},svg); S('path',{d:d,'class':k?'w-ok':'w-fire'},svg);
+      S('text',{x:ox+30,y:24,'class':'t-h'},svg,k?'with shortcuts':'plain stack'); S('text',{x:ox+280,y:24,'class':'t-s end'},svg,'after '+L+' layers');
+      S('text',{x:ox+30,y:230,'class':'t-s'},svg,'input −1'); S('text',{x:ox+280,y:230,'class':'t-s end'},svg,'input +1');
+      S('text',{x:ox+36,y:44,'class':'t-s'},svg,'vertical scale fitted to each panel'); });
+    var p=nets[0], q=nets[1]; function span(n){ var a=[]; for (var i=0;i<=20;i++) a.push(n.fwd(-1+i/10).H[L][0]); return Math.max.apply(null,a)-Math.min.apply(null,a); }
+    $('#sg-r').innerHTML='After <b>'+L+'</b> layers, the unit\'s output varies over a range of <b>'+fmt(span(p),3)+'</b> (plain) versus <b>'+fmt(span(q),3)+'</b> (with shortcuts) as the input sweeps from −1 to 1.'; }
+  bindRange('sg-l',function(v){ L=v; draw(); }); bindRange('sg-s',function(v){ seed=v; draw(); });
+})();
+(function(){ // training race
+  var svg=$('#rt'), L=20, timer=null, nets, hist, t;
+  function init(){ nets=[new RNet(L,0,3), new RNet(L,1,3)]; hist=[[],[]]; t=0; }
+  function draw(){ clear(svg); var X=function(x){ return 20+(x+1)/2*250; }, Y=function(v){ return 130-v*85; };
+    S('rect',{x:20,y:20,width:250,height:220,'class':'box'},svg);
+    RX.forEach(function(x,i){ S('circle',{cx:X(x),cy:Y(RY[i]),r:2.6,'class':'f-ink'},svg); });
+    nets.forEach(function(n,k){ var d=''; for (var i=0;i<=80;i++){ var x=-1+i/40, y=Math.max(-1.2,Math.min(1.2,n.fwd(x).y)); d+=(i?'L':'M')+X(x)+','+Y(y); } S('path',{d:d,'class':k?'w-ok':'w-fire'},svg); });
+    S('text',{x:30,y:36,'class':'t-fire'},svg,'plain'); S('text',{x:80,y:36,'class':'t-ok'},svg,'residual');
+    var x0=320, x1=590, y0=30, y1=220, lo=-5, hi=0, LX=function(i){ return x0+i/900*(x1-x0); }, LY=function(e){ var l=Math.log10(Math.max(e,1e-5)); return y1-(l-lo)/(hi-lo)*(y1-y0); };
+    S('line',{x1:x0,y1:y1,x2:x1,y2:y1,'class':'axis'},svg); S('line',{x1:x0,y1:y0,x2:x0,y2:y1,'class':'axis'},svg);
+    [0,-1,-2,-3,-4,-5].forEach(function(p){ S('text',{x:x0-4,y:LY(Math.pow(10,p))+4,'class':'t-s end'},svg,p===0?'1':'1e'+p); });
+    S('text',{x:(x0+x1)/2,y:246,'class':'t-s mid'},svg,'training steps (0 to 900)'); S('text',{x:x0+4,y:22,'class':'t-s'},svg,'training error');
+    hist.forEach(function(h,k){ if (h.length<2) return; var d=''; h.forEach(function(e,i){ d+=(i?'L':'M')+LX(i)+','+LY(e); }); S('path',{d:d,'class':k?'w-ok':'w-fire'},svg); });
+    var e0=hist[0][hist[0].length-1], e1=hist[1][hist[1].length-1];
+    $('#rt-r').innerHTML = t ? 'Depth <b>'+L+'</b>, step <b>'+t+'</b>. Error: plain <b>'+(e0<1e-3?e0.toExponential(1):fmt(e0,4))+'</b>, residual <b>'+(e1<1e-3?e1.toExponential(1):fmt(e1,4))+'</b>.' : 'Depth <b>'+L+'</b>. Press Train both.'; }
+  function go(){ if (timer) clearInterval(timer); init();
+    timer=setInterval(function(){ for (var k=0;k<15&&t<900;k++){ hist[0].push(nets[0].step(RX,RY,0.02,0.9,1)); hist[1].push(nets[1].step(RX,RY,0.02,0.9,1)); t++; } draw(); if (t>=900){ clearInterval(timer); timer=null; } },30); }
+  bindRange('rt-l',function(v){ L=v; if (timer){ clearInterval(timer); timer=null; } init(); draw(); });
+  $('#rt-go').onclick=go;
+})();
+(function(){ // scalar identity
+  var svg=$('#idf'), w=0.3, n=30;
+  function draw(){ clear(svg); var x0=50, x1=580, y0=20, y1=180, lo=-3, hi=3, X=function(v){ return x0+(v+0.5)/2*(x1-x0); }, Y=function(g){ var l=Math.log10(Math.max(Math.abs(g),1e-3)); l=Math.max(lo,Math.min(hi,l)); return y1-(l-lo)/(hi-lo)*(y1-y0); };
+    S('line',{x1:x0,y1:y1,x2:x1,y2:y1,'class':'axis'},svg); S('line',{x1:x0,y1:y0,x2:x0,y2:y1,'class':'axis'},svg);
+    [-3,-2,-1,0,1,2,3].forEach(function(p){ S('line',{x1:x0,y1:Y(Math.pow(10,p)),x2:x1,y2:Y(Math.pow(10,p)),'class':'grid'},svg); S('text',{x:x0-4,y:Y(Math.pow(10,p))+4,'class':'t-s end'},svg,p===0?'1':'1e'+p); });
+    [-0.5,0,0.5,1,1.5].forEach(function(v){ S('text',{x:X(v),y:y1+16,'class':'t-s mid'},svg,v); });
+    S('text',{x:(x0+x1)/2,y:214,'class':'t-s mid'},svg,'weight w'); S('rect',{x:x0,y:Y(1.25),width:x1-x0,height:Y(0.8)-Y(1.25),'class':'f-ok','fill-opacity':0.12},svg);
+    var dp='',dr=''; for (var i=0;i<=200;i++){ var v=-0.5+i/100; dp+=(i?'L':'M')+X(v)+','+Y(Math.pow(v,n)); dr+=(i?'L':'M')+X(v)+','+Y(Math.pow(1+v,n)); }
+    S('path',{d:dp,'class':'w-fire'},svg); S('path',{d:dr,'class':'w-ok'},svg);
+    var gp=Math.pow(w,n), gr=Math.pow(1+w,n); S('circle',{cx:X(w),cy:Y(gp),r:5,'class':'u-on'},svg); S('circle',{cx:X(w),cy:Y(gr),r:5,'class':'u-wire'},svg);
+    S('text',{x:x0+8,y:y0+12,'class':'t-s'},svg,'green band: gain 0.8–1.25 (near identity)'); S('text',{x:X(1)+6,y:Y(1)-8,'class':'t-fire'},svg,'plain wⁿ'); S('text',{x:X(0)+6,y:Y(1)-8,'class':'t-ok'},svg,'residual (1+w)ⁿ');
+    function band(f){ var a=null,b=null; for (var i=0;i<=4000;i++){ var v=-0.5+i/2000, g=f(v); if (g>=0.8&&g<=1.25){ if (a===null) a=v; b=v; } } return b-a; }
+    $('#id-r').innerHTML='At <var>w</var> = '+fmt(w,2)+' and depth '+n+': plain gain <b>'+(gp<1e-3?gp.toExponential(1):fmt(gp,3))+'</b>, residual gain <b>'+(gr>1e3?gr.toExponential(1):fmt(gr,3))+'</b>. Width of the near-identity band: plain <b>'+fmt(band(function(v){ return Math.pow(v,n); }),4)+'</b>, residual <b>'+fmt(band(function(v){ return Math.pow(1+v,n); }),4)+'</b> (same width; the residual band sits at <var>w</var> ≈ 0, where small random initial weights already are).'; }
+  bindRange('id-w',function(v){ w=v; draw(); }); bindRange('id-n',function(v){ n=v; draw(); });
+})();
+(function(){ // bottleneck params
+  var svg=$('#bn'), d=64;
+  function n(x){ return x.toLocaleString('en-GB'); }
+  function draw(){ clear(svg); var C=4*d, basic=2*9*d*d, bott=C*d+9*d*d+d*C, wide=2*9*C*C, mx=wide;
+    var rows=[['basic block, width d',basic,'2 × 3×3 × '+d+' × '+d,'f-wire'],['bottleneck, d inside, 4d outside',bott,C+'×'+d+' + 9×'+d+'×'+d+' + '+d+'×'+C,'f-fire'],['basic block at width 4d',wide,'2 × 3×3 × '+C+' × '+C,'f-muted']];
+    rows.forEach(function(r,i){ var y=24+i*66, w=Math.max(2,r[1]/mx*360); S('text',{x:10,y:y,'class':'t'},svg,r[0]); S('rect',{x:10,y:y+8,width:w,height:22,'class':r[3]},svg); S('text',{x:16+w,y:y+24,'class':'t'},svg,n(r[1])); S('text',{x:10,y:y+46,'class':'t-s'},svg,r[2]); });
+    $('#bn-r').innerHTML='At <var>d</var> = '+d+': bottleneck <b>'+n(bott)+'</b> vs basic <b>'+n(basic)+'</b> weights (ratio <b>'+fmt(bott/basic,2)+'</b>), while carrying a '+C+'-channel signal. A basic block at that width would need <b>'+fmt(wide/bott,1)+'×</b> more.'; }
+  bindRange('bn-d',function(v){ d=v; draw(); });
+})();
+(function(){ // results
+  var svg=$('#rv'), mode='in';
+  var IN=[['VGG-16',28.07,'f-muted'],['plain-18',27.94,'f-wire'],['plain-34',28.54,'f-wire'],['ResNet-18',27.88,'f-fire'],['ResNet-34 A',25.03,'f-fire'],['ResNet-34 B',24.52,'f-fire'],['ResNet-34 C',24.19,'f-fire'],['ResNet-50',22.85,'f-fire'],['ResNet-101',21.75,'f-fire'],['ResNet-152',21.43,'f-fire']];
+  var CF=[['ResNet-20',8.75],['ResNet-32',7.51],['ResNet-44',7.17],['ResNet-56',6.97],['ResNet-110',6.43],['ResNet-1202',7.93]];
+  function draw(){ clear(svg); var D=mode==='in'?IN:CF, lo=mode==='in'?20:6, hi=mode==='in'?29:9, x0=130, W=440;
+    for (var g=lo;g<=hi;g+=1){ var x=x0+(g-lo)/(hi-lo)*W; S('line',{x1:x,y1:10,x2:x,y2:268,'class':'grid'},svg); S('text',{x:x,y:286,'class':'t-s mid'},svg,g+'%'); }
+    var h=Math.min(24,250/D.length);
+    D.forEach(function(r,i){ var y=14+i*h, w=(r[1]-lo)/(hi-lo)*W; S('text',{x:x0-6,y:y+h*0.65,'class':'t end'},svg,r[0]); S('rect',{x:x0,y:y+2,width:w,height:h-6,'class':r[2]||(r[0]==='ResNet-1202'?'f-inh':'f-fire')},svg); S('text',{x:x0+w+5,y:y+h*0.65,'class':'t-s'},svg,fmt(r[1],2)); });
+    $('#rv-r').innerHTML = mode==='in' ? 'Plain nets get worse from 18 to 34 layers (27.94 → 28.54); ResNets get better all the way to 152 (27.88 → 21.43). Axis starts at 20%.' : 'Error falls with depth to 110 layers, then rises at 1,202 layers, attributed to overfitting rather than optimisation. Axis starts at 6%.'; }
+  $$('[data-rv]').forEach(function(b){ b.addEventListener('click',function(){ mode=b.dataset.rv; $$('[data-rv]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }); });
+  draw();
+})();
+</script>
+
+</body>
+</html>

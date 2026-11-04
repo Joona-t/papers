@@ -1,0 +1,335 @@
+<!--LEDE-->
+DeepSeekMath asks how far an open 7-billion-parameter model can get at competition mathematics. The answer combines a 120-billion-token maths corpus mined from the web with a new, leaner reinforcement-learning method, Group Relative Policy Optimization (GRPO), which scores each answer against the other answers to the same question instead of training a separate network to predict how good an answer should be.
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>The team filtered 120 billion tokens of mathematical text out of a huge web crawl and used it to keep training a 7-billion-parameter model; after fine-tuning and reinforcement learning it reached 51.7% on a hard competition-maths test without any calculator or code tools.</p>
+  <p>To improve it further with reinforcement learning, they replaced the usual PPO method's second "critic" network, which tries to predict how good each answer will be, with something much simpler.</p>
+  <p>GRPO asks the model the same question many times (64 in the paper), scores every answer, and rewards each one by how much better or worse it did than the group's average: grading on a curve.</p>
+  <p>This saves the memory and effort of a whole extra model, lifted the scores further, and became the training method behind <a href="r1.html">DeepSeek-R1</a> a year later.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §2</p>
+  <h2>First, feed it a lot of maths</h2>
+  <div class="prose">
+    <p>Most of the paper is about data. The authors started from OpenWebMath, a public collection of mathematical web pages, and trained a simple text classifier to recognise "pages that look like maths". They ran it over Common Crawl, a giant public snapshot of the web, kept the best-scoring pages, had people help label which website sections were mathematical, retrained the classifier and repeated. After four rounds they had 35.5 million web pages totalling 120 billion tokens (word pieces).</p>
+    <p>They also removed anything that matched the test questions, so the model could not simply memorise answers. A code-trained 7B model, further trained on this corpus plus some code and ordinary text, became DeepSeekMath-Base. After supervised fine-tuning on worked solutions it became DeepSeekMath-Instruct, and after reinforcement learning, DeepSeekMath-RL.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Before coaching a student for a maths olympiad, you give them a library. The library here is the web's maths pages, found by a sniffer dog that gets better at finding them each round.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Careful data selection, not a bigger model, did most of the work; reinforcement learning was the finishing step.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §4.1.1</p>
+  <h2>Learning from right and wrong answers, and the expensive critic</h2>
+  <div class="prose">
+    <p>In <strong>reinforcement learning</strong> (RL) the model tries something, gets a score (a <strong>reward</strong>), and is nudged to do more of what scored well. For maths, the model writes a solution and a reward model judges it.</p>
+    <p>A raw score alone is a poor teacher. If almost every answer scores well, "you scored 0.8" tells you little; what matters is whether this answer was <em>better than expected</em>. That difference is called the <strong>advantage</strong>. The popular method PPO, used in <a href="instructgpt.html">InstructGPT</a>, computes it with a second neural network, the <strong>critic</strong> or value model, trained alongside the main one to predict the expected score at every point in the answer.</p>
+    <p>The critic is usually as big as the model being trained. That means another few billion numbers in GPU memory, another network to train, and a tricky job: predicting the final score from a half-written solution when the reward only arrives at the very end.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Reinforcement learning needs a baseline, "what score did we expect?", and PPO pays for it with a whole second model.</p>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §4.1.2 · Eq. 3</p>
+  <h2>Grade on a curve instead</h2>
+  <div class="prose">
+    <p>GRPO's idea is to get the baseline from the model's own attempts. For each question, sample a <strong>group</strong> of answers. Score them all. The expected score is just the group's average; each answer's advantage is how far above or below the average it landed, divided by how spread out the scores were (the <strong>standard deviation</strong>), so that every question's lesson has a similar size.</p>
+    <p>Answers above average get reinforced, those below get discouraged. No critic is needed. Try it below with a right-or-wrong (1 or 0) score.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Chance each answer is right <input type="range" id="gr-p" min="0" max="1" step="0.05" value="0.4" data-fmt="2"><output id="gr-p-o">0.40</output></label>
+      <label>Group size <input type="range" id="gr-g" min="2" max="16" step="1" value="8"><output id="gr-g-o">8</output></label>
+      <button class="btn" id="gr-s">Sample a new group</button>
+    </div>
+    <div class="svgbox"><svg id="gr" viewBox="0 0 600 240" role="img" aria-label="A group of sampled answers with rewards and group-relative advantages"></svg></div>
+    <p class="readout" id="gr-r"></p>
+    <figcaption>Each column is one sampled answer: tick = correct (reward 1), cross = wrong (reward 0). Bars show its advantage, (reward − group average) ÷ standard deviation: up (amber) reinforces, down (blue) discourages. Set the chance to 0 or 1, or use a small group on an easy question: when every answer gets the same score, all advantages are zero and the group teaches nothing.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>A teacher who grades on a curve doesn't need to know in advance how hard the test was. The class's own average tells her: whoever beat it did well.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>GRPO replaces the critic with the group: the average score of several attempts at the same question is the baseline.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>A question is so easy that all 64 answers are correct. What does GRPO learn from it?</dt>
+    <dd>Nothing: every advantage is zero. Questions that are always solved or never solved give no signal, which is why the mix of difficulty in the training set matters.</dd>
+    <dt>Why does a rare correct answer get a large positive advantage?</dt>
+    <dd>Because the average is low and the spread small, so being right is far above expectation. The method pushes hard on surprising successes.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §4.1 · Algorithm 1</p>
+  <h2>Watch GRPO train</h2>
+  <div class="prose">
+    <p>Here is a tiny stand-in for a language model. For one type of question it can choose between four solution strategies, each with a different (hidden) chance of reaching the right answer. Every step, it samples a group of attempts, scores each 1 or 0, computes the group-relative advantages, and nudges its preferences. Watch it discover the best strategy without ever being told which one that is.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Group size <input type="range" id="gt-g" min="2" max="32" step="1" value="8"><output id="gt-g-o">8</output></label>
+      <button class="btn" id="gt-go" aria-pressed="false">Train</button><button class="btn" id="gt-reset">Reset</button>
+    </div>
+    <div class="svgbox wide"><svg id="gt" viewBox="0 0 640 260" role="img" aria-label="Policy over four strategies and accuracy curve during GRPO training"></svg></div>
+    <p class="readout" id="gt-r"></p>
+    <figcaption>Left: how often the model picks each strategy (hidden success rates underneath). Right: expected accuracy over training. "Wasted groups" counts groups where all answers scored the same, so all advantages were zero. With group size 2, many groups are wasted and learning is slower and noisier. An illustration of the update rule, not the paper's experiment.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Comparing attempts with each other is enough signal to move a model towards strategies that reach correct answers.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §4.2, §5.2 · Table 5, Fig. 7</p>
+  <h2>What reinforcement learning actually changed</h2>
+  <div class="prose">
+    <p>GRPO, trained only on questions related to two maths test sets (GSM8K and MATH), raised the Instruct model from 82.9% to 88.2% on GSM8K and from 46.8% to 51.7% on MATH. It also improved on tests it was not trained for, such as a Chinese maths benchmark.</p>
+    <p>The authors then asked a sharp question. If you let the model try <var>K</var> times, does RL raise the chance that <em>at least one</em> try is right (called Pass@K)? Mostly not. What it raised was the chance that the <em>most common</em> answer is right (Maj@K), and the chance a single try is right. Their reading: RL made the model more reliable at producing answers it could already sometimes produce, rather than teaching fundamentally new abilities.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>A year later <a href="r1.html">DeepSeek-R1</a> used GRPO with simple rule-based rewards (is the final answer right?) at much larger scale, and long, self-checking reasoning emerged. Others then refined GRPO itself: "Dr. GRPO" (2025) argued that dividing by the group's spread and by answer length introduces biases and removed them; DAPO (2025) changed clipping and sampling to keep training stable. The debate over whether RL creates new abilities or sharpens existing ones, raised here, continues.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>GRPO improved accuracy cheaply, but mainly by making the model's existing good answers more likely, a finding later work keeps revisiting.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>If RL raises Maj@K but not Pass@K, what has changed in the model?</dt>
+    <dd>The correct answer was already somewhere among its possible outputs; RL made it more probable, so it wins the vote more often, without adding new correct answers it could never find before.</dd>
+  </dl></details>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>DeepSeekMath 7B continues pre-training DeepSeek-Coder-Base-v1.5 7B on 120B math-related tokens from Common Crawl, together with natural language and code. It scores 51.7% on competition-level MATH without external toolkits or voting, approaching Gemini-Ultra and GPT-4, and 60.9% with self-consistency over 64 samples. Two factors are credited: a carefully engineered data-selection pipeline over public web data, and Group Relative Policy Optimization (GRPO), a PPO variant that improves mathematical reasoning while reducing PPO's memory usage. Shao, Wang, Zhu, Xu, Song, Bi, Zhang, Zhang, Li, Wu, Guo, arXiv 2402.03300 (2024).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2–3</p>
+  <h2>Corpus, base and instruct models</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Data collection (§2.1).</strong> A fastText classifier is trained on 500,000 OpenWebMath positives and 500,000 Common Crawl negatives and applied to a deduplicated Common Crawl of 40B HTML pages. Domains with over 10% of pages recalled are marked math-related; annotators then label math URL paths, uncollected pages from those paths are added as positives, and the classifier is retrained. After four iterations (by iteration 4, about 98% of the data had already been collected in iteration 3) the DeepSeekMath Corpus holds 35.5M pages, 120B tokens.</li>
+      <li><strong>Decontamination.</strong> Text segments with exact 10-gram matches to benchmarks (GSM8K, MATH, CMATH, AGIEval) are removed; shorter benchmark texts use exact matching down to 3-grams.</li>
+      <li><strong>Base model (§2.3).</strong> Initialised from DeepSeek-Coder-Base-v1.5 7B; the authors find (§5.1) that code pre-training first helps mathematical reasoning, while arXiv papers, perhaps surprisingly, gave no clear improvement on the benchmarks they used.</li>
+      <li><strong>SFT (§3).</strong> Chain-of-thought, program-of-thought and tool-integrated solutions in English and Chinese, giving DeepSeekMath-Instruct 7B.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §4.1.1 · Eqs. 1–4 · Fig. 4</p>
+  <h2>From PPO to GRPO</h2>
+  <div class="prose"><p>PPO maximises the clipped surrogate</p></div>
+  <div class="eq">𝒥<sub>PPO</sub>(θ) = 𝔼 [ (1/|<var>o</var>|) Σ<sub><var>t</var></sub> min( ρ<sub><var>t</var></sub> <var>A<sub>t</sub></var>, clip(ρ<sub><var>t</var></sub>, 1 − ε, 1 + ε) <var>A<sub>t</sub></var> ) ], &nbsp; ρ<sub><var>t</var></sub> = π<sub>θ</sub>(<var>o<sub>t</sub></var> | <var>q</var>, <var>o</var><sub>&lt;<var>t</var></sub>) / π<sub>θ<sub>old</sub></sub>(<var>o<sub>t</sub></var> | <var>q</var>, <var>o</var><sub>&lt;<var>t</var></sub>) <span class="n">(1)</span></div>
+  <div class="prose"><p>with <var>A<sub>t</sub></var> from Generalised Advantage Estimation (GAE) over rewards and a learned value function <var>V<sub>ψ</sub></var>, and a per-token KL penalty folded into the reward:</p></div>
+  <div class="eq"><var>r<sub>t</sub></var> = <var>r<sub>φ</sub></var>(<var>q</var>, <var>o</var><sub>≤<var>t</var></sub>) − β log ( π<sub>θ</sub>(<var>o<sub>t</sub></var> | <var>q</var>, <var>o</var><sub>&lt;<var>t</var></sub>) / π<sub>ref</sub>(<var>o<sub>t</sub></var> | <var>q</var>, <var>o</var><sub>&lt;<var>t</var></sub>) ) <span class="n">(2)</span></div>
+  <div class="prose"><p>The value model is typically as large as the policy, and in LLM RL only the last token receives a reward, which makes a per-token value function hard to train. GRPO drops it. For each question <var>q</var>, sample <var>G</var> outputs {<var>o</var><sub>1</sub>, …, <var>o<sub>G</sub></var>} from π<sub>θ<sub>old</sub></sub> and maximise</p></div>
+  <div class="eq">𝒥<sub>GRPO</sub>(θ) = 𝔼 [ (1/<var>G</var>) Σ<sub><var>i</var>=1</sub><sup><var>G</var></sup> (1/|<var>o<sub>i</sub></var>|) Σ<sub><var>t</var>=1</sub><sup>|<var>o<sub>i</sub></var>|</sup> { min( ρ<sub><var>i,t</var></sub> <var>Â<sub>i,t</sub></var>, clip(ρ<sub><var>i,t</var></sub>, 1 − ε, 1 + ε) <var>Â<sub>i,t</sub></var> ) − β 𝔻<sub>KL</sub>[π<sub>θ</sub> ‖ π<sub>ref</sub>] } ] <span class="n">(3)</span></div>
+  <div class="prose"><p>Two differences besides the advantage: the KL term is added directly to the loss rather than to the reward, so it does not complicate <var>Â</var>; and it uses the unbiased, always non-negative estimator</p></div>
+  <div class="eq">𝔻<sub>KL</sub>[π<sub>θ</sub> ‖ π<sub>ref</sub>] = π<sub>ref</sub>(<var>o<sub>i,t</sub></var> | ·) / π<sub>θ</sub>(<var>o<sub>i,t</sub></var> | ·) − log ( π<sub>ref</sub>(<var>o<sub>i,t</sub></var> | ·) / π<sub>θ</sub>(<var>o<sub>i,t</sub></var> | ·) ) − 1 <span class="n">(4)</span></div>
+  <div class="prose"><p>The clipped surrogate is what keeps each update "proximal". For one token, the objective as a function of the ratio ρ:</p></div>
+  <figure class="live">
+    <div class="ctl">
+      <label>ε <input type="range" id="cl-e" min="0.05" max="0.5" step="0.05" value="0.2" data-fmt="2"><output id="cl-e-o">0.20</output></label>
+      <label>Advantage <var>Â</var> <input type="range" id="cl-a" min="-2" max="2" step="0.1" value="1" data-fmt="1"><output id="cl-a-o">1.0</output></label>
+      <label>β (KL) <input type="range" id="cl-b" min="0" max="0.5" step="0.02" value="0.04" data-fmt="2"><output id="cl-b-o">0.04</output></label>
+    </div>
+    <div class="svgbox"><svg id="cl" viewBox="0 0 600 250" role="img" aria-label="Clipped surrogate objective and KL penalty against the probability ratio"></svg></div>
+    <p class="readout" id="cl-r"></p>
+    <figcaption>Blue: unclipped ρ·Â. Amber: the clipped term min(ρÂ, clip(ρ)Â), which goes flat (zero gradient) once ρ leaves [1 − ε, 1 + ε] in the direction the advantage favours. Green dashed: the Eq. 4 KL estimate for that token, plotted assuming π<sub>θ<sub>old</sub></sub> = π<sub>ref</sub> so that π<sub>ref</sub>/π<sub>θ</sub> = 1/ρ; it is zero at ρ = 1 and positive elsewhere. Black: their combination, the per-token objective. The paper uses β = 0.04; the value of ε is not stated in the paper.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is Eq. 4 always non-negative?</dt>
+    <dd>For <var>x</var> = π<sub>ref</sub>/π<sub>θ</sub> &gt; 0, <var>x</var> − log <var>x</var> − 1 ≥ 0 with equality only at <var>x</var> = 1 (since log <var>x</var> ≤ <var>x</var> − 1). Its expectation under π<sub>θ</sub> equals the true KL, so it is unbiased.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §4.1.2–4.1.4 · Algorithm 1</p>
+  <h2>Outcome and process supervision, iterative RL</h2>
+  <div class="prose">
+    <p><strong>Outcome supervision.</strong> A reward model scores each complete output, <var>r</var> = {<var>r</var><sub>1</sub>, …, <var>r<sub>G</sub></var>}. Every token of output <var>i</var> gets the same normalised advantage:</p>
+  </div>
+  <div class="eq"><var>Â<sub>i,t</sub></var> = <var>r̃<sub>i</sub></var> = ( <var>r<sub>i</sub></var> − mean(<var>r</var>) ) / std(<var>r</var>)</div>
+  <div class="prose">
+    <p><strong>Process supervision.</strong> A process reward model scores the end of each reasoning step. All step rewards across the group are normalised by their mean and standard deviation, and a token's advantage is the sum of normalised rewards of the steps ending at or after it: <var>Â<sub>i,t</sub></var> = Σ<sub>index(<var>j</var>) ≥ <var>t</var></sub> <var>r̃</var><sub><var>i</var></sub><sup>index(<var>j</var>)</sup>.</p>
+    <p><strong>Iterative RL.</strong> As the policy improves, the old reward model may no longer supervise it well. Algorithm 1 therefore alternates: periodically generate new training data for the reward model from the current policy's samples, continue training the reward model with a replay mechanism that keeps 10% of historical data, and reset the reference model to the current policy.</p>
+  </div>
+  <pre class="algo"><span class="c">Algorithm 1 (paraphrased)</span>
+for iteration = 1..I:
+    π_ref ← π_θ
+    for step = 1..M:
+        sample batch D_b of questions;  π_θold ← π_θ
+        for each q in D_b: sample G outputs {o_i} ~ π_θold(·|q)
+        score each o_i with reward model r_φ; compute Â_{i,t}
+        for GRPO iteration = 1..μ: update π_θ by maximising Eq. 3
+    update r_φ by continued training on new samples (replay 10%)</pre>
+  <div class="prose">
+    <p><strong>Settings (§4.2).</strong> Training questions: about 144K chain-of-thought questions related to GSM8K and MATH from the SFT data (deliberately narrow, to test generalisation). Policy learning rate 1e-6, KL coefficient β = 0.04, <var>G</var> = 64 outputs per question, max length 1,024, batch size 1,024, and the policy is updated only once after each exploration stage. (A single update means each batch is used on-policy, so in this setting the ratio starts at 1 and the clip plays little role; this is our reading, not a statement in the paper.) The reward model was initialised from DeepSeekMath-Base 7B with learning rate 2e-5.</p>
+  </div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §4.2 · Table 5</p>
+  <h2>Results</h2>
+  <div class="tablebox"><table>
+    <thead><tr><th>Benchmark</th><th>Type</th><th>Instruct 7B</th><th>RL 7B</th></tr></thead>
+    <tbody>
+      <tr><td>GSM8K (CoT)</td><td>in-domain</td><td class="num">82.9</td><td class="num">88.2</td></tr>
+      <tr><td>MATH (CoT)</td><td>in-domain</td><td class="num">46.8</td><td class="num">51.7</td></tr>
+      <tr><td>MGSM-zh (CoT)</td><td>out-of-domain</td><td class="num">73.2</td><td class="num">79.6</td></tr>
+      <tr><td>CMATH (CoT)</td><td>out-of-domain</td><td class="num">84.6</td><td class="num">88.8</td></tr>
+      <tr><td>GSM8K (tool-integrated)</td><td>in-domain</td><td class="num">83.7</td><td class="num">86.7</td></tr>
+      <tr><td>MATH (tool-integrated)</td><td>in-domain</td><td class="num">57.4</td><td class="num">58.8</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose"><p>RL used only chain-of-thought-format GSM8K/MATH questions, yet improved tool-integrated and Chinese benchmarks too. With self-consistency over 64 samples, the RL model reaches 60.9% on MATH (abstract).</p></div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §5.2 · Eq. 5 · Table 10 · Fig. 7</p>
+  <h2>A unified view, and why RL works</h2>
+  <div class="prose"><p>§5.2.1 writes SFT, rejection-sampling fine-tuning (RFT), DPO, online RFT, PPO and GRPO as the same gradient form with different data sources, reward functions and per-token gradient coefficients:</p></div>
+  <div class="eq">∇<sub>θ</sub>𝒥<sub>𝒜</sub>(θ) = 𝔼<sub>(<var>q</var>, <var>o</var>)∼𝒟</sub> [ (1/|<var>o</var>|) Σ<sub><var>t</var></sub> GC<sub>𝒜</sub>(<var>q</var>, <var>o</var>, <var>t</var>, π<sub>rf</sub>) ∇<sub>θ</sub> log π<sub>θ</sub>(<var>o<sub>t</sub></var> | <var>q</var>, <var>o</var><sub>&lt;<var>t</var></sub>) ] <span class="n">(5)</span></div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Method</th><th>Data source</th><th>Reward</th></tr></thead>
+    <tbody>
+      <tr><td>SFT</td><td>human-curated (<var>q</var>, <var>o</var>)</td><td>none (coefficient 1)</td></tr>
+      <tr><td>RFT</td><td>SFT model samples, offline</td><td>rule</td></tr>
+      <tr><td>DPO</td><td>SFT model pairs, offline</td><td>rule</td></tr>
+      <tr><td>Online RFT</td><td>current policy samples</td><td>rule</td></tr>
+      <tr><td>PPO</td><td>current policy samples</td><td>model</td></tr>
+      <tr><td>GRPO</td><td>groups from current policy</td><td>model</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>Experiments along these axes find that online data beats offline, and that GRPO's reward-scaled coefficients (which can penalise wrong answers by different amounts) beat online RFT's binary keep/discard.</p>
+    <p><strong>Why RL works (§5.2.2, Fig. 7).</strong> RL improves Maj@K but not Pass@K. The authors conclude that RL "enhances the model's overall performance by rendering the output distribution more robust": it boosts correct responses already in the model's top-K rather than enhancing fundamental capabilities. The toy below reproduces the effect with exactly that mechanism.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>RL boost to top-2 correct answers <input type="range" id="pk-a" min="1" max="6" step="0.5" value="3" data-fmt="1"><output id="pk-a-o">3.0</output></label></div>
+    <div class="svgbox"><svg id="pk" viewBox="0 0 600 260" role="img" aria-label="Pass@K and Maj@K curves before and after sharpening"></svg></div>
+    <p class="readout" id="pk-r"></p>
+    <figcaption>Illustrative simulation, not the paper's data. 300 questions; for each, the model has a probability distribution over one correct and four wrong answers. "RL" is modelled as the paper's interpretation: wherever the correct answer is already among the model's two most likely answers, its probability is multiplied by the boost and renormalised; other questions are untouched. Dashed lines: before; solid: after. Pass@K (blue) is the chance at least one of <var>K</var> samples is correct; Maj@K (amber) is the chance the majority answer is correct. Pass@1 and Maj@K rise clearly while Pass@64 barely moves, the shape of the paper's Fig. 7.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t6">
+  <p class="eyebrow"><b>Section</b> · §5.2.3, §6 and later work</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Scope.</strong> A 7B model on maths; geometry and theorem proving are weaker than closed models, and the authors attribute some limits to model scale and data.</li>
+      <li><strong>Reward model.</strong> Results depend on a learned reward model whose reliability and generalisation to harder questions §5.2.3 names as a key direction, along with better exploration (e.g. tree search) and data sources.</li>
+      <li><strong>No headline memory number.</strong> The memory and compute savings of dropping the critic are argued qualitatively; no measured figure is given.</li>
+      <li><strong>Narrow gains.</strong> Fig. 7 suggests RL mainly sharpens rather than extends capability.</li>
+    </ul>
+  </div>
+  <div class="later"><span class="label">Later refinements</span><a href="r1.html">DeepSeek-R1</a> (2025) applied GRPO to a 671B mixture-of-experts base with rule-based accuracy and format rewards instead of a reward model, and much longer outputs, producing emergent long chain-of-thought. Analyses of GRPO then identified biases: normalising by output length |<var>o<sub>i</sub></var>| favours long wrong answers and short right ones, and dividing by std(<var>r</var>) up-weights questions that are nearly always or never solved; "Dr. GRPO" (Liu et al., 2025) removes both. DAPO (Yu et al., 2025) drops the KL term, uses asymmetric "clip-higher" bounds, token-level loss averaging and dynamic sampling to skip zero-advantage groups. Yue et al. (2025) revisited the Pass@K question at large <var>K</var> and found base models can match or exceed RL-trained ones, reinforcing this paper's §5.2.2 reading. Earlier group-baseline ideas include RLOO (leave-one-out REINFORCE baselines). Compare the offline alternative <a href="dpo.html">DPO</a>, which §5.2.1 places in the same framework.</div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does per-output length normalisation bias GRPO?</dt>
+    <dd>Each output's token losses are averaged over its own length, so a long wrong answer's per-token penalty is diluted while a short correct answer's per-token reward is concentrated. Over training this can favour longer incorrect outputs.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t7" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Advantage</dt><dd>How much better an action or output did than a baseline expectation.</dd>
+    <dt>Value model / critic</dt><dd>Network predicting expected future reward; PPO's baseline.</dd>
+    <dt>GAE</dt><dd>Generalised Advantage Estimation: exponentially weighted TD errors from a value function.</dd>
+    <dt>Group <var>G</var></dt><dd>Number of outputs sampled per question (64 in the paper).</dd>
+    <dt>π<sub>ref</sub></dt><dd>Reference policy for the KL penalty (initially the SFT model).</dd>
+    <dt>ε</dt><dd>Clip range of the probability ratio.</dd>
+    <dt>Pass@K</dt><dd>Probability that at least one of <var>K</var> samples is correct.</dd>
+    <dt>Maj@K</dt><dd>Accuracy of the majority-vote answer over <var>K</var> samples (self-consistency).</dd>
+    <dt>ORM / PRM</dt><dd>Outcome / process reward model: scores whole answers or individual steps.</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+function softmax(t){ var m=Math.max.apply(null,t), e=t.map(function(v){return Math.exp(v-m);}), z=e.reduce(function(a,b){return a+b;},0); return e.map(function(v){return v/z;}); }
+function meanStd(r){ var m=r.reduce(function(a,b){return a+b;},0)/r.length, v=r.reduce(function(a,b){return a+(b-m)*(b-m);},0)/r.length; return [m,Math.sqrt(v)]; }
+(function(){ // group advantages
+  var svg=$('#gr'), p=0.4, G=8, rr=rng(9), rew=[];
+  function sample(){ rew=[]; for (var i=0;i<G;i++) rew.push(rr()<p?1:0); draw(); }
+  function draw(){ clear(svg); var ms=meanStd(rew), w=Math.min(60,520/G);
+    S('line',{x1:40,y1:150,x2:580,y2:150,'class':'axis'},svg); S('text',{x:36,y:154,'class':'t-s end'},svg,'0');
+    S('text',{x:36,y:86,'class':'t-s end'},svg,'+2'); S('text',{x:36,y:222,'class':'t-s end'},svg,'−2');
+    S('line',{x1:40,y1:82,x2:580,y2:82,'class':'grid'},svg); S('line',{x1:40,y1:218,x2:580,y2:218,'class':'grid'},svg);
+    rew.forEach(function(r,i){ var x=50+i*(520/G)+(520/G-w)/2, cx=x+w/2, a=ms[1]>0?(r-ms[0])/ms[1]:0, h=Math.max(-2.6,Math.min(2.6,a))*34;
+      S('text',{x:cx,y:24,'class':r?'t-ok mid':'t-inh mid'},svg,r?'✓':'✗'); S('text',{x:cx,y:42,'class':'t-s mid'},svg,'r='+r);
+      if (Math.abs(h)>0.5) S('rect',{x:x+4,y:h>0?150-h:150,width:w-8,height:Math.abs(h),'class':a>0?'f-fire':'f-wire'},svg);
+      S('text',{x:cx,y:a>=0?150-h-5:150-h+13,'class':'t-s mid'},svg,fmt(a,2)); });
+    $('#gr-r').innerHTML='Group average <b>'+fmt(ms[0],2)+'</b>, standard deviation <b>'+fmt(ms[1],2)+'</b>. '+(ms[1]===0?'<b>All scores equal: zero advantage, no learning signal.</b>':'Correct answers get <b>'+fmt((1-ms[0])/ms[1],2)+'</b>, wrong ones <b>'+fmt((0-ms[0])/ms[1],2)+'</b>.');
+  }
+  bindRange('gr-p',function(v){ p=v; sample(); }); bindRange('gr-g',function(v){ G=v; sample(); }); $('#gr-s').onclick=sample;
+})();
+(function(){ // GRPO bandit
+  var svg=$('#gt'), P=[0.2,0.45,0.7,0.3], names=['guess & check','work backwards','set up equation','draw a picture'], G=8, th, hist, it, wasted, rr, timer=null;
+  function reset(){ th=[0,0,0,0]; hist=[]; it=0; wasted=0; rr=rng(21); draw(); }
+  function pi(){ return softmax(th); }
+  function step(){ var p=pi(), acts=[], rew=[];
+    for (var i=0;i<G;i++){ var u=rr(), a=0, c=p[0]; while (u>c && a<3){ a++; c+=p[a]; } acts.push(a); rew.push(rr()<P[a]?1:0); }
+    var ms=meanStd(rew); if (ms[1]===0){ wasted++; } else { var g=[0,0,0,0];
+      acts.forEach(function(a,i){ var A=(rew[i]-ms[0])/ms[1]; for (var k=0;k<4;k++) g[k]+=A*((k===a?1:0)-p[k])/G; });
+      th=th.map(function(t,k){ return t+0.5*g[k]; }); }
+    it++; var q=pi(); hist.push(q.reduce(function(s,x,k){ return s+x*P[k]; },0)); }
+  function draw(){ clear(svg); var p=pi();
+    p.forEach(function(x,k){ var y=24+k*56; S('text',{x:10,y:y+12,'class':'t'},svg,names[k]); S('text',{x:10,y:y+28,'class':'t-s'},svg,'success '+Math.round(P[k]*100)+'%');
+      S('rect',{x:150,y:y,width:150,height:30,'class':'f-card'},svg); S('rect',{x:150,y:y,width:Math.max(1,x*150),height:30,'class':k===2?'f-fire':'f-wire'},svg); S('text',{x:156+x*150,y:y+20,'class':'t-s'},svg,fmt(x,2)); });
+    var X=function(i){ return 380+i/Math.max(200,hist.length)*240; }, Y=function(v){ return 220-(v-0.1)/0.7*190; };
+    S('line',{x1:380,y1:220,x2:620,y2:220,'class':'axis'},svg); S('line',{x1:380,y1:30,x2:380,y2:220,'class':'axis'},svg);
+    [0.2,0.4,0.6,0.8].forEach(function(v){ S('text',{x:374,y:Y(v)+4,'class':'t-s end'},svg,v); });
+    S('line',{x1:380,y1:Y(0.7),x2:620,y2:Y(0.7),'class':'w-dash'},svg); S('text',{x:618,y:Y(0.7)-4,'class':'t-s end'},svg,'best possible 0.70');
+    S('text',{x:500,y:242,'class':'t-s mid'},svg,'training steps'); S('text',{x:386,y:24,'class':'t-s'},svg,'expected accuracy');
+    if (hist.length>1){ var d=''; hist.forEach(function(v,i){ d+=(i?'L':'M')+X(i)+','+Y(v); }); S('path',{d:d,'class':'w-fire'},svg); }
+    var acc=p.reduce(function(s,x,k){ return s+x*P[k]; },0);
+    $('#gt-r').innerHTML='Step <b>'+it+'</b>. Expected accuracy <b>'+fmt(acc,3)+'</b>. Wasted groups (all same score): <b>'+wasted+'</b>'+(it?' ('+Math.round(100*wasted/it)+'%)':'')+'.';
+  }
+  bindRange('gt-g',function(v){ G=v; });
+  $('#gt-reset').onclick=function(){ if (timer){ clearInterval(timer); timer=null; $('#gt-go').textContent='Train'; $('#gt-go').setAttribute('aria-pressed','false'); } reset(); };
+  $('#gt-go').onclick=function(){ var b=this; if (timer){ clearInterval(timer); timer=null; b.textContent='Train'; b.setAttribute('aria-pressed','false'); return; }
+    b.textContent='Pause'; b.setAttribute('aria-pressed','true');
+    timer=setInterval(function(){ for (var k=0;k<2;k++) step(); draw(); if (it>=400){ clearInterval(timer); timer=null; b.textContent='Train'; b.setAttribute('aria-pressed','false'); } },40); };
+  reset();
+})();
+(function(){ // clipped surrogate
+  var svg=$('#cl'), eps=0.2, A=1, beta=0.04;
+  function X(r){ return 60+(r-0.4)/1.2*500; }
+  function draw(){ clear(svg); var lo=Math.min(-2.2,-2.2), hi=2.6, Y=function(v){ return 210-(v-lo)/(hi-lo)*185; };
+    S('line',{x1:60,y1:Y(0),x2:560,y2:Y(0),'class':'axis'},svg); S('line',{x1:X(1),y1:20,x2:X(1),y2:212,'class':'grid'},svg);
+    S('rect',{x:X(1-eps),y:20,width:X(1+eps)-X(1-eps),height:192,'class':'f-rule','fill-opacity':0.35},svg);
+    [0.4,0.6,0.8,1,1.2,1.4,1.6].forEach(function(r){ S('text',{x:X(r),y:228,'class':'t-s mid'},svg,fmt(r,1)); });
+    S('text',{x:310,y:246,'class':'t-s mid'},svg,'probability ratio ρ = π_θ / π_θold');
+    [-2,-1,0,1,2].forEach(function(v){ S('text',{x:54,y:Y(v)+4,'class':'t-s end'},svg,v); });
+    var d1='',d2='',d3='',d4=''; for (var r=0.4;r<=1.601;r+=0.01){ var u=r*A, c=Math.min(r*A,Math.max(1-eps,Math.min(1+eps,r))*A), k=(1/r)-Math.log(1/r)-1;
+      d1+=(d1?'L':'M')+X(r)+','+Y(u); d2+=(d2?'L':'M')+X(r)+','+Y(c); d3+=(d3?'L':'M')+X(r)+','+Y(-k); d4+=(d4?'L':'M')+X(r)+','+Y(c-beta*k); }
+    S('path',{d:d1,'class':'w'},svg); S('path',{d:d3,'class':'w-ok','stroke-dasharray':'5 4'},svg); S('path',{d:d2,'class':'w-fire'},svg); S('path',{d:d4,'class':'w-ink'},svg);
+    S('text',{x:X(1),y:16,'class':'t-s mid'},svg,'trust region [1−ε, 1+ε]');
+    var gl=A>0?'Above ρ = '+fmt(1+eps,2)+' the clipped term is flat: no incentive to push this token further.':(A<0?'Below ρ = '+fmt(1-eps,2)+' the clipped term is flat: no incentive to suppress this token further.':'Zero advantage: only the KL term acts.');
+    $('#cl-r').innerHTML='Â = <b>'+fmt(A,1)+'</b>. '+gl+' The KL penalty (shown as −KL) pulls the optimum back towards ρ = 1.';
+  }
+  bindRange('cl-e',function(v){ eps=v; draw(); }); bindRange('cl-a',function(v){ A=v; draw(); }); bindRange('cl-b',function(v){ beta=v; draw(); });
+})();
+(function(){ // pass@k vs maj@k
+  var svg=$('#pk'), Ks=[1,2,4,8,16,32,64], Q=[], r=rng(4), sharp=3;
+  for (var q=0;q<300;q++){ var lg=[gauss(r)*1.0+0.8]; for (var j=0;j<4;j++) lg.push(gauss(r)*1.0); Q.push(softmax(lg)); }
+  function sharpen(p,a){ var rank=p.filter(function(x){ return x>p[0]; }).length; if (rank>1) return p; var w=p.slice(); w[0]*=a; var z=w.reduce(function(s,x){return s+x;},0); return w.map(function(x){return x/z;}); }
+  function curves(a){ var rr=rng(77), pass=Ks.map(function(){return 0;}), maj=Ks.map(function(){return 0;});
+    Q.forEach(function(p0){ var p=sharpen(p0,a);
+      Ks.forEach(function(K,ki){ pass[ki]+=1-Math.pow(1-p[0],K); var wins=0, T=12;
+        for (var t=0;t<T;t++){ var c=[0,0,0,0,0]; for (var s=0;s<K;s++){ var u=rr(), k=0, acc=p[0]; while (u>acc && k<4){ k++; acc+=p[k]; } c[k]++; }
+          var best=Math.max.apply(null,c); if (c[0]===best && c.filter(function(x){return x===best;}).length===1) wins++; else if (c[0]===best) wins+=1/c.filter(function(x){return x===best;}).length; }
+        maj[ki]+=wins/T; }); });
+    return [pass.map(function(x){return x/Q.length;}), maj.map(function(x){return x/Q.length;})]; }
+  var base=curves(1);
+  function X(i){ return 70+i/6*480; } function Y(v){ return 215-v*190; }
+  function draw(){ clear(svg); var c=curves(sharp);
+    S('line',{x1:70,y1:215,x2:550,y2:215,'class':'axis'},svg); S('line',{x1:70,y1:20,x2:70,y2:215,'class':'axis'},svg);
+    [0,0.25,0.5,0.75,1].forEach(function(v){ S('line',{x1:70,y1:Y(v),x2:550,y2:Y(v),'class':'grid'},svg); S('text',{x:64,y:Y(v)+4,'class':'t-s end'},svg,v); });
+    Ks.forEach(function(K,i){ S('text',{x:X(i),y:232,'class':'t-s mid'},svg,K); }); S('text',{x:310,y:252,'class':'t-s mid'},svg,'K (number of samples)');
+    function line(arr,cls,dash){ var d=''; arr.forEach(function(v,i){ d+=(i?'L':'M')+X(i)+','+Y(v); }); var e=S('path',{d:d,'class':cls},svg); if (dash) e.setAttribute('stroke-dasharray','5 4'); }
+    line(base[0],'w',1); line(base[1],'w-fire',1); line(c[0],'w',0); line(c[1],'w-fire',0);
+    S('text',{x:556,y:Y(c[0][6])+4,'class':'t-wire'},svg,'Pass'); S('text',{x:556,y:Y(c[1][6])+4,'class':'t-fire'},svg,'Maj');
+    $('#pk-r').innerHTML='Pass@1 '+fmt(base[0][0],3)+' → <b>'+fmt(c[0][0],3)+'</b>; Maj@64 '+fmt(base[1][6],3)+' → <b>'+fmt(c[1][6],3)+'</b>; Pass@64 '+fmt(base[0][6],3)+' → <b>'+fmt(c[0][6],3)+'</b>.';
+  }
+  bindRange('pk-a',function(v){ sharp=v; draw(); });
+})();
+</script>

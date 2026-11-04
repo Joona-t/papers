@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CLIP (2021) study guide</title>
+<meta name="description" content="Instead of training a vision model on a fixed list of hand-labelled categories, what if it learned from the captions that already come with images on the internet? CLIP learns to match 400 million images with their own captions, and the result can sort images into categories it was never trained on,">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Computer vision</b> · 2021</p>
+  <h1>Learning Transferable Visual Models From Natural Language Supervision</h1>
+  <p class="cite">Alec Radford et al. · ICML 2021</p>
+  <p class="lede">Instead of training a vision model on a fixed list of hand-labelled categories, what if it learned from the captions that already come with images on the internet? CLIP learns to match 400 million images with their own captions, and the result can sort images into categories it was never trained on, just from a written description of each category.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/2103.00020">Read the paper (free)</a> <a href="https://lovespark.love/papers/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, independent AI review, but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Vision models were usually trained to pick one of a fixed set of labels, like ImageNet's 1,000, which is expensive to annotate and limits what they can recognise.</p>
+  <p>CLIP instead trains two networks, one for images and one for text, so that an image and its caption end up as nearby points, and mismatched pairs far apart; the 400 million training pairs were collected from the internet.</p>
+  <p>To classify a new image, you write a short description for each possible category ("a photo of a dog", "a photo of a cat") and pick the description that lands closest to the image: no extra training needed. This is called zero-shot classification.</p>
+  <p>Without seeing a single ImageNet training example, the best CLIP model matched the accuracy of a ResNet-50 trained on all 1.28 million of them, and held up much better on unusual images such as sketches.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1 · §2.1–2.2</p>
+  <h2>Captions are free labels</h2>
+  <div class="prose">
+    <p>Image recognisers like <a href="alexnet.html">AlexNet</a> and <a href="resnet.html">ResNet</a> learn from datasets where people have labelled every image with one category from a fixed list. That has two costs. Labelling millions of images is slow and expensive. And the model only ever knows those categories: to recognise something new, you need new labels and new training.</p>
+    <p>Meanwhile, the internet is full of images that already come with text: captions, alt text, titles. That text is noisy, but it is free, plentiful, and describes far more than 1,000 categories. Language models such as <a href="gpt2.html">GPT-2</a> had shown what learning from raw web text could do. CLIP asks whether vision can learn the same way.</p>
+    <p>The authors built a new dataset of <strong>400 million (image, text) pairs</strong> from the internet. To cover a wide range of concepts, they searched for pairs whose text contained one of 500,000 query words and phrases, keeping up to 20,000 pairs per query.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A child doesn't learn what a giraffe is from a labelled flashcard deck alone. They hear "look at the giraffe!" while looking at one, and connect the word with the sight. CLIP learns from millions of such loose pairings.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Natural-language captions give an almost unlimited, open-ended source of supervision for vision.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §2.3 · Figs. 2–3</p>
+  <h2>Learning by matching, not by describing</h2>
+  <div class="prose">
+    <p>The authors first tried teaching a model to <em>write</em> each image's caption word for word. It learned slowly, because there are countless correct ways to caption a photo and the model is penalised for not guessing the exact one. Simply predicting which words appear, ignoring order, was 3 times faster to train. Then they switched to an even easier task: given a batch of images and a batch of captions, just work out which caption goes with which image. That was another 4 times more efficient.</p>
+    <p>This matching approach is called <strong>contrastive learning</strong>. An image network turns each image into a point (a list of numbers called an <strong>embedding</strong>), and a text network does the same for each caption. Training pulls each image towards its own caption and pushes it away from all the other captions in the batch. Press Train to watch it happen in a small, two-dimensional version.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="ct-go">Train</button><button class="btn" id="ct-rs">Shuffle</button></div>
+    <div class="svgbox"><svg id="ct" viewBox="0 0 600 270" role="img" aria-label="Five images and five captions as points on a circle, and their match table"></svg></div>
+    <p class="readout" id="ct-r"></p>
+    <figcaption>Left: embeddings on a circle (CLIP uses 512 or more dimensions; we use 2). Squares are images, circles are captions; matching pairs share a number (captions: 1 "a dog on grass", 2 "waves at sunset", 3 "red sports car", 4 "birthday cake", 5 "cat asleep"). Right: the batch's match table, where row = image, column = caption, and darker means a stronger match; training aims to make the diagonal dark. The update is the real CLIP loss and its gradient, run on this toy.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>A pairs game: a pile of photos and a pile of captions, all shuffled. You don't need to write a perfect caption, only to recognise which one belongs to which photo. That is much easier to learn, yet still forces you to understand what is in each picture.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Matching images to captions among many distractors teaches a model what images contain, far more efficiently than generating the captions.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>In a batch of 32,768 pairs, how many wrong pairings does each image get pushed away from?</dt>
+    <dd>32,767: every other caption in the batch. Large batches give many "negatives" per step, which is part of why CLIP used such a large batch.</dd>
+    <dt>Why was predicting the exact caption a slow way to learn?</dt>
+    <dd>Many different captions fit the same image, so the model spends its effort on wording rather than on recognising what is in the picture.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §3.1 · Fig. 1</p>
+  <h2>Classify by writing the category names</h2>
+  <div class="prose">
+    <p>After training, CLIP can classify images into categories it never saw as labels. Write a sentence for each category, such as "a photo of a dog." and "a photo of a cat.", turn each sentence into a point with the text network, turn the image into a point with the image network, and pick the closest sentence. Because nothing is trained for the new task, this is called <strong>zero-shot</strong> classification.</p>
+    <p>Wording matters. Using "A photo of a {label}." instead of the bare label raised ImageNet accuracy by 1.3 points, partly because single words are ambiguous ("crane" the bird or the machine?) and web captions rarely consist of a single word. Choose an image and the candidate categories below.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" data-zi="0">Image: dog on grass</button><button class="btn" data-zi="1">Image: cat on sofa</button><button class="btn" data-zi="2">Image: red car</button></div>
+    <div class="ctl" id="zs-labels"></div>
+    <div class="svgbox"><svg id="zs" viewBox="0 0 600 240" role="img" aria-label="Similarity of the image to each candidate description, and the resulting probabilities"></svg></div>
+    <p class="readout" id="zs-r"></p>
+    <figcaption>Toggle candidate categories on and off. Each becomes "a photo of a {label}." The bars show the probability CLIP-style scoring gives each, computed as a softmax of similarities multiplied by 100 (CLIP's trained scale). Embeddings here are hand-made from a handful of concepts, for illustration only. Note how removing the right answer makes the model confidently pick the nearest wrong one.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>A text description becomes a classifier: change the list of descriptions and you have a new classifier, with no retraining.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What happens if the correct category is not in your list?</dt>
+    <dd>The model still picks one, the closest description it has. Zero-shot classification can only choose among the options you write.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §3.1 · §3.3 · Table 1 · Fig. 13</p>
+  <h2>How well it works, and why it is robust</h2>
+  <div class="prose">
+    <p>The best CLIP model classified ImageNet zero-shot with <strong>76.2%</strong> accuracy. That equals the original ResNet-50, which was trained on ImageNet's 1.28 million labelled images; CLIP used none of them. An earlier attempt at the same zero-shot idea (Visual N-Grams, 2017) had managed 11.5%.</p>
+    <p>The bigger surprise was <strong>robustness</strong>. Models trained on ImageNet often fail on images that look different from ImageNet photos: sketches, cartoons, unusual angles. Zero-shot CLIP and a ResNet-101 have the same ImageNet accuracy, but on sketches CLIP scores 60.2% against 25.2%, and on artistic renditions 88.9% against 37.7% (Fig. 13). Because CLIP never trained on ImageNet specifically, it hasn't latched onto the quirks of that one dataset.</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Dataset (Fig. 13)</th><th>ResNet-101</th><th>Zero-shot CLIP</th></tr></thead>
+    <tbody>
+      <tr><td>ImageNet</td><td class="num">76.2</td><td class="num">76.2</td></tr>
+      <tr><td>ImageNet Sketch</td><td class="num">25.2</td><td class="num">60.2</td></tr>
+      <tr><td>ImageNet-R (renditions)</td><td class="num">37.7</td><td class="num">88.9</td></tr>
+      <tr><td>ImageNet-A (hard natural images)</td><td class="num">2.7</td><td class="num">77.1</td></tr>
+    </tbody></table></div>
+  <p class="takeaway"><span class="label">Takeaway</span>Learning from broad web data rather than one curated dataset gave accuracy that transfers to new kinds of images.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §6 · §7</p>
+  <h2>Limits, and a model everyone built on</h2>
+  <div class="prose">
+    <p>CLIP is not good at everything. It got only 88% on handwritten digits (MNIST), which simple models handle almost perfectly, because few web images look like those digits. It struggles to count objects and with very fine distinctions such as car models or aircraft types. The authors estimate it would need around 1,000 times more compute for zero-shot CLIP to reach the best task-specific results overall. And because it learns from unfiltered internet data, it picks up the internet's social biases; the paper's own bias probes found that, depending on the category names offered, it could give offensive labels to images of people.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>CLIP became a building block. Its text encoder steers image generators such as DALL·E 2 and <a href="ldm.html">Stable Diffusion</a>; its image encoder became the "eyes" of many vision-language chatbots and robot models, in the line that led to <a href="rt2.html">RT-2</a>. Open reproductions (OpenCLIP, trained on the public LAION datasets) and variants with simpler losses (SigLIP, 2023) followed. The core recipe, match images and text contrastively at scale, has not been replaced.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>CLIP turned language into a universal interface for vision, at the price of the web's blind spots and biases.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>State-of-the-art vision systems are trained to predict a fixed set of predetermined categories, which limits their generality, since more labelled data is needed for any new concept. Learning directly from raw text about images uses a much broader source of supervision. The simple pre-training task of predicting which caption goes with which image is an efficient and scalable way to learn state-of-the-art image representations from scratch, on 400 million (image, text) pairs from the internet. Natural language then references learned visual concepts (or describes new ones), enabling zero-shot transfer. Benchmarked on over 30 datasets spanning OCR, action recognition in videos, geo-localisation and fine-grained classification, the model transfers non-trivially to most tasks and is often competitive with fully supervised baselines; it matches the original ResNet-50 on ImageNet zero-shot without using any of its 1.28 million training examples. ICML 2021.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2.2–2.3 · Figs. 2–3</p>
+  <h2>Data and the contrastive objective</h2>
+  <div class="prose">
+    <p><strong>WIT.</strong> 400 M (image, text) pairs collected by searching for text containing one of 500,000 queries (the base query list is all words occurring at least 100 times in English Wikipedia, augmented with high-frequency bigrams, the names of Wikipedia articles above a certain search volume, and WordNet synsets), class-balanced to at most 20,000 pairs per query. The total word count is similar to the WebText dataset used for GPT-2.</p>
+    <p><strong>Choosing the objective (Fig. 2).</strong> A transformer language model predicting captions learned ImageNet zero-shot accuracy 3× more slowly than a bag-of-words prediction baseline; replacing prediction with a contrastive objective gave a further 4× efficiency gain. Given a batch of <var>N</var> pairs, CLIP jointly trains an image and text encoder to maximise the cosine similarity of the <var>N</var> real pairs and minimise it for the <var>N</var><sup>2</sup> − <var>N</var> incorrect ones, with a symmetric cross-entropy over the similarity scores (the multi-class <var>N</var>-pair / InfoNCE loss):</p>
+  </div>
+  <div class="eq"><var>ℓ</var><sub><var>ij</var></sub> = (<b>I</b><sub><var>i</var></sub> · <b>T</b><sub><var>j</var></sub>) · e<sup><var>t</var></sup>, &nbsp;&nbsp; <var>L</var> = ½ [ −(1/<var>N</var>) Σ<sub><var>i</var></sub> log softmax<sub><var>j</var></sub>(<var>ℓ</var><sub><var>ij</var></sub>)<sub><var>j</var>=<var>i</var></sub> − (1/<var>N</var>) Σ<sub><var>j</var></sub> log softmax<sub><var>i</var></sub>(<var>ℓ</var><sub><var>ij</var></sub>)<sub><var>i</var>=<var>j</var></sub> ]</div>
+  <pre class="algo"><span class="c"># Fig. 3, numpy-like pseudocode (abridged)</span>
+I_f = image_encoder(I)                  <span class="c"># [n, d_i]</span>
+T_f = text_encoder(T)                   <span class="c"># [n, d_t]</span>
+I_e = l2_normalize(np.dot(I_f, W_i), axis=1)
+T_e = l2_normalize(np.dot(T_f, W_t), axis=1)
+logits = np.dot(I_e, T_e.T) * np.exp(t) <span class="c"># [n, n]</span>
+labels = np.arange(n)
+loss_i = cross_entropy_loss(logits, labels, axis=0)
+loss_t = cross_entropy_loss(logits, labels, axis=1)
+loss   = (loss_i + loss_t)/2</pre>
+  <div class="prose"><p>Simplifications relative to prior work (ConVIRT, which CLIP describes itself as a simplified version of): trained from scratch with no ImageNet or text pre-training; linear rather than non-linear projections into the joint space; random square crops of resized images as the only augmentation; the temperature τ is a learned log-parameterised scalar, initialised to the equivalent of 0.07 and clipped so the logit scale e<sup><var>t</var></sup> never exceeds 100. Explore how the logit scale and batch size shape the loss:</p></div>
+  <figure class="live">
+    <div class="ctl"><label>Logit scale e<sup><var>t</var></sup> <input type="range" id="tb-s" min="1" max="100" step="1" value="14"><output id="tb-s-o">14</output></label><label>Batch <var>N</var> <input type="range" id="tb-n" min="2" max="64" step="1" value="16"><output id="tb-n-o">16</output></label><label>Pair quality <input type="range" id="tb-q" min="0" max="1" step="0.05" value="0.3" data-fmt="2"><output id="tb-q-o">0.30</output></label></div>
+    <div class="svgbox"><svg id="tb" viewBox="0 0 600 250" role="img" aria-label="Softmax probability matrix and loss for a synthetic batch"></svg></div>
+    <p class="readout" id="tb-r"></p>
+    <figcaption>Synthetic batch: random unit vectors in 32 dimensions for captions; each image vector is its caption's vector mixed with an unrelated random direction ("pair quality" 1 = identical, 0 = unrelated). Left: image-to-text softmax probabilities. Right: the symmetric loss against log <var>N</var>, the loss of uniform guessing. The initial scale is 1/0.07 ≈ 14.3; training may raise it up to the cap of 100. Try it: with imperfect pairs, a very high scale makes confident mistakes expensive (the loss can exceed chance), while a very low scale cannot express confidence; more candidates (larger <var>N</var>) make the same embeddings harder to match. Illustrative computation of the real loss on synthetic vectors.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does a higher logit scale (lower temperature) sharpen the softmax, and why cap it?</dt>
+    <dd>Cosine similarities lie in [−1, 1], so without scaling the softmax over thousands of candidates is nearly flat. Multiplying by a large scale lets small similarity differences dominate. The cap at 100 prevents training instability from ever-sharper logits.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §2.4–2.5</p>
+  <h2>Encoders and training</h2>
+  <div class="prose">
+    <p><strong>Image encoders.</strong> Five ResNets (ResNet-50, ResNet-101, and EfficientNet-style scalings RN50x4, RN50x16, RN50x64 using about 4×, 16× and 64× the compute of ResNet-50), modified with ResNet-D improvements, antialiased blur pooling, and global average pooling replaced by an attention pooling layer (a single layer of "transformer-style" multi-head QKV attention whose query is conditioned on the global average-pooled representation). Three <a href="vit.html">Vision Transformers</a> (ViT-B/32, ViT-B/16, ViT-L/14), with an extra layer norm added to the combined patch and position embeddings before the transformer.</p>
+    <p><strong>Text encoder.</strong> A 63 M-parameter, 12-layer, 512-wide Transformer with 8 attention heads, operating on a lower-cased byte-pair-encoded text with a 49,152-token vocabulary, maximum sequence length 76, bracketed with [SOS] and [EOS]; the top layer's activation at [EOS] is layer-normalised and linearly projected into the joint space. Masked self-attention is used to keep the option of initialising from a pre-trained language model or adding language modelling as an auxiliary objective.</p>
+    <p><strong>Training.</strong> All models train for 32 epochs with Adam with decoupled weight decay and a cosine schedule, minibatch 32,768, mixed precision. The largest ResNet, RN50x64, took 18 days on 592 V100 GPUs; the largest ViT took 12 days on 256 V100s. ViT-L/14 was also trained for one extra epoch at 336-pixel resolution (ViT-L/14@336px); results reported simply as "CLIP" use this model.</p>
+  </div>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §3.1 · Table 1 · Figs. 4–6</p>
+  <h2>Zero-shot transfer</h2>
+  <div class="prose">
+    <p>For a dataset with <var>K</var> classes, embed each class name (inside a prompt) with the text encoder; the normalised text embeddings form the weights of a linear classifier, scaled by the temperature, applied to the normalised image embedding. The text encoder is thus a "hypernetwork" generating classifier weights; the class embeddings are computed once and cached.</p>
+    <p><strong>Prompts (§3.1.4).</strong> The default template "A photo of a {label}." adds 1.3% on ImageNet over bare class names; task-specific context helps ("A photo of a {label}, a type of pet." for Oxford Pets); ensembling over 80 different prompts, averaged in embedding space, adds another 3.5%. Together prompt engineering and ensembling improve ImageNet accuracy by almost 5%, and average accuracy over 36 datasets by almost 5 points (Fig. 4).</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Zero-shot top-1 (Table 1)</th><th>aYahoo</th><th>ImageNet</th><th>SUN</th></tr></thead>
+    <tbody>
+      <tr><td>Visual N-Grams (2017)</td><td class="num">72.4</td><td class="num">11.5</td><td class="num">23.0</td></tr>
+      <tr><td>CLIP</td><td class="num">98.4</td><td class="num">76.2</td><td class="num">58.5</td></tr>
+    </tbody></table></div>
+  <div class="prose"><p><strong>Against supervised baselines.</strong> Zero-shot CLIP beats a fully supervised logistic-regression classifier on ResNet-50 features on 16 of 27 datasets, including ImageNet (Fig. 5); it is weakest on specialised, complex or abstract tasks such as satellite imagery, lymph-node tumour detection, counting objects in synthetic scenes, and traffic-sign recognition. Zero-shot CLIP roughly matches a 4-shot linear probe on its own features (Fig. 6); few-shot probes only overtake it with more examples per class.</p></div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §3.3 · Figs. 13–14</p>
+  <h2>Robustness to distribution shift</h2>
+  <div class="prose"><p>Following Taori et al. (2020), "effective robustness" is accuracy under distribution shift beyond what in-distribution (ImageNet) accuracy predicts. ImageNet-trained models sit on a common trend line; zero-shot CLIP models lie well above it, reducing the gap between ImageNet accuracy and accuracy under shift by up to 75%.</p></div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" data-rb="abs">Accuracy</button><button class="btn" data-rb="gap">Drop from ImageNet</button></div>
+    <div class="svgbox wide"><svg id="rb" viewBox="0 0 640 290" role="img" aria-label="ResNet-101 versus zero-shot CLIP accuracy on ImageNet and five shifted datasets"></svg></div>
+    <p class="readout" id="rb-r"></p>
+    <figcaption>Values from Fig. 13: an ImageNet-trained ResNet-101 and zero-shot CLIP (ViT-L/14@336px), which have the same 76.2% ImageNet accuracy. "Drop" shows each dataset's accuracy minus ImageNet accuracy.</figcaption>
+  </figure>
+  <div class="prose"><p><strong>Adapting to ImageNet (Fig. 14).</strong> Fitting a logistic-regression classifier on CLIP features with ImageNet labels raises ImageNet accuracy by 9.2 points but slightly lowers average accuracy across the shifted datasets: much of the gain reflects ImageNet-specific patterns that do not transfer. This is evidence that the robustness comes from avoiding training on the target distribution, not only from the representation.</p></div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is comparing to a ResNet-101 with the same ImageNet accuracy the right control?</dt>
+    <dd>Accuracy under shift correlates strongly with in-distribution accuracy; matching ImageNet accuracy isolates robustness beyond what better ImageNet performance alone would give.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §6–7 · lineage</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Compute to close the gap.</strong> Zero-shot CLIP is on average competitive with a linear classifier on ResNet-50 features, well below the state of the art; the authors estimate about a 1,000× increase in compute would be needed for zero-shot CLIP to reach overall state-of-the-art performance.</li>
+      <li><strong>Task blind spots.</strong> Weak on fine-grained classification (car models, flower species, aircraft variants), abstract and systematic tasks such as counting, and truly out-of-distribution data: 88% on MNIST, below logistic regression on raw pixels.</li>
+      <li><strong>Only chooses.</strong> CLIP selects among given concepts rather than generating outputs such as captions.</li>
+      <li><strong>Data efficiency.</strong> It does not fix deep learning's poor data efficiency; it compensates with scale (32 epochs over 400 M images is about 12.8 billion images seen).</li>
+      <li><strong>Bias and surveillance (§7).</strong> Class design strongly affects outcomes, including denigration harms; the authors probe gender and race classification and surveillance-style uses, and caution against deployment without task-specific testing.</li>
+    </ul>
+  </div>
+  <div class="later"><span class="label">Later refinements</span>Precursors: Visual N-Grams (2017), VirTex and ICMLM (2020, caption-based pre-training), ConVIRT (2020, contrastive image-text on medical data). Contemporary: ALIGN (2021) scaled the same objective to 1.8 B noisier pairs. After: LiT (2022) froze a pre-trained image tower and trained only text; OpenCLIP reproduced CLIP on LAION-400M/5B and studied scaling laws; SigLIP (2023) replaced the batch-wide softmax with an independent sigmoid per pair, removing the need for huge all-to-all batches; CoCa added a captioning loss. CLIP embeddings condition DALL·E 2 (unCLIP), Stable Diffusion v1 uses CLIP ViT-L/14's text encoder, and CLIP-style vision towers became the image input of vision-language models such as LLaVA, the family that vision-language-action models like <a href="rt2.html">RT-2</a> extend to robotics.</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Contrastive loss</dt><dd>Classifies the correct pair among a batch of candidates (InfoNCE / N-pair).</dd>
+    <dt>Embedding</dt><dd>A vector representing an image or text in the shared space.</dd>
+    <dt>Logit scale</dt><dd>e<sup><var>t</var></sup> = 1/τ, multiplying cosine similarities before softmax.</dd>
+    <dt>Zero-shot</dt><dd>Applying the model to a new task with no task-specific training examples.</dd>
+    <dt>Prompt ensembling</dt><dd>Averaging text embeddings of several templates per class.</dd>
+    <dt>Linear probe</dt><dd>Logistic regression trained on frozen features.</dd>
+    <dt>Effective robustness</dt><dd>Accuracy under distribution shift beyond the trend predicted by in-distribution accuracy.</dd>
+    <dt>WIT</dt><dd>WebImageText, CLIP's 400 M-pair training set.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="vit.html">ViT (2020)</a></p>
+  <p><strong>Led to:</strong> <a href="rt2.html">RT-2 (2023)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers/">Papers worth reading</a> (<a href="https://lovespark.love/papers/#clip">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // 2-D contrastive toy
+  var svg=$('#ct'), n=5, th, ph, seed=3, timer=null, steps=0, s=5;
+  var imgs=['dog photo','beach photo','car photo','cake photo','cat photo'], caps=['"a dog on grass"','"waves at sunset"','"red sports car"','"birthday cake"','"cat asleep"'];
+  function reset(){ var r=rng(seed++); th=[]; ph=[]; for (var i=0;i<n;i++){ th.push(r()*6.283); ph.push(r()*6.283); } steps=0; }
+  function logits(){ var L=[]; for (var i=0;i<n;i++){ L.push([]); for (var j=0;j<n;j++) L[i].push(s*Math.cos(th[i]-ph[j])); } return L; }
+  function sm(a){ var m=Math.max.apply(null,a), e=a.map(function(v){ return Math.exp(v-m); }), z=e.reduce(function(x,y){ return x+y; },0); return e.map(function(v){ return v/z; }); }
+  function lossGrad(){ var L=logits(), gth=th.map(function(){ return 0; }), gph=ph.map(function(){ return 0; }), loss=0;
+    var R=L.map(sm), C=[]; for (var j=0;j<n;j++) C.push(sm(L.map(function(r){ return r[j]; })));
+    for (var i=0;i<n;i++){ loss-=Math.log(R[i][i])/(2*n); loss-=Math.log(C[i][i])/(2*n); }
+    for (var i=0;i<n;i++) for (var j=0;j<n;j++){ var dl=((R[i][j]-(i===j?1:0))+(C[j][i]-(i===j?1:0)))/(2*n), sn=Math.sin(th[i]-ph[j]); gth[i]+=dl*(-s*sn); gph[j]+=dl*(s*sn); }
+    return [loss,gth,gph,R]; }
+  function draw(){ clear(svg); var g=lossGrad(), R=g[3], cx=130, cy=135, rad=100;
+    S('circle',{cx:cx,cy:cy,r:rad,'class':'grid'},svg);
+    for (var i=0;i<n;i++){ var a=[cx+rad*Math.cos(th[i]),cy-rad*Math.sin(th[i])], b=[cx+rad*Math.cos(ph[i]),cy-rad*Math.sin(ph[i])];
+      S('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],'class':'w-dash'},svg);
+      S('rect',{x:a[0]-8,y:a[1]-8,width:16,height:16,'class':'u-on'},svg); S('text',{x:a[0],y:a[1]+4,'class':'t mid'},svg,i+1);
+      S('circle',{cx:b[0],cy:b[1],r:8,'class':'u-wire'},svg); S('text',{x:b[0],y:b[1]+4,'class':'t mid','style':'fill:var(--card)'},svg,i+1); }
+    S('text',{x:cx,y:262,'class':'t-s mid'},svg,'■ image   ● caption');
+    var x0=380, y0=20, c=34;
+    for (var j=0;j<n;j++){ S('text',{x:x0+j*c+c/2,y:y0+8,'class':'t-wire mid'},svg,'T'+(j+1)); }
+    for (var i=0;i<n;i++){ S('text',{x:x0-8,y:y0+20+i*c+c/2+4,'class':'t-fire end'},svg,'I'+(i+1)+' '+imgs[i]);
+      for (var j=0;j<n;j++){ S('rect',{x:x0+j*c,y:y0+20+i*c,width:c-2,height:c-2,'class':i===j?'f-ok':'f-fire','fill-opacity':0.06+0.94*R[i][j]},svg); S('text',{x:x0+j*c+c/2-1,y:y0+20+i*c+c/2+3,'class':'t-s mid'},svg,fmt(R[i][j]*100,0)); } }
+    var correct=0; for (var i=0;i<n;i++){ var b=0; for (var j=1;j<n;j++) if (R[i][j]>R[i][b]) b=j; if (b===i) correct++; }
+    $('#ct-r').innerHTML='Step <b>'+steps+'</b>. Loss <b>'+fmt(g[0],3)+'</b> (a model that cannot tell the captions apart scores log 5 = 1.609; a confidently wrong one scores higher). Images matched to the right caption: <b>'+correct+' of 5</b>.'; }
+  function step(){ var g=lossGrad(); for (var i=0;i<n;i++){ th[i]-=0.8*g[1][i]; ph[i]-=0.8*g[2][i]; } steps++; }
+  $('#ct-go').onclick=function(){ if (timer) return; var k=0; timer=setInterval(function(){ for (var q=0;q<3;q++) step(); draw(); if (++k>=60){ clearInterval(timer); timer=null; } },40); };
+  $('#ct-rs').onclick=function(){ if (timer){ clearInterval(timer); timer=null; } reset(); draw(); };
+  reset(); draw();
+})();
+(function(){ // zero-shot toy
+  var svg=$('#zs'), im=0;
+  // concepts: animal, dog, cat, vehicle, red, outdoor, indoor, furniture, wild
+  var V={dog:[1,1,0,0,0,0.3,0,0,0],puppy:[1,0.9,0,0,0,0.2,0.1,0,0],cat:[1,0,1,0,0,0,0.3,0,0],wolf:[1,0.6,0,0,0,0.5,0,0,1],car:[0,0,0,1,0,0.3,0,0,0],truck:[0,0,0,0.9,0,0.4,0,0,0],sofa:[0,0,0,0,0,0,0.6,1,0],'lawn':[0,0,0,0,0,1,0,0,0.2]};
+  var I=[[0.9,0.85,0.05,0,0,0.7,0,0,0.1],[0.9,0.05,0.9,0,0,0,0.6,0.5,0],[0,0,0,0.95,0.7,0.5,0,0,0]];
+  var on={dog:1,cat:1,car:1,wolf:1,puppy:0,truck:0,sofa:0,lawn:0};
+  function norm(v){ var s=Math.sqrt(v.reduce(function(a,b){ return a+b*b; },0)); return v.map(function(x){ return x/s; }); }
+  var box=$('#zs-labels'); Object.keys(on).forEach(function(k){ var b=document.createElement('button'); b.className='btn'+(on[k]?' on':''); b.textContent=k; b.setAttribute('aria-pressed',!!on[k]); b.onclick=function(){ var cnt=Object.keys(on).filter(function(x){ return on[x]; }).length; if (on[k]&&cnt<=2) return; on[k]=on[k]?0:1; b.classList.toggle('on',!!on[k]); b.setAttribute('aria-pressed',!!on[k]); draw(); }; box.appendChild(b); });
+  function draw(){ clear(svg); var x=norm(I[im]), labs=Object.keys(on).filter(function(k){ return on[k]; });
+    var sims=labs.map(function(k){ var t=norm(V[k]); return t.reduce(function(a,v,i){ return a+v*x[i]; },0); });
+    var m=Math.max.apply(null,sims), e=sims.map(function(s){ return Math.exp(100*(s-m)); }), z=e.reduce(function(a,b){ return a+b; },0), p=e.map(function(v){ return v/z; });
+    S('text',{x:10,y:18,'class':'t-s'},svg,'"a photo of a {label}."'); S('text',{x:250,y:18,'class':'t-s'},svg,'cosine similarity'); S('text',{x:430,y:18,'class':'t-s'},svg,'probability');
+    var h=Math.min(28,210/labs.length), best=0; p.forEach(function(v,i){ if (v>p[best]) best=i; });
+    labs.forEach(function(k,i){ var y=30+i*h; S('text',{x:10,y:y+h*0.65,'class':i===best?'t-fire':'t'},svg,'a photo of a '+k+'.');
+      S('rect',{x:250,y:y+3,width:Math.max(1,sims[i]*150),height:h-8,'class':'f-wire'},svg); S('text',{x:254+sims[i]*150,y:y+h*0.65,'class':'t-s'},svg,fmt(sims[i],3));
+      S('rect',{x:430,y:y+3,width:Math.max(1,p[i]*100),height:h-8,'class':i===best?'f-fire':'f-muted'},svg); S('text',{x:434+p[i]*100,y:y+h*0.65,'class':'t-s'},svg,fmt(p[i]*100,1)+'%'); });
+    $('#zs-r').innerHTML='Prediction: <b>'+labs[best]+'</b> with '+fmt(p[best]*100,1)+'% probability, chosen from '+labs.length+' written categories.'; }
+  $$('[data-zi]').forEach(function(b){ b.addEventListener('click',function(){ im=+b.dataset.zi; $$('[data-zi]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }); });
+  draw();
+})();
+(function(){ // temperature and batch
+  var svg=$('#tb'), sc=14, N=16, q=0.3, D=32;
+  function draw(){ clear(svg); var r=rng(7), T=[], I=[];
+    function unit(){ var v=[], s=0; for (var k=0;k<D;k++){ var g=gauss(r); v.push(g); s+=g*g; } s=Math.sqrt(s); return v.map(function(x){ return x/s; }); }
+    for (var i=0;i<64;i++){ var t=unit(), u=unit(), v=t.map(function(x,k){ return q*x+(1-q)*u[k]; }), s=Math.sqrt(v.reduce(function(a,b){ return a+b*b; },0)); T.push(t); I.push(v.map(function(x){ return x/s; })); }
+    T=T.slice(0,N); I=I.slice(0,N);
+    var L=I.map(function(a){ return T.map(function(b){ return sc*a.reduce(function(z,x,k){ return z+x*b[k]; },0); }); });
+    function sm(a){ var m=Math.max.apply(null,a), e=a.map(function(v){ return Math.exp(v-m); }), z=e.reduce(function(x,y){ return x+y; },0); return e.map(function(v){ return v/z; }); }
+    var R=L.map(sm), li=0, lt=0, acc=0; for (var i=0;i<N;i++){ li-=Math.log(R[i][i])/N; var col=sm(L.map(function(row){ return row[i]; })); lt-=Math.log(col[i])/N; var b=0; for (var j=1;j<N;j++) if (R[i][j]>R[i][b]) b=j; if (b===i) acc++; }
+    var loss=(li+lt)/2, cs=Math.min(13,200/N), x0=20, y0=24;
+    S('text',{x:x0,y:16,'class':'t-s'},svg,'image→text softmax (rows = images)');
+    for (var i=0;i<N;i++) for (var j=0;j<N;j++) S('rect',{x:x0+j*cs,y:y0+i*cs,width:cs-0.5,height:cs-0.5,'class':i===j?'f-ok':'f-fire','fill-opacity':0.04+0.96*R[i][j]},svg);
+    var bx=300, by=220, H=180, mx=Math.max(Math.log(64),loss)*1.05;
+    S('line',{x1:bx,y1:by,x2:590,y2:by,'class':'axis'},svg);
+    [['loss',loss,'f-fire'],['log N (chance)',Math.log(N),'f-muted']].forEach(function(b,k){ var h=b[1]/mx*H, x=bx+20+k*130; S('rect',{x:x,y:by-h,width:80,height:h,'class':b[2]},svg); S('text',{x:x+40,y:by-h-6,'class':'t mid'},svg,fmt(b[1],3)); S('text',{x:x+40,y:by+16,'class':'t-s mid'},svg,b[0]); });
+    $('#tb-r').innerHTML='Loss <b>'+fmt(loss,3)+'</b> vs chance log '+N+' = <b>'+fmt(Math.log(N),3)+'</b>. Images whose top caption is correct: <b>'+acc+' of '+N+'</b>. Correct-pair probability on the diagonal averages <b>'+fmt(R.reduce(function(a,r,i){ return a+r[i]; },0)/N*100,1)+'%</b>.'; }
+  bindRange('tb-s',function(v){ sc=v; draw(); }); bindRange('tb-n',function(v){ N=v; draw(); }); bindRange('tb-q',function(v){ q=v; draw(); });
+})();
+(function(){ // robustness chart
+  var svg=$('#rb'), mode='abs';
+  var D=[['ImageNet',76.2,76.2],['ImageNetV2',64.3,70.1],['ImageNet-R',37.7,88.9],['ObjectNet',32.6,72.3],['ImageNet Sketch',25.2,60.2],['ImageNet-A',2.7,77.1]];
+  function draw(){ clear(svg); var x0=140, W=440, gap=mode==='gap';
+    var lo=gap?-80:0, hi=gap?20:100, X=function(v){ return x0+(v-lo)/(hi-lo)*W; };
+    for (var g=lo;g<=hi;g+=20){ S('line',{x1:X(g),y1:10,x2:X(g),y2:256,'class':'grid'},svg); S('text',{x:X(g),y:274,'class':'t-s mid'},svg,g); }
+    D.forEach(function(d,i){ var y=14+i*41; S('text',{x:x0-8,y:y+22,'class':'t end'},svg,d[0]);
+      [[d[1],'f-wire','ResNet-101'],[d[2],'f-fire','CLIP']].forEach(function(b,k){ var v=gap?b[0]-76.2:b[0], a=X(Math.min(0,v)), w=Math.abs(X(v)-X(0)); S('rect',{x:gap?a:X(0),y:y+k*17,width:Math.max(1,w),height:14,'class':b[1]},svg);
+        S('text',{x:(v<0&&gap)?a-4:X(v)+4,y:y+k*17+11,'class':(v<0&&gap)?'t-s end':'t-s'},svg,fmt(v,1)); }); });
+    S('rect',{x:10,y:262,width:10,height:10,'class':'f-wire'},svg); S('text',{x:24,y:271,'class':'t-s'},svg,'ResNet-101'); S('rect',{x:100,y:262,width:10,height:10,'class':'f-fire'},svg); S('text',{x:114,y:271,'class':'t-s'},svg,'CLIP');
+    $('#rb-r').innerHTML = gap ? 'Average drop from ImageNet over the five shifted sets: ResNet-101 <b>'+fmt(D.slice(1).reduce(function(a,d){ return a+d[1]-76.2; },0)/5,1)+'</b> points, zero-shot CLIP <b>'+fmt(D.slice(1).reduce(function(a,d){ return a+d[2]-76.2; },0)/5,1)+'</b> points.' : 'Same ImageNet accuracy (76.2%), very different behaviour under shift.'; }
+  $$('[data-rb]').forEach(function(b){ b.addEventListener('click',function(){ mode=b.dataset.rb; $$('[data-rb]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }); });
+  draw();
+})();
+</script>
+
+</body>
+</html>

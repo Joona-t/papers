@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VAE (2013) study guide</title>
+<meta name="description" content="Can a neural network learn to describe each example with a few hidden &quot;causes&quot; and also generate brand-new examples from them, when the maths of working backwards from an example to its causes is impossible to do exactly? Kingma and Welling show that it can: pair a decoder with an encoder ">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Neural networks</b> · 2013</p>
+  <h1>Auto-Encoding Variational Bayes</h1>
+  <p class="cite">Diederik Kingma, Max Welling · ICLR 2014</p>
+  <p class="lede">Can a neural network learn to describe each example with a few hidden "causes" and also generate brand-new examples from them, when the maths of working backwards from an example to its causes is impossible to do exactly? Kingma and Welling show that it can: pair a decoder with an encoder that guesses the causes, and rewrite the random guessing step so that ordinary backpropagation can train both together.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/1312.6114">Read the paper (free)</a> <a href="https://lovespark.love/papers/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, independent AI review, but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Imagine every picture of a face is produced from a short list of hidden settings (pose, smile, lighting). A <strong>decoder</strong> network turns settings into a picture; we would like to learn it, and also be able to make new faces.</p>
+  <p>To learn, we need to know which settings probably produced each real picture. That is exactly what we cannot calculate, so a second network, the <strong>encoder</strong>, learns to guess a fuzzy range of settings for each picture.</p>
+  <p>The guess involves random sampling, and you cannot normally pass learning signals back through a dice roll. The <strong>reparameterisation trick</strong> moves the dice roll to the side, so the sampling becomes "fixed noise, shifted and stretched", which backpropagation handles easily.</p>
+  <p>Training balances two pulls: make the decoded picture match the original, and keep the guessed settings close to a simple standard bell curve, so that random settings later decode into sensible new pictures.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §2.1 · Fig. 1</p>
+  <h2>Hidden causes behind the data</h2>
+  <div class="prose">
+    <p>A <strong>generative model</strong> is a recipe for producing data. This paper uses a two-step recipe. First pick a small set of hidden numbers, called the <strong>latent variables</strong> or the <strong>code</strong> and written <var>z</var>, at random from a simple distribution. Then feed them through a network that turns them into a data point <var>x</var>, such as an image.</p>
+    <p>If the recipe is good, it can do three useful things: produce new, realistic examples; describe any real example compactly by its code; and say how plausible a given example is.</p>
+    <p>The hard part is learning the recipe from data. For each real image we would like to know which codes could have produced it (statisticians call this the <strong>posterior</strong>). When the decoder is a neural network, there is no formula for that. Earlier methods either needed simplifying assumptions or ran a slow sampling procedure separately for every single data point, which is hopeless for large datasets.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A sound engineer hears a finished song and wants to know the mixing-desk settings that produced it. Turning the knobs forward to make a song is easy. Working backwards from the song to the knobs is the hard direction, and that is the direction learning needs.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>A latent-variable model makes data from a few hidden numbers. Going forward is easy; inferring the hidden numbers from data is the hard step that blocked training.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Which direction is hard: from code to image, or from image to code?</dt>
+    <dd>From image to code. The decoder computes image from code directly, but no formula inverts a neural network into a probability distribution over codes.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §2.1–2.2, §3</p>
+  <h2>An encoder that guesses, a decoder that rebuilds</h2>
+  <div class="prose">
+    <p>The paper's answer is to train a second network to do the hard direction approximately. This <strong>encoder</strong> looks at an example and outputs a guess about its code. The guess is not a single point but a fuzzy region: a centre (the <strong>mean</strong>, <var>μ</var>) and a spread (the <strong>standard deviation</strong>, <var>σ</var>) for each latent number. The paper calls this a <em>recognition model</em>, and notes that when it is a neural network, the whole system is a <strong>variational auto-encoder</strong>, or VAE.</p>
+    <p>Training then looks like an auto-encoder: an example goes in, the encoder proposes a fuzzy code, we pick one code from that fuzzy region, the decoder rebuilds the example from it, and we score how well it matches. Because the encoder is shared across all examples, guessing a new example's code costs one quick pass instead of a slow per-example search.</p>
+    <p>The score being maximised has a precise meaning: it is a guaranteed lower bound on how probable the model finds the real data (more on that in the In depth tab). Pushing the bound up improves both the decoder and the encoder's guesses.</p>
+  </div>
+  <figure>
+    <div class="svgbox"><svg viewBox="0 0 600 170" role="img" aria-label="Diagram: data x goes into the encoder, which outputs mu and sigma; a code z is sampled; the decoder rebuilds x">
+      <rect x="10" y="60" width="70" height="50" class="box"/><text x="45" y="90" class="t mid">image x</text>
+      <path d="M80,85 L118,85" class="w" marker-end="url(#aw)"/>
+      <polygon points="120,40 210,62 210,108 120,130" class="box-wire"/><text x="165" y="89" class="t mid">encoder</text>
+      <path d="M210,72 L248,60" class="w" marker-end="url(#aw)"/><path d="M210,98 L248,110" class="w" marker-end="url(#aw)"/>
+      <text x="262" y="64" class="t-wire">μ (centre)</text><text x="262" y="114" class="t-wire">σ (spread)</text>
+      <path d="M335,60 L362,80" class="w" marker-end="url(#aw)"/><path d="M335,110 L362,90" class="w" marker-end="url(#aw)"/>
+      <circle cx="380" cy="85" r="18" class="u-on"/><text x="380" y="89" class="t mid">z</text>
+      <text x="380" y="132" class="t-s mid">pick one code</text>
+      <path d="M398,85 L418,85" class="w" marker-end="url(#aw)"/>
+      <polygon points="420,62 510,40 510,130 420,108" class="box-fire"/><text x="465" y="89" class="t mid">decoder</text>
+      <path d="M510,85 L528,85" class="w" marker-end="url(#aw)"/>
+      <rect x="530" y="60" width="62" height="50" class="box"/><text x="561" y="82" class="t mid">rebuilt</text><text x="561" y="98" class="t mid">image</text>
+      <text x="300" y="20" class="t-s mid">training: rebuild the image well, and keep (μ, σ) near a bell curve</text>
+      <text x="300" y="162" class="t-s mid">generating: skip the encoder, draw z from the bell curve, decode</text>
+    </svg></div>
+    <figcaption>The VAE as an auto-encoder with a fuzzy middle. Only the decoder is needed to make new examples.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>The encoder learns to do the hard direction approximately, giving a centre and spread for each example's code, and the decoder learns to rebuild the example from a code picked there.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why output a spread, not just a single best code?</dt>
+    <dd>The true answer is a range of plausible codes, not one. Representing the range is what makes the training score a bound on the data's probability, and it forces nearby codes to decode to similar examples.</dd>
+    <dt>What does sharing one encoder across all examples buy?</dt>
+    <dd>Speed: a new example's code is guessed in a single forward pass rather than by a separate optimisation or sampling run for that example.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §2.3–2.4 · Eq. 4</p>
+  <h2>The reparameterisation trick</h2>
+  <div class="prose">
+    <p>Here is the snag. In the middle of the pipeline we <em>pick a random code</em> from the encoder's fuzzy region. <a href="backprop.html">Backpropagation</a> works by asking "if I nudged this number a little, how would the final score change?" But a random draw has no such answer: nudge <var>μ</var> and you just get a different, unrelated random number.</p>
+    <p>The trick is to draw the randomness first, from a fixed bell curve that has nothing to learn, and then compute the code from it: <strong>code = <var>μ</var> + <var>σ</var> × noise</strong>. The randomness is the same; what changes is that the code is now an ordinary calculation from <var>μ</var> and <var>σ</var>. Nudge <var>μ</var> and every code slides by exactly that amount. Stretch <var>σ</var> and they spread out smoothly. Backpropagation can follow that.</p>
+    <p>Try it below. In "fresh draws" mode, moving the sliders re-rolls the dice and the dots jump about at random. In "reparameterised" mode the noise is drawn once and kept, so the dots glide. Then press <em>Learn</em> to let gradient descent move <var>μ</var> and <var>σ</var> so the dots land in the target zone.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn" id="rp-mode" aria-pressed="true">Mode: reparameterised</button>
+      <label><var>μ</var> <input type="range" id="rp-mu" min="-3" max="3" step="0.05" value="-1.5" data-fmt="2"><output id="rp-mu-o">-1.50</output></label>
+      <label><var>σ</var> <input type="range" id="rp-sd" min="0.05" max="2" step="0.05" value="1.2" data-fmt="2"><output id="rp-sd-o">1.20</output></label>
+      <button class="btn" id="rp-learn">Learn</button><button class="btn" id="rp-new">New noise</button>
+    </div>
+    <div class="svgbox"><svg id="rp" viewBox="0 0 600 230" role="img" aria-label="Fixed noise samples on top, mapped through mu plus sigma times noise to codes below, with a target zone"></svg></div>
+    <p class="readout" id="rp-r"></p>
+    <figcaption>Top row: 24 noise values drawn from a standard bell curve. Bottom row: the codes <var>μ</var> + <var>σ</var> × noise. Lines show which noise value made which code. The amber band is a target region; the score is the average squared distance of the codes from its centre (2.0). Learn takes gradient steps on <var>μ</var> and <var>σ</var> through the formula, which is only possible in reparameterised mode.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>A dart player's throws scatter randomly. You cannot coach "the randomness", but you can coach the aim (where the centre of the scatter is) and the steadiness (how wide it is). Writing each throw as "aim plus steadiness times a random wobble" separates the coachable parts from the luck.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Write the random code as "centre plus spread times fixed noise". The randomness stays, but the code becomes a smooth function of what the network outputs, so backpropagation can train through it.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>After the trick, which quantity is random and which are learned?</dt>
+    <dd>The noise is random and has no learnable parts; <var>μ</var> and <var>σ</var> are produced by the encoder and are learned.</dd>
+    <dt>If the score improves when codes move right, what does backprop tell the encoder?</dt>
+    <dd>Increase <var>μ</var>: each code moves one-for-one with <var>μ</var>, so the derivative of the score with respect to <var>μ</var> is just the average derivative with respect to the codes.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · Eq. 3, Eq. 10</p>
+  <h2>A tug of war: rebuild well, but keep codes tidy</h2>
+  <div class="prose">
+    <p>The training score has two parts. The <strong>reconstruction</strong> part rewards rebuilding each example accurately from a code picked in its fuzzy region. The <strong>regulariser</strong> part (a "KL divergence", a measure of how different two distributions are) penalises fuzzy regions that stray from a standard bell curve centred on zero with spread one.</p>
+    <p>Each pull alone goes wrong. With only reconstruction, the encoder shrinks every spread to almost nothing and pushes codes far apart: a plain auto-encoder, whose space has gaps that decode to nonsense. With too much regulariser, every example gets the same bell-curve code and the decoder learns to output the average example regardless. The balance gives codes that are distinct enough to rebuild from and packed together enough that a random draw from the bell curve lands somewhere meaningful.</p>
+    <p>The toy below trains a real (tiny) VAE in your browser on eight one-dimensional data points, using the reparameterisation trick. The slider changes the weight on the regulariser. The paper uses weight 1; turning it up or down is a later variation.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Regulariser weight <input type="range" id="tw-b" min="0" max="12" step="0.5" value="1" data-fmt="1"><output id="tw-b-o">1.0</output></label>
+      <button class="btn" id="tw-run" aria-pressed="false">Train</button><button class="btn" id="tw-reset">Reset</button><button class="btn" id="tw-gen">Generate 30 new points</button>
+    </div>
+    <div class="svgbox"><svg id="tw" viewBox="0 0 600 280" role="img" aria-label="Data points with their reconstructions above, and their fuzzy codes in latent space below"></svg></div>
+    <p class="readout" id="tw-r"></p>
+    <figcaption>Top: the eight data points (circles), their reconstructions (ticks), and any generated points (triangles). Bottom: each point's fuzzy code (bell shapes, matching colours) against the standard bell curve (dashed). Try weight 0 (spreads shrink to slivers and nothing ties the codes to the bell curve), 1, and 10 (every code collapses onto the bell curve and every reconstruction becomes the average). Press Train after each change. Illustrative toy with a straight-line decoder and fixed decoder noise; the collapse threshold depends on that noise level.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Reconstruction keeps codes informative; the regulariser keeps them packed near a standard bell curve so that random codes decode to sensible new examples.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does generation fail if the regulariser weight is zero?</dt>
+    <dd>Codes can sit anywhere with tiny spreads, so most of the standard bell curve covers regions no real example uses, and those codes decode to things unlike the data.</dd>
+    <dt>What does the model do when the regulariser dominates?</dt>
+    <dd>It ignores the input: every code distribution equals the bell curve, and the decoder outputs the average example. This is later called posterior collapse.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §5 · Figs. 2–5</p>
+  <h2>What it showed, and where it led</h2>
+  <div class="prose">
+    <p>The experiments are modest by today's standards: handwritten digits (MNIST) and a set of face images (Frey Face). The new method reached a better score faster than the main older alternative, the wake-sleep algorithm, in every setting tested, and it worked on the full MNIST training set where a sampling-based method was too slow. With only two latent numbers, the learned code space could be laid out as a map, and walking across it morphed one digit or facial expression smoothly into another.</p>
+    <p>The bigger legacy is the trick itself. "Sample noise, then transform it differentiably" became a standard tool across machine learning, and the encoder-decoder-with-fuzzy-codes design became a basic building block.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>VAE images tend to look blurry next to those from <a href="gan.html">GANs</a> or <a href="ddpm.html">diffusion models</a>. VAEs survived as components: <a href="ldm.html">latent diffusion</a> (the Stable Diffusion family) first compresses images with an auto-encoder that is lightly regularised in this KL style, then runs diffusion in that smaller code space. The same reparameterisation idea was published independently by Rezende, Mohamed and Wierstra in 2014.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The VAE made deep latent-variable models trainable at scale with plain backpropagation; its sampling trick outlived its image quality.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>How can one perform efficient approximate inference and learning in directed probabilistic models whose continuous latent variables have intractable posteriors, on large datasets? The paper introduces a stochastic variational inference and learning algorithm that scales to large data and works under mild differentiability conditions. First, a reparameterisation of the variational lower bound yields an estimator that can be optimised with standard stochastic gradient methods (SGVB). Second, for i.i.d. data with per-datapoint latents, posterior inference is made efficient by fitting an approximate inference (recognition) model to the intractable posterior with that estimator (AEVB). arXiv December 2013; ICLR 2014.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2.1–2.2 · Eqs. 1–3</p>
+  <h2>Setting and the variational bound</h2>
+  <div class="prose">
+    <p>Data <var>X</var> = {<var>x</var><sup>(<var>i</var>)</sup>}<sub><var>i</var>=1</sub><sup><var>N</var></sup} are i.i.d., each generated by drawing <var>z</var><sup>(<var>i</var>)</sup> ∼ <var>p</var><sub>θ*</sub>(<var>z</var>) and then <var>x</var><sup>(<var>i</var>)</sup> ∼ <var>p</var><sub>θ*</sub>(<var>x</var>|<var>z</var>). The paper explicitly allows the case where the marginal <var>p</var><sub>θ</sub>(<var>x</var>) = ∫ <var>p</var><sub>θ</sub>(<var>z</var>)<var>p</var><sub>θ</sub>(<var>x</var>|<var>z</var>) d<var>z</var> and the posterior <var>p</var><sub>θ</sub>(<var>z</var>|<var>x</var>) are intractable (so EM and closed-form mean-field VB do not apply) and the dataset is too large for per-datapoint sampling loops. It targets three problems: ML or MAP estimation of θ, approximate posterior inference of <var>z</var>, and approximate marginal inference of <var>x</var>.</p>
+    <p>A recognition model <var>q</var><sub>φ</sub>(<var>z</var>|<var>x</var>), the probabilistic <em>encoder</em>, approximates the posterior; <var>p</var><sub>θ</sub>(<var>x</var>|<var>z</var>) is the probabilistic <em>decoder</em>. Unlike mean-field, <var>q</var> need not factorise and its parameters are not computed from a closed-form expectation; φ is learned jointly with θ. The marginal log-likelihood decomposes per datapoint as</p>
+  </div>
+  <div class="eq">log <var>p</var><sub>θ</sub>(<var>x</var><sup>(<var>i</var>)</sup>) = <var>D</var><sub>KL</sub>(<var>q</var><sub>φ</sub>(<var>z</var>|<var>x</var><sup>(<var>i</var>)</sup>) ‖ <var>p</var><sub>θ</sub>(<var>z</var>|<var>x</var><sup>(<var>i</var>)</sup>)) + ℒ(θ, φ; <var>x</var><sup>(<var>i</var>)</sup>) <span class="n">(1)</span></div>
+  <div class="eq">ℒ = E<sub><var>q</var><sub>φ</sub>(<var>z</var>|<var>x</var>)</sub>[ −log <var>q</var><sub>φ</sub>(<var>z</var>|<var>x</var>) + log <var>p</var><sub>θ</sub>(<var>x</var>, <var>z</var>) ] <span class="n">(2)</span></div>
+  <div class="eq">ℒ = −<var>D</var><sub>KL</sub>(<var>q</var><sub>φ</sub>(<var>z</var>|<var>x</var><sup>(<var>i</var>)</sup>) ‖ <var>p</var><sub>θ</sub>(<var>z</var>)) + E<sub><var>q</var><sub>φ</sub>(<var>z</var>|<var>x</var><sup>(<var>i</var>)</sup>)</sub>[ log <var>p</var><sub>θ</sub>(<var>x</var><sup>(<var>i</var>)</sup>|<var>z</var>) ] <span class="n">(3)</span></div>
+  <div class="prose">
+    <p>Since the first KL in (1) is non-negative, ℒ is a lower bound (the ELBO), tight when <var>q</var> equals the true posterior. Maximising ℒ over θ and φ jointly both raises the likelihood and pulls <var>q</var> toward the posterior. The gradient in θ is easy to estimate by sampling; the gradient in φ is the problem, because φ parameterises the distribution the expectation is taken under. The naive Monte Carlo (score-function) estimator, E<sub><var>q</var></sub>[<var>f</var>(<var>z</var>) ∇<sub>φ</sub> log <var>q</var><sub>φ</sub>(<var>z</var>)], is unbiased but, the paper notes, has very high variance and is impractical for this purpose.</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does maximising ℒ over φ make <var>q</var> a better posterior approximation?</dt>
+    <dd>log <var>p</var><sub>θ</sub>(<var>x</var>) does not depend on φ, so by Eq. 1 raising ℒ in φ must lower KL(<var>q</var> ‖ <var>p</var>(<var>z</var>|<var>x</var>)).</dd>
+    <dt>In Eq. 3, which term acts like an auto-encoder's reconstruction error?</dt>
+    <dd>The expected log-likelihood E<sub><var>q</var></sub>[log <var>p</var><sub>θ</sub>(<var>x</var>|<var>z</var>)]; the KL to the prior acts as a regulariser.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §2.3 · Eqs. 4–8 · Algorithm 1</p>
+  <h2>SGVB estimators and the AEVB algorithm</h2>
+  <div class="prose"><p>Assume <var>z̃</var> ∼ <var>q</var><sub>φ</sub>(<var>z</var>|<var>x</var>) can be written as a differentiable transform of auxiliary noise:</p></div>
+  <div class="eq"><var>z̃</var> = <var>g</var><sub>φ</sub>(ε, <var>x</var>), &nbsp; ε ∼ <var>p</var>(ε) <span class="n">(4)</span></div>
+  <div class="eq">E<sub><var>q</var><sub>φ</sub>(<var>z</var>|<var>x</var><sup>(<var>i</var>)</sup>)</sub>[<var>f</var>(<var>z</var>)] = E<sub><var>p</var>(ε)</sub>[<var>f</var>(<var>g</var><sub>φ</sub>(ε, <var>x</var><sup>(<var>i</var>)</sup>))] ≃ (1/<var>L</var>) Σ<sub><var>l</var>=1</sub><sup><var>L</var></sup> <var>f</var>(<var>g</var><sub>φ</sub>(ε<sup>(<var>l</var>)</sup>, <var>x</var><sup>(<var>i</var>)</sup>)) <span class="n">(5)</span></div>
+  <div class="prose"><p>Applying (5) to (2) gives the generic estimator; applying it only to the reconstruction term of (3), when the KL is analytic, gives a second estimator that typically has lower variance; and a minibatch of <var>M</var> points from <var>N</var> gives the dataset-level estimator:</p></div>
+  <div class="eq">ℒ̃<sup>A</sup> = (1/<var>L</var>) Σ<sub><var>l</var></sub> [ log <var>p</var><sub>θ</sub>(<var>x</var><sup>(<var>i</var>)</sup>, <var>z</var><sup>(<var>i</var>,<var>l</var>)</sup>) − log <var>q</var><sub>φ</sub>(<var>z</var><sup>(<var>i</var>,<var>l</var>)</sup>|<var>x</var><sup>(<var>i</var>)</sup>) ], &nbsp; <var>z</var><sup>(<var>i</var>,<var>l</var>)</sup> = <var>g</var><sub>φ</sub>(ε<sup>(<var>i</var>,<var>l</var>)</sup>, <var>x</var><sup>(<var>i</var>)</sup>) <span class="n">(6)</span></div>
+  <div class="eq">ℒ̃<sup>B</sup> = −<var>D</var><sub>KL</sub>(<var>q</var><sub>φ</sub>(<var>z</var>|<var>x</var><sup>(<var>i</var>)</sup>) ‖ <var>p</var><sub>θ</sub>(<var>z</var>)) + (1/<var>L</var>) Σ<sub><var>l</var></sub> log <var>p</var><sub>θ</sub>(<var>x</var><sup>(<var>i</var>)</sup>|<var>z</var><sup>(<var>i</var>,<var>l</var>)</sup>) <span class="n">(7)</span></div>
+  <div class="eq">ℒ(θ, φ; <var>X</var>) ≃ ℒ̃<sup><var>M</var></sup>(θ, φ; <var>X</var><sup><var>M</var></sup>) = (<var>N</var>/<var>M</var>) Σ<sub><var>i</var>=1</sub><sup><var>M</var></sup> ℒ̃(θ, φ; <var>x</var><sup>(<var>i</var>)</sup>) <span class="n">(8)</span></div>
+<pre class="algo"><span class="c">Algorithm 1 (AEVB, minibatch version)</span>
+θ, φ ← initialise
+repeat
+    X<sup>M</sup> ← random minibatch of M datapoints
+    ε ← L samples per datapoint from p(ε)
+    g ← ∇<sub>θ,φ</sub> ℒ̃<sup>M</sup>(θ, φ; X<sup>M</sup>, ε)        <span class="c">gradient of Eq. 8, by backprop</span>
+    θ, φ ← update with g                    <span class="c">SGD or Adagrad</span>
+until convergence
+<span class="c">The paper uses M = 100 and L = 1.</span></pre>
+  <div class="prose">
+    <p>The point of the reparameterisation is that ∇<sub>φ</sub> now passes through <var>f</var> ∘ <var>g</var><sub>φ</sub> by the chain rule, using the derivative of <var>f</var>, instead of weighting <var>f</var> by the score ∇ log <var>q</var>. The figure compares the two unbiased estimators of the same gradient, d/d<var>μ</var> E<sub><var>z</var>∼𝒩(<var>μ</var>, <var>σ</var>²)</sub>[(<var>z</var> − 2)²] = 2(<var>μ</var> − 2).</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label><var>μ</var> <input type="range" id="gv-mu" min="-3" max="3" step="0.1" value="0" data-fmt="1"><output id="gv-mu-o">0.0</output></label>
+      <label><var>σ</var> <input type="range" id="gv-sd" min="0.1" max="2" step="0.05" value="1" data-fmt="2"><output id="gv-sd-o">1.00</output></label>
+      <label><var>L</var> <input type="range" id="gv-L" min="1" max="50" step="1" value="1"><output id="gv-L-o">1</output></label>
+      <button class="btn" id="gv-re">Resample</button>
+    </div>
+    <div class="svgbox"><svg id="gv" viewBox="0 0 600 260" role="img" aria-label="Histograms of score-function and reparameterised gradient estimates"></svg></div>
+    <p class="readout" id="gv-r"></p>
+    <figcaption>3,000 independent gradient estimates, each averaging <var>L</var> samples. Blue: score-function estimator <var>f</var>(<var>z</var>)(<var>z</var> − <var>μ</var>)/<var>σ</var>². Amber: reparameterised estimator <var>f</var>′(<var>μ</var> + <var>σ</var>ε) with ε ∼ 𝒩(0, 1). Both average to the true value (dashed line; the 1% tails on each side are cut off the chart), but the score-function spread is several times wider, and grows quickly as <var>μ</var> moves away from 2. With the reparameterised estimator, <var>L</var> = 1 is often enough, as in the paper.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does the paper get away with <var>L</var> = 1?</dt>
+    <dd>The reparameterised estimator has low variance, and with a minibatch of <var>M</var> = 100 the gradient already averages over 100 independent samples.</dd>
+    <dt>What does ℒ̃<sup>B</sup> require that ℒ̃<sup>A</sup> does not?</dt>
+    <dd>A closed-form KL between <var>q</var><sub>φ</sub>(<var>z</var>|<var>x</var>) and the prior, which holds for Gaussian <var>q</var> and Gaussian prior.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §2.4</p>
+  <h2>When can you reparameterise?</h2>
+  <div class="prose">
+    <p>For the univariate Gaussian <var>z</var> ∼ 𝒩(<var>μ</var>, <var>σ</var>²), <var>z</var> = <var>μ</var> + <var>σ</var>ε with ε ∼ 𝒩(0, 1), so E<sub>𝒩(<var>z</var>; <var>μ</var>, <var>σ</var>²)</sub>[<var>f</var>(<var>z</var>)] ≃ (1/<var>L</var>) Σ<sub><var>l</var></sub> <var>f</var>(<var>μ</var> + <var>σ</var>ε<sup>(<var>l</var>)</sup>). The paper lists three general routes to a suitable <var>g</var><sub>φ</sub> and <var>p</var>(ε):</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Route</th><th>Construction</th><th>Examples given in §2.4</th></tr></thead>
+    <tbody>
+      <tr><td>Tractable inverse CDF</td><td>ε ∼ 𝒰(0, 1), <var>g</var> = inverse CDF of <var>q</var></td><td>Exponential, Cauchy, Logistic, Rayleigh, Pareto, Weibull, Reciprocal, Gompertz, Gumbel, Erlang</td></tr>
+      <tr><td>Location–scale family</td><td>standard member as ε, <var>g</var> = location + scale · ε</td><td>Laplace, Elliptical, Student's t, Logistic, Uniform, Triangular, Gaussian</td></tr>
+      <tr><td>Composition</td><td>express the variable as a transform of auxiliary variables</td><td>Log-Normal (exponentiated normal), Gamma, Dirichlet, Beta, Chi-squared, F</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose"><p>If none apply, good approximations to the inverse CDF exist with cost comparable to the density. The conspicuous gap is <strong>discrete</strong> latents: there is no differentiable <var>g</var> for a categorical variable, which is why wake-sleep (which handles discrete latents) remained relevant and why continuous relaxations were introduced later.</p></div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §3 · Eqs. 9–10 · App. B–C</p>
+  <h2>The variational auto-encoder</h2>
+  <div class="prose">
+    <p>The worked example: prior <var>p</var><sub>θ</sub>(<var>z</var>) = 𝒩(<var>z</var>; 0, <var>I</var>) with no parameters; decoder <var>p</var><sub>θ</sub>(<var>x</var>|<var>z</var>) a multivariate Gaussian (real-valued data) or Bernoulli (binary data) whose parameters are output by an MLP with one hidden layer (Appendix C); encoder a diagonal Gaussian whose mean and log-variance are output by an MLP:</p>
+  </div>
+  <div class="eq">log <var>q</var><sub>φ</sub>(<var>z</var>|<var>x</var><sup>(<var>i</var>)</sup>) = log 𝒩(<var>z</var>; <var>μ</var><sup>(<var>i</var>)</sup>, <var>σ</var><sup>2(<var>i</var>)</sup><var>I</var>) <span class="n">(9)</span></div>
+  <div class="eq">ℒ(θ, φ; <var>x</var><sup>(<var>i</var>)</sup>) ≃ ½ Σ<sub><var>j</var>=1</sub><sup><var>J</var></sup> (1 + log((<var>σ<sub>j</sub></var><sup>(<var>i</var>)</sup>)<sup>2</sup>) − (<var>μ<sub>j</sub></var><sup>(<var>i</var>)</sup>)<sup>2</sup> − (<var>σ<sub>j</sub></var><sup>(<var>i</var>)</sup>)<sup>2</sup>) + (1/<var>L</var>) Σ<sub><var>l</var></sub> log <var>p</var><sub>θ</sub>(<var>x</var><sup>(<var>i</var>)</sup>|<var>z</var><sup>(<var>i</var>,<var>l</var>)</sup>), &nbsp; <var>z</var><sup>(<var>i</var>,<var>l</var>)</sup> = <var>μ</var><sup>(<var>i</var>)</sup> + <var>σ</var><sup>(<var>i</var>)</sup> ⊙ ε<sup>(<var>l</var>)</sup> <span class="n">(10)</span></div>
+  <div class="prose">
+    <p>The first sum is −KL(<var>q</var> ‖ <var>p</var>) in closed form (derived in Appendix B), so this is estimator ℒ̃<sup>B</sup>. A footnote stresses that the diagonal covariance is a simplifying choice, not a limitation of the method. Check the closed form against Monte Carlo below.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label><var>μ</var> <input type="range" id="kl-mu" min="-3" max="3" step="0.05" value="1" data-fmt="2"><output id="kl-mu-o">1.00</output></label>
+      <label><var>σ</var> <input type="range" id="kl-sd" min="0.1" max="2.5" step="0.05" value="0.5" data-fmt="2"><output id="kl-sd-o">0.50</output></label>
+    </div>
+    <div class="svgbox"><svg id="kl" viewBox="0 0 600 220" role="img" aria-label="Approximate posterior q against the standard normal prior, with the KL divergence"></svg></div>
+    <p class="readout" id="kl-r"></p>
+    <figcaption>One latent dimension. Amber: <var>q</var> = 𝒩(<var>μ</var>, <var>σ</var>²). Dashed: prior 𝒩(0, 1). The readout compares the closed form −½(1 + log <var>σ</var>² − <var>μ</var>² − <var>σ</var>²) with a 20,000-sample Monte Carlo estimate of E<sub><var>q</var></sub>[log <var>q</var> − log <var>p</var>]. Note the asymmetry: shrinking <var>σ</var> costs −log <var>σ</var>, so very confident codes are penalised, while large <var>σ</var> costs <var>σ</var>²/2.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What KL does the encoder pay for <var>μ</var> = 0, <var>σ</var> = 1, and what does that mean?</dt>
+    <dd>Zero. The code carries no information about <var>x</var>; if every dimension sits there, the model has collapsed to ignoring its input.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §4–5 · Figs. 2–5</p>
+  <h2>Related work and experiments</h2>
+  <div class="prose">
+    <p><strong>Related work (§4).</strong> The wake-sleep algorithm (Hinton et al., 1995) is described as the only other online method in the literature applicable to the same general class of continuous latent-variable models; it also uses a recognition model but optimises two objectives that together do not correspond to a bound on the marginal likelihood. The authors relate the KL term to regularised auto-encoders (denoising, contractive, sparse) and note a linear-Gaussian special case connects to PCA. An independent paper (Rezende, Mohamed and Wierstra) connected auto-encoders, directed models and the same reparameterisation.</p>
+    <p><strong>Setup (§5).</strong> Encoder and decoder each have one hidden layer: 500 hidden units on MNIST, 200 on Frey Face (smaller, to limit overfitting); Frey Face decoder means are passed through a sigmoid into (0, 1). Parameters are initialised from 𝒩(0, 0.01); optimisation is minibatch SGVB with Adagrad, step size chosen from {0.01, 0.02, 0.1}; <var>M</var> = 100, <var>L</var> = 1. A weight-decay term corresponding to a prior <var>p</var>(θ) = 𝒩(0, <var>I</var>) makes the parameter estimate approximately MAP.</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Experiment</th><th>What was compared</th><th>Reported outcome</th></tr></thead>
+    <tbody>
+      <tr><td>Lower bound vs training time (Fig. 2)</td><td>AEVB vs wake-sleep; latent sizes <var>N<sub>z</sub></var> = 3, 5, 10, 20, 200 (MNIST) and 2, 5, 10, 20 (Frey Face)</td><td>AEVB converged considerably faster and reached a better bound in all experiments; extra latent dimensions did not cause overfitting, attributed to the regularising KL.</td></tr>
+      <tr><td>Estimated marginal likelihood (Fig. 3)</td><td>AEVB, wake-sleep, Monte Carlo EM with HMC; 3 latents, 100 hidden units; <var>N</var><sub>train</sub> = 1,000 and 50,000</td><td>AEVB compared favourably with both; MCEM is not an online algorithm and could not be run efficiently on the full MNIST set.</td></tr>
+      <tr><td>Visualisation (Figs. 4–5, App. A)</td><td>2-D latent manifolds; random samples for several latent sizes</td><td>Smooth manifolds of digits and facial expressions.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="kp" id="t6">
+  <p class="eyebrow"><b>Section</b> · §6–7 and later work</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Continuous latents only.</strong> The trick needs a differentiable <var>g</var><sub>φ</sub>. Discrete latents later got continuous relaxations (Gumbel-softmax / Concrete, Jang et al. and Maddison et al., 2017) or a straight-through quantiser (VQ-VAE, van den Oord et al., 2017).</li>
+      <li><strong>The bound's slack.</strong> A diagonal Gaussian <var>q</var> leaves a gap in Eq. 1. Importance-weighted bounds (IWAE, Burda et al.) tighten it; normalising flows (Rezende &amp; Mohamed, 2015) and hierarchical latents (e.g. NVAE, 2020) make <var>q</var> and the prior richer.</li>
+      <li><strong>Posterior collapse.</strong> With a powerful decoder (e.g. an autoregressive text model), the optimum can set <var>q</var> = prior and ignore <var>z</var>. Bowman et al. (2016) observed this for sentences and used KL annealing.</li>
+      <li><strong>Sample quality.</strong> Gaussian-likelihood VAEs produce blurry samples relative to <a href="gan.html">GANs</a> and later <a href="ddpm.html">diffusion models</a>. β-VAE (Higgins et al., 2017) deliberately up-weights the KL to encourage disentangled codes, trading reconstruction.</li>
+    </ul>
+    <p>The authors' future-work list (§7) included hierarchical models with convolutional encoders and decoders, time-series models, SGVB for global parameters, and supervised latent-variable models; all were pursued.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>The paper's finding in one line: <em>the reparameterisation trick makes a latent-variable generative model trainable with ordinary backpropagation.</em> That trick, also called the pathwise gradient estimator, is now standard well beyond VAEs. In generative modelling, VAEs were overtaken on sample quality, but the KL-regularised auto-encoder lives on as the first stage of <a href="ldm.html">latent diffusion</a>, and the ELBO is the training objective that <a href="ddpm.html">DDPM</a> derives its loss from.</div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why can't the Gaussian reparameterisation be used directly for a categorical latent?</dt>
+    <dd>A categorical sample is a piecewise-constant function of the parameters, so its derivative is zero almost everywhere; there is no useful differentiable path from φ to the sample.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t7" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Latent <var>z</var></dt><dd>Unobserved variable (the code) from which data are generated.</dd>
+    <dt>Posterior</dt><dd><var>p</var><sub>θ</sub>(<var>z</var>|<var>x</var>): distribution of codes given an observation; intractable here.</dd>
+    <dt>Recognition model</dt><dd><var>q</var><sub>φ</sub>(<var>z</var>|<var>x</var>), the encoder; an amortised approximation to the posterior.</dd>
+    <dt>ELBO / ℒ</dt><dd>Evidence lower bound, Eqs. 2–3; lower bound on log <var>p</var><sub>θ</sub>(<var>x</var>).</dd>
+    <dt>KL divergence</dt><dd>E<sub><var>q</var></sub>[log <var>q</var> − log <var>p</var>] ≥ 0; zero iff the distributions are equal.</dd>
+    <dt>SGVB</dt><dd>Stochastic Gradient Variational Bayes: the reparameterised Monte Carlo estimators of ℒ (Eqs. 6–8).</dd>
+    <dt>AEVB</dt><dd>Auto-Encoding Variational Bayes: Algorithm 1, joint SGD on θ and φ with a recognition model.</dd>
+    <dt>Reparameterisation</dt><dd>Writing <var>z</var> = <var>g</var><sub>φ</sub>(ε, <var>x</var>) with parameter-free noise ε, so gradients pass through the sample.</dd>
+    <dt>Score-function estimator</dt><dd>E[<var>f</var> ∇ log <var>q</var>]; unbiased, high variance (also called REINFORCE).</dd>
+    <dt>Posterior collapse</dt><dd><var>q</var>(<var>z</var>|<var>x</var>) ≈ <var>p</var>(<var>z</var>) for all <var>x</var>: the decoder ignores the code.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Led to:</strong> <a href="ldm.html">Latent diffusion (2021)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers/">Papers worth reading</a> (<a href="https://lovespark.love/papers/#vae">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // reparameterisation dots
+  var svg=$('#rp'), N=24, eps=[], seed=3, mu=-1.5, sd=1.2, reparam=true, fresh=[], timer=null, T=2.0;
+  function newNoise(){ var r=rng(seed++); eps=[]; for (var i=0;i<N;i++) eps.push(Math.max(-2.8,Math.min(2.8,gauss(r)))); eps.sort(function(a,b){return a-b;}); }
+  var fr=rng(99);
+  function X(v){ return 300+v*55; }
+  function codes(){ if (reparam) return eps.map(function(e){ return mu+sd*e; }); return fresh; }
+  function draw(){ clear(svg); var z=codes();
+    S('rect',{x:X(T-0.5),y:130,width:55,height:60,'class':'box-fire'},svg); S('text',{x:X(T),y:206,'class':'t-fire mid'},svg,'target');
+    S('line',{x1:20,y1:60,x2:580,y2:60,'class':'grid'},svg); S('line',{x1:20,y1:160,x2:580,y2:160,'class':'axis'},svg);
+    for (var t=-5;t<=5;t++){ S('line',{x1:X(t),y1:160,x2:X(t),y2:165,'class':'axis'},svg); S('text',{x:X(t),y:178,'class':'t-s mid'},svg,t); }
+    S('text',{x:20,y:40,'class':'t-s'},svg,'noise (drawn once)'); S('text',{x:20,y:120,'class':'t-s'},svg,'codes');
+    eps.forEach(function(e,i){ if (reparam) S('line',{x1:X(e),y1:60,x2:X(z[i]),y2:160,'class':'w-faint'},svg); S('circle',{cx:X(e),cy:60,r:4,'class':'f-wire'},svg); });
+    z.forEach(function(v){ S('circle',{cx:X(Math.max(-5.3,Math.min(5.3,v))),cy:160,r:5,'class':'u-on'},svg); });
+    if (!reparam) S('text',{x:300,y:110,'class':'t-inh mid'},svg,'fresh draws: no link from μ, σ to the codes');
+    var loss=z.reduce(function(s,v){return s+(v-T)*(v-T);},0)/N;
+    $('#rp-r').innerHTML='Score (mean squared distance from target): <b>'+fmt(loss,3)+'</b>'+(reparam?'':' · in this mode the codes are just new random numbers each time');
+    return loss; }
+  function resample(){ fresh=[]; for (var i=0;i<N;i++) fresh.push(mu+sd*gauss(fr)); }
+  function setSl(id,v){ var r=$('#'+id); r.value=v; $('#'+id+'-o').textContent=fmt(v,2); }
+  bindRange('rp-mu',function(v){ mu=v; resample(); draw(); });
+  bindRange('rp-sd',function(v){ sd=v; resample(); draw(); });
+  $('#rp-mode').onclick=function(){ reparam=!reparam; this.setAttribute('aria-pressed',reparam); this.textContent='Mode: '+(reparam?'reparameterised':'fresh draws'); resample(); draw(); };
+  $('#rp-new').onclick=function(){ newNoise(); resample(); draw(); };
+  $('#rp-learn').onclick=function(){
+    if (timer) return;
+    if (!reparam){ $('#rp-r').innerHTML='<b>Cannot learn</b>: with fresh draws there is no formula linking μ and σ to the codes, so backpropagation has nothing to follow. Switch modes.'; return; }
+    var k=0; timer=setInterval(function(){ var gm=0, gs=0; eps.forEach(function(e){ var z=mu+sd*e; gm+=2*(z-T)/N; gs+=2*(z-T)*e/N; });
+      mu-=0.08*gm; sd=Math.max(0.05,sd-0.08*gs); setSl('rp-mu',Math.max(-3,Math.min(3,mu))); setSl('rp-sd',Math.min(2,sd)); var l=draw(); k++;
+      if (k>60){ clearInterval(timer); timer=null; $('#rp-r').innerHTML+=' · after 60 gradient steps: μ = <b>'+fmt(mu,2)+'</b>, σ = <b>'+fmt(sd,2)+'</b>'; } },40); };
+  newNoise(); resample(); draw();
+})();
+(function(){ // tiny VAE tug of war
+  var svg=$('#tw'), xs=[-3,-2.4,-1.7,-0.4,0.3,1.6,2.2,3.0], s2=0.5, beta=1, P, M, V, t, timer=null, r=rng(11), gen=[];
+  function reset(){ P={mu:xs.map(function(x){return 0.1*x;}), ls:xs.map(function(){return -1;}), a:0.5, b:0}; M={}; V={}; t=0; gen=[]; draw(); }
+  function adam(k,i,g,lr){ var key=k+i; M[key]=(M[key]||0)*0.9+0.1*g; V[key]=(V[key]||0)*0.999+0.001*g*g; var mh=M[key]/(1-Math.pow(0.9,t)), vh=V[key]/(1-Math.pow(0.999,t)); return lr*mh/(Math.sqrt(vh)+1e-8); }
+  function step(){ t++; var ga=0, gb=0, n=xs.length, rec=0, kl=0;
+    for (var i=0;i<n;i++){ var s=Math.exp(P.ls[i]), e=gauss(r), z=P.mu[i]+s*e, res=xs[i]-(P.a*z+P.b);
+      var dz=-P.a*res/s2; ga+=-res*z/s2/n; gb+=-res/s2/n;
+      var gmu=(dz+beta*P.mu[i])/n, gls=(dz*s*e+beta*(s*s-1))/n;
+      P.mu[i]-=adam('m',i,gmu,0.03); P.ls[i]-=adam('l',i,gls,0.03); P.ls[i]=Math.max(-5,Math.min(1.5,P.ls[i])); }
+    P.a-=adam('a',0,ga,0.03); P.b-=adam('b',0,gb,0.03); }
+  function stats(){ var rec=0, kl=0, n=xs.length; for (var i=0;i<n;i++){ var s=Math.exp(P.ls[i]); rec+=Math.pow(xs[i]-(P.a*P.mu[i]+P.b),2)+P.a*P.a*s*s; kl+=0.5*(P.mu[i]*P.mu[i]+s*s-1-2*P.ls[i]); } return [rec/n,kl/n]; }
+  function XD(v){ return 300+v*70; } function XZ(v){ return 300+v*60; }
+  function draw(){ clear(svg);
+    S('text',{x:16,y:20,'class':'t-s'},svg,'data space'); S('line',{x1:20,y1:70,x2:580,y2:70,'class':'axis'},svg);
+    gen.forEach(function(g){ var x=XD(Math.max(-4,Math.min(4,g))); S('path',{d:'M'+x+',88 l-4,8 l8,0 z','class':'f-ok'},svg); });
+    xs.forEach(function(x,i){ var cl=i%2?'f-wire':'f-fire'; S('circle',{cx:XD(x),cy:70,r:6,'class':cl},svg); var rc=P.a*P.mu[i]+P.b; S('line',{x1:XD(rc),y1:46,x2:XD(rc),y2:60,'stroke-width':3,'class':i%2?'w':'w-fire'},svg); });
+    S('text',{x:16,y:132,'class':'t-s'},svg,'code space (z)'); var base=255;
+    S('line',{x1:20,y1:base,x2:580,y2:base,'class':'axis'},svg);
+    for (var tt=-4;tt<=4;tt++){ S('line',{x1:XZ(tt),y1:base,x2:XZ(tt),y2:base+4,'class':'axis'},svg); S('text',{x:XZ(tt),y:base+16,'class':'t-s mid'},svg,tt); }
+    var d=''; for (var z=-4.6;z<=4.6;z+=0.05){ d+=(d?'L':'M')+XZ(z)+','+(base-90*Math.exp(-z*z/2)); } S('path',{d:d,'class':'w-dash'},svg);
+    xs.forEach(function(x,i){ var s=Math.exp(P.ls[i]), m=P.mu[i], h=Math.min(112,90/s), dd='';
+      for (var z=m-3.5*s; z<=m+3.5*s; z+=s/12){ var zz=Math.max(-4.8,Math.min(4.8,z)); dd+=(dd?'L':'M')+XZ(zz)+','+(base-h*Math.exp(-Math.pow((z-m)/s,2)/2)); }
+      S('path',{d:dd,'class':i%2?'w':'w-fire'},svg); });
+    var st=stats(); $('#tw-r').innerHTML='Steps: <b>'+t+'</b> · reconstruction error: <b>'+fmt(st[0],3)+'</b> · regulariser (KL): <b>'+fmt(st[1],3)+'</b> · decoder slope: <b>'+fmt(P.a,2)+'</b>'; }
+  bindRange('tw-b',function(v){ beta=v; });
+  $('#tw-run').onclick=function(){ var b=this; if (timer){ clearInterval(timer); timer=null; b.textContent='Train'; b.setAttribute('aria-pressed','false'); return; }
+    b.textContent='Pause'; b.setAttribute('aria-pressed','true'); timer=setInterval(function(){ for (var k=0;k<40;k++) step(); draw(); if (t>12000){ clearInterval(timer); timer=null; b.textContent='Train'; b.setAttribute('aria-pressed','false'); } },30); };
+  $('#tw-reset').onclick=reset;
+  $('#tw-gen').onclick=function(){ gen=[]; var rr=rng(t+7); for (var k=0;k<30;k++){ gen.push(P.a*gauss(rr)+P.b+Math.sqrt(s2)*gauss(rr)); } draw(); };
+  reset(); for (var k=0;k<1500;k++) step(); draw();
+})();
+(function(){ // gradient estimator variance
+  var svg=$('#gv'), mu=0, sd=1, L=1, seed=5;
+  function run(){ var r=rng(seed), K=3000, A=[], B=[];
+    for (var k=0;k<K;k++){ var sa=0, sb=0; for (var l=0;l<L;l++){ var e=gauss(r), z=mu+sd*e, f=(z-2)*(z-2); sa+=f*(z-mu)/(sd*sd); sb+=2*(z-2); } A.push(sa/L); B.push(sb/L); }
+    return [A,B]; }
+  function sdv(a){ var m=a.reduce(function(s,v){return s+v;},0)/a.length; return [m,Math.sqrt(a.reduce(function(s,v){return s+(v-m)*(v-m);},0)/a.length)]; }
+  function draw(){ clear(svg); var R=run(), A=R[0], B=R[1], tr=2*(mu-2), sa=sdv(A), sb=sdv(B);
+    var all=A.concat(B).sort(function(a,b){return a-b;}), lo=Math.min(all[Math.floor(all.length*0.01)],tr-1), hi=Math.max(all[Math.floor(all.length*0.99)],tr+1), nb=60, x0=30, x1=580, y0=220;
+    function X(v){ return x0+(v-lo)/(hi-lo)*(x1-x0); }
+    function hist(a){ var h=[]; for (var i=0;i<nb;i++) h.push(0); a.forEach(function(v){ var b=Math.floor((v-lo)/(hi-lo)*nb); if (b>=0&&b<nb) h[b]++; }); return h; }
+    var ha=hist(A), hb=hist(B), mx=Math.max(Math.max.apply(null,ha),Math.max.apply(null,hb)), bw=(x1-x0)/nb;
+    ha.forEach(function(c,i){ var h=c/mx*170; S('rect',{x:x0+i*bw,y:y0-h,width:bw-0.5,height:h,'class':'f-wire','fill-opacity':0.45},svg); });
+    hb.forEach(function(c,i){ var h=c/mx*170; S('rect',{x:x0+i*bw+bw*0.2,y:y0-h,width:bw*0.6,height:h,'class':'f-fire','fill-opacity':0.85},svg); });
+    S('line',{x1:x0,y1:y0,x2:x1,y2:y0,'class':'axis'},svg);
+    S('line',{x1:X(tr),y1:30,x2:X(tr),y2:y0,'class':'w-dash'},svg); S('text',{x:X(tr),y:24,'class':'t-s mid'},svg,'true gradient '+fmt(tr,2));
+    [lo,(lo+tr)/2,tr,(tr+hi)/2,hi].forEach(function(v){ S('text',{x:X(v),y:y0+16,'class':'t-s mid'},svg,fmt(v,1)); });
+    S('rect',{x:40,y:36,width:12,height:12,'class':'f-wire','fill-opacity':0.45},svg); S('text',{x:58,y:46,'class':'t-s'},svg,'score function');
+    S('rect',{x:40,y:56,width:12,height:12,'class':'f-fire'},svg); S('text',{x:58,y:66,'class':'t-s'},svg,'reparameterised');
+    S('text',{x:x1,y:y0+34,'class':'t-s end'},svg,'gradient estimate');
+    $('#gv-r').innerHTML='Std. dev. of estimates: score function <b>'+fmt(sa[1],2)+'</b>, reparameterised <b>'+fmt(sb[1],2)+'</b> (ratio <b>'+fmt(sa[1]/sb[1],1)+'×</b>). Means: '+fmt(sa[0],2)+' and '+fmt(sb[0],2)+'.'; }
+  bindRange('gv-mu',function(v){ mu=v; draw(); }); bindRange('gv-sd',function(v){ sd=v; draw(); }); bindRange('gv-L',function(v){ L=v; draw(); });
+  $('#gv-re').onclick=function(){ seed++; draw(); };
+})();
+(function(){ // KL closed form vs MC
+  var svg=$('#kl'), mu=1, sd=0.5;
+  function N(z,m,s){ return Math.exp(-0.5*Math.pow((z-m)/s,2))/(s*Math.sqrt(2*Math.PI)); }
+  function draw(){ clear(svg); var X=function(v){ return 300+v*60; }, y0=190, sc=120;
+    S('line',{x1:20,y1:y0,x2:580,y2:y0,'class':'axis'},svg);
+    for (var t=-4;t<=4;t++){ S('text',{x:X(t),y:y0+16,'class':'t-s mid'},svg,t); }
+    var top=Math.max(N(mu,mu,sd),N(0,0,1)), k=150/top, dp='', dq='';
+    for (var z=-4.6;z<=4.6;z+=0.02){ dp+=(dp?'L':'M')+X(z)+','+(y0-k*N(z,0,1)); dq+=(dq?'L':'M')+X(z)+','+(y0-k*N(z,mu,sd)); }
+    S('path',{d:dp,'class':'w-dash'},svg); S('path',{d:dq,'class':'w-fire'},svg);
+    S('text',{x:24,y:24,'class':'t-s'},svg,'dashed: prior N(0,1)'); S('text',{x:24,y:40,'class':'t-fire'},svg,'amber: q = N(μ, σ²)');
+    var kl=-0.5*(1+Math.log(sd*sd)-mu*mu-sd*sd), r=rng(42), s=0, K=20000;
+    for (var i=0;i<K;i++){ var z=mu+sd*gauss(r); s+=Math.log(N(z,mu,sd))-Math.log(N(z,0,1)); }
+    $('#kl-r').innerHTML='KL(q ‖ p), closed form (Eq. 10): <b>'+fmt(kl,4)+'</b> · Monte Carlo: <b>'+fmt(s/K,4)+'</b> · parts: μ²/2 = '+fmt(mu*mu/2,3)+', (σ² − 1 − log σ²)/2 = '+fmt((sd*sd-1-Math.log(sd*sd))/2,3); }
+  bindRange('kl-mu',function(v){ mu=v; draw(); }); bindRange('kl-sd',function(v){ sd=v; draw(); });
+})();
+</script>
+
+</body>
+</html>

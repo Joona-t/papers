@@ -1,0 +1,258 @@
+<!--LEDE-->
+Can a model have far more parameters without costing more to run? A "mixture of experts" model does this by holding many alternative sub-networks and sending each word to only a few of them, but earlier versions were complicated and unstable. The Switch Transformer simplifies the idea to its extreme: send each token to exactly one expert. With a few fixes for stability, this trained up to seven times faster than a comparable dense model on the same hardware and scaled to 1.6 trillion parameters.
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>In an ordinary transformer every word (token) passes through the same feed-forward layer, so adding parameters always adds computation.</p>
+  <p>A Switch Transformer replaces that layer with many copies, called experts, plus a small "router" that sends each token to just one of them, so the parameter count grows with the number of experts while the work per token stays the same.</p>
+  <p>Routing to a single expert, instead of the two or more earlier work used, is simpler and cheaper, and three practical tricks (a balancing penalty, higher numerical precision in the router, and smaller starting weights) made it train reliably.</p>
+  <p>Using the same computing budget per token as Google's T5 models, Switch models reached the same quality up to seven times faster, helped in all 101 languages tested, and were scaled to 1.6 trillion parameters.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1–2</p>
+  <h2>More parameters without more work</h2>
+  <div class="prose">
+    <p>Bigger language models are better, as the <a href="scaling.html">scaling-law</a> papers showed, but in a normal ("dense") model every parameter is used for every token, so a model ten times bigger costs ten times as much to run.</p>
+    <p>A <a href="moe.html">mixture of experts</a> breaks that link. Take one of the transformer's feed-forward layers (the part of each block that processes each token on its own) and make many copies of it, each with its own weights. These copies are the <strong>experts</strong>. A small <strong>router</strong> looks at each token and decides which expert should handle it. Each token only visits its chosen expert, so the work per token stays about the same no matter how many experts exist. The model's total knowledge, held in all those parameters, can grow almost for free. This is called <strong>sparse</strong> computation: only a small part of the model is active for any one token.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A hospital with one general doctor sees every patient with the same person. A hospital with sixty specialists and a receptionist who sends each patient to one of them can know far more medicine, yet each patient still has just one appointment.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Experts plus a router let the number of parameters grow while the computation per token stays fixed.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §2.1–2.2 · Figs. 2–3</p>
+  <h2>One expert per token, and a capacity limit</h2>
+  <div class="prose">
+    <p>Earlier mixture-of-experts models sent each token to at least two experts and blended their answers, believing the router could not learn which expert is good otherwise. The Switch paper simply sends each token to its single highest-scoring expert (and multiplies that expert's output by the router's confidence, which is what lets the router learn). This halves the work of routing and the amount of data that has to move between chips.</p>
+    <p>There is a catch. The experts sit on different chips, and each chip must reserve a fixed amount of room in advance. So each expert gets a <strong>capacity</strong>: the number of tokens it can take per batch, equal to the fair share (tokens ÷ experts) times a <strong>capacity factor</strong>. If too many tokens choose the same expert, the extras are <strong>dropped</strong>: they skip the expert and pass through unchanged on the layer's shortcut ("residual") connection. A bigger capacity factor drops fewer tokens but wastes room when experts are not full.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Capacity factor <input type="range" id="rt-cf" min="0.5" max="2" step="0.25" value="1" data-fmt="2"><output id="rt-cf-o">1.00</output></label>
+      <button class="btn" id="rt-bal" aria-pressed="false">Router: unbalanced</button>
+      <button class="btn" id="rt-k" aria-pressed="false">Routing: top-1 (Switch)</button>
+    </div>
+    <div class="svgbox wide"><svg id="rt" viewBox="0 0 640 300" role="img" aria-label="Tokens routed to four experts with a capacity limit"></svg></div>
+    <p class="readout" id="rt-r"></p>
+    <figcaption>Twelve tokens, four experts. Each token goes to its highest-scoring expert (lines). Each expert has room for capacity = 12 ÷ 4 × capacity factor tokens (empty boxes are wasted room). Tokens that arrive after an expert is full are dropped (red, dashed) and skip to the next layer unchanged. "Balanced" shows a router after the balancing penalty has done its job; "top-2" shows the older approach where each token visits two experts, doubling the traffic, so it needs twice the capacity to avoid drops. Router scores are made up for illustration.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Switch routes each token to one expert; each expert has a fixed capacity, and tokens over the limit skip the layer.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why can't experts simply take however many tokens arrive?</dt>
+    <dd>The hardware (TPUs) needs tensor sizes fixed before running, so each expert's buffer must be set in advance. Anything beyond it is overflow.</dd>
+    <dt>What happens to a dropped token? Is it lost?</dt>
+    <dd>Not entirely: it skips this one expert layer and continues through the residual connection, so it still reaches the next layer, just without that layer's expert processing.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §2.2 · Eq. 4</p>
+  <h2>Keeping the experts evenly busy</h2>
+  <div class="prose">
+    <p>Left alone, a router tends to fall into favourites: a few experts get most tokens, overflow and drop them, while others sit idle and never learn. Switch adds a small extra term to the training loss, the <strong>load-balancing loss</strong>, which is smallest when every expert gets the same share of tokens and the router spreads its confidence evenly. It is multiplied by a small weight (0.01) so it nudges the router without overriding the main task.</p>
+    <p>Toggle the router in the figure above between unbalanced and balanced and watch the dropped tokens and the balancing loss fall.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>A gentle penalty for uneven routing keeps all experts in use and few tokens dropped.</p>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §2.4, §3 · Figs. 4–6</p>
+  <h2>Stable training, and how much faster</h2>
+  <div class="prose">
+    <p>Sparse models had a reputation for crashing during training. The authors found three cheap fixes. Do the router's arithmetic in full 32-bit precision even though the rest of the model uses 16-bit numbers (the router's exponentials are sensitive to rounding). Start the weights ten times smaller than usual. And when fine-tuning on small tasks, use much stronger dropout inside the experts, which have so many parameters they otherwise overfit.</p>
+    <p>The payoff: the parameter count rises with each extra expert, while the computation per token stays flat. Compared with T5-Base on the same hardware and with the same computation per token, a Switch-Base model with 64 experts reached T5-Base's quality about seven times faster.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Experts <input type="range" id="ex-n" min="0" max="8" step="1" value="6"><output id="ex-n-o">6</output></label></div>
+    <div class="svgbox"><svg id="ex" viewBox="0 0 600 240" role="img" aria-label="Parameters and computation per token as the number of experts grows"></svg></div>
+    <p class="readout" id="ex-r"></p>
+    <figcaption>Switch-Base with 2<sup><var>k</var></sup> experts. Parameter counts are approximate, interpolated between the two sizes the paper gives for this family (223M for the dense T5-Base, 14.7B with 256 experts, so about 57M per extra expert). Computation per token does not change, because each token still visits one expert per layer. The paper's Fig. 4 shows the matching result: at a fixed number of training steps, the test loss keeps falling as experts are added.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>With a few stability tricks, adding experts adds parameters for free per token, and that bought large speed-ups over dense models.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §4–5 · Table 9</p>
+  <h2>Trillion parameters, and what it led to</h2>
+  <div class="prose">
+    <p>The authors combined data, model and expert parallelism to spread models across many chips, and built Switch-C with 2,048 experts and about 1.6 trillion parameters, which reached a fixed quality four times faster than the 11-billion-parameter T5-XXL. The gains carried over to fine-tuned tasks and to 101 languages. Because sparse models are awkward to deploy, they also <a href="distill.html">distilled</a> them into small dense models, which kept about 30% of the quality gain.</p>
+    <p>Not everything worked: the largest models were sometimes unstable, and the trillion-parameter model was not the best on every downstream task.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>Mixture-of-experts layers became mainstream in large language models. ST-MoE (2022) added a "router z-loss" for stability. Many later models went back to routing each token to two or more experts, but with Switch-style capacity and balancing: Mixtral 8x7B (2024) uses top-2 of 8 experts, and DeepSeek's models use many small experts plus always-on "shared" experts, later with a balancing method that needs no extra loss. The core Switch idea, sparse experts to decouple parameters from compute, is now standard.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Switch showed sparse experts could scale past a trillion parameters with simple top-1 routing; later models kept the idea and refined routing and stability.</p>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Mixture-of-experts models select different parameters for each input, giving sparsely activated models with outrageous parameter counts at constant compute, but complexity, communication costs and training instability have limited adoption. The Switch Transformer simplifies MoE routing, reduces communication and compute, and introduces training techniques that address instability, showing that large sparse models can be trained for the first time in lower-precision (bfloat16) formats. Built on T5-Base and T5-Large, it achieves up to 7× pre-training speed-ups with the same computational resources, gains over mT5-Base in all 101 languages, and, using the Colossal Clean Crawled Corpus (C4), trillion-parameter models with a 4× speed-up over T5-XXL. Fedus, Zoph &amp; Shazeer, JMLR 23 (2022) (arXiv 2101.03961, 2021).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2.1 · Eqs. 1–2</p>
+  <h2>The Switch layer</h2>
+  <div class="prose"><p>Following Shazeer et al. (2017), a router with weights <var>W<sub>r</sub></var> produces logits <var>h</var>(<var>x</var>) = <var>W<sub>r</sub></var>·<var>x</var> for a token representation <var>x</var>, normalised over the <var>N</var> experts:</p></div>
+  <div class="eq"><var>p<sub>i</sub></var>(<var>x</var>) = e<sup><var>h</var>(<var>x</var>)<sub><var>i</var></sub></sup> / Σ<sub><var>j</var>=1</sub><sup><var>N</var></sup> e<sup><var>h</var>(<var>x</var>)<sub><var>j</var></sub></sup> <span class="n">(1)</span></div>
+  <div class="eq"><var>y</var> = Σ<sub><var>i</var>∈𝒯</sub> <var>p<sub>i</sub></var>(<var>x</var>) <var>E<sub>i</sub></var>(<var>x</var>) <span class="n">(2)</span></div>
+  <div class="prose">
+    <p>with 𝒯 the top-<var>k</var> experts. Prior work argued <var>k</var> ≥ 2 was needed for non-trivial gradients to the router. Switch uses <var>k</var> = 1: <var>y</var> = <var>p<sub>i*</sub></var>(<var>x</var>)<var>E<sub>i*</sub></var>(<var>x</var>), where the gate value <var>p<sub>i*</sub></var> still provides a gradient to the router. Claimed benefits: router computation is reduced, each expert's batch (capacity) can be at least halved since each token goes to one expert, and the implementation and communication are simplified. The Switch layer replaces the dense FFN sub-layer of a transformer block; experts are FFNs with independent weights, and attention layers are shared.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §2.2 · Eqs. 3–6</p>
+  <h2>Capacity and the auxiliary load-balancing loss</h2>
+  <div class="eq">expert capacity = (tokens per batch / number of experts) × capacity factor <span class="n">(3)</span></div>
+  <div class="prose"><p>Overflowing tokens are not computed by any expert in that layer and are passed on via the residual connection. Empirically, the paper reports low drop rates (typically under 1%) with the balancing loss. For a batch ℬ of <var>T</var> tokens and <var>N</var> experts, the auxiliary loss is</p></div>
+  <div class="eq">loss = α · <var>N</var> · Σ<sub><var>i</var>=1</sub><sup><var>N</var></sup> <var>f<sub>i</sub></var> · <var>P<sub>i</sub></var> <span class="n">(4)</span></div>
+  <div class="eq"><var>f<sub>i</sub></var> = (1/<var>T</var>) Σ<sub><var>x</var>∈ℬ</sub> 𝟙{argmax <var>p</var>(<var>x</var>) = <var>i</var>}, &nbsp;&nbsp; <var>P<sub>i</sub></var> = (1/<var>T</var>) Σ<sub><var>x</var>∈ℬ</sub> <var>p<sub>i</sub></var>(<var>x</var>) <span class="n">(5, 6)</span></div>
+  <div class="prose">
+    <p><var>f<sub>i</sub></var>, the fraction of tokens dispatched to expert <var>i</var>, is not differentiable; <var>P<sub>i</sub></var>, the average router probability, is. Under uniform routing both equal 1/<var>N</var> and the loss is α (the factor <var>N</var> makes it invariant to the number of experts). The gradient flows through <var>P<sub>i</sub></var> and is largest for experts that are already over-used, pushing their probability down. α = 10<sup>−2</sup> was chosen from a sweep over 10<sup>−1</sup> to 10<sup>−5</sup>. The loss is added at every Switch layer.</p>
+    <p>Simulate it below: tokens are routed to experts whose popularity follows a skewed distribution; the readout gives the drop rate, wasted capacity and Eq. 4.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Experts <var>N</var> <input type="range" id="cp-n" min="2" max="7" step="1" value="5"><output id="cp-n-o">5</output></label>
+      <label>Router skew <input type="range" id="cp-s" min="0" max="2" step="0.1" value="0.3" data-fmt="1"><output id="cp-s-o">0.3</output></label>
+      <label>Capacity factor <input type="range" id="cp-c" min="0.5" max="3" step="0.25" value="1.25" data-fmt="2"><output id="cp-c-o">1.25</output></label>
+    </div>
+    <div class="svgbox wide"><svg id="cp" viewBox="0 0 640 260" role="img" aria-label="Per-expert load against capacity for a simulated batch"></svg></div>
+    <p class="readout" id="cp-r"></p>
+    <figcaption>One batch of <var>T</var> = 2,048 tokens, <var>N</var> = 2<sup>slider</sup> experts. Router logits are Gaussian noise plus an expert-specific offset whose spread is the skew (0 = perfectly balanced in expectation). Bars: tokens assigned to each expert (sorted); the dashed line is capacity; amber above it is dropped. The aux loss uses α = 0.01. Even at skew 0, random fluctuation means a capacity factor of 1.0 drops some tokens, which is one reason the paper experiments with capacity factors between 1.0 and 2.0. Illustrative simulation, not trained routers.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §2.3–2.4 · Tables 1–4</p>
+  <h2>Comparisons and stability techniques</h2>
+  <div class="tablebox"><table>
+    <thead><tr><th>Model (Table 1; 128 experts)</th><th>Capacity factor</th><th>Neg. log perp. @100k steps</th><th>Time to threshold</th><th>Examples / s</th></tr></thead>
+    <tbody>
+      <tr><td>T5-Base</td><td class="num">n/a</td><td class="num">−1.731</td><td class="num">not reached</td><td class="num">1600</td></tr>
+      <tr><td>T5-Large</td><td class="num">n/a</td><td class="num">−1.550</td><td class="num">131.1 h</td><td class="num">470</td></tr>
+      <tr><td>MoE-Base</td><td class="num">2.0</td><td class="num">−1.547</td><td class="num">68.7 h</td><td class="num">840</td></tr>
+      <tr><td>Switch-Base</td><td class="num">2.0</td><td class="num">−1.554</td><td class="num">72.8 h</td><td class="num">860</td></tr>
+      <tr><td>MoE-Base</td><td class="num">1.25</td><td class="num">−1.559</td><td class="num">80.7 h</td><td class="num">790</td></tr>
+      <tr><td>Switch-Base</td><td class="num">1.25</td><td class="num">−1.553</td><td class="num">65.0 h</td><td class="num">910</td></tr>
+      <tr><td>MoE-Base</td><td class="num">1.0</td><td class="num">−1.572</td><td class="num">80.1 h</td><td class="num">860</td></tr>
+      <tr><td>Switch-Base</td><td class="num">1.0</td><td class="num">−1.561</td><td class="num">62.8 h</td><td class="num">1000</td></tr>
+      <tr><td>Switch-Base+</td><td class="num">1.0</td><td class="num">−1.534</td><td class="num">67.6 h</td><td class="num">780</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>Switch beats top-2 MoE at equal speed, and does especially well at low capacity factors; Switch-Base+ is a larger Switch model matched to MoE's speed. All runs on 32 TPUv3 cores, trained on C4 with the T5 span-corruption objective.</p>
+    <ul>
+      <li><strong>Selective precision (Table 2).</strong> Router input cast to float32 locally, softmax computed in float32, outputs cast back to bfloat16 before dispatch: quality −1.716 at 1,390 examples/s, vs −1.718 at 1,160 for full float32 and divergence (−3.780) for full bfloat16. The exponentials in the router softmax are the sensitive part.</li>
+      <li><strong>Initialisation (Table 3).</strong> Truncated normal with σ = √(<var>s</var>/<var>n</var>), scale <var>s</var> reduced from 1.0 to 0.1: average quality −2.72 (std 0.01) vs −3.60 (std 0.68) after 3.5k steps over three seeds.</li>
+      <li><strong>Expert dropout (Table 4).</strong> Fine-tuning with dropout 0.1 on non-expert layers and 0.4 inside experts gave the best results (GLUE 85.2, CNNDM 19.6, SQuAD 83.7, SuperGLUE 73.0, vs T5-Base 82.9, 19.6, 83.5, 72.4).</li>
+    </ul>
+  </div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §3–5 · Figs. 4–8 · Tables 5–9</p>
+  <h2>Scaling, downstream, distillation, parallelism</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Step scaling (§3.1, Fig. 4).</strong> At fixed FLOPs per token, going from the dense T5-Base (223M) through 2 to 256 experts (14.7B parameters) monotonically improves loss at a fixed step count. Switch-Base with 64 experts reaches T5-Base's step-450k quality at step 60k, a 7.5× step speed-up.</li>
+      <li><strong>Wall clock (§3.2–3.3, Figs. 5–6).</strong> About 7× faster than T5-Base to the same quality; Switch-Base is also 2.5× faster than T5-Large despite T5-Large using 3.5× more FLOPs per token.</li>
+      <li><strong>Fine-tuning (§4.1, Table 5).</strong> SuperGLUE: Switch-Base 79.5 vs T5-Base 75.1; Switch-Large 84.7 vs T5-Large 82.7. Winogrande and knowledge-heavy closed-book QA benefit strongly; ARC is a mixed case.</li>
+      <li><strong>Distillation (§4.2, Tables 6–8).</strong> Initialising the dense student with the teacher's non-expert weights and using a 0.25 teacher-probability / 0.75 ground-truth loss mix keeps about 30% of the quality gain of a 3.8B Switch-Base teacher in a 223M student; at 99% compression (14.7B teacher) 28% remains.</li>
+      <li><strong>Multilingual (§4.3, Figs. 7–8).</strong> mSwitch-Base improves over mT5-Base on all 101 languages, mean step speed-up 5×, with 91% of languages at least 4×.</li>
+      <li><strong>Parallelism (§5, Fig. 9).</strong> Data, model and expert parallelism are combined in Mesh-TensorFlow; expert parallelism uses all-to-all communication to send tokens to the device holding their expert.</li>
+      <li><strong>Trillion scale (§5.6, Table 9).</strong> Switch-XXL: 395B parameters, 64 experts, FLOP-matched to T5-XXL. Switch-C: 1,571B parameters, 2,048 experts, expert parallelism only, fewer FLOPs per token. Switch-C reaches T5-XXL's quality 4× faster; Switch-XXL, which has the same FLOPs per token as T5-XXL, leads it by about 0.087 in negative log perplexity at 500k steps (Table 9), but was sometimes unstable.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §6–8 · lineage</p>
+  <h2>Limitations and what came next</h2>
+  <div class="prose"><ul>
+    <li><strong>Stability at scale.</strong> Switch-XXL remained sometimes unstable; the stability tricks were sufficient for Base/Large but not fully for the largest FLOP-matched models (§8).</li>
+    <li><strong>Pre-training ≠ fine-tuning.</strong> Switch-C, with better pre-training perplexity, scored 87.7 on SQuAD vs Switch-XXL's 89.6; the relationship between upstream and downstream quality for sparse models is not straightforward.</li>
+    <li><strong>Memory.</strong> Parameters are cheap in FLOPs but not in memory or communication; serving needs every expert resident, which motivated distillation and later expert offloading.</li>
+    <li><strong>Experts in attention.</strong> Tried in Appendix A and improved quality, but unstable in bfloat16; left for future work.</li>
+    <li><strong>Successors.</strong> GShard (Lepikhin et al., 2020) preceded Switch with top-2 routing and capacity; ST-MoE (Zoph et al., 2022) added the router z-loss and a careful fine-tuning study; Expert Choice routing (Zhou et al., 2022) lets experts pick tokens, guaranteeing balance; Mixtral 8x7B uses top-2 of 8; DeepSeekMoE uses fine-grained plus shared experts, and DeepSeek-V3 balances load with learned per-expert biases instead of an auxiliary loss.</li>
+  </ul></div>
+  <div class="later"><span class="label">Later refinement</span>The Switch recipe (sparse FFN experts, capacity factor, an auxiliary balance loss, float32 router) became the template for MoE language models. Top-1 routing itself was not universally adopted: many production MoEs route to 2 or more (often many small) experts, trading some communication for quality.</div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does the load-balancing loss multiply <var>f<sub>i</sub></var> by <var>P<sub>i</sub></var> rather than just penalising the variance of <var>f</var>?</dt>
+    <dd><var>f</var> comes from an argmax and has no gradient. Multiplying by the differentiable <var>P<sub>i</sub></var> gives a gradient that lowers router probability most for experts with large <var>f<sub>i</sub></var>.</dd>
+    <dt>Why is top-1 routing cheaper in communication than top-2?</dt>
+    <dd>Each token is sent across devices to one expert instead of two, halving the all-to-all traffic and the expert capacity needed.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Expert</dt><dd>One of <var>N</var> FFN sub-networks in a Switch layer.</dd>
+    <dt>Router</dt><dd>Linear layer plus softmax choosing an expert per token.</dd>
+    <dt>Capacity factor</dt><dd>Multiplier on the even share of tokens per expert that sets each expert's buffer.</dd>
+    <dt>Token dropping</dt><dd>Overflow tokens skip the expert and pass through the residual.</dd>
+    <dt>Aux loss</dt><dd>α<var>N</var>Σ<var>f<sub>i</sub>P<sub>i</sub></var>, encouraging uniform routing.</dd>
+    <dt>Expert parallelism</dt><dd>Placing different experts on different devices, with all-to-all token exchange.</dd>
+    <dt>Neg. log perplexity</dt><dd>The paper's quality metric; higher (closer to 0) is better.</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+(function(){ // router demo
+  var svg=$('#rt'), cf=1, bal=false, k2=false;
+  var words=['The','cat','sat','on','the','mat','and','then','it','fell','asleep','.'];
+  var R=rng(21), base=[], noise=[]; for (var t=0;t<12;t++){ var row=[]; for (var e=0;e<4;e++) row.push(gauss(R)); noise.push(row); }
+  function logits(t){ var skew=bal?[0,0,0,0]:[1.6,0.6,-0.4,-1.2]; return noise[t].map(function(v,e){ return v*0.9+skew[e]; }); }
+  function draw(){ clear(svg); var cap=Math.floor(12/4*cf), load=[0,0,0,0], P=[0,0,0,0], f=[0,0,0,0], assign=[], dropped=0, sent=0;
+    for (var t=0;t<12;t++){ var z=logits(t), m=Math.max.apply(null,z), ex=z.map(function(v){return Math.exp(v-m);}), s=ex.reduce(function(a,b){return a+b;},0), p=ex.map(function(v){return v/s;});
+      var order=[0,1,2,3].sort(function(a,b){ return p[b]-p[a]; }); f[order[0]]++; p.forEach(function(v,e){ P[e]+=v; });
+      var chosen=k2?order.slice(0,2):order.slice(0,1), res=[]; chosen.forEach(function(e){ sent++; if (load[e]<cap){ load[e]++; res.push([e,true,load[e]-1]); } else { res.push([e,false]); dropped++; } }); assign.push(res); }
+    var aux=0.01*4*f.reduce(function(a,v,i){ return a+(v/12)*(P[i]/12); },0);
+    var tx=function(t){ return 30+t*50; };
+    words.forEach(function(w,t){ var allDrop=assign[t].every(function(a){ return !a[1]; }); S('rect',{x:tx(t)-4,y:20,width:44,height:26,'class':allDrop?'box-inh':'box'},svg); S('text',{x:tx(t)+18,y:38,'class':'t mid'},svg,w); });
+    var ex0=40, ew=135;
+    for (var e=0;e<4;e++){ var x=ex0+e*150; S('rect',{x:x,y:190,width:ew,height:70,'class':'box-wire'},svg); S('text',{x:x+ew/2,y:280,'class':'t-s mid'},svg,'expert '+(e+1)+' ('+load[e]+'/'+cap+')');
+      for (var c=0;c<cap;c++){ var cw=Math.min(28,(ew-10)/Math.max(cap,1)-3); S('rect',{x:x+6+c*(cw+3),y:205,width:cw,height:40,'class':c<load[e]?'u-on':'u-off'},svg); } }
+    assign.forEach(function(res,t){ res.forEach(function(a,j){ var x2=ex0+a[0]*150+ew/2+(j?10:-10); var at={x1:tx(t)+18,y1:46,x2:x2,y2:a[1]?188:150,'class':a[1]?'w':'w-inh'}; S('line',at,svg); if (!a[1]) S('text',{x:x2,y:146,'class':'t-inh mid'},svg,'✕'); }); });
+    $('#rt-r').innerHTML='Capacity per expert: <b>'+cap+'</b>. Expert loads '+load.join(', ')+'. Dropped: <b>'+dropped+'</b> of '+sent+' expert assignments. Empty slots: <b>'+(4*cap-load.reduce(function(a,b){return a+b;},0))+'</b>. Balancing loss: <b>'+fmt(aux,4)+'</b> (0.0100 is perfectly even).'; }
+  bindRange('rt-cf',function(v){ cf=v; draw(); });
+  $('#rt-bal').onclick=function(){ bal=!bal; this.setAttribute('aria-pressed',bal); this.textContent='Router: '+(bal?'balanced':'unbalanced'); draw(); };
+  $('#rt-k').onclick=function(){ k2=!k2; this.setAttribute('aria-pressed',k2); this.textContent='Routing: '+(k2?'top-2 (classic MoE)':'top-1 (Switch)'); draw(); };
+})();
+(function(){ // params vs compute
+  var svg=$('#ex'), k=6;
+  function params(E){ return 223e6+(E-1)*(14.7e9-223e6)/255; }
+  function nice(x){ return x>=1e9?fmt(x/1e9,1)+'B':fmt(x/1e6,0)+'M'; }
+  function draw(){ clear(svg); var E=Math.pow(2,k), x0=150;
+    function W(v){ return Math.log(v/1e8)/Math.log(15e9/1e8)*400; }
+    S('text',{x:x0-8,y:60,'class':'t end'},svg,'parameters'); S('rect',{x:x0,y:42,width:Math.max(4,W(params(E))),height:28,'class':'f-fire'},svg); S('text',{x:x0+Math.max(4,W(params(E)))+6,y:61,'class':'t-s'},svg,nice(params(E)));
+    S('text',{x:x0-8,y:130,'class':'t end'},svg,'work per token'); S('rect',{x:x0,y:112,width:W(223e6)+4,height:28,'class':'f-wire'},svg); S('text',{x:x0+W(223e6)+10,y:131,'class':'t-s'},svg,'same as T5-Base');
+    for (var e=0;e<Math.min(E,64);e++) S('rect',{x:x0+(e%32)*12,y:170+Math.floor(e/32)*14,width:9,height:10,'class':e===((k*7)%Math.min(E,64))?'u-on':'u'},svg);
+    S('text',{x:x0-8,y:184,'class':'t end'},svg,'experts'); if (E>64) S('text',{x:x0+390,y:206,'class':'t-s end'},svg,'… '+E+' in all (64 drawn)');
+    S('text',{x:x0,y:230,'class':'t-s'},svg,'amber = the expert one token visits; the rest sit idle');
+    S('text',{x:x0,y:24,'class':'t-s'},svg,'log scale');
+    $('#ex-r').innerHTML='<b>'+E+'</b> expert'+(E>1?'s':'')+': about <b>'+nice(params(E))+'</b> parameters, <b>'+fmt(params(E)/223e6,1)+'×</b> T5-Base, for the same computation per token.'; }
+  bindRange('ex-n',function(v){ k=v; $('#ex-n-o').textContent=Math.pow(2,v); draw(); });
+})();
+(function(){ // capacity simulation
+  var svg=$('#cp'), nk=5, skew=0.3, cf=1.25, T=2048;
+  function draw(){ clear(svg); var N=Math.pow(2,nk), R=rng(77), off=[]; for (var e=0;e<N;e++) off.push(gauss(R)*skew);
+    var load=new Array(N).fill(0), P=new Array(N).fill(0);
+    for (var t=0;t<T;t++){ var z=off.map(function(o){ return o+gauss(R); }), m=Math.max.apply(null,z), ex=z.map(function(v){return Math.exp(v-m);}), s=ex.reduce(function(a,b){return a+b;},0), best=0;
+      for (var e=0;e<N;e++){ P[e]+=ex[e]/s; if (z[e]>z[best]) best=e; } load[best]++; }
+    var cap=Math.floor(T/N*cf), drop=0, waste=0; load.forEach(function(l){ drop+=Math.max(0,l-cap); waste+=Math.max(0,cap-l); });
+    var aux=0.01*N*load.reduce(function(a,l,i){ return a+(l/T)*(P[i]/T); },0);
+    var srt=load.slice().sort(function(a,b){return b-a;}), mx=Math.max(srt[0],cap)*1.1, x0=50, w=560/N;
+    function Y(v){ return 220-v/mx*190; }
+    S('line',{x1:x0,y1:220,x2:x0+560,y2:220,'class':'axis'},svg);
+    srt.forEach(function(l,i){ var x=x0+i*w; var keep=Math.min(l,cap); S('rect',{x:x,y:Y(keep),width:Math.max(1,w-(N>32?0.5:2)),height:220-Y(keep),'class':'f-wire'},svg); if (l>cap) S('rect',{x:x,y:Y(l),width:Math.max(1,w-(N>32?0.5:2)),height:Y(cap)-Y(l),'class':'f-fire'},svg); });
+    S('line',{x1:x0,y1:Y(cap),x2:x0+560,y2:Y(cap),'class':'w-dash'},svg); S('text',{x:x0+560,y:Y(cap)-6,'class':'t-s end'},svg,'capacity '+cap);
+    S('text',{x:x0,y:240,'class':'t-s'},svg,N+' experts, sorted by load'); S('text',{x:x0+4,y:22,'class':'t-s'},svg,'tokens per expert');
+    $('#cp-r').innerHTML='Dropped tokens: <b>'+fmt(100*drop/T,1)+'%</b>. Wasted capacity: <b>'+fmt(100*waste/(cap*N),1)+'%</b> of slots. Aux loss (Eq. 4): <b>'+fmt(aux,4)+'</b> (uniform = 0.0100).'; }
+  bindRange('cp-n',function(v){ nk=v; $('#cp-n-o').textContent=Math.pow(2,v); draw(); });
+  bindRange('cp-s',function(v){ skew=v; draw(); }); bindRange('cp-c',function(v){ cf=v; draw(); });
+})();
+</script>

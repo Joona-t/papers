@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open X-Embodiment (2023) study guide</title>
+<meta name="description" content="Every robotics lab collects data on its own robot and trains its own model, so each dataset is small. This paper, written by a collaboration of dozens of labs, asks what happens if you pour all of it into one pot. With more than a million demonstrations from 22 kinds of robot, a single model trained">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Robotics &amp; reinforcement learning</b> · 2023</p>
+  <h1>Open X-Embodiment: Robotic Learning Datasets and RT-X Models</h1>
+  <p class="cite">Open X-Embodiment Collaboration · ICRA 2024</p>
+  <p class="lede">Every robotics lab collects data on its own robot and trains its own model, so each dataset is small. This paper, written by a collaboration of dozens of labs, asks what happens if you pour all of it into one pot. With more than a million demonstrations from 22 kinds of robot, a single model trained on the mixture outperformed the specialised models the individual labs had built for their own robots.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/2310.08864">Read the paper (free)</a> <a href="https://lovespark.love/papers/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, independent AI review, but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Robot learning is held back by small datasets, and every lab's data comes from a different robot, so the data has rarely been combined.</p>
+  <p>The Open X-Embodiment collaboration converted 60 existing datasets from 22 robot types (over a million recorded episodes) into one shared format and released them.</p>
+  <p>They trained two existing model designs, RT-1 and RT-2, on a mixture of these datasets, calling the results RT-1-X and RT-2-X, with only a rough alignment of what each robot's "move" commands mean.</p>
+  <p>On five labs' own small-data tasks, RT-1-X beat the labs' own methods by about 50% on average, and RT-2-X roughly tripled the success of RT-2 on skills that only existed in another robot's data.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §I</p>
+  <h2>Many small piles of data, each on a different robot</h2>
+  <div class="prose">
+    <p>In language and vision, progress came from training one big model on a huge, varied collection of data, then adapting it. Robotics has not had that collection. A robot dataset is gathered by people steering a particular robot through tasks, which is slow, and every lab uses different arms, grippers, cameras and rooms.</p>
+    <p>The obvious worry is that data from one robot is useless, or even harmful, for another. A small tabletop arm and a large mobile robot don't move the same way. The paper calls the alternative <strong>positive transfer</strong>: training on other robots' data makes a model better on your robot. The question is whether it happens.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Other robots <input type="range" id="tr-k" min="0" max="8" step="1" value="4"><output id="tr-k-o">4</output></label>
+      <label>Episodes per robot <input type="range" id="tr-n" min="3" max="30" step="1" value="8"><output id="tr-n-o">8</output></label>
+      <button class="btn on" id="tr-al" aria-pressed="true">Adjust for each robot's quirks</button>
+    </div>
+    <div class="svgbox"><svg id="tr" viewBox="0 0 600 260" role="img" aria-label="Toy model of learning a shared skill from several robots' data"></svg></div>
+    <p class="readout" id="tr-r"></p>
+    <figcaption>An illustrative toy, not the paper's model. The dashed curve is a skill all robots share, but each robot sees it shifted by its own quirk (for example a different arm length). Our robot (amber dots) only ever practised on the left part of the range. Grey dots are other robots' data, each covering a different region. Amber line: a model trained on our data alone. Green line: a model trained on everyone's data. Switch off "adjust for quirks" and most of the benefit disappears, because the other robots' shifted data drags the model away from ours.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>Learning to drive by watching only your own street is limited. Watching hundreds of drivers in different cars and cities teaches you far more, as long as you remember that a lorry turns wider than your hatchback.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Other robots' data can fill gaps in your own, if the differences between robots are accounted for. The paper tests whether that works at scale.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>In the toy, why does the pooled model help most in the right-hand region?</dt>
+    <dd>Our robot never saw that region, so a model trained on our data alone has to guess. Other robots did see it, and the shared shape of the skill carries over once their quirks are subtracted.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §III · Fig. 2</p>
+  <h2>The dataset: one format for 22 robots</h2>
+  <div class="prose">
+    <p>The collaboration gathered 60 datasets from 21 institutions, covering 22 robot <strong>embodiments</strong> (types of robot body): single arms, two-armed robots and even four-legged ones. Together they hold over a million real-robot episodes and 527 skills, though most of the data is variations of picking and placing. The Franka arm appears in the most datasets.</p>
+    <p>All of it was converted to one file format so that a single program can load any of it. That sounds like plumbing, and it is, but it is the part that lets everyone else reuse the data.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>The main contribution is the pooled, standardised, public dataset; the models show what it can do.</p>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §IV-A</p>
+  <h2>Making different robots speak roughly the same language</h2>
+  <div class="prose">
+    <p>Each model sees a camera picture and a text instruction and outputs a seven-part movement for the robot's hand: three for position, three for rotation, one for the gripper. Different robots have different ranges of movement, so each dataset's movements are rescaled to a common range before being chopped into 256 levels, the trick inherited from <a href="rt2.html">RT-2</a>.</p>
+    <p>Crucially, the alignment is only rough. One robot's "x" might point forward and another's sideways; one robot might be told where to go, another how fast to move. The authors deliberately didn't fix this, and the model had to work out from the camera image which robot it was driving.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Desired move (cm) <input type="range" id="nm-a" min="-4" max="4" step="0.1" value="1.5" data-fmt="1"><output id="nm-a-o">1.5</output></label></div>
+    <div class="svgbox"><svg id="nm" viewBox="0 0 600 220" role="img" aria-label="The same movement mapped to tokens for two robots with different ranges"></svg></div>
+    <p class="readout" id="nm-r"></p>
+    <figcaption>Illustrative ranges. A small arm whose step commands span ±2 cm and a large robot whose span ±8 cm. Each dataset is scaled by its own range, so the same token means "this fraction of my usual movement", not "this many centimetres". Moves beyond a robot's range are clipped.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Each robot's actions are squeezed into the same 256 levels using its own scale; the model learns the rest from what it sees.</p>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §V · Fig. 4, Tables I–II</p>
+  <h2>What pooling bought</h2>
+  <div class="prose">
+    <p><strong>Small datasets.</strong> Five labs tested on their own robots and tasks (such as kitchen manipulation, cable routing and door opening). The small RT-1-X model, trained on the mixture, beat each lab's own method on four of the five, and was about 50% better on average.</p>
+    <p><strong>Large datasets.</strong> For robots that already had lots of data, the small RT-1-X did <em>worse</em> than models trained on that robot alone: it was too small to absorb everything. The much larger RT-2-X (55 billion parameters) did as well or better.</p>
+    <p><strong>Skills borrowed from other robots.</strong> The Google robot was asked to do things that appeared only in a different robot's data, such as "move the apple between the can and the orange". RT-2 trained on Google robot data managed 27% of these; RT-2-X trained on the mixture managed 76%. Remove the WidowX arm's data from the mix and it fell to 43%, so the skills really were coming from that other robot.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Small-data robots gain a lot from pooling; big-data robots gain only if the model is big enough; and skills really do cross between robot bodies.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why did RT-1-X underperform on the large datasets while RT-2-X did not?</dt>
+    <dd>RT-1 has about 35 million parameters, too few to fit a very diverse mixture without sacrificing performance on any single robot. RT-2-X has 55 billion and enough capacity for both.</dd>
+    <dt>What experiment shows the emergent skills came from another robot's data?</dt>
+    <dd>Removing the Bridge (WidowX) datasets from RT-2-X's training mix dropped emergent-skill success from 75.8% to 42.8%.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §VI</p>
+  <h2>Open questions, and where it led</h2>
+  <div class="prose">
+    <p>The authors list what they did not show: whether the model works on a brand-new robot it has no data for, whether robots with very different senses or controls (touch sensors, legged motion) benefit, and when transfer will help versus hurt. They also used only a subset of the robots for training, because the dataset kept growing during the project.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>The dataset became a standard starting point. Octo (2024) and OpenVLA (2024) are open generalist policies trained on Open X-Embodiment data. <a href="pi0.html">π0</a> mixes it (with Bridge and DROID) into a much larger private dataset, where it makes up about 9% of the training mixture, and cross-embodiment training is now the default for robot foundation models.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The paper made "train one model on many robots" the default, but left open how to choose and weight the data.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Large models pretrained on diverse data have been adapted to many downstream tasks in NLP and vision; this paper asks whether the same is possible for robot manipulation, with an "X-robot" policy that adapts to new robots, tasks and environments. It releases standardised data from 22 robots collected through a collaboration of 21 institutions, demonstrating 527 skills (160,266 tasks), and shows that a high-capacity model trained on it (RT-X) exhibits positive transfer, improving several robots' capabilities by leveraging other platforms' experience. Open X-Embodiment Collaboration, ICRA 2024; arXiv 2310.08864.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §III · Fig. 2</p>
+  <h2>The Open X-Embodiment repository</h2>
+  <div class="prose">
+    <p>60 existing datasets, 22 embodiments, 1M+ real trajectories. Fig. 2 breaks the data down: Franka is the most common robot by number of datasets and visually distinct scenes, xArm and the Google Robot contribute the most trajectories, and skills are dominated by pick-and-place with a long tail (wiping, assembling, routing cables). Objects are household items: appliances, food, utensils.</p>
+    <p><strong>Format.</strong> Data is stored in RLDS (Reinforcement Learning Datasets), serialised as TFRecord, which supports differing action spaces and observation modalities (varying numbers of RGB cameras, depth, point clouds) and efficient parallel loading in TensorFlow, PyTorch and JAX pipelines.</p>
+    <p>The paper's text gives both 21 institutions and 34 research labs as the contributing groups; these presumably count different units (institutions versus individual labs).</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §IV · Fig. 3</p>
+  <h2>RT-X: data consolidation and architectures</h2>
+  <div class="prose">
+    <p><strong>Consolidation (§IV-A).</strong> Inputs: a history of images and a language instruction. One canonical camera view per dataset, resized to a shared resolution. Output: a 7-DoF end-effector action (<var>x</var>, <var>y</var>, <var>z</var>, roll, pitch, yaw, gripper opening, or their rates) plus termination. Each dataset's actions are normalised before discretisation into 256 bins; at inference the output is de-normalised per embodiment. Action spaces are coarsely aligned only: coordinate frames are not aligned across robots, and actions may be absolute or delta depending on the robot's controller. The same action vector can therefore mean very different motions on different robots.</p>
+    <p><strong>RT-1-X.</strong> RT-1 (~35M parameters): EfficientNet image encoder with FiLM conditioning on a Universal Sentence Encoder embedding of the instruction, a 15-image history compressed to 81 vision-language tokens, and a decoder-only Transformer outputting discretised actions. Trained on the robotics mixture only.</p>
+    <p><strong>RT-2-X.</strong> RT-2 on a PaLI-X backbone (ViT plus UL2, pretrained mainly on WebLI), 55B or 5B, actions as text tokens (eight dimensions, 256 bins). Co-fine-tuned with roughly 1:1 web VLM data to robot data.</p>
+    <p><strong>Training mixture (§IV-C).</strong> 9 manipulators from 12 datasets: RT-1, QT-Opt, Bridge, Task Agnostic Robot Play, Jaco Play, Cable Routing, RoboTurk, NYU VINN, Austin VIOLA, Berkeley UR5, TOTO and Language Table. Loss: categorical cross-entropy over action tokens. Inference at 3–10 Hz (RT-1 on-robot, RT-2 via cloud).</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>If frames are not aligned, how can the model output the right action for a given robot?</dt>
+    <dd>It must infer the embodiment from the observation (the camera view shows the robot and scene) and condition its action distribution on that, much as a language model infers the language from context. Per-dataset normalisation keeps the token ranges comparable but does not supply the frame.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §V-A · Fig. 4, Table I</p>
+  <h2>In-distribution performance</h2>
+  <div class="prose">
+    <p>3,600 evaluation trials on 6 robots. <strong>Small-data domains (Fig. 4)</strong>: Kitchen Manipulation, Cable Routing, NYU Door Opening, AUTOLab UR5, Robot Play. Each "Original Method" is the model the dataset's creators published. RT-1-X outperforms it on 4 of 5, with mean success about 50% higher than both the Original Method and RT-1 trained on that dataset alone. <strong>Large-data domains (Table I)</strong> follow.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" data-d="0">Bridge · IRIS (WidowX)</button><button class="btn" data-d="1">Bridge · RAIL (WidowX)</button><button class="btn" data-d="2">RT-1 data · Google Robot</button></div>
+    <div class="svgbox"><svg id="t1c" viewBox="0 0 600 210" role="img" aria-label="Table I success rates for each method on large-scale datasets"></svg></div>
+    <p class="readout" id="t1c-r"></p>
+    <figcaption>Success rates from Table I. "Original Method" for Bridge is the policy from the Bridge paper; RT-1 is trained on that robot's data alone; RT-1-X and RT-2-X on the multi-robot mixture. No original-method number is reported for the RT-1 data row.</figcaption>
+  </figure>
+  <div class="prose"><p>The pattern is a capacity effect: the 35M-parameter RT-1-X underfits when the mixture adds data that the target domain does not need, while the 55B RT-2-X absorbs the mixture and improves or matches.</p></div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §V-B, §V-C · Table II, Fig. 5</p>
+  <h2>Out-of-distribution transfer and design ablations</h2>
+  <div class="prose">
+    <p>Evaluated on the Google Robot. <strong>Emergent skills</strong>: tasks whose concepts appear only in Bridge (WidowX) data, such as spatial relations and object placements not in the RT-1 dataset (Fig. 5). <strong>Generalisation</strong>: the unseen objects/backgrounds/environments suite from RT-2.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" data-m="em">Emergent skills</button><button class="btn" data-m="gen">Generalisation</button></div>
+    <div class="svgbox"><svg id="t2c" viewBox="0 0 600 270" role="img" aria-label="Table II rows: emergent skills and generalisation"></svg></div>
+    <p class="readout" id="t2c-r"></p>
+    <figcaption>All seven rows of Table II. Rows differ in model size, data, history length, pretraining and co-training; the labels give the change relative to the row above it in the paper's table.</figcaption>
+  </figure>
+  <div class="prose"><ul>
+    <li><strong>Transfer is real</strong>: row 2 vs 1, 75.8% vs 27.3% emergent (~2.8×, "about 3×" in the text) with generalisation unchanged (61% vs 62%), which the authors attribute to the VLM backbone already supplying generalisation.</li>
+    <li><strong>Its source is identifiable</strong>: removing Bridge (row 3) drops emergent skills to 42.8%.</li>
+    <li><strong>History matters</strong>: 2-step image history (row 4) beats none (row 5), 44.4% vs 14.5%.</li>
+    <li><strong>Web pretraining is essential</strong>: from scratch (row 6) scores 0% / 1%.</li>
+    <li><strong>Scale</strong>: 55B (row 2) vs 5B (row 4), 75.8% vs 44.4%.</li>
+    <li><strong>Co-fine-tuning vs fine-tuning</strong> (row 7 vs 4) is roughly a wash here, which the authors attribute to the diversity of the robot mixture itself.</li>
+  </ul></div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §VI · Lineage</p>
+  <h2>Limitations and what followed</h2>
+  <div class="prose"><ul>
+    <li>No evaluation on robots with very different sensing or actuation (tactile, legged locomotion).</li>
+    <li>No study of generalisation to an entirely new, unseen robot.</li>
+    <li>No criterion for when positive transfer will occur; data selection and weighting are ad hoc.</li>
+    <li>Training used 9 of the 22 embodiments; the architectures were reused, not designed for cross-embodiment.</li>
+    <li>Action alignment is coarse; mixing absolute and delta controllers is left to the model.</li>
+  </ul></div>
+  <div class="later"><span class="label">Later refinements</span>Octo (Octo Model Team, 2024) trained an open transformer policy with a diffusion action head on 800K OXE trajectories, with flexible observation and action heads for new embodiments. OpenVLA (Kim et al., 2024) trained an open 7B VLA on a curated 970K-episode OXE subset and outperformed RT-2-X on several evaluations. DROID (2024) added a large, diverse Franka dataset collected in many real homes and labs. <a href="pi0.html">π0</a> trains on OXE, Bridge v2 and DROID (9.1% of its mixture) alongside 10,000 hours of its own data across seven robot configurations, padding actions to the largest robot's dimensionality instead of aligning them, and adds data-weighting by <var>n</var><sup>0.43</sup> per task-robot pair, a direct response to the open question of how to weight a mixture.</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Embodiment</dt><dd>A robot's physical body: kinematics, gripper, sensors, controller.</dd>
+    <dt>Cross-embodiment</dt><dd>Training or deploying one policy across different robot bodies.</dd>
+    <dt>Positive transfer</dt><dd>Training on other domains' data improves performance on the target domain.</dd>
+    <dt>RLDS</dt><dd>Reinforcement Learning Datasets: an episode/step data format on TFRecord.</dd>
+    <dt>RT-1-X / RT-2-X</dt><dd>RT-1 or RT-2 architectures trained on the X-embodiment mixture.</dd>
+    <dt>Bridge</dt><dd>A large WidowX tabletop dataset from UC Berkeley, the main source of emergent skills here.</dd>
+    <dt>Emergent skill</dt><dd>Here: a task performable on robot A only because it was demonstrated on robot B.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="rt2.html">RT-2 (2023)</a></p>
+  <p><strong>Led to:</strong> <a href="pi0.html">π0 (2024)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers/">Papers worth reading</a> (<a href="https://lovespark.love/papers/#oxe">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // transfer toy
+  var svg=$('#tr'), K=4, N=8, align=true;
+  function g(x){ return 0.5*Math.sin(5.5*x)-0.9*x+0.3; }
+  function make(){ var r=rng(11), robots=[];
+    for (var k=0;k<=8;k++){ var off=k===0?0:0.3+0.5*r(), lo=k===0?0:(0.1+0.5*r()), hi=k===0?0.4:Math.min(1,lo+0.4), pts=[];
+      for (var i=0;i<30;i++){ var x=lo+(hi-lo)*r(); pts.push([x,g(x)+off+gauss(r)*0.08]); } robots.push({off:off,pts:pts}); }
+    return robots; }
+  var R=make(), C=[]; for (var c=0;c<=10;c++) C.push(c/10);
+  function phi(x){ return C.map(function(c){ return Math.exp(-Math.pow((x-c)/0.1,2)/2); }); }
+  function solve(A,y){ var n=y.length; A=A.map(function(r,i){return r.concat([y[i]]);});
+    for (var i=0;i<n;i++){ var m=i; for (var j=i+1;j<n;j++) if (Math.abs(A[j][i])>Math.abs(A[m][i])) m=j; var t=A[i];A[i]=A[m];A[m]=t;
+      for (var j=0;j<n;j++){ if (j===i) continue; var f=A[j][i]/A[i][i]; for (var k=i;k<=n;k++) A[j][k]-=f*A[i][k]; } }
+    return A.map(function(r,i){ return r[n]/r[i]; }); }
+  // least squares: shared RBF curve (+ one offset per other robot if aligned), small ridge
+  function lsq(sets,useOff){ var nb=C.length, no=useOff?sets.length-1:0, D=nb+no, A=[],y=[];
+    for (var i=0;i<D;i++){ A.push([]); for (var j=0;j<D;j++) A[i].push(i===j?0.03:0); y.push(0); }
+    sets.forEach(function(pts,si){ pts.forEach(function(p){ var f=phi(p[0]); for (var k=0;k<no;k++) f.push(si===k+1?1:0);
+      for (var i=0;i<D;i++){ y[i]+=f[i]*p[1]; for (var j=0;j<D;j++) A[i][j]+=f[i]*f[j]; } }); });
+    var w=solve(A,y); return function(x){ var f=phi(x), s=0; for (var i=0;i<nb;i++) s+=w[i]*f[i]; return s; }; }
+  function fit(){ var own=R[0].pts.slice(0,N), others=[]; for (var k=1;k<=K;k++) others.push(R[k].pts.slice(0,N));
+    return {own:own,others:others,f1:lsq([own],false),f2:lsq([own].concat(others),align)}; }
+  function draw(){ clear(svg); var F=fit(), X=function(x){return 40+x*540;}, Y=function(y){return 130-y*75;};
+    S('line',{x1:40,y1:230,x2:580,y2:230,'class':'axis'},svg); S('text',{x:580,y:250,'class':'t-s end'},svg,'situation →');
+    S('rect',{x:X(0),y:12,width:X(0.4)-X(0),height:218,'class':'f-fire','fill-opacity':0.07},svg); S('text',{x:X(0.2),y:26,'class':'t-s mid'},svg,'where our robot practised');
+    F.others.forEach(function(o){ o.forEach(function(p){ S('circle',{cx:X(p[0]),cy:Y(p[1]),r:2.5,'class':'f-muted','fill-opacity':0.6},svg); }); });
+    F.own.forEach(function(p){ S('circle',{cx:X(p[0]),cy:Y(p[1]),r:4,'class':'u-on'},svg); });
+    var d='',a='',b='',e1=0,e2=0,n=0;
+    for (var i=0;i<=120;i++){ var x=i/120, t=g(x), p1=F.f1(x), p2=F.f2(x); d+=(i?'L':'M')+X(x)+','+Y(t); a+=(i?'L':'M')+X(x)+','+Y(p1); b+=(i?'L':'M')+X(x)+','+Y(p2); e1+=Math.pow(p1-t,2); e2+=Math.pow(p2-t,2); n++; }
+    S('path',{d:d,'class':'w-dash'},svg); S('path',{d:a,'class':'w-fire'},svg); if (K>0) S('path',{d:b,'class':'w-ok'},svg);
+    e1=Math.sqrt(e1/n); e2=Math.sqrt(e2/n);
+    $('#tr-r').innerHTML= K===0 ? 'No other robots: our model can only guess outside its practice area. Error <b>'+fmt(e1,2)+'</b>.' : 'Error over the whole range: our data only <b>'+fmt(e1,2)+'</b>, pooled <b>'+fmt(e2,2)+'</b>. '+(e2<e1-0.02?'Positive transfer.':(e2>e1+0.02?'Negative transfer: the others\' quirks are polluting the model.':'About the same.')); }
+  bindRange('tr-k',function(v){K=v;draw();}); bindRange('tr-n',function(v){N=v;draw();});
+  $('#tr-al').onclick=function(){ align=!align; this.classList.toggle('on',align); this.setAttribute('aria-pressed',align); this.textContent=align?'Adjust for each robot\'s quirks':'Quirks ignored'; draw(); };
+})();
+(function(){ // normalisation
+  var svg=$('#nm');
+  function draw(a){ clear(svg); var robots=[['Small arm, range ±2 cm',2],['Large robot, range ±8 cm',8]];
+    robots.forEach(function(rb,i){ var y=40+i*90, n=Math.max(-1,Math.min(1,a/rb[1])), b=Math.min(255,Math.floor((n+1)/2*256));
+      S('text',{x:20,y:y-12,'class':'t-h'},svg,rb[0]);
+      S('line',{x1:40,y1:y+14,x2:440,y2:y+14,'class':'grid'},svg); S('line',{x1:240,y1:y+6,x2:240,y2:y+22,'class':'w-faint'},svg);
+      S('text',{x:40,y:y+36,'class':'t-s mid'},svg,'−'+rb[1]); S('text',{x:440,y:y+36,'class':'t-s mid'},svg,'+'+rb[1]+' cm');
+      S('circle',{cx:240+n*200,cy:y+14,r:7,'class':Math.abs(a)>rb[1]?'u-wire':'u-on'},svg);
+      S('rect',{x:480,y:y,width:90,height:30,'class':'box-fire'},svg); S('text',{x:525,y:y+20,'class':'t mid'},svg,'token '+b);
+      S('text',{x:525,y:y+48,'class':'t-s mid'},svg,Math.abs(a)>rb[1]?'clipped':fmt(n*100,0)+'% of range'); });
+    $('#nm-r').innerHTML='The same '+fmt(a,1)+' cm move becomes different tokens for each robot, because each is scaled by its own range.'; }
+  bindRange('nm-a',draw);
+})();
+(function(){ // Table I
+  var svg=$('#t1c'), M=['Original Method','RT-1','RT-1-X','RT-2-X (55B)'], D=[[13,40,27,50],[13,30,27,30],[null,92,73,91]];
+  function draw(k){ clear(svg); S('line',{x1:150,y1:12,x2:150,y2:180,'class':'axis'},svg);
+    [0,25,50,75,100].forEach(function(t){ var x=150+t*4.2; S('line',{x1:x,y1:12,x2:x,y2:180,'class':'grid'},svg); S('text',{x:x,y:196,'class':'t-s mid'},svg,t+'%'); });
+    M.forEach(function(m,i){ var y=18+i*40, v=D[k][i]; S('text',{x:142,y:y+18,'class':'t end'},svg,m);
+      if (v===null){ S('text',{x:156,y:y+18,'class':'t-s'},svg,'not reported'); return; }
+      S('rect',{x:150,y:y+2,width:Math.max(1,v*4.2),height:24,'class':i>=2?'f-fire':'f-wire'},svg); S('text',{x:156+v*4.2,y:y+19,'class':'t'},svg,v+'%'); });
+    var t=['RT-2-X beats everything; RT-1-X trails the single-robot RT-1.','RT-2-X ties RT-1; RT-1-X is slightly behind.','On the big Google Robot dataset, RT-2-X matches RT-1 while RT-1-X drops 19 points.'];
+    $('#t1c-r').textContent=t[k]; }
+  $$('[data-d]').forEach(function(b){ b.onclick=function(){ $$('[data-d]').forEach(function(x){x.classList.toggle('on',x===b);}); draw(+b.dataset.d); }; });
+  draw(0);
+})();
+(function(){ // Table II
+  var svg=$('#t2c'), rows=[['1 RT-2 55B, Google data only',27.3,62],['2 RT-2-X 55B, all robot data',75.8,61],['3 RT-2-X 55B, without Bridge',42.8,54],['4 RT-2-X 5B, 2-step history',44.4,52],['5 RT-2-X 5B, no history',14.5,30],['6 RT-2-X 5B, from scratch',0,1],['7 RT-2-X 5B, fine-tune not co-ft',48.7,47]];
+  function draw(k){ clear(svg); var j=k==='em'?1:2; S('line',{x1:250,y1:10,x2:250,y2:236,'class':'axis'},svg);
+    [0,25,50,75].forEach(function(t){ var x=250+t*4; S('line',{x1:x,y1:10,x2:x,y2:236,'class':'grid'},svg); S('text',{x:x,y:252,'class':'t-s mid'},svg,t+'%'); });
+    rows.forEach(function(r,i){ var y=14+i*32, v=r[j]; S('text',{x:242,y:y+16,'class':'t end'},svg,r[0]); S('rect',{x:250,y:y+2,width:Math.max(1,v*4),height:20,'class':i===1?'f-fire':'f-wire'},svg); S('text',{x:256+v*4,y:y+17,'class':'t-s'},svg,v+'%'); });
+    $('#t2c-r').innerHTML = k==='em' ? 'Emergent skills: mixing in other robots\' data takes <b>27.3%</b> to <b>75.8%</b>.' : 'Generalisation barely moves between rows 1 and 2 (62% vs 61%); it is driven by the VLM backbone.'; }
+  $$('[data-m]').forEach(function(b){ b.onclick=function(){ $$('[data-m]').forEach(function(x){x.classList.toggle('on',x===b);}); draw(b.dataset.m); }; });
+  draw('em');
+})();
+</script>
+
+</body>
+</html>

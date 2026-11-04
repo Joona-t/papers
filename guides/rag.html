@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RAG (2020) study guide</title>
+<meta name="description" content="Language models store facts inside their weights, where they are hard to check, hard to update and easy to garble. This paper gives a text generator a search engine: for each question it first retrieves a few relevant Wikipedia passages, then writes its answer while reading them. The result was more">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Language models &amp; AI</b> · 2020</p>
+  <h1>Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks</h1>
+  <p class="cite">Patrick Lewis et al. · NeurIPS 2020</p>
+  <p class="lede">Language models store facts inside their weights, where they are hard to check, hard to update and easy to garble. This paper gives a text generator a search engine: for each question it first retrieves a few relevant Wikipedia passages, then writes its answer while reading them. The result was more accurate on open-domain questions, more specific and factual in its writing, and could be updated simply by swapping the document index.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/2005.11401">Read the paper (free)</a> <a href="https://lovespark.love/papers/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, independent AI review, but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Big language models remember a lot of facts, but only implicitly, in their billions of internal numbers: you cannot easily see where an answer came from, correct it, or add new knowledge without retraining.</p>
+  <p>RAG (retrieval-augmented generation) pairs a text generator with a retriever that searches 21 million short Wikipedia passages and hands the best few to the generator.</p>
+  <p>The two parts are trained together, end to end, using only question–answer pairs: nobody tells the retriever which passage is "right"; it learns which passages help the generator answer.</p>
+  <p>RAG set new records on three open-domain question-answering benchmarks, wrote more factual and specific text than a generator alone, and changed its answers when given a newer copy of Wikipedia.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1</p>
+  <h2>Two kinds of memory</h2>
+  <div class="prose">
+    <p>A language model such as <a href="gpt2.html">GPT-2</a> learns facts during training and keeps them in its <strong>parameters</strong>, the millions or billions of numbers inside the network. The paper calls this <strong>parametric memory</strong>. It is powerful but opaque: when the model says something false (a "hallucination"), there is no source to check, and teaching it a new fact means more training.</p>
+    <p>The alternative is <strong>non-parametric memory</strong>: an external collection of documents the system can look things up in, like a library. Facts there are readable, citable and replaceable.</p>
+    <p>RAG combines the two. A <strong>retriever</strong> finds passages related to the input. A <strong>generator</strong>, a pre-trained model that writes text (here BART), then produces the answer while looking at both the question and the retrieved passages.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A closed-book exam versus an open-book exam. In a closed-book exam you rely on what you memorised and might misremember. In an open-book exam you still need understanding to write a good answer, but you can look up the exact date, and someone marking your work can see which page you used.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>RAG keeps the language skill in the model's weights but moves much of the factual knowledge into a searchable document collection.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §2.2 · Fig. 1</p>
+  <h2>How the retriever finds passages</h2>
+  <div class="prose">
+    <p>The retriever turns every passage into a list of numbers, a <strong>vector</strong>, that captures roughly what it is about. It does the same for the question. Passages whose vectors point in a similar direction to the question's get a high score, and the top few are passed on. Because all passage vectors are computed once in advance, searching millions of passages takes a fraction of a second.</p>
+    <p>The real system learns its vectors with neural networks. The toy below uses a much cruder version (it simply counts shared meaningful words), but the pipeline is the same: score every passage, convert scores into probabilities, keep the top <var>k</var>, and let the generator read them.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl" id="rt-q"></div>
+    <div class="ctl"><label>Passages kept (k) <input type="range" id="rt-k" min="1" max="5" step="1" value="2"><output id="rt-k-o">2</output></label></div>
+    <div class="svgbox"><svg id="rt" viewBox="0 0 600 300" role="img" aria-label="Retrieval scores for eight passages and the generated answer"></svg></div>
+    <p class="readout" id="rt-r"></p>
+    <figcaption>An illustrative toy with eight made-up "Wikipedia" passages. Each passage's score is the number of meaningful words it shares with the question; scores become probabilities with a softmax (higher scores take a bigger share). Amber passages are the top <var>k</var> handed to the generator. The answer shown is the one supported by the highest-probability retrieved passage. In real RAG the scores come from learned vectors (so "author" can match "wrote" even with no shared word).</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why can RAG search 21 million passages quickly?</dt>
+    <dd>The passage vectors are computed once and stored in an index; at question time only the question needs encoding, and a fast nearest-neighbour search finds the highest-scoring passages.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §2.1 · §2.4 · Fig. 2</p>
+  <h2>Learning what to retrieve, without being told</h2>
+  <div class="prose">
+    <p>Training data is only question–answer pairs, with no note of which passage contains the answer. So how does the retriever improve?</p>
+    <p>RAG treats the retrieved passage as an unknown it averages over. For each candidate passage, the generator says how likely the correct answer is given that passage. Passages that make the correct answer more likely get their retrieval score pushed up; unhelpful ones get pushed down. Over many examples the retriever learns which kinds of passages actually help.</p>
+    <p>The paper offers two ways to do the averaging. <strong>RAG-Sequence</strong> picks one passage and writes the whole answer from it, then averages over passages. <strong>RAG-Token</strong> may lean on a different passage for each word. That matters when an answer combines facts from several places: the paper shows the generator drawing on one passage for "The Sun Also Rises" and another for "A Farewell to Arms" when writing about Hemingway (Fig. 2).</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A student and a librarian work together on homework. The librarian fetches books; the student writes answers. When the teacher marks an answer right, the librarian remembers which books were on the desk that time, and fetches books like those more often.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The retriever learns from the generator's success, not from labelled "correct passages", which makes RAG easy to train on any input–output task.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What is the practical difference between RAG-Sequence and RAG-Token?</dt>
+    <dd>RAG-Sequence commits to one passage per whole answer; RAG-Token can switch passages word by word, so it can combine facts from different documents in one answer.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §4.1–4.4 · Tables 1–4</p>
+  <h2>More accurate, more specific, more factual</h2>
+  <div class="prose">
+    <p>On four open-domain question benchmarks (questions with no document provided), RAG beat both a 11-billion-parameter model answering from memory (T5) and earlier "retrieve, then extract a span" systems on three of them, while having far fewer trainable parameters than T5-11B. Because it <em>generates</em> rather than copies, it could even answer correctly when no retrieved passage contained the exact answer: 11.8% of such Natural Questions cases, where a copying system would score zero.</p>
+    <p>The authors also had it write quiz-show (Jeopardy-style) clues. Human judges compared RAG's clues with those of the same generator without retrieval (BART): RAG was judged more factual in 42.7% of comparisons and BART in only 7.1%; for specificity it was 37.4% against 16.8%.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Adding retrieval made a mid-sized generator more accurate than a far larger memory-only model, and made its writing measurably more factual.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §4.5</p>
+  <h2>Update the knowledge by swapping the library</h2>
+  <div class="prose">
+    <p>Because facts live in the index, you can change what RAG knows without retraining it. The authors built a test of 82 world leaders ("Who is the President of Peru?" and so on) whose holders changed between 2016 and 2018, and swapped a 2016 Wikipedia index for a 2018 one.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><span>Index:</span><button class="btn on" data-ix="2016">Wikipedia 2016</button><button class="btn" data-ix="2018">Wikipedia 2018</button><span>Ask about leaders in:</span><button class="btn on" data-yr="2016">2016</button><button class="btn" data-yr="2018">2018</button></div>
+    <div class="svgbox"><svg id="hs" viewBox="0 0 600 220" role="img" aria-label="Accuracy on world-leader questions for each index and year"></svg></div>
+    <p class="readout" id="hs-r"></p>
+    <figcaption>Real numbers from §4.5. Accuracy is high only when the index matches the year being asked about: 70% (2016 index, 2016 leaders) and 68% (2018 index, 2018 leaders), but 12% and 4% when mismatched. The model itself was not retrained.</figcaption>
+  </figure>
+  <div class="later"><span class="label">Later refinement</span>"RAG" became the general name for any system that retrieves documents and feeds them to a language model, usually today by pasting retrieved text into the prompt of a large chat model rather than training retriever and generator jointly. Retrieval also became a step inside agents such as <a href="react.html">ReAct</a>. It brought a new risk too: retrieved text can carry hidden instructions, the problem of <a href="injection.html">indirect prompt injection</a>.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Swap the documents and the answers change: knowledge in an index can be updated, inspected and cited in a way knowledge in weights cannot.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What does the 70% versus 4% result show?</dt>
+    <dd>That RAG's answers really come from the index, not from memorised facts: with the old index it gives the old leader, and switching to a newer index updates its answers without any training.</dd>
+  </dl></details>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Large pre-trained LMs store factual knowledge in their parameters, but their ability to access and precisely manipulate it is limited, so they lag task-specific architectures on knowledge-intensive tasks; provenance and knowledge updates are open problems. The authors propose a general fine-tuning recipe for retrieval-augmented generation (RAG), combining a pre-trained seq2seq model as parametric memory with a dense vector index of Wikipedia, accessed by a pre-trained neural retriever, as non-parametric memory. Two formulations condition on the same retrieved passages for a whole sequence or per token. Fine-tuned and evaluated on a wide range of knowledge-intensive tasks, RAG sets the state of the art on three open-domain QA tasks, beating parametric seq2seq models and task-specific retrieve-and-extract architectures, and generates more specific, diverse and factual language than a parametric-only baseline. Lewis et al., NeurIPS 2020.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2.1</p>
+  <h2>Two marginalisations</h2>
+  <div class="prose">
+    <p>Input <var>x</var>, retrieved text document <var>z</var>, target <var>y</var>. A retriever <var>p</var><sub>η</sub>(<var>z</var> | <var>x</var>) returns a top-<var>k</var> truncated distribution over passages; a generator <var>p</var><sub>θ</sub>(<var>y<sub>i</sub></var> | <var>x</var>, <var>z</var>, <var>y</var><sub>1:<var>i</var>−1</sub>) produces tokens. The latent document is marginalised in one of two ways:</p>
+  </div>
+  <div class="eq"><var>p</var><sub>RAG-Seq</sub>(<var>y</var>|<var>x</var>) ≈ Σ<sub><var>z</var> ∈ top-<var>k</var>(<var>p</var>(·|<var>x</var>))</sub> <var>p</var><sub>η</sub>(<var>z</var>|<var>x</var>) ∏<sub><var>i</var></sub> <var>p</var><sub>θ</sub>(<var>y<sub>i</sub></var> | <var>x</var>, <var>z</var>, <var>y</var><sub>1:<var>i</var>−1</sub>)</div>
+  <div class="eq"><var>p</var><sub>RAG-Tok</sub>(<var>y</var>|<var>x</var>) ≈ ∏<sub><var>i</var></sub> Σ<sub><var>z</var> ∈ top-<var>k</var>(<var>p</var>(·|<var>x</var>))</sub> <var>p</var><sub>η</sub>(<var>z</var>|<var>x</var>) <var>p</var><sub>θ</sub>(<var>y<sub>i</sub></var> | <var>x</var>, <var>z</var>, <var>y</var><sub>1:<var>i</var>−1</sub>)</div>
+  <div class="prose">
+    <p>RAG-Sequence is a mixture of <var>k</var> complete sequence models; RAG-Token is a single autoregressive model whose next-token distribution is a mixture, so the effective document can change at each step. For classification (e.g. FEVER), the target is a single token and the two coincide. The calculator below evaluates both formulas on a two-document, two-slot example.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>p(z₁|x) <input type="range" id="mg-p" min="0" max="1" step="0.05" value="0.5" data-fmt="2"><output id="mg-p-o">0.50</output></label>
+      <label>Generator's reliance on its document <input type="range" id="mg-c" min="0.4" max="0.95" step="0.05" value="0.8" data-fmt="2"><output id="mg-c-o">0.80</output></label>
+    </div>
+    <div class="svgbox"><svg id="mg" viewBox="0 0 600 270" role="img" aria-label="Probabilities assigned to candidate two-title answers under RAG-Sequence and RAG-Token"></svg></div>
+    <p class="readout" id="mg-r"></p>
+    <figcaption>Illustrative numbers in the spirit of Fig. 2. Query: "name two Hemingway novels". Passage <var>z</var><sub>1</sub> is about <em>The Sun Also Rises</em> (S), passage <var>z</var><sub>2</sub> about <em>A Farewell to Arms</em> (F); O is any other title. Given its passage, the generator puts the reliance value on that passage's title and splits the rest over the other two; it never repeats a title, and a passage that has already given its own title has nothing more to say, so its slot-2 weight shifts to O. Bars give the probability of each two-title answer under each formula. RAG-Token rates the answer that needs both passages (S, F or F, S) much higher, because it mixes passages per token.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>In the calculator, why does RAG-Sequence give "S, F" a low probability even when both passages are retrieved with equal weight?</dt>
+    <dd>Under RAG-Sequence each whole answer is generated from one passage; neither passage alone strongly supports both titles, so every mixture component assigns the combination a low probability. RAG-Token re-mixes the passages for slot 2.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §2.2–2.5</p>
+  <h2>Retriever, generator, training, decoding</h2>
+  <div class="prose">
+    <p><strong>Retriever (DPR).</strong> A bi-encoder, <var>p</var><sub>η</sub>(<var>z</var>|<var>x</var>) ∝ exp(<b>d</b>(<var>z</var>)<sup>⊤</sup><b>q</b>(<var>x</var>)), with <b>d</b>(<var>z</var>) = BERT<sub>d</sub>(<var>z</var>) and <b>q</b>(<var>x</var>) = BERT<sub>q</sub>(<var>x</var>), both BERT-base. Top-<var>k</var> retrieval is maximum inner product search, approximated in sub-linear time with FAISS and an HNSW index. The retriever is initialised from DPR trained on TriviaQA and Natural Questions. The index (the "non-parametric memory") is the December 2018 Wikipedia dump split into disjoint 100-word chunks, 21M documents.</p>
+    <p><strong>Generator.</strong> BART-large (400M parameters); input <var>x</var> and passage <var>z</var> are simply concatenated.</p>
+    <p><strong>Training (§2.4).</strong> Minimise Σ<sub><var>j</var></sub> −log <var>p</var>(<var>y<sub>j</sub></var>|<var>x<sub>j</sub></var>) with Adam, with no supervision on which document to retrieve. Updating the document encoder would require periodically re-encoding and re-indexing 21M passages (as REALM does); the authors found this unnecessary, so BERT<sub>d</sub> and the index stay fixed and only BERT<sub>q</sub> and BART are fine-tuned. <var>k</var> ∈ {5, 10} in training; test-time <var>k</var> is chosen on dev data (e.g. 15 for RAG-Token QA, 50 for RAG-Sequence QA).</p>
+    <p><strong>Decoding (§2.5).</strong> RAG-Token is a standard autoregressive model with transition <var>p</var>′<sub>θ</sub>(<var>y<sub>i</sub></var>|<var>x</var>, <var>y</var><sub>1:<var>i</var>−1</sub>) = Σ<sub><var>z</var></sub> <var>p</var><sub>η</sub>(<var>z</var>|<var>x</var>) <var>p</var><sub>θ</sub>(<var>y<sub>i</sub></var>|<var>x</var>, <var>z</var>, <var>y</var><sub>1:<var>i</var>−1</sub>), so ordinary beam search applies. RAG-Sequence's likelihood does not factor per token, so beam search runs per document and hypotheses are scored by summing over documents. "Thorough Decoding" runs extra forward passes for hypotheses missing from some document's beam; "Fast Decoding" approximates their probability as zero.</p>
+  </div>
+  <figure>
+    <div class="svgbox"><svg id="arch" viewBox="0 0 600 195" role="img" aria-label="RAG architecture: query encoder, index, generator, marginalisation"></svg></div>
+    <figcaption>Fig. 1 in outline. Trainable parts in amber; the document encoder and index are frozen. Gradients from the marginal likelihood flow into both the generator and the query encoder through <var>p</var><sub>η</sub>(<var>z</var>|<var>x</var>).</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §3–4 · Tables 1–2, 6</p>
+  <h2>Results and ablations</h2>
+  <figure class="live">
+    <div class="ctl" id="qa-ctl"></div>
+    <div class="svgbox"><svg id="qa" viewBox="0 0 600 240" role="img" aria-label="Open-domain QA exact match by system"></svg></div>
+    <p class="readout" id="qa-r"></p>
+    <figcaption>Exact match from Table 1 (test sets). TQA shows the standard open-domain test split; T5 reports only the TQA-Wiki split (where RAG-Seq. scores 68.0), so T5 has no TQA bar. The two ablation bars come from Table 6 and are dev-set scores, so compare them with each other rather than with the test bars. Ablations: "frozen" keeps the retriever fixed; "BM25" replaces dense retrieval with word-overlap search. NQ = Natural Questions, TQA = TriviaQA, WQ = WebQuestions, CT = CuratedTrec.</figcaption>
+  </figure>
+  <div class="prose">
+    <ul>
+      <li><strong>Open-domain QA (Table 1).</strong> New state of the art on NQ, WQ and CT, and on the T5-comparable TriviaQA split. RAG-Sequence: NQ 44.5, TQA 56.8 / 68.0, WQ 45.2, CT 52.2.</li>
+      <li><strong>Generation (Table 2).</strong> MS-MARCO: RAG-Sequence beats BART by 2.6 BLEU-1 and 2.6 ROUGE-L (44.2 / 40.8 vs 41.6 / 38.2). Jeopardy question generation: RAG-Token Q-BLEU-1 22.2 vs BART 19.7.</li>
+      <li><strong>FEVER (Table 2).</strong> RAG-Token 72.5 (3-way) and 89.5 (2-way) label accuracy, within 4.3% of pipeline systems that use retrieval supervision.</li>
+      <li><strong>Human evaluation (Table 4).</strong> Over 452 pairs of Jeopardy generations: factuality, RAG better 42.7% vs BART better 7.1%; specificity, 37.4% vs 16.8%.</li>
+      <li><strong>Diversity (Table 5).</strong> Distinct-trigram ratio on Jeopardy: BART 32.4%, RAG-Token 46.8%, RAG-Sequence 53.8% (gold 90.0%).</li>
+      <li><strong>Ablations (Table 6).</strong> Learned retrieval matters: freezing the retriever drops RAG-Token's NQ from 43.5 to 37.8; BM25 gives 29.7. BM25 does best on FEVER, where claims are entity-centric and word overlap is a strong signal.</li>
+      <li><strong>More documents (Fig. 3).</strong> RAG-Sequence's NQ score improves monotonically with retrieved documents at test time; RAG-Token peaks at 10.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §4.5 · Broader impact · Lineage</p>
+  <h2>Hot-swapping, limitations, and what came next</h2>
+  <div class="prose">
+    <p><strong>Index hot-swapping.</strong> With a December 2016 DrQA Wikipedia index and the 2018 index, on 82 world leaders queried as "Who is {position}?": 70% with the 2016 index for 2016 leaders, 68% with the 2018 index for 2018 leaders, and 12% and 4% when mismatched (2018 index on 2016 leaders, 2016 index on 2018 leaders). Knowledge can be updated without retraining.</p>
+    <p><strong>Parametric and non-parametric together.</strong> In the Hemingway example the retrieved document's posterior is high when a title begins, then falls once the first tokens are produced, because BART can complete the title from its own parameters: the index "cues" knowledge the generator already holds.</p>
+    <p><strong>Limitations.</strong> Wikipedia is neither complete nor free of bias; retrieval is limited to 100-word passages and a fixed number <var>k</var>; the document encoder is never updated; on some tasks (e.g. story generation in Appendix H) retrieval "collapsed", returning the same documents for every input, after which RAG behaves like BART. The broader-impact section notes misuse risks similar to <a href="gpt2.html">GPT-2</a>'s.</p>
+  </div>
+  <div class="later"><span class="label">Lineage</span>Contemporaries: REALM (Guu et al., 2020) used retrieval during pre-training with an updated index; Fusion-in-Decoder (Izacard &amp; Grave, 2021) encodes each passage separately and fuses them in the decoder, scaling to many more passages. RETRO (Borgeaud et al., 2022) retrieved from trillions of tokens during pre-training; Atlas (Izacard et al., 2022) showed retrieval-augmented models are strong few-shot learners. In practice "RAG" now usually means prompting a large chat model with retrieved text, without joint training; <a href="react.html">ReAct</a> made retrieval a tool the model chooses to call. Known failure modes include long contexts where models under-use passages in the middle (Liu et al., 2023, "Lost in the Middle") and retrieved text acting as instructions (<a href="injection.html">indirect prompt injection</a>).</div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why not fine-tune the document encoder too?</dt>
+    <dd>Every update would invalidate the stored passage vectors, requiring re-encoding 21M passages and rebuilding the index; the authors found fine-tuning only the query encoder sufficient.</dd>
+    <dt>Why might BM25 beat dense retrieval on FEVER?</dt>
+    <dd>FEVER claims name specific entities; exact word overlap with an entity's article is a strong retrieval signal there.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t5" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Parametric memory</dt><dd>Knowledge stored in model weights (here BART).</dd>
+    <dt>Non-parametric memory</dt><dd>An external, swappable store (here 21M Wikipedia passages).</dd>
+    <dt>DPR</dt><dd>Dense Passage Retriever: two BERT encoders scoring passages by inner product.</dd>
+    <dt>MIPS</dt><dd>Maximum inner product search; approximate versions (FAISS, HNSW) run in sub-linear time.</dd>
+    <dt>Marginalise</dt><dd>Sum a probability over the possible values of a hidden variable (the retrieved document).</dd>
+    <dt>Exact match (EM)</dt><dd>Fraction of answers that equal a reference answer after normalisation.</dd>
+    <dt>Open-domain QA</dt><dd>Question answering with no document given; the system must find or remember the knowledge.</dd>
+    <dt>Hot-swapping</dt><dd>Replacing the document index at test time without retraining.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Led to:</strong> <a href="react.html">ReAct (2022)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers/">Papers worth reading</a> (<a href="https://lovespark.love/papers/#rag">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // toy retriever
+  var P=[['Ernest Hemingway','Ernest Hemingway was an American author who wrote The Old Man and the Sea.','Ernest Hemingway'],
+    ['The Old Man and the Sea','The Old Man and the Sea is a short novel about an old fisherman and a giant marlin.','an old fisherman'],
+    ['Mount Everest','Mount Everest is the highest mountain on Earth, in the Himalayas.','Mount Everest'],
+    ['K2','K2 is the second highest mountain on Earth.','K2'],
+    ['Marie Curie','Marie Curie won the Nobel Prize in physics and later in chemistry.','Marie Curie'],
+    ['Nobel Prize','The Nobel Prize is awarded each year in physics, chemistry, medicine, literature and peace.','physics, chemistry, medicine, literature and peace'],
+    ['Paris','Paris is the capital and largest city of France.','Paris'],
+    ['Lyon','Lyon is a large city in France known for its food.','Lyon']];
+  var Q=[['Who wrote The Old Man and the Sea?','Ernest Hemingway'],['What is the highest mountain on Earth?','Mount Everest'],['Which scientist won the Nobel Prize in chemistry?','Marie Curie'],['What is the capital of France?','Paris']];
+  var stop={the:1,a:1,an:1,is:1,of:1,and:1,in:1,on:1,who:1,what:1,which:1,its:1,was:1,for:1,to:1,each:1,about:1,later:1,known:1};
+  function words(s){ return s.toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(function(w){ return w && !stop[w]; }); }
+  var svg=$('#rt'), qi=0, k=2, ctl=$('#rt-q');
+  Q.forEach(function(q,i){ var b=document.createElement('button'); b.className='btn'+(i?'':' on'); b.textContent=q[0]; b.onclick=function(){ qi=i; $$('.btn',ctl).forEach(function(x,j){ x.classList.toggle('on',j===i); }); draw(); }; ctl.appendChild(b); });
+  function draw(){ clear(svg); var qw=words(Q[qi][0]);
+    var sc=P.map(function(p){ var pw=words(p[1]), s=0; qw.forEach(function(w){ if (pw.indexOf(w)>=0) s++; }); return s; });
+    var ex=sc.map(function(s){ return Math.exp(1.5*s); }), Z=ex.reduce(function(a,b){return a+b;},0), pr=ex.map(function(e){return e/Z;});
+    var order=sc.map(function(_,i){return i;}).sort(function(a,b){ return pr[b]-pr[a] || a-b; }), top=order.slice(0,k);
+    S('text',{x:10,y:16,'class':'t-s'},svg,'passage'); S('text',{x:250,y:16,'class':'t-s'},svg,'shared words'); S('text',{x:350,y:16,'class':'t-s'},svg,'retrieval probability');
+    P.forEach(function(p,i){ var y=28+i*30, on=top.indexOf(i)>=0;
+      S('rect',{x:8,y:y,width:584,height:26,'class':on?'box-fire':'box'},svg); S('text',{x:16,y:y+17,'class':'t'},svg,p[0]);
+      S('text',{x:270,y:y+17,'class':'t mid'},svg,sc[i]); S('rect',{x:350,y:y+6,width:Math.max(1,pr[i]*200),height:14,'class':on?'f-fire':'f-wire','fill-opacity':on?1:0.45},svg); S('text',{x:356+pr[i]*200,y:y+17,'class':'t-s'},svg,fmt(pr[i]*100,0)+'%'); });
+    var best=P[top[0]], ok=best[2]===Q[qi][1];
+    S('text',{x:10,y:290,'class':'t-s'},svg,'Generator reads: '+top.map(function(i){return P[i][0];}).join(' + '));
+    $('#rt-r').innerHTML='Answer: <b>'+best[2]+'</b>'+(ok?' (supported by the "'+best[0]+'" passage).':' (wrong passage on top).'); }
+  bindRange('rt-k',function(v){ k=v; draw(); });
+})();
+(function(){ // hot swap
+  var acc={'2016':{'2016':70,'2018':4},'2018':{'2016':12,'2018':68}}, ix='2016', yr='2016', svg=$('#hs');
+  function draw(){ clear(svg); var cells=[['2016','2016'],['2016','2018'],['2018','2016'],['2018','2018']];
+    S('line',{x1:60,y1:180,x2:580,y2:180,'class':'axis'},svg); [0,50,100].forEach(function(g){ var y=180-g*1.5; S('line',{x1:60,y1:y,x2:580,y2:y,'class':'grid'},svg); S('text',{x:54,y:y+4,'class':'t-s end'},svg,g+'%'); });
+    cells.forEach(function(c,i){ var v=acc[c[0]][c[1]], x=90+i*125, h=v*1.5, on=c[0]===ix&&c[1]===yr;
+      S('rect',{x:x,y:180-h,width:80,height:h,'class':on?'f-fire':'f-wire','fill-opacity':on?1:0.4},svg); S('text',{x:x+40,y:174-h,'class':on?'t-fire mid':'t-s mid'},svg,v+'%');
+      S('text',{x:x+40,y:198,'class':'t-s mid'},svg,c[0]+' index'); S('text',{x:x+40,y:213,'class':'t-s mid'},svg,c[1]+' leaders'); });
+    var v=acc[ix][yr]; $('#hs-r').innerHTML='Using the <b>'+ix+'</b> index to answer about <b>'+yr+'</b> leaders: <b>'+v+'%</b> correct. '+(ix===yr?'The index matches the question, so the answer is usually current.':'Mismatched: the model mostly reports whoever held the post in '+ix+'.'); }
+  $$('[data-ix]').forEach(function(b){ b.onclick=function(){ ix=b.getAttribute('data-ix'); $$('[data-ix]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }; });
+  $$('[data-yr]').forEach(function(b){ b.onclick=function(){ yr=b.getAttribute('data-yr'); $$('[data-yr]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }; });
+  draw();
+})();
+(function(){ // marginalisation calculator
+  var svg=$('#mg'), p1=0.5, c=0.8, T=['S','F','O'];
+  function slot1(z){ var own=z===0?0:1, r=[0,0,0]; r[own]=c; for (var j=0;j<3;j++) if (j!==own) r[j]=(1-c)/2; return r; }
+  function slot2(z,y1){ var r=slot1(z).slice(), m=r[y1]; r[y1]=0; if (y1===2){ var s=r[0]+r[1]; return r.map(function(v){return v/s;}); } r[2]+=m; return r; }
+  function draw(){ clear(svg); var pz=[p1,1-p1], res=[];
+    for (var a=0;a<3;a++) for (var b=0;b<3;b++){ if (a===b) continue;
+      var seq=0; for (var z=0;z<2;z++) seq+=pz[z]*slot1(z)[a]*slot2(z,a)[b];
+      var t1=0,t2=0; for (z=0;z<2;z++){ t1+=pz[z]*slot1(z)[a]; t2+=pz[z]*slot2(z,a)[b]; }
+      res.push([T[a]+', '+T[b],seq,t1*t2]); }
+    S('text',{x:20,y:18,'class':'t-s'},svg,'answer'); S('rect',{x:300,y:8,width:12,height:12,'class':'f-wire'},svg); S('text',{x:318,y:18,'class':'t-s'},svg,'RAG-Sequence'); S('rect',{x:430,y:8,width:12,height:12,'class':'f-fire'},svg); S('text',{x:448,y:18,'class':'t-s'},svg,'RAG-Token');
+    res.forEach(function(r,i){ var y=32+i*38; S('text',{x:70,y:y+20,'class':(r[0]==='S, F'||r[0]==='F, S')?'t-fire end':'t end'},svg,r[0]);
+      S('rect',{x:80,y:y,width:Math.max(1,r[1]*420),height:14,'class':'f-wire'},svg); S('text',{x:86+r[1]*420,y:y+12,'class':'t-s'},svg,fmt(r[1],3));
+      S('rect',{x:80,y:y+16,width:Math.max(1,r[2]*420),height:14,'class':'f-fire'},svg); S('text',{x:86+r[2]*420,y:y+28,'class':'t-s'},svg,fmt(r[2],3)); });
+    var sf=res.filter(function(r){ return r[0]==='S, F'||r[0]==='F, S'; }), s=sf[0][1]+sf[1][1], t=sf[0][2]+sf[1][2];
+    $('#mg-r').innerHTML='Probability of naming both novels (S, F or F, S): RAG-Sequence <b>'+fmt(s,3)+'</b>, RAG-Token <b>'+fmt(t,3)+'</b>.'; }
+  bindRange('mg-p',function(v){ p1=v; draw(); }); bindRange('mg-c',function(v){ c=v; draw(); });
+})();
+(function(){ // static architecture
+  var svg=$('#arch');
+  function box(x,y,w,t,cls){ S('rect',{x:x,y:y,width:w,height:40,'class':cls},svg); S('text',{x:x+w/2,y:y+24,'class':'t mid'},svg,t); }
+  box(10,65,50,'x','box'); box(85,65,140,'query enc. q(x)','box-fire'); box(250,15,140,'index d(z), 21M','box-wire'); box(250,115,140,'top-k z, pη(z|x)','box'); box(415,65,90,'BART pθ','box-fire'); box(522,65,72,'Σ over z','box');
+  [[60,85,85,85],[225,70,250,40],[320,55,320,115],[390,135,415,100],[505,85,522,85]].forEach(function(l){ S('line',{x1:l[0],y1:l[1],x2:l[2],y2:l[3],'class':'w','marker-end':'url(#aw)'},svg); });
+  S('path',{d:'M35,105 Q35,170 230,170 L400,170 Q460,170 460,105','class':'w-faint','marker-end':'url(#aw)'},svg); S('text',{x:320,y:186,'class':'t-s mid'},svg,'x is also given to the generator');
+  S('text',{x:320,y:11,'class':'t-s mid'},svg,'frozen');
+})();
+(function(){ // QA chart
+  var R=[['T5-11B',[34.5,null,37.4,null]],['T5-11B+SSM',[36.6,null,44.7,null]],['REALM',[40.4,null,40.7,46.8]],['DPR',[41.5,57.9,41.1,50.6]],['RAG-Token',[44.1,55.2,45.5,50.0]],['RAG-Seq.',[44.5,56.8,45.2,52.2]],['RAG-Tok frozen',[37.8,50.1,37.1,51.1]],['RAG-Tok BM25',[29.7,null,null,null]]];
+  var D=['NQ','TQA','WQ','CT'], svg=$('#qa'), ctl=$('#qa-ctl'), k=0;
+  D.forEach(function(d,i){ var b=document.createElement('button'); b.className='btn'+(i?'':' on'); b.textContent=d; b.onclick=function(){ k=i; $$('.btn',ctl).forEach(function(x,j){ x.classList.toggle('on',j===i); }); draw(); }; ctl.appendChild(b); });
+  function draw(){ clear(svg); var rows=R.filter(function(r){ return r[1][k]!=null; }), mx=0; rows.forEach(function(r){ mx=Math.max(mx,r[1][k]); });
+    rows.forEach(function(r,i){ var y=12+i*28, v=r[1][k], w=v/65*400, rag=/^RAG/.test(r[0]), abl=/frozen|BM25/.test(r[0]);
+      S('text',{x:130,y:y+16,'class':'t end'},svg,r[0]); S('rect',{x:140,y:y+3,width:w,height:18,'class':rag&&!abl?'f-fire':'f-wire','fill-opacity':abl?0.35:(rag?1:0.6)},svg); S('text',{x:146+w,y:y+16,'class':v===mx?'t-fire':'t-s'},svg,fmt(v,1)); });
+    var best=rows.filter(function(r){ return r[1][k]===mx; })[0][0]; $('#qa-r').innerHTML=D[k]+': best is <b>'+best+'</b> at <b>'+mx+'</b> EM.'; }
+  draw();
+})();
+</script>
+
+</body>
+</html>

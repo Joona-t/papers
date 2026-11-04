@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLaMA (2023) study guide</title>
+<meta name="description" content="Do you need a giant, secret model trained on private data to get state-of-the-art results? Meta&#x27;s LLaMA paper trained four models of 7 to 65 billion parameters only on publicly available text, and trained them on far more data than was usual for their size. The 13-billion-parameter model beat t">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Language models &amp; AI</b> · 2023</p>
+  <h1>LLaMA: Open and Efficient Foundation Language Models</h1>
+  <p class="cite">Hugo Touvron et al. · arXiv</p>
+  <p class="lede">Do you need a giant, secret model trained on private data to get state-of-the-art results? Meta's LLaMA paper trained four models of 7 to 65 billion parameters only on publicly available text, and trained them on far more data than was usual for their size. The 13-billion-parameter model beat the 175-billion-parameter GPT-3 on most benchmarks, the 65B model rivalled the best models of the day, and the weights were given to researchers, setting off the open-model ecosystem.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/2302.13971">Read the paper (free)</a> <a href="https://lovespark.love/papers/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, independent AI review, but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>The best language models of early 2023 (GPT-3, PaLM, Chinchilla) were either closed or trained partly on data nobody else could get.</p>
+  <p>LLaMA uses only public sources (filtered web pages, GitHub code, Wikipedia, public-domain books, arXiv papers and Stack Exchange) and an architecture assembled from known improvements.</p>
+  <p>The key choice was to train relatively small models on a lot of text, up to 1.4 trillion tokens, because a smaller model is cheaper every time someone uses it.</p>
+  <p>LLaMA-13B outperforms GPT-3 on most benchmarks despite being more than ten times smaller and able to run on a single GPU; LLaMA-65B is competitive with Chinchilla-70B and PaLM-540B, and the models were released to the research community.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1</p>
+  <h2>Train smaller, but longer</h2>
+  <div class="prose">
+    <p>A language model's size is measured in <strong>parameters</strong>, the numbers adjusted during training. The amount it reads is measured in <strong>tokens</strong>, small chunks of text (about three-quarters of a word on average in English). Training cost grows with both: roughly, parameters times tokens.</p>
+    <p>In 2022 the <a href="chinchilla.html">Chinchilla</a> paper worked out the best split for a fixed training budget, and found earlier models such as <a href="gpt3.html">GPT-3</a> were too big for the amount of text they read. LLaMA's authors made a further point: training happens once, but the model is then <em>used</em> millions of times, and every use costs in proportion to its size. So it can be worth training a smaller model for much longer than the "optimal" training budget suggests: for example, Chinchilla's analysis recommends a 10B model on 200B tokens, but LLaMA found a 7B model still improving after 1 trillion tokens.</p>
+    <p>Play with the trade-off below. Slide the amount of use, and compare total computing cost over the model's life.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Tokens generated in use <input type="range" id="lc-u" min="9" max="14" step="0.1" value="11" ><output id="lc-u-o">11</output></label></div>
+    <div class="svgbox"><svg id="lc" viewBox="0 0 600 240" role="img" aria-label="Training plus inference compute for three models"></svg></div>
+    <p class="readout" id="lc-r"></p>
+    <figcaption>Training compute ≈ 6 × parameters × training tokens; using the model ≈ 2 × parameters per generated token. These are standard rough estimates, not figures from the paper; model sizes and token counts are the real ones (GPT-3: 175B parameters, 300B tokens; LLaMA: 13B on 1T and 65B on 1.4T). The slider is a power of ten: 11 means 10<sup>11</sup> tokens generated. Blue = training, amber = use; the axis rescales as you slide.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>Building a car. A bigger engine is quick to build to a given speed, but you pay for its fuel every day. Spending longer engineering a smaller, efficient engine costs more up front and saves on every journey after.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>If a model will be used a lot, it pays to train a smaller one on more data than the training-optimal amount.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why isn't the "compute-optimal" model size from Chinchilla always the right choice?</dt>
+    <dd>It minimises training cost for a given quality, but ignores the cost of running the model afterwards; a smaller model trained longer can reach the same quality and is cheaper at every use.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §2.1 · Table 1</p>
+  <h2>Only public data</h2>
+  <div class="prose">
+    <p>Earlier top models used private datasets, such as unpublished book collections or proprietary web crawls, so nobody outside could reproduce them. LLaMA's training mix was built only from sources others could obtain:</p>
+    <ul>
+      <li>Web pages from <strong>CommonCrawl</strong> (67%), cleaned of duplicates, filtered to English and kept only if they resembled pages cited by Wikipedia; plus the already-cleaned <strong>C4</strong> web collection (15%).</li>
+      <li><strong>GitHub</strong> code under permissive licences (4.5%), <strong>Wikipedia</strong> in 20 languages (4.5%), <strong>books</strong> from Project Gutenberg and the Books3 collection (4.5%), scientific papers from <strong>arXiv</strong> (2.5%) and <strong>Stack Exchange</strong> question-and-answer sites (2%).</li>
+    </ul>
+    <p>About 1.4 trillion tokens in total. High-quality sources such as Wikipedia and books were read about twice; most of the rest about once.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>"Publicly available" is not the same as "free of problems". Books3 turned out to consist of pirated books and became the subject of copyright lawsuits, and later Llama releases disclosed much less about their training data. "Open" for these models came to mean open weights, not open data.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Competitive models can be trained from public data alone, which made the recipe reproducible by others.</p>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §3 · Tables 3, 9</p>
+  <h2>A 13B model beats the 175B GPT-3</h2>
+  <div class="prose">
+    <p>The models were tested on standard benchmarks without further training: common-sense questions ("which is a better way to dry wet shoes?"), sentence completion, science exam questions, and the MMLU exam covering 57 subjects. Pick a benchmark to compare LLaMA with the large closed models of the time.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl" id="bm-ctl"></div>
+    <div class="svgbox"><svg id="bm" viewBox="0 0 600 220" role="img" aria-label="Benchmark accuracy for GPT-3, Chinchilla, PaLM and LLaMA"></svg></div>
+    <p class="readout" id="bm-r"></p>
+    <figcaption>Real numbers: zero-shot accuracy from Table 3 (common-sense reasoning) and 5-shot MMLU from Table 9. Missing bars are scores the paper does not report. Parameters in brackets. LLaMA-13B beats GPT-3 on most of these despite being about 13 times smaller.</figcaption>
+  </figure>
+  <div class="prose">
+    <p>The 65B model was not best at everything. On MMLU, a test of broad knowledge, it scored 63.4 against Chinchilla's 67.5 and PaLM's 69.3. The authors suggest the reason: their mix contains comparatively little book and academic text (177 GB), while those models trained on up to 2 TB of books.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Data and training length can substitute for size: a model a tenth the size of GPT-3 matched or beat it on most tests.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does it matter that LLaMA-13B runs on a single GPU?</dt>
+    <dd>Researchers and small companies with one graphics card could run a model at GPT-3's level themselves, instead of paying for access to a closed one.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §2.2</p>
+  <h2>A transformer with three borrowed upgrades</h2>
+  <div class="prose">
+    <p>LLaMA's design is the standard <a href="transformer.html">transformer</a> with three changes, each borrowed from an earlier model:</p>
+    <ul>
+      <li><strong>Normalise inputs, with RMSNorm.</strong> Inside the network, numbers are rescaled to a standard size before each layer to keep training stable (<a href="rmsnorm.html">RMSNorm</a>, a simpler and cheaper version of layer normalisation).</li>
+      <li><strong>A gated activation (SwiGLU).</strong> The layer that processes each word's information uses a "gate" that lets the network choose how much of each signal to pass.</li>
+      <li><strong>Rotary positions (<a href="rope.html">RoPE</a>).</strong> Word order is encoded by rotating internal vectors by an angle that depends on position, so the model naturally attends to how far apart two words are.</li>
+    </ul>
+    <p>None of these was new. The contribution was a clean combination, efficient training code, and the data recipe, which together became the standard template for open models.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>LLaMA's architecture is a well-chosen bundle of known improvements; most open models since have copied it.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §5–6 · Release</p>
+  <h2>Released to researchers, then to everyone</h2>
+  <div class="prose">
+    <p>Meta offered the weights to researchers under a non-commercial licence, on application. Within about a week they had leaked publicly online. Whatever the intent, the effect was that a strong model was suddenly in everyone's hands, and a wave of work followed: cheap instruction-tuned versions (Stanford's Alpaca, Vicuna), ways to run it on laptops, and memory-saving fine-tuning methods such as <a href="qlora.html">QLoRA</a>, which used LLaMA-65B.</p>
+    <p>The paper itself reports the usual risks honestly: the models reproduce biases from web text, their tendency to produce toxic text rises with size, and they often give untruthful answers. It also reports the carbon cost: training the 65B model took about a million GPU-hours and an estimated 173 tonnes of CO₂-equivalent.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>Llama 2 (July 2023) added chat-tuned versions and a licence allowing most commercial use; Llama 3 (2024) pushed "train small, long" much further, training an 8B model on about 15 trillion tokens. Other open-weight families (Mistral, Qwen, DeepSeek) adopted essentially the same architecture.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>LLaMA turned top-tier language models from a closed service into something researchers could download, study and modify.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>LLaMA is a collection of foundation language models from 7B to 65B parameters, trained on trillions of tokens using publicly available datasets exclusively, showing that state-of-the-art models can be trained without proprietary or inaccessible data. LLaMA-13B outperforms GPT-3 (175B) on most benchmarks, and LLaMA-65B is competitive with the best models, Chinchilla-70B and PaLM-540B. All models were released to the research community. Touvron et al., Meta AI, arXiv 2302.13971, February 2023.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §1 · §2.1 · Table 1</p>
+  <h2>Objective and data</h2>
+  <div class="prose">
+    <p>The stated objective is the best performance at various <em>inference</em> budgets rather than the best performance for a training budget. Hoffmann et al. recommend training a 10B model on 200B tokens; the authors find a 7B model continues to improve after 1T tokens. Hence 7B and 13B are trained on 1.0T tokens and 33B and 65B on 1.4T.</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Source</th><th>Sampling</th><th>Epochs</th><th>Disk</th><th>Processing</th></tr></thead>
+    <tbody>
+      <tr><td>CommonCrawl</td><td class="num">67.0%</td><td class="num">1.10</td><td class="num">3.3 TB</td><td>Five dumps 2017–2020, CCNet pipeline: line dedup, fastText language ID, n-gram LM quality filter, linear classifier for pages resembling Wikipedia references</td></tr>
+      <tr><td>C4</td><td class="num">15.0%</td><td class="num">1.06</td><td class="num">783 GB</td><td>Dedup, language ID, heuristic quality filters</td></tr>
+      <tr><td>GitHub</td><td class="num">4.5%</td><td class="num">0.64</td><td class="num">328 GB</td><td>Apache, BSD and MIT licences; heuristic filters; file-level exact dedup</td></tr>
+      <tr><td>Wikipedia</td><td class="num">4.5%</td><td class="num">2.45</td><td class="num">83 GB</td><td>June–August 2022 dumps, 20 languages</td></tr>
+      <tr><td>Books</td><td class="num">4.5%</td><td class="num">2.23</td><td class="num">85 GB</td><td>Gutenberg and Books3; dedup of books with &gt;90% content overlap</td></tr>
+      <tr><td>ArXiv</td><td class="num">2.5%</td><td class="num">1.06</td><td class="num">92 GB</td><td>LaTeX; preamble and bibliography removed</td></tr>
+      <tr><td>StackExchange</td><td class="num">2.0%</td><td class="num">1.03</td><td class="num">78 GB</td><td>28 largest sites; answers sorted by score</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>Tokenisation is BPE via SentencePiece, splitting all numbers into individual digits and falling back to bytes for unknown UTF-8 characters. Epochs are for the 1.4T-token run; apart from Wikipedia and Books, each token is seen about once.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §2.2 · Table 2</p>
+  <h2>Architecture and shapes</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Pre-normalisation</strong> (from GPT-3): normalise the input of each sub-layer, using <a href="rmsnorm.html">RMSNorm</a> (Zhang &amp; Sennrich, 2019), which drops LayerNorm's mean-centring and bias.</li>
+      <li><strong>SwiGLU</strong> (from PaLM; Shazeer, 2020) replaces ReLU, with hidden dimension 2/3 · 4<var>d</var> instead of 4<var>d</var>, which keeps the three-matrix feed-forward at the parameter count of the two-matrix one.</li>
+      <li><strong>Rotary embeddings</strong> (from GPTNeo; <a href="rope.html">Su et al., 2021</a>) at every layer instead of absolute positional embeddings.</li>
+    </ul>
+  </div>
+  <div class="eq">RMSNorm(<b>x</b>) = <b>x</b> / √( (1/<var>d</var>) Σ<sub><var>i</var></sub> <var>x<sub>i</sub></var><sup>2</sup> + ε ) ⊙ <b>g</b> &nbsp;&nbsp;&nbsp; FFN<sub>SwiGLU</sub>(<b>x</b>) = (Swish(<b>x</b><var>W</var>) ⊙ <b>x</b><var>V</var>) <var>W</var><sub>2</sub></div>
+  <figure class="live">
+    <div class="ctl" id="sh-ctl"></div>
+    <div class="svgbox"><svg id="sh" viewBox="0 0 600 220" role="img" aria-label="Per-layer parameter breakdown for each LLaMA size"></svg></div>
+    <p class="readout" id="sh-r"></p>
+    <figcaption>Shapes from Table 2. Per layer: attention has four <var>d</var> × <var>d</var> matrices (4<var>d</var><sup>2</sup>); SwiGLU has three <var>d</var> × <var>h</var> matrices with <var>h</var> = 8<var>d</var>/3, also 8<var>d</var><sup>2</sup>, exactly what a 4<var>d</var>-wide two-matrix ReLU block would have. Norm gains are negligible. The remainder up to the listed size is mostly the input and output token embeddings (the released tokenizer has 32,000 entries; the paper does not state the vocabulary size). The released code rounds <var>h</var> up to a multiple of 256 (11,008 for 7B).</figcaption>
+  </figure>
+  <div class="tablebox"><table>
+    <thead><tr><th>Params</th><th><var>d</var></th><th>Heads</th><th>Layers</th><th>LR</th><th>Batch</th><th>Tokens</th></tr></thead>
+    <tbody>
+      <tr><td class="num">6.7B</td><td class="num">4096</td><td class="num">32</td><td class="num">32</td><td class="num">3.0e−4</td><td class="num">4M</td><td class="num">1.0T</td></tr>
+      <tr><td class="num">13.0B</td><td class="num">5120</td><td class="num">40</td><td class="num">40</td><td class="num">3.0e−4</td><td class="num">4M</td><td class="num">1.0T</td></tr>
+      <tr><td class="num">32.5B</td><td class="num">6656</td><td class="num">52</td><td class="num">60</td><td class="num">1.5e−4</td><td class="num">4M</td><td class="num">1.4T</td></tr>
+      <tr><td class="num">65.2B</td><td class="num">8192</td><td class="num">64</td><td class="num">80</td><td class="num">1.5e−4</td><td class="num">4M</td><td class="num">1.4T</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>Below, compare the two normalisations on a five-number activation vector. RMSNorm only rescales; LayerNorm also subtracts the mean. When the mean is near zero, as in many trained activations, they nearly coincide, which is why the cheaper one suffices.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Shift all values <input type="range" id="nm-s" min="-2" max="2" step="0.1" value="0" data-fmt="1"><output id="nm-s-o">0.0</output></label><label>Spread <input type="range" id="nm-k" min="0.2" max="3" step="0.1" value="1" data-fmt="1"><output id="nm-k-o">1.0</output></label></div>
+    <div class="svgbox"><svg id="nm" viewBox="0 0 600 200" role="img" aria-label="An activation vector after RMSNorm and after LayerNorm"></svg></div>
+    <p class="readout" id="nm-r"></p>
+    <figcaption>Five activations (grey), then the same after RMSNorm (amber) and LayerNorm (blue), with unit gain and no bias. Both are invariant to the overall scale (try Spread). Only LayerNorm is invariant to a shift; RMSNorm keeps the shift as a direction in the output.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §2.3–2.4</p>
+  <h2>Optimisation and efficiency</h2>
+  <div class="prose">
+    <p>AdamW (<a href="adamw.html">Loshchilov &amp; Hutter</a>) with β<sub>1</sub> = 0.9, β<sub>2</sub> = 0.95; cosine learning-rate schedule ending at 10% of the maximum; weight decay 0.1; gradient clipping 1.0; 2,000 warm-up steps; batch 4M tokens for all sizes.</p>
+    <p>Efficiency: a causal multi-head attention implementation from the xformers library that neither stores attention weights nor computes masked key/query scores (inspired by Rabe &amp; Staats and the backward pass of <a href="flash.html">FlashAttention</a>); activation checkpointing with a hand-written transformer backward pass, saving expensive activations such as linear-layer outputs; model and sequence parallelism; overlapping computation with GPU communication. The 65B model processes about 380 tokens/s/GPU on 2,048 A100 80GB GPUs, so 1.4T tokens take about 21 days.</p>
+  </div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §3–6 · Tables 3–15</p>
+  <h2>Results, instruction tuning, bias and carbon</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Common sense (Table 3, zero-shot).</strong> LLaMA-65B beats Chinchilla-70B on all reported benchmarks except BoolQ, and PaLM-540B everywhere except BoolQ and WinoGrande. LLaMA-13B beats GPT-3 on most.</li>
+      <li><strong>Closed-book QA (Tables 4–5).</strong> LLaMA-65B: NaturalQuestions 23.8 / 31.0 / 35.0 / 39.9 exact match at 0 / 1 / 5 / 64 shots; TriviaQA 68.2 / 71.6 / 72.6 / 73.0.</li>
+      <li><strong>Maths (Table 7).</strong> GSM8k 50.9, or 69.7 with majority voting over <var>k</var> samples, which beats Minerva-62B with voting (68.5) but not Minerva-540B (68.5 without voting, 78.5 with), and without any maths-specific fine-tuning.</li>
+      <li><strong>Code (Table 8).</strong> HumanEval pass@1 23.7 vs PaLM-540B's 26.2.</li>
+      <li><strong>MMLU (Table 9, 5-shot).</strong> GPT-3 43.9, Gopher 60.0, LLaMA-13B 46.9, LLaMA-33B 57.8, LLaMA-65B 63.4, Chinchilla 67.5, PaLM 69.3; attributed to only 177 GB of books and academic text.</li>
+      <li><strong>Training dynamics (§3.7).</strong> Performance improves steadily during training and tracks training perplexity, except on SIQA and WinoGrande.</li>
+      <li><strong>Instruction tuning (§4, Table 10).</strong> A brief fine-tune on instruction data gives LLaMA-I 65B 68.9 on MMLU, above other moderate-size instruction-tuned models (Flan-PaLM-cont 62B 66.1) but below code-davinci-002's 77.4.</li>
+      <li><strong>Bias and truthfulness (§5).</strong> Toxicity on RealToxicityPrompts rises with size (65B: 0.128 basic, 0.141 respectful); CrowS-Pairs average 66.6 (GPT-3 67.2, OPT 69.5); TruthfulQA truthful 0.57 and truthful×informative 0.53 for 65B, versus 0.28 / 0.25 for GPT-3, still prone to hallucination.</li>
+      <li><strong>Carbon (§6, Table 15).</strong> 65B: 1,022,362 A100 GPU-hours, 449 MWh, 173 tCO₂eq (US-average carbon intensity); all models developed about 2,638 MWh and 1,015 tCO₂eq.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · Limitations and lineage</p>
+  <h2>Limitations and what followed</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Not compute-optimal by design.</strong> Over-training trades training efficiency for inference efficiency; the paper does not fit a scaling law for this trade-off.</li>
+      <li><strong>Data provenance.</strong> "Publicly available" included Books3, later at the centre of copyright litigation; the corpus itself was not released.</li>
+      <li><strong>Evaluation.</strong> Mostly zero/few-shot multiple-choice benchmarks, some with known contamination risk; little evaluation of long-context, multilingual or dialogue ability.</li>
+      <li><strong>Base model only.</strong> No safety tuning; only a short instruction-tuning experiment. The paper's own bias and toxicity measurements show the costs.</li>
+    </ul>
+  </div>
+  <div class="later"><span class="label">Lineage</span>The architecture (pre-RMSNorm, SwiGLU, RoPE) became the de facto open-model standard. Llama 2 (2023, 2T tokens, RLHF chat models, grouped-query attention for the largest), Llama 3 (2024, about 15T tokens, larger vocabulary), Mistral 7B, Qwen and DeepSeek follow it closely. Over-training small models became the norm; Sardana &amp; Frankle (2023) extended <a href="chinchilla.html">Chinchilla</a>-style scaling laws to include inference demand. The open weights enabled <a href="lora.html">LoRA</a>/<a href="qlora.html">QLoRA</a> fine-tuning on consumer hardware and much interpretability and safety research, including work such as <a href="refusal.html">refusal-direction ablation</a> that depends on weight access.</div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is SwiGLU's hidden size 8<var>d</var>/3 rather than 4<var>d</var>?</dt>
+    <dd>SwiGLU uses three weight matrices instead of two; shrinking the hidden size by 2/3 keeps parameters and compute equal to the standard 4<var>d</var> ReLU block (3 · <var>d</var> · 8<var>d</var>/3 = 8<var>d</var><sup>2</sup>).</dd>
+    <dt>What does RMSNorm give up relative to LayerNorm?</dt>
+    <dd>Re-centring (shift invariance) and the bias term; it keeps scale invariance, which the RMSNorm paper argued is what matters, at lower cost.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Token</dt><dd>A unit of text from the BPE tokenizer, typically a word piece.</dd>
+    <dt>Inference budget</dt><dd>The compute spent using a model after training.</dd>
+    <dt>Pre-normalisation</dt><dd>Normalising each sub-layer's input rather than its output.</dd>
+    <dt>RMSNorm</dt><dd>Normalisation by root-mean-square only, without mean subtraction.</dd>
+    <dt>SwiGLU</dt><dd>Gated feed-forward: Swish(<b>x</b><var>W</var>) ⊙ <b>x</b><var>V</var>, then a projection.</dd>
+    <dt>RoPE</dt><dd>Rotary positional embedding: rotate query/key pairs by position-dependent angles.</dd>
+    <dt>Over-training</dt><dd>Training on more tokens than the compute-optimal amount for the model size.</dd>
+    <dt>tCO₂eq</dt><dd>Tonnes of CO₂-equivalent emissions.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="rmsnorm.html">RMSNorm (2019)</a>, <a href="gpt3.html">GPT-3 (2020)</a>, <a href="rope.html">RoPE (2021)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers/">Papers worth reading</a> (<a href="https://lovespark.love/papers/#llama">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // lifetime compute
+  var M=[['GPT-3 175B',175e9,300e9],['LLaMA-65B',65.2e9,1.4e12],['LLaMA-13B',13e9,1e12]], svg=$('#lc'), U=1e11;
+  function lg(x){ return Math.log10(x); }
+  function draw(){ clear(svg); var tot=M.map(function(m){ return [6*m[1]*m[2], 2*m[1]*U]; }), mx=Math.max.apply(null,tot.map(function(t){ return t[0]+t[1]; }));
+    var e=Math.floor(Math.log10(mx)), unit=Math.pow(10,e), top=Math.ceil(mx/unit*1.05), X=function(v){ return 150+v/(top*unit)*400; };
+    for (var g=0; g<=top; g++){ if (top>8 && g%2) continue; S('line',{x1:X(g*unit),y1:20,x2:X(g*unit),y2:180,'class':'grid'},svg); S('text',{x:X(g*unit),y:196,'class':'t-s mid'},svg,g); }
+    S('text',{x:350,y:214,'class':'t-s mid'},svg,'total FLOPs, units of 10^'+e);
+    S('rect',{x:150,y:2,width:12,height:12,'class':'f-wire'},svg); S('text',{x:168,y:12,'class':'t-s'},svg,'training'); S('rect',{x:250,y:2,width:12,height:12,'class':'f-fire'},svg); S('text',{x:268,y:12,'class':'t-s'},svg,'use (generation)');
+    M.forEach(function(m,i){ var y=30+i*52, tr=tot[i][0], all=tr+tot[i][1];
+      S('text',{x:142,y:y+20,'class':'t end'},svg,m[0]); S('rect',{x:150,y:y,width:X(tr)-150,height:30,'class':'f-wire'},svg); S('rect',{x:X(tr),y:y,width:Math.max(0,X(all)-X(tr)),height:30,'class':'f-fire'},svg);
+      S('text',{x:Math.min(X(all)+6,560),y:y+20,'class':'t-s'},svg,fmt(all/unit,2)); });
+    var b=tot.map(function(t){ return t[0]+t[1]; });
+    $('#lc-r').innerHTML='After 10^'+fmt(Math.log10(U),1)+' generated tokens, lifetime compute: GPT-3 <b>'+fmt(b[0]/1e23,2)+'</b>, LLaMA-65B <b>'+fmt(b[1]/1e23,2)+'</b>, LLaMA-13B <b>'+fmt(b[2]/1e23,2)+'</b> × 10^23 FLOPs. '+(b[1]<b[0]?'Even LLaMA-65B, which cost more to train than GPT-3, is now cheaper overall.':'LLaMA-65B cost more to train than GPT-3; heavy use would eventually reverse that.')+' With heavy use the costs approach the ratio of model sizes.'; }
+  bindRange('lc-u',function(v){ U=Math.pow(10,v); draw(); });
+})();
+(function(){ // benchmarks
+  var Mn=['GPT-3 (175B)','Chinchilla (70B)','PaLM (540B)','LLaMA (13B)','LLaMA (65B)'];
+  var B=[['BoolQ',[60.5,83.7,88.0,78.1,85.3]],['PIQA',[81.0,81.8,82.3,80.1,82.8]],['HellaSwag',[78.9,80.8,83.4,79.2,84.2]],['WinoGrande',[70.2,74.9,81.1,73.0,77.0]],['ARC-e',[68.8,null,76.6,74.8,78.9]],['ARC-c',[51.4,null,53.0,52.7,56.0]],['OBQA',[57.6,null,53.4,56.4,60.2]],['MMLU',[43.9,67.5,69.3,46.9,63.4]]];
+  var svg=$('#bm'), ctl=$('#bm-ctl');
+  B.forEach(function(b,i){ var e=document.createElement('button'); e.className='btn'+(i===2?' on':''); e.textContent=b[0]; e.onclick=function(){ $$('.btn',ctl).forEach(function(x,j){ x.classList.toggle('on',j===i); }); draw(i); }; ctl.appendChild(e); });
+  function draw(k){ clear(svg); var v=B[k][1], X=function(a){ return 150+a/100*400; };
+    [0,25,50,75,100].forEach(function(g){ S('line',{x1:X(g),y1:8,x2:X(g),y2:182,'class':'grid'},svg); S('text',{x:X(g),y:198,'class':'t-s mid'},svg,g); });
+    Mn.forEach(function(m,i){ var y=12+i*34; S('text',{x:142,y:y+17,'class':'t end'},svg,m); if (v[i]==null){ S('text',{x:156,y:y+17,'class':'t-s'},svg,'not reported'); return; }
+      S('rect',{x:150,y:y+3,width:X(v[i])-150,height:22,'class':i>=3?'f-fire':'f-wire','fill-opacity':i>=3?1:0.6},svg); S('text',{x:X(v[i])+6,y:y+19,'class':'t-s'},svg,v[i]); });
+    var r=v[3]>v[0]?'LLaMA-13B beats GPT-3 ('+v[3]+' vs '+v[0]+')':'GPT-3 beats LLaMA-13B ('+v[0]+' vs '+v[3]+')';
+    $('#bm-r').innerHTML=B[k][0]+': '+r+'. LLaMA-65B: <b>'+v[4]+'</b>.'; }
+  draw(2);
+})();
+(function(){ // shapes
+  var M=[['7B',6.7e9,4096,32],['13B',13.0e9,5120,40],['33B',32.5e9,6656,60],['65B',65.2e9,8192,80]], svg=$('#sh'), ctl=$('#sh-ctl'), k=0;
+  M.forEach(function(m,i){ var b=document.createElement('button'); b.className='btn'+(i?'':' on'); b.textContent='LLaMA-'+m[0]; b.onclick=function(){ k=i; $$('.btn',ctl).forEach(function(x,j){ x.classList.toggle('on',j===i); }); draw(); }; ctl.appendChild(b); });
+  function draw(){ clear(svg); var m=M[k], d=m[2], L=m[3], att=4*d*d*L, ffn=8*d*d*L, rest=m[1]-att-ffn, tot=m[1], W=540;
+    var parts=[['attention 4d²·L',att,'f-wire'],['SwiGLU 8d²·L',ffn,'f-fire'],['embeddings etc.',rest,'f-muted']], x=30;
+    parts.forEach(function(p){ var w=p[1]/tot*W; S('rect',{x:x,y:40,width:w,height:46,'class':p[2],'fill-opacity':0.85},svg); if (w>70){ S('text',{x:x+w/2,y:60,'class':'t mid'},svg,p[0]); S('text',{x:x+w/2,y:78,'class':'t mid'},svg,fmt(p[1]/1e9,2)+'B'); } x+=w; });
+    S('text',{x:30,y:28,'class':'t-s'},svg,'LLaMA-'+m[0]+' parameters, listed '+fmt(tot/1e9,1)+'B');
+    var h=8*d/3;
+    S('text',{x:30,y:120,'class':'t'},svg,'d = '+d+', layers = '+L+', heads = '+(d/128)+' (head size 128)');
+    S('text',{x:30,y:142,'class':'t'},svg,'SwiGLU hidden h = 8d/3 = '+fmt(h,1)+'  →  3·d·h = '+fmt(3*d*h/1e6,1)+'M per layer');
+    S('text',{x:30,y:164,'class':'t'},svg,'a ReLU block 4d wide: 2·d·4d = '+fmt(8*d*d/1e6,1)+'M per layer (the same)');
+    S('text',{x:30,y:186,'class':'t-s'},svg,'remainder '+fmt(rest/1e9,2)+'B ≈ 2 × vocabulary × d; with 32,000 tokens: '+fmt(2*32000*d/1e9,2)+'B');
+    $('#sh-r').innerHTML='12·d²·L = <b>'+fmt((att+ffn)/1e9,2)+'B</b> of the listed '+fmt(tot/1e9,1)+'B; transformer blocks are <b>'+fmt(100*(att+ffn)/tot,0)+'%</b> of the model.'; }
+  draw();
+})();
+(function(){ // RMSNorm vs LayerNorm
+  var base=[1.2,-0.6,0.3,-1.4,0.5], sh=0, sp=1, svg=$('#nm');
+  function draw(){ clear(svg); var x=base.map(function(v){ return v*sp+sh; }), n=x.length;
+    var rms=Math.sqrt(x.reduce(function(a,v){return a+v*v;},0)/n), mu=x.reduce(function(a,v){return a+v;},0)/n, sd=Math.sqrt(x.reduce(function(a,v){return a+(v-mu)*(v-mu);},0)/n);
+    var R=x.map(function(v){ return v/rms; }), Ln=x.map(function(v){ return (v-mu)/(sd||1e-6); });
+    var groups=[['input',x,'f-muted'],['RMSNorm',R,'f-fire'],['LayerNorm',Ln,'f-wire']], Y=function(v){ return 100-Math.max(-3,Math.min(3,v))*30; };
+    S('line',{x1:20,y1:100,x2:580,y2:100,'class':'axis'},svg);
+    groups.forEach(function(g,gi){ var x0=40+gi*185; S('text',{x:x0+75,y:194,'class':'t-s mid'},svg,g[0]);
+      g[1].forEach(function(v,i){ var cx=x0+i*30, y=Y(v); S('rect',{x:cx,y:Math.min(y,100),width:22,height:Math.max(1,Math.abs(y-100)),'class':g[2]},svg); }); });
+    $('#nm-r').innerHTML='mean '+fmt(mu,2)+', RMS '+fmt(rms,2)+'. Max difference between RMSNorm and LayerNorm outputs: <b>'+fmt(Math.max.apply(null,R.map(function(r,i){ return Math.abs(r-Ln[i]); })),2)+'</b>.'; }
+  bindRange('nm-s',function(v){ sh=v; draw(); }); bindRange('nm-k',function(v){ sp=v; draw(); });
+})();
+</script>
+
+</body>
+</html>

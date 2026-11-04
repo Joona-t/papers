@@ -1,0 +1,290 @@
+<!--LEDE-->
+How do you get one model to fold laundry, bus tables and build boxes on several different robots? π0 starts from a vision-language model that already understands images and words, bolts on a small "action expert" that turns noise into smooth arm movements by flow matching, and trains the whole thing on over 10,000 hours of robot data from seven robot types. The result handles long, dexterous tasks that earlier robot models could not.
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Earlier "robot brains" built from language models wrote movements as a handful of numbered tokens, a few times per second: good for pick-and-place, too coarse and slow for folding a shirt.</p>
+  <p>π0 keeps a pretrained vision-language model to understand the camera images and the instruction, but adds a separate, smaller network that produces a whole second's worth of smooth movement (50 small steps) at once.</p>
+  <p>That network is trained with <strong>flow matching</strong>: it learns to turn random noise, step by step, into a realistic movement, which lets it represent "there are two good ways to do this" without averaging them into a bad one.</p>
+  <p>Pretrained on a large mixture of data from seven robot configurations, then fine-tuned on high-quality demonstrations, it folds laundry from a basket, buses tables and assembles boxes, outperforming earlier generalist robot models.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §I, §IV · Fig. 3</p>
+  <h2>A language-model brain with a motor cortex attached</h2>
+  <div class="prose">
+    <p>π0 has two parts that share one network. The first is <strong>PaliGemma</strong>, a 3-billion-parameter vision-language model (VLM) from Google that was trained on web images and text. It reads the robot's camera images (up to three cameras) and the instruction, such as "fold the shirt".</p>
+    <p>The second part is an <strong>action expert</strong> of about 300 million parameters, trained from scratch. It reads the robot's current joint positions and everything the VLM has worked out, and outputs the next 50 movement commands. This bundle of upcoming commands is called an <strong>action chunk</strong>. At 50 commands per second, one chunk covers a second of motion.</p>
+    <p>The two parts are separate sets of weights, but they talk through attention inside one transformer, so the action expert can "look at" what the VLM noticed in the image.</p>
+  </div>
+  <figure>
+    <div class="svgbox"><svg viewBox="0 0 600 210" role="img" aria-label="Diagram: images and text into the VLM, state and noisy actions into the action expert, which outputs a 50-step action chunk">
+      <rect x="10" y="20" width="120" height="36" class="box-wire"/><text x="70" y="43" class="t mid">camera images</text>
+      <rect x="10" y="66" width="120" height="36" class="box-wire"/><text x="70" y="89" class="t mid">"fold the shirt"</text>
+      <rect x="10" y="120" width="120" height="36" class="box-ok"/><text x="70" y="143" class="t mid">joint angles</text>
+      <rect x="10" y="166" width="120" height="36" class="box-fire"/><text x="70" y="189" class="t mid">noisy actions</text>
+      <rect x="190" y="20" width="200" height="82" class="box-wire"/><text x="290" y="56" class="t-h mid">VLM (PaliGemma)</text><text x="290" y="76" class="t-s mid">≈3B parameters, pretrained</text>
+      <rect x="190" y="120" width="200" height="82" class="box-fire"/><text x="290" y="156" class="t-h mid">Action expert</text><text x="290" y="176" class="t-s mid">≈300M parameters, new</text>
+      <line x1="130" y1="38" x2="186" y2="50" class="w" marker-end="url(#aw)"/><line x1="130" y1="84" x2="186" y2="72" class="w" marker-end="url(#aw)"/>
+      <line x1="130" y1="138" x2="186" y2="150" class="w" marker-end="url(#aw)"/><line x1="130" y1="184" x2="186" y2="172" class="w" marker-end="url(#aw)"/>
+      <line x1="290" y1="102" x2="290" y2="118" class="w-fire" marker-end="url(#af)"/><text x="298" y="114" class="t-s">attention</text>
+      <line x1="390" y1="161" x2="440" y2="161" class="w-fire" marker-end="url(#af)"/>
+      <rect x="444" y="134" width="146" height="54" class="box"/><text x="517" y="156" class="t mid">50-step chunk</text><text x="517" y="174" class="t-s mid">≈1 s of motion</text>
+      <path d="M517 134 C517 90 460 70 440 70" class="w-dash" marker-end="url(#ai)"/><text x="470" y="62" class="t-s">repeat 10×</text>
+    </svg></div>
+    <figcaption>Simplified from the paper's Fig. 3. The action expert is run ten times per chunk, each time refining the noisy actions a little (next idea).</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>π0 = a pretrained vision-language model for understanding plus a small new network that writes a second of smooth movement at a time.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §IV · Eq. 1–2</p>
+  <h2>From noise to movement: flow matching</h2>
+  <div class="prose">
+    <p>Suppose a cup is in the way and the arm can pass it on the left or on the right. Both are fine. A model trained to predict "the best guess" for each moment learns the <em>average</em> of the demonstrations, which is straight through the cup.</p>
+    <p><strong>Flow matching</strong> avoids this. During training, the model is shown a real movement blended with random noise and learns which direction points from the noise towards the real movement. To act, it starts from pure noise and takes a few small steps in the direction it has learned, ten in π0's case. Different starting noise ends up at different good answers: some runs go left, some go right, and almost none go through the middle.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Integration steps <input type="range" id="fm-n" min="1" max="20" step="1" value="10"><output id="fm-n-o">10</output></label><button class="btn" id="fm-new">New noise</button></div>
+    <div class="svgbox"><svg id="fm" viewBox="0 0 600 270" role="img" aria-label="Particles flowing from noise to two action modes"></svg></div>
+    <p class="readout" id="fm-r"></p>
+    <figcaption>A one-number action (sideways position of the hand). Demonstrations go left (top band) or right (bottom band) of an obstacle (shaded). Each line is one sample: it starts as random noise on the left (time 0) and follows the flow to an action on the right (time 1). The flow used here is the exact ideal one for this two-band data, computed in closed form, standing in for what π0's network learns. With one step every sample lands on the average, in the obstacle; with ten it splits cleanly.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>A sculptor starts with a rough block and removes a little at a time. Flow matching starts with static on a TV screen and nudges it, a few times, into a picture. Which picture you get depends on the static you started with.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Flow matching turns noise into an action in a few small steps, so it can produce any of several good movements instead of their bad average.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does a single step send every sample to the middle?</dt>
+    <dd>At time 0 the input is pure noise and carries no information about which side to choose, so the best single prediction of the destination is the average of all demonstrations. Later steps can see which way the sample has started to lean.</dd>
+    <dt>Why did RT-2-style models with token outputs not hit this averaging problem as badly?</dt>
+    <dd>Tokens give a probability over 256 bins per dimension, which can also have two peaks. Their weakness is coarseness and speed, not averaging. Flow matching gives continuous values and a whole chunk at once.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §I, §IV, App. D</p>
+  <h2>A second of motion at a time</h2>
+  <div class="prose">
+    <p>Laundry folding needs fast, fine motion. π0 controls robots at up to 50 commands per second. Running a 3-billion-parameter model fifty times a second is not practical, so instead π0 predicts a chunk of 50 future commands in one go (about 73 milliseconds on a single gaming graphics card) and the robot plays out part of the chunk before asking for the next.</p>
+    <p>The trade-off is responsiveness. While the robot is playing out a chunk, it is not looking. Asking more often reacts faster but costs more computing.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Commands played before re-planning <input type="range" id="ch-k" min="5" max="50" step="5" value="25"><output id="ch-k-o">25</output></label></div>
+    <div class="svgbox wide"><svg id="ch" viewBox="0 0 600 220" role="img" aria-label="Robot hand tracking a target that moves partway through, with chunked re-planning"></svg></div>
+    <p class="readout" id="ch-r"></p>
+    <figcaption>Illustrative. Two seconds at 50 commands per second. The target (dashed) jumps at 0.9 s, say because someone nudged the shirt. Each new chunk (marked by a tick) aims at wherever the target is when it is computed, and the hand (amber) follows the chunk. The paper does not tie π0 to one re-planning interval; this shows the general trade-off.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Predicting a chunk of 50 commands makes 50-per-second control affordable, at the price of reacting only when a new chunk is computed.</p>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §V · Fig. 4</p>
+  <h2>Learn broadly, then polish</h2>
+  <div class="prose">
+    <p>The training recipe copies how language models are made. <strong>Pre-training</strong> uses a huge, varied mixture: over 10,000 hours of the company's own robot data across 68 tasks and seven robot configurations (single arms, pairs of arms, arms on mobile bases), plus about 9% public data including <a href="oxe.html">Open X-Embodiment</a>. This teaches broad abilities and how to recover from mistakes, because messy data contains many.</p>
+    <p><strong>Post-training</strong> then fine-tunes on a smaller set of careful, high-quality demonstrations of one task, from a few hours to over 100 hours, to make the robot fluent and efficient at it. The authors found both stages matter: the pretrained-only model is robust but clumsy; a model trained only on the polished data is fluent but brittle.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A chef's training: years of cooking everything (broad, messy experience), then weeks perfecting one restaurant's menu. Either alone gives a worse cook.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Diverse, imperfect data teaches robustness; a little perfect data teaches fluency. π0 uses both, in that order.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §VI–VII</p>
+  <h2>What it can do, and what is still open</h2>
+  <div class="prose">
+    <p>Straight after pre-training, π0 beat earlier open generalist robot models (OpenVLA and Octo) on every test task, including shirt folding and clearing tables. After post-training it did long, multi-stage jobs: taking laundry out of a dryer, folding it, bussing a table, assembling a cardboard box, and packing eggs into a carton. On every one of these the full model scored above half of the maximum possible points, which earlier methods could not approach.</p>
+    <p>For long jobs it can be paired with a higher-level language model that breaks a request into steps ("pick up the napkin", "put the cup in the bin"), an echo of <a href="saycan.html">SayCan</a>.</p>
+    <p>The authors are frank about the limits: nobody yet knows how to choose and weight the pre-training data, not every task works reliably, and it has not been tried on very different domains such as driving or walking robots.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>The same group released π0-FAST (2025), which goes back to tokens but compresses each action chunk with a frequency transform so tokens stay efficient, and π0.5 (2025), which trains on more varied data so that the robot can clean kitchens and bedrooms in homes it has never seen. The weights of π0 were released openly in early 2025.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>π0 showed general robot models can do long, dexterous household tasks; how to build their training data remains open.</p>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Robot learning promises flexible, general, dexterous systems but faces data, generalisation and robustness obstacles. π0 is a flow-matching architecture built on a pretrained VLM to inherit Internet-scale semantic knowledge, trained on a large, diverse dataset from multiple dexterous platforms (single-arm, dual-arm and mobile manipulators). It is evaluated on zero-shot performance after pre-training, following language instructions from people and from a high-level VLM policy, and acquiring new skills by fine-tuning, across tasks such as laundry folding, table cleaning and box assembly. Black et al. (Physical Intelligence), arXiv 2410.24164, October 2024; later published at RSS 2025.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §IV · App. B · Fig. 3</p>
+  <h2>Architecture: VLM backbone, action expert, blockwise causal mask</h2>
+  <div class="prose">
+    <p>The policy models <var>p</var>(<b>A</b><sub><var>t</var></sub> | <b>o</b><sub><var>t</var></sub>) where <b>A</b><sub><var>t</var></sub> = [<b>a</b><sub><var>t</var></sub>, …, <b>a</b><sub><var>t</var>+<var>H</var>−1</sub>] is an action chunk with <var>H</var> = 50 and <b>o</b><sub><var>t</var></sub> = [<b>I</b><sup>1</sup><sub><var>t</var></sub>, …, <b>I</b><sup><var>n</var></sup><sub><var>t</var></sub>, ℓ<sub><var>t</var></sub>, <b>q</b><sub><var>t</var></sub>] holds 2 or 3 RGB images, a language command and the proprioceptive joint-angle vector <b>q</b><sub><var>t</var></sub>. Images pass through PaliGemma's vision encoder into the language token space; <b>q</b><sub><var>t</var></sub> and the noisy actions are linearly projected in. Action tokens also receive a sinusoidal embedding of the flow time τ, fused via an MLP.</p>
+    <p>Backbone: PaliGemma (≈3B, Gemma-2B language model). The action expert is a second set of transformer weights (width 1024, MLP dimension 4096, ≈300M parameters) that processes the state and action tokens; the two weight sets interact only through self-attention, a mixture-of-experts-style design in the manner of Transfusion. Total ≈3.3B parameters. Attention follows a blockwise causal mask with three blocks: [images, language], [<b>q</b><sub><var>t</var></sub>], [noisy actions]. Click a row below to see what it may attend to.</p>
+  </div>
+  <figure class="live">
+    <div class="svgbox"><svg id="am" viewBox="0 0 600 300" role="img" aria-label="Blockwise causal attention mask for pi-zero"></svg></div>
+    <p class="readout" id="am-r"></p>
+    <figcaption>Rows are queries, columns keys; filled cells mean "may attend". Token counts are shrunk for display (real image blocks are hundreds of tokens and the action block has 50). The prefix block never attends to robot-specific tokens, keeping the VLM's inputs close to its pretraining distribution, and the state block is separate so its keys and values can be cached across the 10 flow steps.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is the prefix (images + language) forbidden from attending to the state and actions?</dt>
+    <dd>So the pretrained VLM sees inputs like those it was trained on, minimising distribution shift, and so the prefix's keys and values do not depend on the noisy actions and can be computed once and cached across all integration steps.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §IV · App. B, D</p>
+  <h2>Conditional flow matching for action chunks</h2>
+  <div class="prose"><p>With a linear-Gaussian (optimal-transport) probability path, noisy actions and the training loss are</p></div>
+  <div class="eq"><b>A</b><sub><var>t</var></sub><sup>τ</sup> = τ <b>A</b><sub><var>t</var></sub> + (1 − τ) ε, &nbsp; ε ∼ 𝒩(0, I), &nbsp; τ ∈ [0, 1]</div>
+  <div class="eq"><var>L</var><sup>τ</sup>(θ) = 𝔼<sub><var>p</var>(<b>A</b><sub><var>t</var></sub>|<b>o</b><sub><var>t</var></sub>), <var>q</var>(<b>A</b><sub><var>t</var></sub><sup>τ</sup>|<b>A</b><sub><var>t</var></sub>)</sub> ‖ <b>v</b><sub>θ</sub>(<b>A</b><sub><var>t</var></sub><sup>τ</sup>, <b>o</b><sub><var>t</var></sub>) − <b>u</b>(<b>A</b><sub><var>t</var></sub><sup>τ</sup> | <b>A</b><sub><var>t</var></sub>) ‖<sup>2</sup> <span class="n">(1)</span></div>
+  <div class="eq"><b>A</b><sub><var>t</var></sub><sup>τ+δ</sup> = <b>A</b><sub><var>t</var></sub><sup>τ</sup> + δ <b>v</b><sub>θ</sub>(<b>A</b><sub><var>t</var></sub><sup>τ</sup>, <b>o</b><sub><var>t</var></sub>), &nbsp; <b>A</b><sup>0</sup> ∼ 𝒩(0, I), &nbsp; δ = 0.1 <span class="n">(2)</span></div>
+  <div class="prose">
+    <p>The conditional target is the time derivative of the path, <b>u</b>(<b>A</b><sup>τ</sup> | <b>A</b>) = <b>A</b> − ε. (The first arXiv version writes ε − <b>A</b>, which is inconsistent with integrating from noise at τ = 0 to data at τ = 1; the later revision gives <b>A</b> − ε.) The equation numbers above are this guide's; the paper's HTML version leaves its display equations unnumbered. Inference uses forward Euler with 10 steps, caching the prefix's attention keys and values so only the action tokens are recomputed per step.</p>
+    <p><strong>Timestep distribution.</strong> Rather than uniform τ or the logit-normal of image flow models, π0 samples τ from a shifted beta distribution emphasising low τ (noisier inputs): <var>p</var>(τ) = Beta((<var>s</var> − τ)/<var>s</var>; 1.5, 1) with cutoff <var>s</var> = 0.999. The rationale given is that, unlike image generation, predicting the mean action at high noise is hard but at low noise the observation strongly constrains the action, so training effort is shifted towards the harder, noisier regime; τ above <var>s</var> is never sampled because steps that small are not needed with δ = 0.1.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Beta α <input type="range" id="tb-a" min="0.5" max="3" step="0.1" value="1.5" data-fmt="1"><output id="tb-a-o">1.5</output></label><label>Cutoff s <input type="range" id="tb-s" min="0.8" max="1" step="0.001" value="0.999" data-fmt="3"><output id="tb-s-o">0.999</output></label></div>
+    <div class="svgbox"><svg id="tb" viewBox="0 0 600 220" role="img" aria-label="Training timestep density"></svg></div>
+    <p class="readout" id="tb-r"></p>
+    <figcaption>Density of τ under Beta((<var>s</var> − τ)/<var>s</var>; α, 1). π0's setting is α = 1.5, <var>s</var> = 0.999 (amber); dashed is uniform. Under π0's convention τ = 0 is pure noise, so mass near the left means more training on noisy inputs. Raise α to push mass further towards noise.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Verify that <b>A</b> − ε is the conditional velocity of the path.</dt>
+    <dd>d/dτ [τ<b>A</b> + (1 − τ)ε] = <b>A</b> − ε, independent of τ. The marginal field that <b>v</b><sub>θ</sub> learns is 𝔼[<b>A</b> − ε | <b>A</b><sup>τ</sup>, <b>o</b>], which is what the Plain English toy computes in closed form.</dd>
+    <dt>What fraction of training draws have τ &lt; 0.5 under π0's distribution?</dt>
+    <dd>With <var>u</var> = (<var>s</var> − τ)/<var>s</var> ∼ Beta(1.5, 1), the CDF is <var>u</var><sup>1.5</sup>. τ &lt; 0.5 means <var>u</var> &gt; (0.999 − 0.5)/0.999 ≈ 0.4995, with probability 1 − 0.4995<sup>1.5</sup> ≈ 0.65.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §V · Fig. 4 · Table I</p>
+  <h2>Data, recipe and robot system</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Own data</strong>: 903M timesteps (106M single-arm, 797M dual-arm), 68 tasks defined broadly (for example "bussing" covers many objects and placements), more than 10,000 hours overall.</li>
+      <li><strong>Open data</strong>: Open X-Embodiment, Bridge v2 and DROID, 9.1% of the mixture.</li>
+      <li><strong>Weighting</strong>: each task–robot combination with <var>n</var> samples is weighted by <var>n</var><sup>0.43</sup>, down-weighting over-represented combinations.</li>
+      <li><strong>Heterogeneous robots</strong>: 7 configurations (single-arm, bimanual and mobile platforms) with configuration and action spaces padded with zeros to the largest, 18 dimensions; robots with fewer cameras have missing image slots masked.</li>
+      <li><strong>Post-training</strong>: 5 to 100+ hours of curated data per downstream task.</li>
+      <li><strong>Inference</strong> (Table I, RTX 4090, three cameras): 73 ms on-board in total, of which the 10 flow steps take 27 ms; 86 ms off-board including 13 ms network latency.</li>
+    </ul>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Exponent <input type="range" id="wt-e" min="0" max="1" step="0.01" value="0.43" data-fmt="2"><output id="wt-e-o">0.43</output></label></div>
+    <div class="svgbox"><svg id="wt" viewBox="0 0 600 200" role="img" aria-label="Share of training mixture per task-robot pair as a function of weighting exponent"></svg></div>
+    <p class="readout" id="wt-r"></p>
+    <figcaption>Illustrative sample counts for six hypothetical task–robot pairs spanning two orders of magnitude. Sampling in proportion to <var>n</var><sup>e</sup>: e = 1 is natural proportions, e = 0 is uniform over pairs. π0's 0.43 sits between, keeping rare tasks from vanishing while still favouring abundant ones.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §VI · Figs. 7, 9, 11, 13</p>
+  <h2>Experiments</h2>
+  <div class="prose">
+    <p>Results are reported as normalised task-progress scores in figures, so the main text gives few exact numbers; the qualitative findings are clear.</p>
+    <ul>
+      <li><strong>Out of the box (§VI-A, Fig. 7)</strong>: shirt folding, bussing easy and hard, grocery bagging, toast out of toaster. π0 is best on all, near-perfect on shirt folding and easy bussing. Even a "parity" π0 trained for only 160k steps beats all baselines. π0-small (no VLM initialisation) beats OpenVLA and Octo but trails π0. OpenVLA suffers from lacking action chunking and its discrete tokenisation at these control rates.</li>
+      <li><strong>Language following (§VI-B, Fig. 9)</strong>: on bussing, table setting and grocery bagging, π0 follows commands markedly better than π0-small, showing the value of VLM initialisation; intermediate commands from a human expert or from a high-level VLM policy improve performance.</li>
+      <li><strong>New dexterous tasks (§VI-C, Fig. 11)</strong>: stacking bowls, towel folding, Tupperware in microwave, paper-towel replacement, items into a Franka drawer, versus OpenVLA, Octo, ACT and Diffusion Policy. π0 generally wins; pre-training helps most on tasks close to the pre-training data, with improvements up to about 2× over training from scratch.</li>
+      <li><strong>Complex multi-stage tasks (§VI-D, Fig. 13)</strong>: laundry folding (static and mobile), dryer unloading, table bussing, box building, to-go box and packing eggs. The full pre-train + post-train model scores above 50% of the maximum on every task; both scratch-trained and pre-trained-only models do markedly worse.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §VII · Lineage</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose"><ul>
+    <li>No principled method for composing or weighting the pre-training mixture.</li>
+    <li>Not all tasks work reliably; the amount of post-training data needed for near-perfect performance is unpredictable.</li>
+    <li>When and why positive transfer arises across very diverse data is not understood.</li>
+    <li>Untested beyond manipulation (driving, navigation, legged locomotion).</li>
+    <li>Zero-shot pre-trained behaviour lacks the fluent strategies seen after post-training.</li>
+  </ul></div>
+  <div class="later"><span class="label">Lineage and later work</span>π0 combines the VLM-as-policy idea of <a href="rt2.html">RT-2</a>, the cross-embodiment data of <a href="oxe.html">Open X-Embodiment</a>, action chunking from ACT (Zhao et al., 2023), and generative action heads from <a href="diffpolicy.html">Diffusion Policy</a> recast as <a href="flowmatch.html">flow matching</a> (Lipman et al., 2023). The high-level/low-level split recalls <a href="saycan.html">SayCan</a>. Follow-ups from the same team: FAST (Pertsch et al., 2025), a DCT-based action tokeniser giving π0-FAST, an autoregressive variant that trains faster; π0.5 (2025), co-trained on heterogeneous data including web data and high-level subtask prediction for open-world generalisation in unseen homes; and work on "knowledge insulation" to stop the action expert's gradients degrading the VLM. Model weights and code were released as openpi in 2025.</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>VLA</dt><dd>Vision-language-action model.</dd>
+    <dt>Action chunk</dt><dd>A block of <var>H</var> future actions predicted jointly (<var>H</var> = 50).</dd>
+    <dt>Action expert</dt><dd>π0's separate transformer weights for state and action tokens.</dd>
+    <dt>Flow matching</dt><dd>Training a velocity field that transports noise to data along prescribed paths.</dd>
+    <dt>Forward Euler</dt><dd>Integrating d<b>x</b>/dτ = <b>v</b> with fixed steps <b>x</b> ← <b>x</b> + δ<b>v</b>.</dd>
+    <dt>Blockwise causal mask</dt><dd>Attention mask where tokens attend within their block and to earlier blocks only.</dd>
+    <dt>Proprioception</dt><dd>The robot's sensing of its own joint positions.</dd>
+    <dt>Post-training</dt><dd>Fine-tuning a pretrained model on curated task-specific data.</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+(function(){ // flow matching toy, exact marginal velocity for a 2-component Gaussian mixture
+  var svg=$('#fm'), steps=10, seed=3, MU=[0.7,-0.7], SD=0.09, OB=0.35;
+  function vel(x,t){ var num=0, den=0;
+    for (var k=0;k<2;k++){ var m=t*MU[k], v=t*t*SD*SD+(1-t)*(1-t), lik=Math.exp(-Math.pow(x-m,2)/(2*v))/Math.sqrt(v);
+      var Ea=MU[k]+t*SD*SD*(x-m)/v, Ee=(1-t)*(x-m)/v; num+=lik*(Ea-Ee); den+=lik; }
+    return num/den; }
+  function draw(){ clear(svg); var r=rng(seed), X=function(t){return 50+t*420;}, Y=function(a){return 130-a*80;};
+    S('rect',{x:X(1)-6,y:Y(OB),width:12,height:Y(-OB)-Y(OB),'class':'f-inh','fill-opacity':0.35},svg);
+    S('text',{x:X(1)+12,y:Y(0)+4,'class':'t-inh'},svg,'obstacle');
+    S('rect',{x:X(1)+4,y:Y(MU[0]+0.2),width:8,height:Y(MU[0]-0.2)-Y(MU[0]+0.2),'class':'f-ok','fill-opacity':0.4},svg);
+    S('rect',{x:X(1)+4,y:Y(MU[1]+0.2),width:8,height:Y(MU[1]-0.2)-Y(MU[1]+0.2),'class':'f-ok','fill-opacity':0.4},svg);
+    S('text',{x:X(1)+16,y:Y(MU[0])+4,'class':'t-ok'},svg,'pass left'); S('text',{x:X(1)+16,y:Y(MU[1])+4,'class':'t-ok'},svg,'pass right');
+    S('line',{x1:50,y1:245,x2:470,y2:245,'class':'axis'},svg); S('text',{x:50,y:262,'class':'t-s mid'},svg,'τ = 0 (noise)'); S('text',{x:470,y:262,'class':'t-s mid'},svg,'τ = 1 (action)');
+    var bad=0, N=60, d=1/steps;
+    for (var i=0;i<N;i++){ var x=gauss(r)*0.95, t=0, p='M'+X(0)+','+Y(Math.max(-1.4,Math.min(1.4,x)));
+      for (var s=0;s<steps;s++){ x+=d*vel(x,t); t+=d; p+='L'+X(t)+','+Y(Math.max(-1.4,Math.min(1.4,x))); }
+      if (Math.abs(x)<OB) bad++; S('path',{d:p,'class':'w-fire','stroke-width':1,'stroke-opacity':0.45},svg); }
+    $('#fm-r').innerHTML='<b>'+steps+'</b> step'+(steps>1?'s':'')+': <b>'+bad+'</b> of '+N+' samples end inside the obstacle.'; }
+  bindRange('fm-n',function(v){steps=v;draw();}); $('#fm-new').onclick=function(){ seed++; draw(); };
+})();
+(function(){ // chunking
+  var svg=$('#ch'), K=25;
+  function target(i){ return i<45?0.6:-0.5; }
+  function draw(){ clear(svg); var T=100, X=function(i){return 40+i*5.4;}, Y=function(a){return 100-a*70;};
+    S('line',{x1:40,y1:190,x2:580,y2:190,'class':'axis'},svg); S('text',{x:40,y:208,'class':'t-s'},svg,'0 s'); S('text',{x:310,y:208,'class':'t-s mid'},svg,'1 s'); S('text',{x:580,y:208,'class':'t-s end'},svg,'2 s');
+    var d=''; for (var i=0;i<T;i++) d+=(i?'L':'M')+X(i)+','+Y(target(i)); S('path',{d:d,'class':'w-dash'},svg);
+    var pos=0, p='M'+X(0)+','+Y(0), plan=[], lag=null;
+    for (var i=0;i<T;i++){ if (i%K===0){ var g=target(i), st=pos; plan=[]; for (var j=0;j<K;j++) plan.push(st+(g-st)*(1-Math.exp(-(j+1)/6))); S('line',{x1:X(i),y1:182,x2:X(i),y2:198,'class':'w-ink'},svg); }
+      pos=plan[i%K]; p+='L'+X(i+1)+','+Y(pos); if (lag===null && i>=45 && pos<0.05) lag=i-45; }
+    S('path',{d:p,'class':'w-fire'},svg); S('line',{x1:X(45),y1:20,x2:X(45),y2:180,'class':'w-faint'},svg); S('text',{x:X(45)+4,y:30,'class':'t-s'},svg,'target moves');
+    var calls=Math.ceil(T/K);
+    $('#ch-r').innerHTML='Model called <b>'+calls+'</b> times in 2 s; hand starts reacting about <b>'+fmt((Math.ceil(45/K)*K-45)/50,2)+' s</b> after the target moved.'; }
+  bindRange('ch-k',function(v){K=v;draw();});
+})();
+(function(){ // attention mask
+  var svg=$('#am'), toks=[['img',0],['img',0],['img',0],['txt',0],['txt',0],['q',1],['a',2],['a',2],['a',2],['a',2]], sel=7;
+  var lab={img:'image',txt:'text',q:'state',a:'action'};
+  function can(i,j){ return toks[j][1]<=toks[i][1]; }
+  function draw(){ clear(svg); var n=toks.length, c=22, x0=150, y0=40;
+    toks.forEach(function(t,j){ S('text',{x:x0+j*c+c/2,y:y0-8,'class':'t-s mid'},svg,t[0]==='img'?'I':(t[0]==='txt'?'ℓ':(t[0]==='q'?'q':'a'))); });
+    toks.forEach(function(t,i){ var y=y0+i*c; var tx=S('text',{x:x0-8,y:y+15,'class':(i===sel?'t-fire':'t')+' end clickable'},svg,lab[t[0]]+' '+(i+1));
+      for (var j=0;j<n;j++){ var on=can(i,j); var r=S('rect',{x:x0+j*c+1,y:y+1,width:c-2,height:c-2,'class':on?(i===sel?'f-fire':'f-wire'):'f-rule','fill-opacity':on?(i===sel?1:0.55):0.3},svg); r.classList.add('clickable'); r.addEventListener('click',(function(k){return function(){sel=k;draw();};})(i)); }
+      tx.addEventListener('click',(function(k){return function(){sel=k;draw();};})(i)); });
+    [5,6].forEach(function(b){ S('line',{x1:x0+b*c,y1:y0-2,x2:x0+b*c,y2:y0+n*c+2,'class':'w-ink'},svg); S('line',{x1:x0-2,y1:y0+b*c,x2:x0+n*c+2,y2:y0+b*c,'class':'w-ink'},svg); });
+    S('text',{x:x0+n*c+20,y:y0+50,'class':'t-wire'},svg,'block 1: VLM prefix'); S('text',{x:x0+n*c+20,y:y0+5*c+15,'class':'t-ok'},svg,'block 2: state'); S('text',{x:x0+n*c+20,y:y0+7.5*c,'class':'t-fire'},svg,'block 3: actions');
+    S('text',{x:x0+n*c+20,y:y0+9*c+4,'class':'t-s'},svg,'(action expert)');
+    var t=toks[sel], seen=toks.filter(function(_,j){return can(sel,j);}).length;
+    $('#am-r').innerHTML='Row <b>'+lab[t[0]]+' '+(sel+1)+'</b> attends to <b>'+seen+'</b> of '+n+' tokens'+(t[1]===0?': prefix only, as in VLM pretraining.':(t[1]===1?': prefix and itself, not the noisy actions.':': everything, including all other actions (bidirectional within the chunk).')); }
+  draw();
+})();
+(function(){ // timestep density
+  var svg=$('#tb'), al=1.5, s=0.999;
+  function dens(t,a,s){ if (t>=s) return 0; var u=(s-t)/s; return a*Math.pow(u,a-1)/s; }
+  function draw(){ clear(svg); var X=function(t){return 50+t*520;}, Y=function(p){return 180-p*50;};
+    S('line',{x1:50,y1:180,x2:570,y2:180,'class':'axis'},svg); S('line',{x1:50,y1:20,x2:50,y2:180,'class':'axis'},svg);
+    S('text',{x:50,y:198,'class':'t-s mid'},svg,'0 (noise)'); S('text',{x:570,y:198,'class':'t-s mid'},svg,'1 (data)'); S('text',{x:310,y:214,'class':'t-s mid'},svg,'τ');
+    [1,2,3].forEach(function(p){ S('line',{x1:50,y1:Y(p),x2:570,y2:Y(p),'class':'grid'},svg); S('text',{x:44,y:Y(p)+4,'class':'t-s end'},svg,String(p)); });
+    S('line',{x1:X(0),y1:Y(1),x2:X(1),y2:Y(1),'class':'w-dash'},svg);
+    var d='', m=0; for (var i=0;i<=400;i++){ var t=i/400, p=Math.min(3.2,dens(t,al,s)); d+=(i?'L':'M')+X(t)+','+Y(p); }
+    S('path',{d:d,'class':'w-fire'},svg);
+    var u=(s-0.5)/s, frac=1-Math.pow(Math.max(0,u),al);
+    $('#tb-r').innerHTML='Share of training draws with τ &lt; 0.5 (the noisier half): <b>'+fmt(frac*100,0)+'%</b> (uniform: 50%).'; }
+  bindRange('tb-a',function(v){al=v;draw();}); bindRange('tb-s',function(v){s=v;draw();});
+})();
+(function(){ // weighting
+  var svg=$('#wt'), n=[4000,1500,600,200,80,30];
+  function draw(e){ clear(svg); var w=n.map(function(x){return Math.pow(x,e);}), tot=w.reduce(function(a,b){return a+b;},0), nt=n.reduce(function(a,b){return a+b;},0);
+    n.forEach(function(x,i){ var y=14+i*28, sh=w[i]/tot, nat=x/nt; S('text',{x:130,y:y+15,'class':'t end'},svg,'pair '+(i+1)+' (n='+x+')');
+      S('rect',{x:140,y:y+2,width:sh*420,height:18,'class':'f-fire'},svg); S('line',{x1:140+nat*420,y1:y,x2:140+nat*420,y2:y+22,'class':'w-ink'},svg);
+      S('text',{x:146+Math.max(sh,nat)*420,y:y+16,'class':'t-s'},svg,fmt(sh*100,1)+'%'); });
+    S('text',{x:140,y:192,'class':'t-s'},svg,'bars: share under n^e · black tick: natural share (e = 1)');
+    $('#wt-r').innerHTML='Rarest pair gets <b>'+fmt(w[5]/tot*100,1)+'%</b> of samples, versus '+fmt(n[5]/nt*100,1)+'% naturally.'; }
+  bindRange('wt-e',draw);
+})();
+</script>

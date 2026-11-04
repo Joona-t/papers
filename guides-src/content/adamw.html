@@ -1,0 +1,274 @@
+<!--LEDE-->
+Two common ways of stopping a network's weights from growing too large, "L2 regularisation" and "weight decay", were treated as the same thing. This paper shows they are the same only for plain gradient descent: inside Adam they behave differently, and the usual implementation quietly weakens the regulariser for exactly the weights that most need it. Applying the decay directly to the weights, outside Adam's machinery, fixes it and narrows Adam's gap with SGD on image classification.
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>To keep networks from overfitting, people shrink every weight slightly towards zero at each step, either by adding a penalty on large weights to the loss ("L2 regularisation") or by directly multiplying the weights by a number just below 1 ("weight decay").</p>
+  <p>For plain gradient descent these two are exactly the same, which is why libraries implemented weight decay as an L2 penalty, including for <a href="adam.html">Adam</a>.</p>
+  <p>But Adam rescales every gradient by that weight's typical gradient size, so a penalty that travels through the gradient gets rescaled too: weights with large, busy gradients are barely regularised at all.</p>
+  <p>Taking the decay out of the gradient and applying it directly to the weights ("decoupled weight decay", giving AdamW) made Adam generalise better, made its two main settings independent of each other, and became the standard way large models are trained.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1</p>
+  <h2>Why shrink the weights at all?</h2>
+  <div class="prose">
+    <p>A network with lots of adjustable numbers ("weights") can memorise its training examples instead of learning the general pattern. That is called <strong>overfitting</strong>: perfect on the practice questions, poor on the exam.</p>
+    <p>A simple, old remedy is to keep weights small. Large weights let a network build sharp, twitchy functions that chase every quirk of the training data; small weights force smoother functions. So at every training step you pull each weight a little towards zero, and let the data pull back only where it really matters.</p>
+    <p>There are two ways to write that pull down:</p>
+    <ul>
+      <li><strong>L2 regularisation</strong>: add a penalty to the error, proportional to the sum of the squared weights. The gradient of that penalty is just "weight × a constant", so it shows up as an extra push towards zero inside the gradient.</li>
+      <li><strong>Weight decay</strong>: after each step, multiply every weight by a number just below 1, such as 0.9999.</li>
+    </ul>
+    <p>For ordinary gradient descent you can do the algebra and these are identical, once you match the constants. Everyone therefore used the words interchangeably, and software implemented "weight decay" by adding the L2 term to the gradient.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A garden where every plant is trimmed back a little each week, so only the ones that keep getting strong sunlight grow big. You can either give the gardener a rule ("trim 1% off everything") or bake the trimming into the plant food. With plain plant food the effect is the same.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>L2 regularisation and weight decay both pull weights towards zero, and for plain gradient descent they are the same thing.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §2 · Prop. 2</p>
+  <h2>Adam bends the penalty</h2>
+  <div class="prose">
+    <p><a href="adam.html">Adam</a> gives each weight its own step size: it divides that weight's gradient by the typical size of its recent gradients. A weight that always sees big gradients gets its steps shrunk; a weight with tiny gradients gets them enlarged. That is what makes Adam work so well.</p>
+    <p>Now put the L2 penalty into the gradient. It too gets divided by the typical gradient size. For a weight with large, noisy gradients, the shrink-towards-zero signal is divided by a big number and almost vanishes. For a weight with small gradients it is amplified. The regulariser is no longer the same for every weight; it is weakest exactly on the weights the data is pushing around the most.</p>
+    <p>Below, two weights start at 1. The data gives them only noise, a gradient that flips between plus and minus every step and averages to zero, so the only steady force is the pull to zero. Weight A gets large noisy gradients, weight B small ones. Compare how fast each shrinks under each method.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn on" data-opt="adam">Optimiser: Adam</button><button class="btn" data-opt="sgd">Optimiser: plain SGD</button>
+      <label>Noise on weight A <input type="range" id="wd-na" min="0.1" max="10" step="0.1" value="5" data-fmt="1"><output id="wd-na-o">5.0</output></label>
+    </div>
+    <div class="svgbox"><svg id="wd" viewBox="0 0 600 270" role="img" aria-label="Two weights shrinking under L2 regularisation and decoupled weight decay"></svg></div>
+    <p class="readout" id="wd-r"></p>
+    <figcaption>Solid lines: decoupled weight decay (subtract λ × weight directly). Dashed: L2 penalty added to the gradient. Amber: weight A (noise level set by the slider). Blue: weight B (noise 0.01). The noise is a gradient of ±noise level, alternating each step. 400 steps, λ = 0.01 per step; Adam uses α = 0.01, and plain SGD uses step 0.01 with the L2 strength set to λ/0.01 so the two methods match. Under SGD the dashed and solid lines coincide exactly. Under Adam the dashed amber line barely moves: a busy weight is hardly regularised. Illustrative toy, same seed every time.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Inside Adam, an L2 penalty is rescaled per weight, so weights with large gradients are barely regularised. Weight decay applied directly treats every weight the same.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does the dashed blue line (weight B, small noise) still shrink reasonably under Adam with L2?</dt>
+    <dd>Its gradient noise is small, so the L2 term is a sizeable part of its gradient, and after Adam's division the pull towards zero becomes a step of nearly α every time. It is the noisy weight A whose pull is divided by a big number and drowned out.</dd>
+    <dt>What happens to Adam + L2 if you make weight A's noise tiny too?</dt>
+    <dd>Then the L2 term dominates both gradients, Adam normalises it to a step of about α each time, and both weights shrink at a steady rate set by α, not by λ. The penalty strength has stopped mattering, which is the other face of the same problem.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §2 · Algorithm 2</p>
+  <h2>The fix: decay the weights directly</h2>
+  <div class="prose">
+    <p>The paper's change is one line of code. Keep Adam exactly as it is for the data's gradient, and afterwards, separately, shrink each weight by a small fixed fraction. The decay no longer passes through Adam's per-weight rescaling, so every weight is pulled towards zero at the same proportional rate. The authors call this <strong>decoupled weight decay</strong>; applied to Adam it is <strong>AdamW</strong>, and applied to SGD with momentum it is <strong>SGDW</strong>.</p>
+    <p>A second benefit is that the two knobs people tune stop interfering. With L2 inside the gradient, if you change the learning rate you also change how strong the regulariser effectively is, so the best weight-decay setting moves whenever the learning rate moves. Decoupled, the two settings can be tuned one at a time.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" data-grid="l2">L2 in the gradient</button><button class="btn" data-grid="dec">Decoupled decay</button></div>
+    <div class="svgbox"><svg id="hg" viewBox="0 0 600 290" role="img" aria-label="A grid of learning rate against weight decay, coloured by test error"></svg></div>
+    <p class="readout" id="hg-r"></p>
+    <figcaption>A cartoon of the paper's Figs. 1–2, not real data. Each cell is a training run with one learning rate (across) and one weight-decay setting (up); darker means lower test error. In this toy, the error depends on how far the learning rate is from its best value and how far the <em>effective</em> decay is from its best value. With L2 the effective decay is learning rate × setting, so the good region is a diagonal stripe: change one knob and you must re-tune the other. Decoupled, the good region is a compact blob you can find one axis at a time. Click any cell to see why.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Decoupled weight decay is one line of code, and it also makes the learning rate and the decay strength independently tunable.</p>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §4 · Figs. 3–4</p>
+  <h2>What it bought</h2>
+  <div class="prose">
+    <p>At the time, a common belief was that Adam trains fast but generalises worse than plain SGD with momentum on image tasks. The authors argued that much of that gap came from the broken regulariser, not from Adam itself. On CIFAR-10 (small colour images) and a downsampled 32×32 ImageNet, using residual networks, AdamW reached clearly lower test error than Adam with L2, and with a learning-rate schedule that periodically restarts (AdamWR) it closed most of the gap to SGD.</p>
+    <p>The authors also noticed that the best decay strength depends on how long you train and how big the batches are, and suggested a rule to rescale it, so a setting found on a short run carries over to a longer one.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>AdamW became the standard optimiser for transformers: GPT-style and BERT-style models and <a href="chinchilla.html">Chinchilla</a> all use decoupled weight decay, and Chinchilla's authors report AdamW beat Adam in their language-model runs. The main lasting tweak is how the decay is tied to the learning rate: popular libraries multiply it by the learning rate, which partly re-couples the two knobs the paper set out to separate.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Fixing the regulariser made Adam competitive on image classification and gave the field the optimiser it still uses for large models.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>A colleague says "AdamW is just Adam with weight decay turned on". What is missing?</dt>
+    <dd>Where the decay is applied. Adam with a weight-decay option usually adds an L2 term to the gradient, which is then rescaled per weight. AdamW subtracts the decay from the weights directly, outside the rescaling.</dd>
+  </dl></details>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>L2 regularisation and weight decay are equivalent for standard SGD (once the coefficient is rescaled by the learning rate) but not for adaptive gradient methods such as Adam. Common implementations of these methods use L2 and call it weight decay, which may be misleading. A simple modification recovers the original formulation by decoupling weight decay from the optimisation steps taken with respect to the loss. This (i) decouples the optimal weight-decay factor from the learning rate for both SGD and Adam, and (ii) substantially improves Adam's generalisation, letting it compete with SGD with momentum on image classification. Loshchilov &amp; Hutter, ICLR 2019 (arXiv 1711.05101; first circulated in 2017 as "Fixing Weight Decay Regularization in Adam").</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2 · Props. 1–2</p>
+  <h2>When are L2 and weight decay the same?</h2>
+  <div class="prose"><p>Weight decay in Hanson &amp; Pratt's (1988) sense is</p></div>
+  <div class="eq">θ<sub><var>t</var>+1</sub> = (1 − λ) θ<sub><var>t</var></sub> − α ∇<var>f<sub>t</sub></var>(θ<sub><var>t</var></sub>)</div>
+  <div class="prose"><p>whereas L2 regularisation minimises <var>f</var><sub><var>t</var></sub><sup>reg</sup>(θ) = <var>f<sub>t</sub></var>(θ) + (λ′/2)‖θ‖<sub>2</sub><sup>2</sup>, whose gradient adds λ′θ.</p>
+  <p><strong>Proposition 1.</strong> For SGD, the two are identical with λ′ = λ/α: α(∇<var>f</var> + (λ/α)θ) = α∇<var>f</var> + λθ. Note the dependence on α: if L2 is used to implement decay, the "right" λ′ shifts whenever α changes, which is the coupling visible as diagonal valleys in the paper's Fig. 2.</p>
+  <p><strong>Proposition 2.</strong> Consider any optimiser whose step is −α<var>M<sub>t</sub></var>∇<var>f<sub>t</sub></var> with a preconditioner <var>M<sub>t</sub></var> ≠ <var>k</var><var>I</var>. Running it on <var>f</var><sup>reg</sup> gives decay −α<var>M<sub>t</sub></var>λ′θ, so no λ′ reproduces uniform decay λθ. For Adam, <var>M<sub>t</sub></var> = diag(1/(√<var>v̂<sub>t</sub></var> + ε)) (with momentum on top), so coordinate <var>i</var>'s effective decay rate is αλ′/(√<var>v̂<sub>t,i</sub></var> + ε): weights with large historical gradient magnitude are regularised <em>less</em> than they would be by weight decay.</p>
+  <p><strong>Proposition 3</strong> (fixed preconditioner <var>M</var> = diag(<var>s</var>)<sup>−1</sup>) shows that decoupled decay on such an optimiser equals gradient steps on a <em>scale-adjusted</em> L2 penalty in which each coordinate's penalty is weighted by its preconditioner scale √<var>s<sub>i</sub></var>, so weights with large typical gradients are regularised relatively <em>more</em> than under plain L2. The authors flag that real adaptive methods have time-varying preconditioners, so this is an intuition rather than an exact statement.</p></div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" data-pq="sgd">SGD vs SGDW</button><button class="btn" data-pq="adam">Adam vs AdamW</button><button class="btn" id="pq-go">Run 300 steps</button></div>
+    <div class="svgbox"><svg id="pq" viewBox="0 0 600 260" role="img" aria-label="Trajectories of L2-regularised and decoupled-decay optimisers on a 2-D quadratic"></svg></div>
+    <p class="readout" id="pq-r"></p>
+    <figcaption>A 2-D ill-conditioned quadratic <var>f</var> = ½(θ − θ*)<sup>T</sup>H(θ − θ*) with curvatures 0.5 and 20, θ* = (3, 2), start (−3, −2), λ = 0.005. Dashed: L2 with λ′ = λ/α in the gradient. Solid: decoupled decay. For SGD (α = 0.04) the two runs coincide to floating-point precision (Prop. 1). For Adam (α = 0.05) they settle at different points: the L2 fixed point solves ∇<var>f</var> + λ′θ = 0, while AdamW's fixed point balances λθ against Adam's normalised step, so the two shrink the two coordinates by different amounts (Prop. 2).</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §2 · Algorithms 1–2</p>
+  <h2>SGDW and AdamW</h2>
+  <pre class="algo"><span class="c"># Algorithm 2 (Adam with L2 vs AdamW). Defaults α=0.001, β1=0.9, β2=0.999, ε=1e-8, λ∈ℝ</span>
+t ← t + 1
+∇ft ← SelectBatch(θ(t−1)) ; gt ← ∇ft(θ(t−1)) <span class="inh">+ λθ(t−1)</span>      <span class="c"># L2: decay inside the gradient</span>
+mt ← β1 m(t−1) + (1 − β1) gt
+vt ← β2 v(t−1) + (1 − β2) gt²
+m̂t ← mt/(1 − β1^t) ;  v̂t ← vt/(1 − β2^t)
+ηt ← SetScheduleMultiplier(t)
+θt ← θ(t−1) − ηt ( α m̂t/(√v̂t + ε) <span class="ok">+ λθ(t−1)</span> )     <span class="c"># AdamW: decay outside it</span></pre>
+  <div class="prose">
+    <p>Exactly one of the two highlighted terms is used. Two details matter. First, in the paper the decay is multiplied by the schedule multiplier η<sub><var>t</var></sub> but <em>not</em> by α, so changing α leaves the decay strength alone; this is the decoupling of λ from α. Second, η<sub><var>t</var></sub> scales both terms, so with a cosine schedule the decay anneals together with the step size. Algorithm 1 (SGDW) is analogous: θ<sub><var>t</var></sub> ← θ<sub><var>t</var>−1</sub> − <var>m<sub>t</sub></var> − η<sub><var>t</var></sub>λθ<sub><var>t</var>−1</sub>, with the decay kept out of the momentum buffer.</p>
+    <p><strong>Implementation drift.</strong> PyTorch's <code>torch.optim.AdamW</code> applies θ ← θ(1 − lr·λ), where lr already includes α and the schedule. The decay is therefore proportional to the learning rate, so the "decoupled" λ is again tied to α (though still not rescaled per coordinate). Comparing λ values across codebases requires knowing which convention is used.</p>
+  </div>
+  <style>pre.algo .inh{color:var(--inhib)} pre.algo .ok{color:var(--ok)}</style>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §3</p>
+  <h2>A Bayesian-filtering justification</h2>
+  <div class="prose">
+    <p>§3 summarises Aitchison's (2018) view of adaptive gradient methods as Bayesian filtering: the optimiser tracks a Gaussian belief over the optimal parameters, the preconditioner plays the role of posterior uncertainty, and each gradient is an observation (μ<sub>post</sub> = μ<sub>prior</sub> + Σ<sub>post</sub><var>g</var>). In this view, weight decay belongs in the <em>state transition</em>, not the observation: assume the optimal θ drifts according to <var>N</var>((<var>I</var> − <var>A</var>)θ<sub><var>t</var></sub>, <var>Q</var>). Taking <var>A</var> = λ<var>I</var> multiplies the mean by (1 − λ) each step, which is decoupled weight decay, applied independently of the per-parameter uncertainty. L2, by contrast, enters as part of the observed gradient and is therefore scaled by Σ<sub>post</sub>. This is a motivation rather than a derivation of AdamW's exact update.</p>
+  </div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §4 · App. B · Figs. 1–4</p>
+  <h2>Experiments, schedules and normalised decay</h2>
+  <div class="prose">
+    <p><strong>Setup.</strong> 26 2×64d ResNet with Shake-Shake regularisation (11.6M parameters) on CIFAR-10, plus 26 2×96d (25.6M) for long runs, and ImageNet32×32 (1.2M images at 32×32); batch size 128; budgets 100 to 1800 epochs.</p>
+    <ul>
+      <li><strong>Figs. 1–2 (§4.1–4.2).</strong> Test-error heatmaps over (learning rate, weight decay) for fixed, step-drop and cosine schedules. With L2, the good settings lie on a diagonal (coupled); with decoupled decay they are more separable. Cosine annealing gave the best results for both optimisers.</li>
+      <li><strong>Fig. 3 (§4.3).</strong> Over 1800 epochs with the 26 2×96d net, AdamW achieved lower training loss and lower test error than Adam, and better test error at the same training loss, i.e. better generalisation, not just faster optimisation. The paper reports a relative test-error improvement of roughly 15% over Adam with L2 (at Adam's default learning rate of 0.001).</li>
+      <li><strong>Fig. 4 (§4.4).</strong> Warm restarts (SGDR-style cosine cycles) give AdamWR, improving anytime performance, and reaching performance comparable to SGDWR on ImageNet32×32 while closing most of the gap on CIFAR-10.</li>
+    </ul>
+    <p><strong>Normalised weight decay (App. B.1).</strong> The best λ shrinks as the number of weight updates grows, so the authors propose</p>
+  </div>
+  <div class="eq">λ = λ<sub>norm</sub> · √( <var>b</var> / (<var>B</var> · <var>T</var>) )</div>
+  <div class="prose"><p>with batch size <var>b</var>, training-set size <var>B</var> and epochs <var>T</var> (per restart for AdamWR). λ<sub>norm</sub> is read as the decay to use if training for one pass with one batch. The authors note the square-root form comes from limited experiments. The figure below shows the cosine-with-restarts multiplier η<sub><var>t</var></sub> (App. B.2) and the λ this rule gives.</p></div>
+  <figure class="live">
+    <div class="ctl">
+      <label><var>T</var><sub>0</sub> (first cycle, epochs) <input type="range" id="sc-t0" min="10" max="200" step="10" value="100"><output id="sc-t0-o">100</output></label>
+      <label><var>T</var><sub>mult</sub> <input type="range" id="sc-tm" min="1" max="3" step="1" value="2"><output id="sc-tm-o">2</output></label>
+      <label>λ<sub>norm</sub> <input type="range" id="sc-ln" min="0.005" max="0.1" step="0.005" value="0.05" data-fmt="3"><output id="sc-ln-o">0.050</output></label>
+    </div>
+    <div class="svgbox wide"><svg id="sc" viewBox="0 0 640 250" role="img" aria-label="Cosine annealing schedule multiplier with warm restarts over 1500 epochs"></svg></div>
+    <p class="readout" id="sc-r"></p>
+    <figcaption>η<sub><var>t</var></sub> = ½(1 + cos(π <var>T</var><sub>cur</sub>/<var>T<sub>i</sub></var>)) with cycle lengths <var>T</var><sub>0</sub>, <var>T</var><sub>0</sub><var>T</var><sub>mult</sub>, … (η<sub>min</sub> = 0, η<sub>max</sub> = 1). The paper's example in its supplementary material uses <var>T</var><sub>0</sub> = 100 and <var>T</var><sub>mult</sub> = 2. Numbers under each cycle: the λ given by the normalisation rule for CIFAR-10 (<var>B</var> = 50,000, <var>b</var> = 128), so longer cycles get proportionally smaller per-step decay.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §5 and lineage</p>
+  <h2>Limitations and later work</h2>
+  <div class="prose"><ul>
+    <li><strong>Scope.</strong> All of the authors' own experiments are image classification with one architecture family; they say results must be verified on a wider range of tasks, and conjecture (untested) that similar results hold for AdaGrad and AMSGrad. §4.5 cites third-party results (EEG decoding, and the use of AdamW in transformer pre-training by Radford et al., 2018).</li>
+    <li><strong>The scaling rule</strong> for λ is heuristic. Later work treats AdamW's decay as setting an averaging timescale of roughly 1/(ηλ) updates and derives how λ should change with model and dataset size.</li>
+    <li><strong>Which parameters to decay.</strong> Common practice (not from this paper) excludes biases and normalisation gains from decay.</li>
+    <li><strong>Interaction with normalisation.</strong> For scale-invariant weights (followed by <a href="batchnorm.html">BatchNorm</a> or <a href="layernorm.html">LayerNorm</a>), decay mainly controls the effective learning rate rather than model complexity (van Laarhoven, 2017; Zhang et al., 2019), a different reason it helps.</li>
+  </ul></div>
+  <div class="later"><span class="label">Later refinement</span>AdamW is the default in transformer training. <a href="chinchilla.html">Hoffmann et al. (2022)</a> report that AdamW-trained language models outperformed Adam-trained ones, and train Chinchilla with it. Later optimisers (Lion, Sophia, Adafactor variants) keep decoupled decay as a separate term.</div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Under the paper's AdamW update, does doubling α change the strength of weight decay?</dt>
+    <dd>No: the decay term is η<sub><var>t</var></sub>λθ, independent of α. (Under PyTorch's AdamW it would double, because decay is lr·λ.)</dd>
+    <dt>For a coordinate with √<var>v̂</var> = 100 and α = 10<sup>−3</sup>, what per-step decay rate does Adam + L2 with λ′ = 10<sup>−2</sup> give?</dt>
+    <dd>About αλ′/√<var>v̂</var> = 10<sup>−7</sup>, a factor of 100 weaker than for a coordinate with √<var>v̂</var> = 1.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>L2 regularisation</dt><dd>Adding (λ′/2)‖θ‖² to the loss; its gradient is λ′θ.</dd>
+    <dt>Weight decay</dt><dd>Multiplying weights by (1 − λ) each step, independent of the loss gradient.</dd>
+    <dt>Decoupled</dt><dd>Applied directly to θ, outside the optimiser's preconditioning and momentum.</dd>
+    <dt>Preconditioner</dt><dd>The matrix (here diagonal) that rescales the gradient; for Adam 1/(√<var>v̂</var> + ε).</dd>
+    <dt>η<sub><var>t</var></sub></dt><dd>Schedule multiplier (e.g. cosine annealing) applied to both the step and the decay.</dd>
+    <dt>SGDR / AdamWR</dt><dd>Cosine annealing with warm restarts, applied to SGD(W) or AdamW.</dd>
+    <dt>λ<sub>norm</sub></dt><dd>Normalised weight decay, rescaled by √(<var>b</var>/(<var>BT</var>)).</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+(function(){ // two weights shrinking
+  var svg=$('#wd'), opt='adam', na=5, nb=0.01, lam=0.01, T=400;
+  function run(sig, dec, seed){ var w=1, m=0, v=0, ws=[1];
+    for (var t=1;t<=T;t++){ var g=(t%2?sig:-sig);
+      if (opt==='sgd'){ var a=0.01; if (dec) w=w-a*g-lam*w; else w=w-a*(g+(lam/a)*w); }
+      else { var a=0.01; if (!dec) g+=lam*w; m=0.9*m+0.1*g; v=0.999*v+0.001*g*g; var mh=m/(1-Math.pow(0.9,t)), vh=v/(1-Math.pow(0.999,t)); w=w-a*mh/(Math.sqrt(vh)+1e-8); if (dec) w=w-lam*w; }
+      ws.push(w); } return ws; }
+  function X(t){ return 50+t/T*520; } function Y(w){ return 220-Math.max(-0.4,Math.min(1.6,w))/1.6*180; }
+  function line(ws,cls,dash){ var d=''; ws.forEach(function(w,i){ if (i%2) return; d+=(d?'L':'M')+fmt(X(i),1)+','+fmt(Y(w),1); }); var a={d:d,'class':cls}; if (dash) a['stroke-dasharray']='6 4'; S('path',a,svg); }
+  function draw(){ clear(svg);
+    S('line',{x1:50,y1:Y(0),x2:570,y2:Y(0),'class':'grid'},svg); S('line',{x1:50,y1:Y(1),x2:570,y2:Y(1),'class':'grid'},svg); S('line',{x1:50,y1:30,x2:50,y2:240,'class':'axis'},svg);
+    S('text',{x:44,y:Y(1)+4,'class':'t-s end'},svg,'1'); S('text',{x:44,y:Y(0)+4,'class':'t-s end'},svg,'0'); S('text',{x:310,y:258,'class':'t-s mid'},svg,'training step (0 to 400)'); S('text',{x:56,y:24,'class':'t-s'},svg,'weight value');
+    var aL2=run(na,false,3), aD=run(na,true,3), bL2=run(nb,false,7), bD=run(nb,true,7);
+    line(aD,'w-fire'); line(aL2,'w-fire',true); line(bD,'w'); line(bL2,'w',true);
+    S('text',{x:566,y:24,'class':'t-s end'},svg,opt==='adam'?'Adam / AdamW':'SGD / SGDW');
+    function avg(ws){ var s=0; for (var i=T-49;i<=T;i++) s+=ws[i]; return s/50; }
+    $('#wd-r').innerHTML='Average of last 50 steps. Weight A: L2 <b>'+fmt(avg(aL2),2)+'</b>, decoupled <b>'+fmt(avg(aD),2)+'</b>. Weight B: L2 <b>'+fmt(avg(bL2),2)+'</b>, decoupled <b>'+fmt(avg(bD),2)+'</b>. Pure decay would give '+fmt(Math.pow(1-lam,T),3)+'.'; }
+  $$('[data-opt]').forEach(function(b){ b.onclick=function(){ $$('[data-opt]').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); opt=b.getAttribute('data-opt'); draw(); }; });
+  bindRange('wd-na',function(v){ na=v; draw(); });
+})();
+(function(){ // hyperparameter grid cartoon
+  var svg=$('#hg'), mode='l2', sel=null, n=8;
+  var lrs=[], wds=[]; for (var i=0;i<n;i++){ lrs.push(-4+i*0.5); wds.push(-4+i*0.5); } // log10 values
+  function err(i,j){ var lr=lrs[i], wd=wds[j]; var eff = mode==='l2' ? lr+wd : wd-0.0; var bestLr=-2.25, bestEff = mode==='l2' ? -4.25 : -2;
+    return 4 + 1.2*Math.pow(lr-bestLr,2) + 1.6*Math.pow(eff-bestEff,2); }
+  function draw(){ clear(svg); var cs=26, x0=120, y0=24, best=1e9, bi=0, bj=0;
+    for (var i=0;i<n;i++) for (var j=0;j<n;j++){ var e=err(i,j); if (e<best){ best=e; bi=i; bj=j; } }
+    for (var i=0;i<n;i++) for (var j=0;j<n;j++){ var e=err(i,j), op=Math.max(0.06, 1-(e-4)/10);
+      var rc=S('rect',{x:x0+i*cs*1.5,y:y0+(n-1-j)*cs,width:cs*1.5-2,height:cs-2,'class':'f-wire clickable','fill-opacity':op},svg);
+      (function(i,j){ rc.addEventListener('click',function(){ sel=[i,j]; draw(); }); })(i,j); }
+    if (sel) S('rect',{x:x0+sel[0]*cs*1.5,y:y0+(n-1-sel[1])*cs,width:cs*1.5-2,height:cs-2,'class':'box-fire','fill-opacity':0},svg);
+    S('text',{x:x0+bi*cs*1.5+cs*0.75-1,y:y0+(n-1-bj)*cs+17,'class':'t mid'},svg,'★');
+    S('text',{x:x0+n*cs*0.75,y:y0+n*cs+22,'class':'t-s mid'},svg,'learning rate  (low → high)');
+    S('text',{x:x0-10,y:y0+n*cs/2,'class':'t-s end'},svg,'decay'); S('text',{x:x0-10,y:y0+n*cs/2+14,'class':'t-s end'},svg,'setting ↑');
+    S('text',{x:470,y:60,'class':'t-s'},svg,'darker = lower'); S('text',{x:470,y:76,'class':'t-s'},svg,'test error');
+    S('text',{x:470,y:110,'class':'t-s'},svg,'★ = best cell');
+    S('text',{x:470,y:150,'class':'t-h'},svg,mode==='l2'?'diagonal':'separable');
+    if (sel){ var i=sel[0], j=sel[1]; $('#hg-r').innerHTML='Learning rate 10<sup>'+fmt(lrs[i],1)+'</sup>, setting 10<sup>'+fmt(wds[j],1)+'</sup>: effective decay per step = <b>'+(mode==='l2'?'lr × setting = 10<sup>'+fmt(lrs[i]+wds[j],1)+'</sup>':'setting = 10<sup>'+fmt(wds[j],1)+'</sup>')+'</b>. Toy error <b>'+fmt(err(i,j),2)+'</b> (best '+fmt(best,2)+').'; }
+    else $('#hg-r').innerHTML='Click a cell.'; }
+  $$('[data-grid]').forEach(function(b){ b.onclick=function(){ $$('[data-grid]').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); mode=b.getAttribute('data-grid'); draw(); }; });
+  draw();
+})();
+(function(){ // Prop 1 / 2 numeric check
+  var svg=$('#pq'), mode='sgd', timer=null, H=[0.5,20], ts=[3,2], lam=0.005;
+  function sim(dec){ var th=[-3,-2], m=[0,0], v=[0,0], out=[th.slice()];
+    for (var t=1;t<=300;t++){ var g=[H[0]*(th[0]-ts[0]), H[1]*(th[1]-ts[1])];
+      if (mode==='sgd'){ var a=0.04; for (var i=0;i<2;i++){ if (dec) th[i]=th[i]-a*g[i]-lam*th[i]; else th[i]=th[i]-a*(g[i]+(lam/a)*th[i]); } }
+      else { var a=0.05; for (var i=0;i<2;i++){ var gi=g[i]+(dec?0:(lam/a)*th[i]); m[i]=0.9*m[i]+0.1*gi; v[i]=0.999*v[i]+0.001*gi*gi; var mh=m[i]/(1-Math.pow(0.9,t)), vh=v[i]/(1-Math.pow(0.999,t)); th[i]-=a*mh/(Math.sqrt(vh)+1e-8); if (dec) th[i]-=lam*th[i]; } }
+      out.push(th.slice()); } return out; }
+  function X(x){ return 70+(x+4)/8*460; } function Y(y){ return 130-y*45; }
+  function draw(a,b,n){ clear(svg);
+    S('line',{x1:X(-4),y1:Y(0),x2:X(4),y2:Y(0),'class':'grid'},svg); S('line',{x1:X(0),y1:Y(-2.5),x2:X(0),y2:Y(2.5),'class':'grid'},svg);
+    S('text',{x:X(ts[0]),y:Y(ts[1])-10,'class':'t-s mid'},svg,'θ* (unregularised)'); S('text',{x:X(ts[0]),y:Y(ts[1])+4,'class':'t mid'},svg,'×');
+    S('text',{x:X(0)+4,y:Y(2.5)+10,'class':'t-s'},svg,'origin');
+    function pl(p,cls,dash){ var d=''; for (var i=0;i<=n;i++) d+=(i?'L':'M')+fmt(X(p[i][0]),1)+','+fmt(Y(Math.max(-2.6,Math.min(2.6,p[i][1]))),1); var at={d:d,'class':cls}; if (dash) at['stroke-dasharray']='6 4'; S('path',at,svg); }
+    pl(b,'w-ok'); pl(a,'w-fire',true);
+    var A=a[n], B=b[n]; S('circle',{cx:X(A[0]),cy:Y(A[1]),r:5,'class':'u-on'},svg); S('circle',{cx:X(B[0]),cy:Y(B[1]),r:3,'class':'u-wire'},svg);
+    S('text',{x:590,y:240,'class':'t-fire end'},svg,'dashed amber: L2'); S('text',{x:590,y:254,'class':'t-ok end'},svg,'solid green: decoupled');
+    var diff=Math.max(Math.abs(A[0]-B[0]),Math.abs(A[1]-B[1]));
+    $('#pq-r').innerHTML='Step '+n+'. L2 run at (<b>'+fmt(A[0],3)+'</b>, <b>'+fmt(A[1],3)+'</b>); decoupled at (<b>'+fmt(B[0],3)+'</b>, <b>'+fmt(B[1],3)+'</b>). Largest coordinate difference: <b>'+(diff<1e-9?diff.toExponential(1)+' (identical)':fmt(diff,3))+'</b>.'; }
+  function go(){ if (timer) clearInterval(timer); var a=sim(false), b=sim(true), n=0; timer=setInterval(function(){ n=Math.min(300,n+6); draw(a,b,n); if (n>=300){ clearInterval(timer); timer=null; } },30); }
+  $$('[data-pq]').forEach(function(b){ b.onclick=function(){ $$('[data-pq]').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); mode=b.getAttribute('data-pq'); if (timer){ clearInterval(timer); timer=null; } draw(sim(false),sim(true),300); }; });
+  $('#pq-go').onclick=go; draw(sim(false),sim(true),300);
+})();
+(function(){ // cosine warm restarts + normalised decay
+  var svg=$('#sc'), T0=100, Tm=2, ln=0.05, total=1500;
+  function draw(){ clear(svg); var cycles=[], s=0, Ti=T0; while (s<total){ cycles.push([s,Ti]); s+=Ti; Ti*=Tm; }
+    function X(e){ return 40+e/total*580; } function Y(h){ return 190-h*150; }
+    S('line',{x1:40,y1:Y(0),x2:620,y2:Y(0),'class':'axis'},svg); S('line',{x1:40,y1:Y(0),x2:40,y2:Y(1)-6,'class':'axis'},svg);
+    S('text',{x:34,y:Y(1)+4,'class':'t-s end'},svg,'1'); S('text',{x:34,y:Y(0)+4,'class':'t-s end'},svg,'0'); S('text',{x:46,y:Y(1)-10,'class':'t-s'},svg,'η_t');
+    var d=''; for (var e=0;e<=total;e+=2){ var c=null; for (var k=0;k<cycles.length;k++) if (e>=cycles[k][0]) c=cycles[k]; var h=0.5*(1+Math.cos(Math.PI*(e-c[0])/c[1])); d+=(d?'L':'M')+fmt(X(e),1)+','+fmt(Y(h),1); }
+    S('path',{d:d,'class':'w-fire'},svg);
+    var parts=[];
+    cycles.forEach(function(c,k){ S('line',{x1:X(c[0]),y1:Y(0),x2:X(c[0]),y2:Y(1),'class':'w-dash'},svg); var lam=ln*Math.sqrt(128/(50000*c[1]));
+      var mid=X(Math.min(total,c[0]+c[1]/2)); if (X(Math.min(total,c[0]+c[1]))-X(c[0])>46) S('text',{x:mid,y:216,'class':'t-s mid'},svg,'λ='+lam.toExponential(1)); parts.push(c[1]+' ep → λ='+lam.toExponential(2)); });
+    S('text',{x:330,y:240,'class':'t-s mid'},svg,'epoch (0 to '+total+'); dashed lines = restarts');
+    $('#sc-r').innerHTML='Cycles: <b>'+parts.join('; ')+'</b>'+(cycles[cycles.length-1][0]+cycles[cycles.length-1][1]>total?' (last cycle cut off at '+total+')':'')+'.'; }
+  bindRange('sc-t0',function(v){ T0=v; draw(); }); bindRange('sc-tm',function(v){ Tm=v; draw(); }); bindRange('sc-ln',function(v){ ln=v; draw(); });
+})();
+</script>

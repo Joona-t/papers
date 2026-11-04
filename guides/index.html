@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Papers explained</title>
+<meta name="description" content="Study guides for every paper in the Papers worth reading archive.">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+<style>.idx section{padding-top:36px} .idx ol{margin:12px 0 0;padding-left:1.4em;display:grid;gap:10px} .idx .t2{color:var(--muted);font-size:.92rem} .idx .soon{color:var(--muted)}</style>
+</head><body><div class="wrap idx">
+<header class="top"><p class="eyebrow">Study guides · 75 of 75 ready</p><h1>Papers explained</h1>
+<p class="lede">One guide per paper in <a href="https://lovespark.love/papers/">Papers worth reading</a>. Each has a Plain English tab for anyone and an In depth tab for specialists, with diagrams you can play with.</p>
+<aside class="aimade"><span class="label">Made with AI · check it yourself</span><p>These guides were written by Claude, an AI model, and each was checked against its paper by a second, independent AI review. Joona, who runs the archive, has not personally read all of them yet, so mistakes can remain. The papers are the authority: verify anything that matters to you.</p><p>You can also <a href="make-your-own.html">ask an AI to make a guide just for you</a>, at your level and in the format you like.</p></aside></header>
+<section><h2>Neural networks</h2><ol><li><a href="mcculloch-pitts.html">Artificial neuron <span class="cite">1943</span></a><br><span class="t2">A Logical Calculus of the Ideas Immanent in Nervous Activity</span></li><li><a href="perceptron.html">Perceptron <span class="cite">1958</span></a><br><span class="t2">The Perceptron: A Probabilistic Model for Information Storage and Organization in the Brain</span></li><li><a href="perceptrons-book.html">Perceptrons (book) <span class="cite">1969</span></a><br><span class="t2">Perceptrons: An Introduction to Computational Geometry</span></li><li><a href="backprop.html">Backpropagation <span class="cite">1986</span></a><br><span class="t2">Learning representations by back-propagating errors</span></li><li><a href="lstm.html">LSTM <span class="cite">1997</span></a><br><span class="t2">Long Short-Term Memory</span></li><li><a href="forget-gate.html">Forget gate <span class="cite">2000</span></a><br><span class="t2">Learning to Forget: Continual Prediction with LSTM</span></li><li><a href="vae.html">VAE <span class="cite">2013</span></a><br><span class="t2">Auto-Encoding Variational Bayes</span></li><li><a href="dropout.html">Dropout <span class="cite">2014</span></a><br><span class="t2">Dropout: A Simple Way to Prevent Neural Networks from Overfitting</span></li><li><a href="gan.html">GAN <span class="cite">2014</span></a><br><span class="t2">Generative Adversarial Networks</span></li><li><a href="batchnorm.html">Batch norm <span class="cite">2015</span></a><br><span class="t2">Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift</span></li><li><a href="layernorm.html">Layer norm <span class="cite">2016</span></a><br><span class="t2">Layer Normalization</span></li><li><a href="moe.html">Mixture of experts <span class="cite">2017</span></a><br><span class="t2">Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer</span></li><li><a href="rmsnorm.html">RMSNorm <span class="cite">2019</span></a><br><span class="t2">Root Mean Square Layer Normalization</span></li><li><a href="switch.html">Switch Transformer <span class="cite">2021</span></a><br><span class="t2">Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity</span></li></ol></section><section><h2>Machine learning &amp; training</h2><ol><li><a href="adam.html">Adam <span class="cite">2014</span></a><br><span class="t2">Adam: A Method for Stochastic Optimization</span></li><li><a href="distill.html">Distillation <span class="cite">2015</span></a><br><span class="t2">Distilling the Knowledge in a Neural Network</span></li><li><a href="adamw.html">AdamW <span class="cite">2017</span></a><br><span class="t2">Decoupled Weight Decay Regularization</span></li><li><a href="scaling.html">Scaling laws <span class="cite">2020</span></a><br><span class="t2">Scaling Laws for Neural Language Models</span></li><li><a href="lora.html">LoRA <span class="cite">2021</span></a><br><span class="t2">LoRA: Low-Rank Adaptation of Large Language Models</span></li><li><a href="chinchilla.html">Chinchilla <span class="cite">2022</span></a><br><span class="t2">Training Compute-Optimal Large Language Models</span></li><li><a href="qlora.html">QLoRA <span class="cite">2023</span></a><br><span class="t2">QLoRA: Efficient Finetuning of Quantized LLMs</span></li><li><a href="dpo.html">DPO <span class="cite">2023</span></a><br><span class="t2">Direct Preference Optimization: Your Language Model is Secretly a Reward Model</span></li><li><a href="grpo.html">GRPO <span class="cite">2024</span></a><br><span class="t2">DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models</span></li></ol></section><section><h2>Language models &amp; AI</h2><ol><li><a href="word2vec.html">word2vec <span class="cite">2013</span></a><br><span class="t2">Efficient Estimation of Word Representations in Vector Space</span></li><li><a href="bahdanau.html">Attention <span class="cite">2014</span></a><br><span class="t2">Neural Machine Translation by Jointly Learning to Align and Translate</span></li><li><a href="transformer.html">Transformer <span class="cite">2017</span></a><br><span class="t2">Attention Is All You Need</span></li><li><a href="gpt1.html">GPT-1 <span class="cite">2018</span></a><br><span class="t2">Improving Language Understanding by Generative Pre-Training</span></li><li><a href="bert.html">BERT <span class="cite">2018</span></a><br><span class="t2">BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding</span></li><li><a href="gpt2.html">GPT-2 <span class="cite">2019</span></a><br><span class="t2">Language Models are Unsupervised Multitask Learners</span></li><li><a href="gpt3.html">GPT-3 <span class="cite">2020</span></a><br><span class="t2">Language Models are Few-Shot Learners</span></li><li><a href="rag.html">RAG <span class="cite">2020</span></a><br><span class="t2">Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks</span></li><li><a href="rope.html">RoPE <span class="cite">2021</span></a><br><span class="t2">RoFormer: Enhanced Transformer with Rotary Position Embedding</span></li><li><a href="cot.html">Chain of thought <span class="cite">2022</span></a><br><span class="t2">Chain-of-Thought Prompting Elicits Reasoning in Large Language Models</span></li><li><a href="instructgpt.html">InstructGPT (RLHF) <span class="cite">2022</span></a><br><span class="t2">Training language models to follow instructions with human feedback</span></li><li><a href="flash.html">FlashAttention <span class="cite">2022</span></a><br><span class="t2">FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness</span></li><li><a href="react.html">ReAct <span class="cite">2022</span></a><br><span class="t2">ReAct: Synergizing Reasoning and Acting in Language Models</span></li><li><a href="llama.html">LLaMA <span class="cite">2023</span></a><br><span class="t2">LLaMA: Open and Efficient Foundation Language Models</span></li><li><a href="r1.html">DeepSeek-R1 <span class="cite">2025</span></a><br><span class="t2">DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning</span></li></ol></section><section><h2>Computer vision</h2><ol><li><a href="lenet.html">LeNet <span class="cite">1998</span></a><br><span class="t2">Gradient-Based Learning Applied to Document Recognition</span></li><li><a href="alexnet.html">AlexNet <span class="cite">2012</span></a><br><span class="t2">ImageNet Classification with Deep Convolutional Neural Networks</span></li><li><a href="resnet.html">ResNet <span class="cite">2015</span></a><br><span class="t2">Deep Residual Learning for Image Recognition</span></li><li><a href="unet.html">U-Net <span class="cite">2015</span></a><br><span class="t2">U-Net: Convolutional Networks for Biomedical Image Segmentation</span></li><li><a href="diffusion2015.html">Diffusion models <span class="cite">2015</span></a><br><span class="t2">Deep Unsupervised Learning using Nonequilibrium Thermodynamics</span></li><li><a href="ddpm.html">DDPM <span class="cite">2020</span></a><br><span class="t2">Denoising Diffusion Probabilistic Models</span></li><li><a href="vit.html">ViT <span class="cite">2020</span></a><br><span class="t2">An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale</span></li><li><a href="clip.html">CLIP <span class="cite">2021</span></a><br><span class="t2">Learning Transferable Visual Models From Natural Language Supervision</span></li><li><a href="beatgans.html">Diffusion beats GANs <span class="cite">2021</span></a><br><span class="t2">Diffusion Models Beat GANs on Image Synthesis</span></li><li><a href="cfg.html">Classifier-free guidance <span class="cite">2021</span></a><br><span class="t2">Classifier-Free Diffusion Guidance</span></li><li><a href="ldm.html">Latent diffusion <span class="cite">2021</span></a><br><span class="t2">High-Resolution Image Synthesis with Latent Diffusion Models</span></li><li><a href="flowmatch.html">Flow matching <span class="cite">2022</span></a><br><span class="t2">Flow Matching for Generative Modeling</span></li><li><a href="sam.html">Segment Anything <span class="cite">2023</span></a><br><span class="t2">Segment Anything</span></li></ol></section><section><h2>Robotics &amp; reinforcement learning</h2><ol><li><a href="dqn.html">DQN <span class="cite">2013</span></a><br><span class="t2">Playing Atari with Deep Reinforcement Learning</span></li><li><a href="trpo.html">TRPO <span class="cite">2015</span></a><br><span class="t2">Trust Region Policy Optimization</span></li><li><a href="dqn-nature.html">Nature DQN <span class="cite">2015</span></a><br><span class="t2">Human-level control through deep reinforcement learning</span></li><li><a href="alphago.html">AlphaGo <span class="cite">2016</span></a><br><span class="t2">Mastering the game of Go with deep neural networks and tree search</span></li><li><a href="domainrand.html">Domain randomisation <span class="cite">2017</span></a><br><span class="t2">Domain Randomization for Transferring Deep Neural Networks from Simulation to the Real World</span></li><li><a href="ppo.html">PPO <span class="cite">2017</span></a><br><span class="t2">Proximal Policy Optimization Algorithms</span></li><li><a href="alphazero.html">AlphaZero <span class="cite">2017</span></a><br><span class="t2">Mastering Chess and Shogi by Self-Play with a General Reinforcement Learning Algorithm</span></li><li><a href="saycan.html">SayCan <span class="cite">2022</span></a><br><span class="t2">Do As I Can, Not As I Say: Grounding Language in Robotic Affordances</span></li><li><a href="diffpolicy.html">Diffusion Policy <span class="cite">2023</span></a><br><span class="t2">Diffusion Policy: Visuomotor Policy Learning via Action Diffusion</span></li><li><a href="rt2.html">RT-2 <span class="cite">2023</span></a><br><span class="t2">RT-2: Vision-Language-Action Models Transfer Web Knowledge to Robotic Control</span></li><li><a href="oxe.html">Open X-Embodiment <span class="cite">2023</span></a><br><span class="t2">Open X-Embodiment: Robotic Learning Datasets and RT-X Models</span></li><li><a href="pi0.html">π0 <span class="cite">2024</span></a><br><span class="t2">π0: A Vision-Language-Action Flow Model for General Robot Control</span></li></ol></section><section><h2>Safety &amp; security</h2><ol><li><a href="adversarial.html">Adversarial examples <span class="cite">2013</span></a><br><span class="t2">Intriguing properties of neural networks</span></li><li><a href="concrete.html">Concrete problems <span class="cite">2016</span></a><br><span class="t2">Concrete Problems in AI Safety</span></li><li><a href="constitutional.html">Constitutional AI <span class="cite">2022</span></a><br><span class="t2">Constitutional AI: Harmlessness from AI Feedback</span></li><li><a href="injection.html">Indirect prompt injection <span class="cite">2023</span></a><br><span class="t2">Not what you&#x27;ve signed up for: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection</span></li><li><a href="gcg.html">Universal jailbreaks (GCG) <span class="cite">2023</span></a><br><span class="t2">Universal and Transferable Adversarial Attacks on Aligned Language Models</span></li><li><a href="sleeper.html">Sleeper agents <span class="cite">2024</span></a><br><span class="t2">Sleeper Agents: Training Deceptive LLMs that Persist Through Safety Training</span></li><li><a href="refusal.html">Abliteration <span class="cite">2024</span></a><br><span class="t2">Refusal in Language Models Is Mediated by a Single Direction</span></li><li><a href="cones.html">Refusal concept cones <span class="cite">2025</span></a><br><span class="t2">The Geometry of Refusal in Large Language Models: Concept Cones and Representational Independence</span></li><li><a href="abl-defense.html">Defending against abliteration <span class="cite">2025</span></a><br><span class="t2">An Embarrassingly Simple Defense Against LLM Abliteration Attacks</span></li><li><a href="abl-compare.html">Abliteration tools compared <span class="cite">2025</span></a><br><span class="t2">Comparative Analysis of LLM Abliteration Methods: A Cross-Architecture Evaluation</span></li><li><a href="swarm-policy.html">Swarm red-teaming <span class="cite">2026</span></a><br><span class="t2">Restricting the Model, Missing the System: Measurement and Accountability in Offensive AI Governance</span></li><li><a href="swarm-hf.html">The Hugging Face swarm attack <span class="cite">2026</span></a><br><span class="t2">OpenAI – Hugging Face Incident: Technical Report</span></li></ol></section>
+</div></body></html>

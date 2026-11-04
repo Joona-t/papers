@@ -17,6 +17,7 @@ Read it at **[lovespark.love/papers](https://lovespark.love/papers/)**, or open 
 ```bash
 python3 scripts/build.py           # regenerate index.html
 node scripts/verify.mjs            # offline: build freshness, links point forward in time, anchors, no network, no personal paths
+python3 guides-src/build.py         # rebuild the study guides in guides/ (then rerun scripts/build.py)
 python3 -I scripts/check_links.py  # online: every arXiv title matches arXiv, every other link resolves
 ```
 

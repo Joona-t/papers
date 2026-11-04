@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adversarial examples (2013) study guide</title>
+<meta name="description" content="Are image classifiers that score near-human accuracy actually seeing what we see? This paper found that for every test image, there is a nearby image, changed by amounts too small for a person to notice, that the network labels completely wrongly, and that the same altered image often fools other ne">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Safety &amp; security</b> · 2013</p>
+  <h1>Intriguing properties of neural networks</h1>
+  <p class="cite">Christian Szegedy et al. · ICLR 2014</p>
+  <p class="lede">Are image classifiers that score near-human accuracy actually seeing what we see? This paper found that for every test image, there is a nearby image, changed by amounts too small for a person to notice, that the network labels completely wrongly, and that the same altered image often fools other networks trained separately. It named these "adversarial examples" and started a field.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/1312.6199">Read the paper (free)</a> <a href="https://lovespark.love/papers/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, independent AI review, but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>The authors searched, with an optimisation method, for the smallest change to an image that would make a neural network give a chosen wrong answer.</p>
+  <p>For every image they tried, on every network they tried, such a change existed and was tiny: the altered picture looks identical to a person, yet the network now says "ostrich" with confidence.</p>
+  <p>Random noise of the same size barely affects the network; only carefully aimed changes do. And an image altered to fool one network often fools other networks with different designs or trained on different data.</p>
+  <p>A second finding: single neurons inside a network are no more meaningful than random combinations of neurons, so the "meaning" lives in the whole space, not in individual units.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §4 · Figs. 5, 7</p>
+  <h2>An invisible change, a confident wrong answer</h2>
+  <div class="prose">
+    <p>A <strong>classifier</strong> is a program that looks at an image and outputs a label, such as "school bus" or "dog". In 2013 deep neural network classifiers were rapidly approaching human accuracy on photographs, and it was natural to assume they "saw" roughly as we do.</p>
+    <p>The authors asked a sharper question: what is the <em>smallest</em> change to this image that makes the network say something else? They let a computer search for it. The answer was startling. For images from ImageNet, the changes were so small that the altered images look identical to the originals, yet the network labelled every one of them "ostrich". They called these altered images <strong>adversarial examples</strong>.</p>
+    <p>Just as important: a random speckle of the same size does almost nothing. The change has to be <em>aimed</em>.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Change per pixel <input type="range" id="ad-e" min="0" max="0.2" step="0.005" value="0.06" data-fmt="3"><output id="ad-e-o">0.060</output></label>
+      <button class="btn on" data-p="aim">Aimed change</button><button class="btn" data-p="rand">Random change</button>
+    </div>
+    <div class="svgbox"><svg id="ad" viewBox="0 0 600 250" role="img" aria-label="An image, a perturbation and the classifier's confidence"></svg></div>
+    <p class="readout" id="ad-r"></p>
+    <figcaption>A toy classifier deciding "7" versus "1" on a 16 × 16 image (pixel brightness 0 to 1). The middle panel shows the change, magnified so you can see it; the right panel is what the classifier actually receives. The aimed change nudges every pixel by the same small amount in whichever direction lowers the score for "7". This aiming rule is the later "fast gradient sign" method, used here because it is simple; the paper itself used a slower optimiser to find the very smallest change. Illustrative, not one of the paper's networks.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>For a trained network there are tiny, aimed changes that flip its answer, while random changes of the same size do not.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is the random change so much weaker than the aimed one at the same size?</dt>
+    <dd>Random nudges push the score up for some pixels and down for others, so they mostly cancel. Aimed nudges all push the same way, so their effects add up.</dd>
+    <dt>Does the network make this mistake because the picture became ambiguous?</dt>
+    <dd>No. To a person the altered picture is just as clear as the original. The error reveals something about how the network computes, not about the image.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §4.3, §5 · later work</p>
+  <h2>Why tiny changes can add up</h2>
+  <div class="prose">
+    <p>The paper offered a geometric picture: adversarial examples are rare (you will almost never stumble on one by chance) but they are everywhere, close to every ordinary image, "much like the rational numbers" are close to every number on a line. It also measured how much each layer of a network can stretch a small input change, and found the stretch could be large even in the first layer.</p>
+    <p>A year later, Goodfellow, Shlens and Szegedy gave a simpler explanation. Images have many pixels. If each pixel is changed by a tiny amount in the direction the network is most sensitive to, the effects add up across all pixels. Double the number of pixels and the total effect doubles, while the change per pixel stays just as invisible. Random changes only grow with the square root of the number of pixels, because they partly cancel.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>log₁₀ of pixel count <input type="range" id="dm-n" min="1" max="6" step="0.1" value="4" data-fmt="1"><output id="dm-n-o">4.0</output></label></div>
+    <div class="svgbox"><svg id="dm" viewBox="0 0 600 240" role="img" aria-label="How the effect of aimed versus random changes grows with the number of pixels"></svg></div>
+    <p class="readout" id="dm-r"></p>
+    <figcaption>The slider sets the number of pixels as a power of ten (from 10 to a million). Each pixel changes by 1% of its range; each of the classifier's weights has a typical size of 1. Amber: total shift in the score from an aimed change (grows with the number of pixels). Blue: typical shift from a random change (grows with its square root). The dashed line is an illustrative score margin of 10 that must be overcome to flip the answer. This is the linear explanation from Goodfellow et al. (2014), not from this paper.</figcaption>
+  </figure>
+  <div class="later"><span class="label">Later refinement</span>The "rational numbers" picture in this paper was largely replaced by the linear explanation above, which also produced a fast attack (the fast gradient sign method) and made adversarial training practical. Later still, Ilyas et al. (2019) argued that adversarial examples exploit genuinely predictive but non-human-like "features" in the data.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>In high dimensions, many invisible nudges in the right direction add up to a big change in the network's output.</p>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §4.2 · Tables 2–4</p>
+  <h2>A trick that fools one network fools others</h2>
+  <div class="prose">
+    <p>If adversarial examples were quirks of one particular network, they would be a curiosity. The paper found something worse: images altered to fool one network often fool others that were built differently or trained on a different half of the data.</p>
+    <p>On handwritten digits (the MNIST dataset), changes made against one network caused errors in a separately trained network of a different design on anywhere from a few percent to over 80% of images (examples made on the deeper networks transferred at up to about 40%), while random noise of a similar strength caused almost none. Changes made against a network trained on one half of the training set fooled a network trained on the other half 5.9% of the time, and amplifying them a little raised that to 43% (Table 4).</p>
+  </div>
+  <div class="tablebox"><table>
+    <tr><th>Altered for…</th><th>…then shown to</th><th>Error rate</th></tr>
+    <tr><td>FC200-200-10 (two hidden layers)</td><td>FC10 (no hidden layer)</td><td class="num">38.2%</td></tr>
+    <tr><td>FC200-200-10</td><td>FC100-100-10</td><td class="num">20.3%</td></tr>
+    <tr><td>AE400-10 (autoencoder features)</td><td>FC10, heavy weight decay</td><td class="num">24.8%</td></tr>
+    <tr><td>Random noise, std 0.1</td><td>FC100-100-10</td><td class="num">0%</td></tr>
+  </table></div>
+  <div class="prose"><p>Selected cells from the paper's Table 2. A network named FC<var>a</var>-<var>b</var>-10 is fully connected with hidden layers of <var>a</var> and <var>b</var> units and 10 outputs.</p></div>
+  <p class="takeaway"><span class="label">Takeaway</span>Adversarial examples transfer between models, so an attacker may not need access to the exact model they want to fool.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does transfer make adversarial examples a security problem rather than just a curiosity?</dt>
+    <dd>An attacker can train their own substitute model, craft examples against it, and use them on a system whose internals they cannot see.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §3 · Figs. 1–4</p>
+  <h2>The other finding: single neurons aren't special</h2>
+  <div class="prose">
+    <p>Researchers often tried to understand a network by finding the images that most strongly activate a single neuron, and noticing that they share a theme ("this neuron detects faces"). The authors did the same for <em>random combinations</em> of neurons, and found the top images shared themes just as clearly.</p>
+    <p>Their conclusion: it is the overall space of activity, not the individual neurons, that carries meaning. Later interpretability research refined this. Many neurons respond to several unrelated things at once (called <strong>polysemantic</strong> neurons), and some meaningful directions do align with neurons while many do not.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Describing colours by "how red, how green, how blue" works, but so does "how bright, how warm, how saturated". Neither set of directions is the "true" one; the colour space itself is what matters.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Inspecting single neurons can mislead; meaningful directions in a network need not line up with individual units.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §4.2, §5 · Legacy</p>
+  <h2>Defences, arms races and language models</h2>
+  <div class="prose">
+    <p>The paper also tried a first defence: add adversarial examples to the training data. On digit recognition, this brought test error below 1.2%, better than the same network with weight decay or dropout, so adversarial examples were useful training data. That idea, <strong>adversarial training</strong>, is still the most reliable defence, though it is expensive and only protects against the kinds of change it was trained on.</p>
+    <p>A decade later, the same pattern showed up in language models: a string of odd-looking words, found by search, can make a chatbot ignore its safety training, and it transfers to other chatbots (<a href="gcg.html">GCG, 2023</a>).</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>Madry et al. (2018) framed adversarial training as a min-max problem solved with projected gradient descent, the standard recipe today. Carlini and Wagner (2017) showed many proposed defences failed against stronger attacks. Adversarial examples were also shown to work in the physical world, for example printed photos and stickers on road signs.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>This paper revealed a weakness that every later generation of models, including language models, has shared.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Deep networks are highly expressive, which yields good performance but also uninterpretable solutions with counter-intuitive properties. Two are reported. First, by a unit-analysis method, there is no distinction between individual high-level units and random linear combinations of them, suggesting the space rather than individual units holds semantic information. Second, deep networks learn input–output mappings that are discontinuous to a significant extent: an imperceptible, optimised perturbation can cause misclassification, and the same perturbation can cause a different network trained on a different subset of the data to misclassify. Szegedy, Zaremba, Sutskever, Bruna, Erhan, Goodfellow, Fergus; arXiv 1312.6199 (Dec 2013), ICLR 2014.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2–3 · Figs. 1–4</p>
+  <h2>Setup, and units versus random directions</h2>
+  <div class="prose">
+    <p><strong>Models (§2).</strong> MNIST: fully connected nets with one or more hidden layers and softmax ("FC"), and a classifier on autoencoder features ("AE"). ImageNet: the Krizhevsky et al. convolutional network ("AlexNet"). YouTube: "QuocNet", an unsupervised network trained on about 10M YouTube images, with a linear classifier on top.</p>
+    <p><strong>Unit analysis (§3).</strong> Let φ(<var>x</var>) be a layer's activation vector and <var>e<sub>i</sub></var> the natural basis vector of unit <var>i</var>. Prior work interpreted units by the held-out images maximising the unit:</p>
+  </div>
+  <div class="eq"><var>x</var>′ = argmax<sub><var>x</var> ∈ ℐ</sub> ⟨φ(<var>x</var>), <var>e<sub>i</sub></var>⟩</div>
+  <div class="prose">
+    <p>The paper repeats this with a random direction <var>v</var> ∈ ℝ<sup><var>n</var></sup> in place of <var>e<sub>i</sub></var>, and finds the retrieved images are similarly semantically coherent on both MNIST (Figs. 1–2) and ImageNet (Figs. 3–4). The evidence is qualitative (visual inspection). It undercuts the assumption that the coordinate basis is privileged.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>Activation-basis interpretability made a comeback with network dissection and feature visualisation (Olah et al., 2017), which found many units fairly interpretable, then refined again with the superposition hypothesis and sparse dictionary learning (Elhage et al., 2022; Bricken et al., 2023), which recover interpretable directions that are mostly not single neurons. The paper's conclusion is now seen as directionally right but too strong.</div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §4.1</p>
+  <h2>Finding minimal adversarial perturbations</h2>
+  <div class="prose"><p>Let <var>f</var> : ℝ<sup><var>m</var></sup> → {1, …, <var>k</var>} be a classifier with continuous loss loss<sub><var>f</var></sub>. For an image <var>x</var> ∈ [0, 1]<sup><var>m</var></sup> and target label <var>l</var>, the minimal perturbation solves</p></div>
+  <div class="eq">minimise ‖<var>r</var>‖<sub>2</sub> &nbsp; subject to &nbsp; <var>f</var>(<var>x</var> + <var>r</var>) = <var>l</var>, &nbsp; <var>x</var> + <var>r</var> ∈ [0, 1]<sup><var>m</var></sup></div>
+  <div class="prose">
+    <p>Its minimiser defines <var>D</var>(<var>x</var>, <var>l</var>), and ‖<var>D</var>(<var>x</var>, <var>l</var>) − <var>x</var>‖ is the distortion. The problem is hard, so the paper approximates it with box-constrained L-BFGS on a penalty formulation:</p>
+  </div>
+  <div class="eq">minimise &nbsp; <var>c</var> |<var>r</var>| + loss<sub><var>f</var></sub>(<var>x</var> + <var>r</var>, <var>l</var>) &nbsp; subject to &nbsp; <var>x</var> + <var>r</var> ∈ [0, 1]<sup><var>m</var></sup></div>
+  <div class="prose">
+    <p>with a line search over <var>c</var> &gt; 0 for the value at which the minimiser satisfies <var>f</var>(<var>x</var> + <var>r</var>) = <var>l</var>. The paper words this as finding the minimum such <var>c</var>; since <var>c</var> weights the size penalty, the smallest successful perturbation corresponds to the boundary where increasing <var>c</var> further would make the attack fail, and this boundary is what the search locates. For convex losses the penalty method is exact; for networks it is an approximation. Try it on a toy logistic classifier:</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>log<sub>10</sub> c <input type="range" id="pc-c" min="-3" max="1" step="0.05" value="-1.5" data-fmt="2"><output id="pc-c-o">-1.50</output></label><button class="btn" id="pc-ls">Line search for the boundary</button></div>
+    <div class="svgbox"><svg id="pc" viewBox="0 0 600 240" role="img" aria-label="Penalty method: perturbation norm and target probability versus c"></svg></div>
+    <p class="readout" id="pc-r"></p>
+    <figcaption>Toy: the 16 × 16 "7 vs 1" logistic classifier from the Plain English tab, target label <var>l</var> = "1". For each <var>c</var>, projected gradient descent minimises <var>c</var>‖<var>r</var>‖<sub>2</sub><sup>2</sup> + loss(<var>x</var> + <var>r</var>, <var>l</var>) inside the [0, 1] box (a squared norm is used for smooth optimisation). Curves: ‖<var>r</var>‖<sub>2</sub> (amber) and P(<var>l</var>) (green) across <var>c</var>; the marker is your <var>c</var>. The line search bisects for the largest <var>c</var> whose solution is still classified as <var>l</var>.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §4.2 · Tables 1–4</p>
+  <h2>Experiments</h2>
+  <div class="prose"><p><strong>Table 1</strong> (MNIST): every model admits adversarial examples with small average minimum distortion (the paper's distortion measure, an RMS-style per-pixel quantity).</p></div>
+  <div class="tablebox"><table>
+    <tr><th>Model</th><th>Train err.</th><th>Test err.</th><th>Av. min. distortion</th></tr>
+    <tr><td>FC10(10<sup>−4</sup>)</td><td class="num">6.7%</td><td class="num">7.4%</td><td class="num">0.062</td></tr>
+    <tr><td>FC10(10<sup>−2</sup>)</td><td class="num">10%</td><td class="num">9.4%</td><td class="num">0.1</td></tr>
+    <tr><td>FC10(1)</td><td class="num">21.2%</td><td class="num">20%</td><td class="num">0.14</td></tr>
+    <tr><td>FC100-100-10</td><td class="num">0%</td><td class="num">1.64%</td><td class="num">0.058</td></tr>
+    <tr><td>FC200-200-10</td><td class="num">0%</td><td class="num">1.54%</td><td class="num">0.065</td></tr>
+    <tr><td>AE400-10</td><td class="num">0.57%</td><td class="num">1.9%</td><td class="num">0.086</td></tr>
+  </table></div>
+  <div class="prose">
+    <p>FC10(λ) is softmax regression with weight decay λ; heavier regularisation requires larger distortion but costs accuracy. Fig. 7 notes that randomly distorted images with standard deviation 1 are still classified correctly 51% of the time, whereas adversarial distortions near 0.06 succeed always.</p>
+    <p><strong>Cross-model (Table 2).</strong> Adversarial examples crafted on one model and fed to others: examples made for FC200-200-10 cause 38.2% error on FC10(10<sup>−4</sup>), those for FC100-100-10 cause 28.9% on the same model, and those for AE400-10 cause 24.8% on FC10(1); Gaussian noise of std 0.1 gives 0% error and std 0.3 gives 5% and 4.3% on the two deep FC nets. <strong>Cross-training-set (Tables 3–4).</strong> MNIST split into disjoint halves P<sub>1</sub>, P<sub>2</sub> of 30,000 each; examples for FC100-100-10 on P<sub>1</sub> cause 26.2% error on FC123-456-10 (P<sub>1</sub>) and 5.9% on FC100-100-10′ (P<sub>2</sub>); magnified to std 0.1, 98% and 43%.</p>
+    <p><strong>ImageNet (Fig. 5).</strong> For AlexNet, all perturbed images are classified "ostrich, Struthio camelus", with average distortion 0.006508 over 64 examples. <strong>QuocNet (Fig. 6)</strong> shows the same for a binary car classifier.</p>
+    <p><strong>Adversarial training.</strong> Training a 100-100-10 network on a pool of adversarial examples refreshed during training reached test error below 1.2%, versus 1.6% with weight decay alone and about 1.3% with dropout. The paper notes examples generated for higher layers seemed more useful than input-level ones, and calls this preliminary.</p>
+  </div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §4.3 · Eq. 1 · Table 5</p>
+  <h2>Spectral analysis of instability</h2>
+  <div class="prose">
+    <p>Write the network as φ(<var>x</var>) = φ<sub><var>K</var></sub>(φ<sub><var>K</var>−1</sub>(… φ<sub>1</sub>(<var>x</var>; <var>W</var><sub>1</sub>) …)). If each layer is <var>L<sub>k</sub></var>-Lipschitz, ‖φ<sub><var>k</var></sub>(<var>x</var>) − φ<sub><var>k</var></sub>(<var>x</var> + <var>r</var>)‖ ≤ <var>L<sub>k</sub></var> ‖<var>r</var>‖, then the whole network satisfies</p>
+  </div>
+  <div class="eq">‖φ(<var>x</var>) − φ(<var>x</var> + <var>r</var>)‖ ≤ <var>L</var> ‖<var>r</var>‖, &nbsp; <var>L</var> = ∏<sub><var>k</var></sub> <var>L<sub>k</sub></var></div>
+  <div class="prose">
+    <p>For a ReLU layer φ<sub><var>k</var></sub>(<var>x</var>) = max(0, <var>W<sub>k</sub>x</var> + <var>b<sub>k</sub></var>), <var>L<sub>k</sub></var> ≤ ‖<var>W<sub>k</sub></var>‖ (operator norm). Max-pooling is contractive; contrast normalisation is contractive for γ ∈ [0.5, 1]. For convolutions, the operator norm is computed in the Fourier domain via Parseval: ‖<var>W</var>‖ = sup<sub>ξ</sub> ‖<var>A</var>(ξ)‖ (Eq. 1), where <var>A</var>(ξ) collects the filters' Fourier coefficients at frequency ξ. Table 5 reports these bounds for the ImageNet network.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Layers included <input type="range" id="lp-k" min="1" max="8" step="1" value="8"><output id="lp-k-o">8</output></label></div>
+    <div class="svgbox"><svg id="lp" viewBox="0 0 600 240" role="img" aria-label="Per-layer Lipschitz upper bounds and their running product"></svg></div>
+    <p class="readout" id="lp-r"></p>
+    <figcaption>Bars: per-layer upper bounds from Table 5 (Conv. 1–5, FC 1–3). Line: running product on a log scale, i.e. the bound on how much the network can amplify an input perturbation up to that layer. These are upper bounds only: a large bound does not prove adversarial examples exist, but a small one would rule them out.</figcaption>
+  </figure>
+  <div class="prose"><p>The authors conclude instability can appear as early as the first convolutional layer, and suggest penalising these bounds as a regulariser (not tested in the paper). Later work did exactly this: Parseval networks (Cissé et al., 2017) and spectral normalisation (Miyato et al., 2018) constrain layer operator norms.</p></div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §5 · Lineage</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose"><ul>
+    <li>The explanation offered (adversarial "pockets" that are low-probability but dense, like the rationals) is a metaphor, not a theory; the authors state they lack a deep understanding of how often adversarial negatives appear.</li>
+    <li>L-BFGS is slow and only approximates the minimal perturbation for non-convex models.</li>
+    <li>Transfer is quantified only on MNIST; ImageNet transfer is not measured.</li>
+    <li>Adversarial training results are preliminary and small-scale.</li>
+    <li>A minor inconsistency: §3 uses a convolutional MNIST network, while §4.2 says convolutional MNIST results were not yet available.</li>
+  </ul></div>
+  <div class="later"><span class="label">Later refinements</span><strong>Explanation and fast attacks:</strong> Goodfellow, Shlens &amp; Szegedy (2014) proposed the linearity hypothesis and FGSM, <var>x</var>′ = <var>x</var> + ε sign(∇<sub><var>x</var></sub>ℒ). <strong>Stronger attacks:</strong> DeepFool (2016), Carlini–Wagner (2017). <strong>Robust training:</strong> PGD adversarial training as a saddle-point problem (Madry et al., 2018); certified defences via randomised smoothing (Cohen et al., 2019). <strong>Transfer and black-box attacks:</strong> Papernot et al. (2017). <strong>Physical attacks:</strong> Kurakin et al. (2016), Eykholt et al. (2018). <strong>Theory:</strong> robustness–accuracy trade-offs (Tsipras et al., 2019) and non-robust features (Ilyas et al., 2019). <strong>Language models:</strong> universal transferable suffix attacks on aligned LLMs (<a href="gcg.html">Zou et al., 2023</a>) are the direct descendant.</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Adversarial example</dt><dd>An input deliberately perturbed, usually imperceptibly, to cause misclassification.</dd>
+    <dt>Distortion</dt><dd>Size of the perturbation; the paper reports an average minimum per model.</dd>
+    <dt>Box constraint</dt><dd>Keeping pixel values in [0, 1].</dd>
+    <dt>L-BFGS</dt><dd>Limited-memory quasi-Newton optimiser; the "box-constrained" variant handles bounds.</dd>
+    <dt>Transferability</dt><dd>Adversarial examples crafted for one model fooling another.</dd>
+    <dt>Lipschitz constant</dt><dd>Maximum ratio of output change to input change.</dd>
+    <dt>Operator norm</dt><dd>Largest singular value of a linear map; bounds how much it can stretch a vector.</dd>
+    <dt>Adversarial training</dt><dd>Training on adversarial examples to increase robustness.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Led to:</strong> <a href="gcg.html">Universal jailbreaks (GCG) (2023)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers/">Papers worth reading</a> (<a href="https://lovespark.love/papers/#adversarial">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+var TOY=(function(){ // 16x16 "7" image and a 7-vs-1 linear classifier
+  var N=16, img=[], t7=[], t1=[], r=rng(42), w=[], i, x, y;
+  for (y=0;y<N;y++) for (x=0;x<N;x++){
+    var s7=(y>=3&&y<=4&&x>=3&&x<=12) || (Math.abs(x-(12-(y-4)*0.55))<1.1 && y>=4 && y<=13) ? 1:0;
+    var s1=(x>=7&&x<=8&&y>=3&&y<=13)?1:0;
+    t7.push(s7); t1.push(s1); img.push(Math.min(1,Math.max(0,s7*0.95+0.03*r()))); }
+  for (i=0;i<N*N;i++) w.push(0.8*(t7[i]-t1[i])+0.35*gauss(r));
+  var b=0, s0=0; for (i=0;i<N*N;i++) s0+=w[i]*img[i]; b=3-s0;
+  function score(v){ var s=b; for (var i=0;i<v.length;i++) s+=w[i]*v[i]; return s; }
+  return {N:N,img:img,w:w,b:b,score:score};
+})();
+function drawImg(svg,v,x0,y0,px,mode){ var N=TOY.N; for (var i=0;i<N*N;i++){ var x=i%N, y=Math.floor(i/N), a=v[i];
+  if (mode==='diff'){ S('rect',{x:x0+x*px,y:y0+y*px,width:px,height:px,'class':a>0?'f-fire':'f-wire','fill-opacity':Math.min(1,Math.abs(a)*6)},svg); }
+  else S('rect',{x:x0+x*px,y:y0+y*px,width:px,height:px,'class':'f-ink','fill-opacity':Math.max(0.02,a)},svg); }
+  S('rect',{x:x0,y:y0,width:N*px,height:N*px,'class':'area'},svg); }
+(function(){ // aimed vs random
+  var svg=$('#ad'), eps=0.06, mode='aim', rr=rng(7), rs=TOY.img.map(function(){ return rr()<0.5?-1:1; });
+  function draw(){ clear(svg); var px=9, x=TOY.img, d=[], xa=[];
+    for (var i=0;i<x.length;i++){ var dir=mode==='aim'?-Math.sign(TOY.w[i]):rs[i]; var v=Math.min(1,Math.max(0,x[i]+eps*dir)); xa.push(v); d.push(v-x[i]); }
+    drawImg(svg,x,20,30,px); drawImg(svg,d,200,30,px,'diff'); drawImg(svg,xa,380,30,px);
+    S('text',{x:92,y:20,'class':'t-s mid'},svg,'original'); S('text',{x:272,y:20,'class':'t-s mid'},svg,'change (magnified)'); S('text',{x:452,y:20,'class':'t-s mid'},svg,'what the network sees');
+    S('text',{x:182,y:110,'class':'t-big mid'},svg,'+'); S('text',{x:362,y:110,'class':'t-big mid'},svg,'=');
+    var p0=sigmoid(TOY.score(x)), p1=sigmoid(TOY.score(xa));
+    [[p0,'before'],[p1,'after']].forEach(function(q,k){ var y=196+k*24; S('text',{x:70,y:y+12,'class':'t end'},svg,q[1]); S('rect',{x:80,y:y,width:q[0]*440,height:16,'class':'f-fire'},svg); S('rect',{x:80+q[0]*440,y:y,width:(1-q[0])*440,height:16,'class':'f-wire'},svg);
+      S('text',{x:84,y:y+12,'class':'t-s','style':'fill:var(--card)'},svg,'"7" '+fmt(q[0]*100,0)+'%'); S('text',{x:516,y:y+12,'class':'t-s end','style':'fill:var(--card)'},svg,'"1" '+fmt((1-q[0])*100,0)+'%'); });
+    $('#ad-r').innerHTML=(mode==='aim'?'Aimed':'Random')+' change of '+fmt(eps,3)+' per pixel: the classifier now says <b>'+(p1>0.5?'"7"':'"1"')+'</b> with '+fmt(Math.max(p1,1-p1)*100,0)+'% confidence.'; }
+  bindRange('ad-e',function(v){eps=v;draw();});
+  $$('[data-p]').forEach(function(b){ b.onclick=function(){ mode=b.dataset.p; $$('[data-p]').forEach(function(x){x.classList.toggle('on',x===b);}); draw(); }; });
+})();
+(function(){ // dimension
+  var svg=$('#dm');
+  function draw(L){ clear(svg); var X=function(l){return 60+(l-1)/5*500;}, Y=function(v){ return 200-Math.log10(Math.max(v,1e-2))/6*180-60; };
+    S('line',{x1:60,y1:210,x2:560,y2:210,'class':'axis'},svg); S('line',{x1:60,y1:10,x2:60,y2:210,'class':'axis'},svg);
+    [1,2,3,4,5,6].forEach(function(l){ S('text',{x:X(l),y:226,'class':'t-s mid'},svg,'10'+['¹','²','³','⁴','⁵','⁶'][l-1]); });
+    [0.1,1,10,100,1000,10000].forEach(function(v){ var y=Y(v); if (y<10||y>210) return; S('line',{x1:60,y1:y,x2:560,y2:y,'class':'grid'},svg); S('text',{x:54,y:y+4,'class':'t-s end'},svg,String(v)); });
+    var a='',b=''; for (var l=1;l<=6.001;l+=0.05){ var n=Math.pow(10,l); a+=(a?'L':'M')+X(l)+','+Y(0.01*n); b+=(b?'L':'M')+X(l)+','+Y(0.01*Math.sqrt(n)); }
+    S('path',{d:a,'class':'w-fire'},svg); S('path',{d:b,'class':'w'},svg); S('line',{x1:60,y1:Y(10),x2:560,y2:Y(10),'class':'w-dash'},svg); S('text',{x:556,y:Y(10)-6,'class':'t-s end'},svg,'margin to flip');
+    var n=Math.pow(10,L); S('line',{x1:X(L),y1:10,x2:X(L),y2:210,'class':'w-faint'},svg);
+    S('circle',{cx:X(L),cy:Y(0.01*n),r:5,'class':'u-on'},svg); S('circle',{cx:X(L),cy:Y(0.01*Math.sqrt(n)),r:5,'class':'u-wire'},svg);
+    $('#dm-r').innerHTML='With <b>'+Math.round(n).toLocaleString()+'</b> pixels: aimed shift <b>'+fmt(0.01*n,1)+'</b>, random shift about <b>'+fmt(0.01*Math.sqrt(n),2)+'</b>. '+(0.01*n>10?'The aimed change flips the answer.':'Not enough to flip yet.'); }
+  bindRange('dm-n',draw);
+})();
+(function(){ // penalty method
+  var svg=$('#pc'), lc=-1.5, cache={};
+  function solve(c){ var k=fmt(c,4); if (cache[k]) return cache[k]; var x=TOY.img, r=x.map(function(){return 0;}), lr=0.02;
+    for (var it=0;it<400;it++){ var v=x.map(function(a,i){return a+r[i];}), p1=1-sigmoid(TOY.score(v)); // P(label "1")
+      // loss = -log p1 ; d/dv = (1-p1)*w  (since score is logit of "7")
+      for (var i=0;i<r.length;i++){ var g=(1-p1)*TOY.w[i]+2*c*r[i]; r[i]-=lr*g/Math.max(0.05,c*2+0.3); var nv=x[i]+r[i]; if (nv<0) r[i]=-x[i]; if (nv>1) r[i]=1-x[i]; } }
+    var v=x.map(function(a,i){return a+r[i];}), nr=Math.sqrt(r.reduce(function(s,a){return s+a*a;},0)), p=1-sigmoid(TOY.score(v));
+    return cache[k]={nr:nr,p:p}; }
+  var grid=[]; for (var l=-3;l<=1.0001;l+=0.1) grid.push([l,solve(Math.pow(10,l))]);
+  var maxn=Math.max.apply(null,grid.map(function(g){return g[1].nr;}));
+  function draw(){ clear(svg); var X=function(l){return 60+(l+3)/4*500;}, Yn=function(v){return 200-v/maxn*170;}, Yp=function(p){return 200-p*170;};
+    S('line',{x1:60,y1:200,x2:560,y2:200,'class':'axis'},svg); S('line',{x1:60,y1:24,x2:60,y2:200,'class':'axis'},svg);
+    [-3,-2,-1,0,1].forEach(function(l){ S('text',{x:X(l),y:216,'class':'t-s mid'},svg,'10'+(l<0?'⁻':'')+['⁰','¹','²','³'][Math.abs(l)]); });
+    S('text',{x:310,y:234,'class':'t-s mid'},svg,'penalty weight c');
+    S('line',{x1:60,y1:Yp(0.5),x2:560,y2:Yp(0.5),'class':'w-dash'},svg); S('text',{x:556,y:Yp(0.5)-4,'class':'t-s end'},svg,'P = 0.5');
+    var a='',b=''; grid.forEach(function(g,i){ a+=(i?'L':'M')+X(g[0])+','+Yn(g[1].nr); b+=(i?'L':'M')+X(g[0])+','+Yp(g[1].p); });
+    S('path',{d:a,'class':'w-fire'},svg); S('path',{d:b,'class':'w-ok'},svg);
+    S('text',{x:66,y:18,'class':'t-fire'},svg,'‖r‖₂'); S('text',{x:120,y:18,'class':'t-ok'},svg,'P(target "1")');
+    var s=solve(Math.pow(10,lc)); S('line',{x1:X(lc),y1:24,x2:X(lc),y2:200,'class':'w-ink'},svg);
+    $('#pc-r').innerHTML='c = '+fmt(Math.pow(10,lc),4)+': ‖r‖₂ = <b>'+fmt(s.nr,3)+'</b>, P("1") = <b>'+fmt(s.p,3)+'</b>, '+(s.p>0.5?'attack succeeds.':'attack fails (penalty too strong).'); }
+  bindRange('pc-c',function(v){lc=v;draw();});
+  $('#pc-ls').onclick=function(){ var lo=-3, hi=1; if (solve(Math.pow(10,lo)).p<=0.5){ $('#pc-r').textContent='Even the weakest penalty fails.'; return; }
+    for (var k=0;k<14;k++){ var m=(lo+hi)/2; if (solve(Math.pow(10,m)).p>0.5) lo=m; else hi=m; }
+    var el=$('#pc-c'); el.value=Math.floor(lo/0.05)*0.05; el.dispatchEvent(new Event('input')); $('#pc-r').innerHTML+=' Boundary found by bisection: c ≈ <b>'+fmt(Math.pow(10,lo),4)+'</b>.'; };
+})();
+(function(){ // Lipschitz
+  var svg=$('#lp'), L=[['C1',2.75],['C2',10],['C3',7],['C4',7.5],['C5',11],['F1',3.12],['F2',4],['F3',4]];
+  function draw(k){ clear(svg); var bw=56, X=function(i){return 70+i*62;};
+    S('line',{x1:60,y1:200,x2:570,y2:200,'class':'axis'},svg);
+    var prod=1, pts='';
+    L.forEach(function(l,i){ var on=i<k, h=l[1]*12; S('rect',{x:X(i),y:200-h,width:bw-10,height:h,'class':on?'f-wire':'f-rule','fill-opacity':on?0.8:0.4},svg); S('text',{x:X(i)+(bw-10)/2,y:196-h,'class':'t-s mid'},svg,String(l[1])); S('text',{x:X(i)+(bw-10)/2,y:216,'class':'t-s mid'},svg,l[0]);
+      if (on){ prod*=l[1]; var y=200-Math.log10(prod)/7*180; pts+=(pts?'L':'M')+(X(i)+(bw-10)/2)+','+y; } });
+    S('path',{d:pts,'class':'w-fire'},svg); S('text',{x:66,y:20,'class':'t-fire'},svg,'running product (log scale, top = 10⁷)');
+    $('#lp-r').innerHTML='Bound on amplification through '+k+' layer'+(k>1?'s':'')+': <b>'+(prod>=1e4?prod.toExponential(2):fmt(prod,2))+'</b>.'; }
+  bindRange('lp-k',draw);
+})();
+</script>
+
+</body>
+</html>

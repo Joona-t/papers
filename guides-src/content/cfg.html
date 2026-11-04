@@ -1,0 +1,288 @@
+<!--LEDE-->
+Classifier guidance made diffusion images sharper, but it needed a second network: a classifier trained on noisy images. Ho and Salimans show you can get the same effect from the diffusion model alone. Train it to denoise both with and without the label, then at every sampling step push the prediction away from the unlabelled guess and towards the labelled one. This one-line trick is how nearly every text-to-image model is steered today.
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p><a href="beatgans.html">Classifier guidance</a> sharpened diffusion images by nudging every step with a separate classifier, which had to be specially trained on noisy images.</p>
+  <p>Instead, train a single diffusion model that sometimes gets the label (such as "dog") and sometimes gets a blank, so it learns both "a dog picture" and "any picture".</p>
+  <p>When generating, compute both guesses and exaggerate the difference between them: move further in the direction that the label adds.</p>
+  <p>A guidance weight sets how far to exaggerate: more gives more typical, convincing images and less variety, exactly the trade-off classifier guidance gave, with no classifier at all.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1, §3.1</p>
+  <h2>The trouble with an extra classifier</h2>
+  <div class="prose">
+    <p>A <a href="ddpm.html">diffusion model</a> makes a picture by starting from random static and removing a little noise at a time. To ask for a <em>particular</em> kind of picture, you can give the model a label (a class such as "malamute", or later a text prompt). On its own, though, a labelled model often produces pictures that only vaguely match.</p>
+    <p><a href="beatgans.html">Dhariwal and Nichol</a> fixed this with <strong>classifier guidance</strong>: a separate image classifier nudges each step towards "more malamute". It worked, but it had costs. The classifier had to be trained on noisy images at every noise level, so off-the-shelf classifiers couldn't be used. And some people suspected the trick might work partly by "fooling" the classifier, a bit like the adversarial examples that trick image recognisers, rather than by genuinely improving the images.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A painter (the diffusion model) works with a critic standing beside them (the classifier). The question this paper asks: could the painter learn to be their own critic?</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Guidance improves conditional diffusion, but the classifier it needed was awkward to build and raised doubts about what it was really doing.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §3.2 · Algorithm 1 · Eq. 6</p>
+  <h2>One model, two guesses</h2>
+  <div class="prose">
+    <p>Training changes by one line. Normally every training picture comes with its label. Here, a random 10 to 20% of the time the label is replaced by a "blank" token. So the same network learns two jobs: denoise <em>given</em> the label, and denoise <em>without</em> it.</p>
+    <p>At each sampling step, ask the network twice: once with the label, once with the blank. The difference between the two answers is "what the label adds". Classifier-free guidance takes the labelled answer and adds an extra helping of that difference, scaled by a <strong>guidance weight</strong> <var>w</var>. At <var>w</var> = 0 you get the plain labelled model; larger <var>w</var> exaggerates.</p>
+    <p>The figure shows these directions for three classes of 2-D points. Each arrow shows which way a noisy point is pushed. The blue arrows use the label alone; the amber arrows add guidance. Turn up <var>w</var> and the amber arrows turn away from the other classes.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><span>Label:</span><button class="btn on" id="vf-0" aria-pressed="true">A</button><button class="btn" id="vf-1" aria-pressed="false">B</button><button class="btn" id="vf-2" aria-pressed="false">C</button>
+      <label>Guidance <var>w</var> <input type="range" id="vf-w" min="0" max="6" step="0.5" value="2" data-fmt="1"><output id="vf-w-o">2.0</output></label>
+      <label>Noise level <input type="range" id="vf-t" min="5" max="95" step="5" value="40"><output id="vf-t-o">40</output></label></div>
+    <div class="svgbox"><svg id="vf" viewBox="0 0 600 300" role="img" aria-label="Arrows showing conditional and guided denoising directions over three classes of 2-D points"></svg></div>
+    <p class="readout" id="vf-r"></p>
+    <figcaption>Circles: where each class's <em>noisy</em> points lie at this noise level (one standard deviation; they shrink towards the centre and spread out as noise grows). Each dot is a noisy point; the lines leaving it show where it is pushed. Blue: the direction the labelled model moves a noisy point. Amber: the guided direction, (1 + <var>w</var>) × labelled − <var>w</var> × unlabelled. Noise level runs from 5 (little noise) to 95 (mostly noise) on a 100-step scale. Toy illustration with exact denoisers.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>One network learns both "with label" and "without label". Guidance moves each step further along the difference between them.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What does the network see during training when the label is dropped?</dt>
+    <dd>A special "null" label. It then has to denoise without knowing the class, which teaches it the unconditional model.</dd>
+    <dt>Why does subtracting the unlabelled guess help?</dt>
+    <dd>The unlabelled guess points towards "any plausible picture". Moving away from it emphasises what is specific to the requested label, so samples become more distinctively that class.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §3 · Fig. 2 · §4.1</p>
+  <h2>The guidance dial</h2>
+  <div class="prose">
+    <p>Now run the whole sampling process with those guided arrows. The paper's Figure 2 does this for three Gaussian blobs; the figure below does the same live. With <var>w</var> = 0 the samples cover the requested class, including the parts that overlap its neighbours. As <var>w</var> grows, they crowd into the region that is most clearly that class and least like the others.</p>
+    <p>On real images the effect is the same: more typical, more recognisable pictures, at the cost of variety. In the paper's ImageNet tests, a small amount of guidance gave the best overall quality score, while larger amounts gave the most convincing individual images.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><span>Label:</span><button class="btn on" id="gd-0" aria-pressed="true">A</button><button class="btn" id="gd-1" aria-pressed="false">B</button><button class="btn" id="gd-2" aria-pressed="false">C</button>
+      <label>Guidance <var>w</var> <input type="range" id="gd-w" min="0" max="8" step="0.5" value="0" data-fmt="1"><output id="gd-w-o">0.0</output></label></div>
+    <div class="svgbox"><svg id="gd" viewBox="0 0 600 300" role="img" aria-label="Scatter of guided samples from a 2-D three-class model"></svg></div>
+    <p class="readout" id="gd-r"></p>
+    <figcaption>600 samples from a 100-step sampler using classifier-free guidance with the exact labelled and unlabelled denoisers. Dashed circles: two standard deviations of each class. Try label A, then raise <var>w</var> from 0 to 4: the cloud shrinks and moves away from B and C. Toy illustration modelled on the paper's Fig. 2.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Turning up the guidance weight trades variety for typicality, the same dial classifier guidance offered.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>At high <var>w</var>, why do samples move away from the other classes rather than just shrinking to the class centre?</dt>
+    <dd>Guidance rewards points that are much more likely under the label than overall. Points near other classes are fairly likely overall, so they are penalised, and the cloud drifts to the side facing away from its neighbours.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §4 · Tables 1–2</p>
+  <h2>Does it work on real images?</h2>
+  <div class="prose">
+    <p>The authors trained class-conditional diffusion models on ImageNet at 64 × 64 and 128 × 128 pixels. A small guidance weight (<var>w</var> = 0.1 at 64 × 64, 0.3 at 128 × 128) gave the best FID, the usual realism-plus-variety score. At 128 × 128 it scored 2.43, better than the classifier-guided model from <a href="beatgans.html">Dhariwal and Nichol</a> (2.97). Larger weights steadily raised the Inception Score (how confidently a classifier recognises each image) while FID got worse, which is the variety cost showing up.</p>
+    <p>Dropping the label 10% or 20% of the time worked about equally well; 50% gave a worse balance of quality and variety. So only a small share of training has to go to the unlabelled job.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Without any classifier, guidance matched and beat classifier guidance on ImageNet.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §5 and legacy</p>
+  <h2>The price, and why it took over</h2>
+  <div class="prose">
+    <p>The cost is speed: every sampling step now runs the network twice, once with and once without the label. The authors also note that less diverse outputs might under-represent rare kinds of data.</p>
+    <p>The benefits won out. The trick needs no extra model, works with any kind of conditioning (including text prompts, where a noisy-image classifier would be impractical), and is a couple of lines of code. The "guidance scale" slider in Stable Diffusion and similar tools is this paper's <var>w</var>, shifted by one: their default of 7.5 corresponds to <var>w</var> = 6.5 here.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>GLIDE, DALL·E 2, Imagen and <a href="ldm.html">Stable Diffusion</a> all generate with classifier-free guidance, usually at much larger weights than the paper's best-FID settings, because people prefer prompt-faithful images over maximal variety. Later work tames side effects such as over-saturation at high weights, for example by applying guidance only in part of the noise range, or by guiding with a weaker version of the model itself ("autoguidance").</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Classifier-free guidance is simple, general and cheap enough that it became the standard way to steer diffusion models.</p>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Classifier guidance trades mode coverage for sample fidelity in conditional diffusion models, but requires training an image classifier separately from the diffusion model. This paper shows guidance can be performed by a pure generative model without such a classifier: jointly train a conditional and an unconditional diffusion model, and combine their score estimates to obtain a trade-off between sample quality and diversity similar to that of classifier guidance. A short version appeared at the NeurIPS 2021 Workshop on Deep Generative Models and Downstream Applications; arXiv:2207.12598 (2022).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2 · Eqs. 1–5</p>
+  <h2>Continuous-time setup</h2>
+  <div class="prose"><p>The paper uses a variance-preserving continuous-time formulation indexed by log signal-to-noise ratio λ = log(α<sub>λ</sub><sup>2</sup>/σ<sub>λ</sub><sup>2</sup>):</p></div>
+  <div class="eq"><var>q</var>(<b>z</b><sub>λ</sub> | <b>x</b>) = <span class="v">N</span>(α<sub>λ</sub><b>x</b>, σ<sub>λ</sub><sup>2</sup><b>I</b>),&nbsp;&nbsp; α<sub>λ</sub><sup>2</sup> = 1/(1 + e<sup>−λ</sup>),&nbsp; σ<sub>λ</sub><sup>2</sup> = 1 − α<sub>λ</sub><sup>2</sup> <span class="n">(1)</span></div>
+  <div class="prose">
+    <p>Training samples λ = −2 log tan(<var>a</var><var>u</var> + <var>b</var>) with <var>u</var> ~ U[0, 1], <var>b</var> = arctan(e<sup>−λ<sub>max</sub>/2</sup>), <var>a</var> = arctan(e<sup>−λ<sub>min</sub>/2</sup>) − <var>b</var>: a hyperbolic secant distribution truncated to [λ<sub>min</sub>, λ<sub>max</sub>] = [−20, 20], inspired by the cosine schedule of Nichol and Dhariwal. The model predicts ε, with <b>x</b><sub>θ</sub>(<b>z</b><sub>λ</sub>) = (<b>z</b><sub>λ</sub> − σ<sub>λ</sub>ε<sub>θ</sub>(<b>z</b><sub>λ</sub>))/α<sub>λ</sub>, trained on E‖ε<sub>θ</sub>(<b>z</b><sub>λ</sub>) − ε‖<sup>2</sup> (Eq. 5), so ε<sub>θ</sub>(<b>z</b><sub>λ</sub>) ≈ −σ<sub>λ</sub>∇<sub><b>z</b><sub>λ</sub></sub> log <var>p</var>(<b>z</b><sub>λ</sub>). Sampling uses ancestral steps with a variance interpolation exponent <var>v</var> (Eq. 4): <var>v</var> = 0.3 at 64 × 64, 0.2 at 128 × 128.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3.1</p>
+  <h2>Classifier guidance in this notation</h2>
+  <div class="eq">ε̃<sub>θ</sub>(<b>z</b><sub>λ</sub>, <b>c</b>) = ε<sub>θ</sub>(<b>z</b><sub>λ</sub>, <b>c</b>) − <var>w</var> σ<sub>λ</sub> ∇<sub><b>z</b><sub>λ</sub></sub> log <var>p</var><sub>θ</sub>(<b>c</b> | <b>z</b><sub>λ</sub>) ≈ −σ<sub>λ</sub>∇<sub><b>z</b><sub>λ</sub></sub>[ log <var>p</var>(<b>z</b><sub>λ</sub> | <b>c</b>) + <var>w</var> log <var>p</var><sub>θ</sub>(<b>c</b> | <b>z</b><sub>λ</sub>) ]</div>
+  <div class="prose">
+    <p>so sampling targets <var>p̃</var><sub>θ</sub>(<b>z</b><sub>λ</sub> | <b>c</b>) ∝ <var>p</var><sub>θ</sub>(<b>z</b><sub>λ</sub> | <b>c</b>) <var>p</var><sub>θ</sub>(<b>c</b> | <b>z</b><sub>λ</sub>)<sup><var>w</var></sup>, up-weighting points where the classifier is confident. The paper notes that guiding an <em>unconditional</em> model with weight <var>w</var> + 1 is in principle the same as guiding a conditional model with weight <var>w</var>, since <var>p</var>(<b>z</b> | <b>c</b>)<var>p</var>(<b>c</b> | <b>z</b>)<sup><var>w</var></sup> ∝ <var>p</var>(<b>z</b>)<var>p</var>(<b>c</b> | <b>z</b>)<sup><var>w</var>+1</sup>, but that the conditional form gave the best results in practice (as in <a href="beatgans.html">Dhariwal and Nichol</a>). Fig. 2 illustrates the effect on a mixture of three Gaussians.</p>
+  </div>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §3.2 · Eq. 6 · Algorithms 1–2</p>
+  <h2>Classifier-free guidance</h2>
+  <div class="prose"><p>A single network parameterises both models: ε<sub>θ</sub>(<b>z</b><sub>λ</sub>) = ε<sub>θ</sub>(<b>z</b><sub>λ</sub>, <b>c</b> = ∅). Sampling uses the linear combination</p></div>
+  <div class="eq">ε̃<sub>θ</sub>(<b>z</b><sub>λ</sub>, <b>c</b>) = (1 + <var>w</var>) ε<sub>θ</sub>(<b>z</b><sub>λ</sub>, <b>c</b>) − <var>w</var> ε<sub>θ</sub>(<b>z</b><sub>λ</sub>) <span class="n">(6)</span></div>
+  <div class="prose">
+    <p><strong>Why this is guidance.</strong> Define the implicit classifier <var>p</var><sup>i</sup>(<b>c</b> | <b>z</b><sub>λ</sub>) ∝ <var>p</var>(<b>z</b><sub>λ</sub> | <b>c</b>)/<var>p</var>(<b>z</b><sub>λ</sub>). With exact scores ε*, ∇ log <var>p</var><sup>i</sup>(<b>c</b> | <b>z</b><sub>λ</sub>) = −(1/σ<sub>λ</sub>)[ε*(<b>z</b><sub>λ</sub>, <b>c</b>) − ε*(<b>z</b><sub>λ</sub>)]. Plugging this into classifier guidance gives ε̃*(<b>z</b><sub>λ</sub>, <b>c</b>) = (1 + <var>w</var>)ε*(<b>z</b><sub>λ</sub>, <b>c</b>) − <var>w</var>ε*(<b>z</b><sub>λ</sub>), which is Eq. 6. Equivalently, the target is <var>p</var>(<b>z</b> | <b>c</b>)<sup>1+<var>w</var></sup>/<var>p</var>(<b>z</b>)<sup><var>w</var></sup>.</p>
+    <p>The paper stresses a subtlety: Eq. 6 uses unconstrained networks, so ε̃<sub>θ</sub> need not be the score of any distribution (the vector field need not be conservative), and the guided sampler does not exactly sample <var>p</var><sup>i</sup>-tilted distributions. Even with exact scores, tilting each noise level separately is not the same as tilting the clean data distribution and then diffusing it.</p>
+  </div>
+  <pre class="algo"><span class="c">Algorithm 1  Joint training</span>
+input: p_uncond
+repeat
+  (x, c) ~ p(x, c)
+  c <- null with probability p_uncond
+  lambda ~ p(lambda);  eps ~ N(0, I)
+  z = alpha_lambda x + sigma_lambda eps
+  gradient step on || eps_theta(z, c) - eps ||^2
+until converged
+
+<span class="c">Algorithm 2  Conditional sampling</span>
+input: guidance w, condition c, increasing log-SNR sequence lambda_1..lambda_T
+z_1 ~ N(0, I)
+for t = 1..T:
+  eps~ = (1 + w) eps_theta(z_t, c) - w eps_theta(z_t)        <span class="c"># Eq. 6</span>
+  x~ = (z_t - sigma_t eps~) / alpha_t
+  z_{t+1} ~ N( mu~(z_t, x~), sigma~^2 ) if t &lt; T else z_{t+1} = x~
+return z_{T+1}</pre>
+  <div class="prose"><p>The figure plots the ideal clean-data target of Eq. 6 in one dimension, <var>p</var>(<var>x</var> | <var>c</var>)<sup>1+<var>w</var></sup> <var>p</var>(<var>x</var>)<sup>−<var>w</var></sup> normalised, for three overlapping classes.</p></div>
+  <figure class="live">
+    <div class="ctl"><label>Guidance <var>w</var> <input type="range" id="tg-w" min="0" max="8" step="0.25" value="1" data-fmt="2"><output id="tg-w-o">1.00</output></label><span>Class:</span><button class="btn" id="tg-0">A</button><button class="btn on" id="tg-1" aria-pressed="true">B</button><button class="btn" id="tg-2">C</button></div>
+    <div class="svgbox"><svg id="tg" viewBox="0 0 600 250" role="img" aria-label="One-dimensional guided target density for increasing guidance weight"></svg></div>
+    <p class="readout" id="tg-r"></p>
+    <figcaption>Grey: <var>p</var>(<var>x</var>). Blue dashed: <var>p</var>(<var>x</var> | <var>c</var>). Amber: the tilted target ∝ <var>p</var>(<var>x</var> | <var>c</var>)<sup>1+<var>w</var></sup>/<var>p</var>(<var>x</var>)<sup><var>w</var></sup>, computed on a grid. For the middle class the target narrows symmetrically; for an edge class it narrows and shifts outwards, away from its neighbour. This is the clean-data target; the actual sampler applies Eq. 6 at every noise level, which is not identical.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Write classifier-free guidance in the "scale <var>s</var>" form used by most libraries.</dt>
+    <dd>ε<sub>θ</sub>(<b>z</b>) + <var>s</var>[ε<sub>θ</sub>(<b>z</b>, <b>c</b>) − ε<sub>θ</sub>(<b>z</b>)] with <var>s</var> = 1 + <var>w</var>. So <var>s</var> = 1 (<var>w</var> = 0) is the plain conditional model.</dd>
+    <dt>Why can't the guided sampler be read as an adversarial attack on a classifier?</dt>
+    <dd>There is no classifier: the update is a difference of two generative-model outputs. The paper argues this shows guidance gains are obtainable by a purely generative model.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §4 · Tables 1–2 · Figs. 3–5</p>
+  <h2>Experiments</h2>
+  <div class="prose">
+    <p>Class-conditional ImageNet at 64 × 64 and 128 × 128, using the architecture and hyperparameters of Dhariwal and Nichol's guided models, with the class embedding able to take the null token. FID and IS on 50k samples. §4.1 varies <var>w</var>; §4.2 varies <var>p</var><sub>uncond</sub> ∈ {0.1, 0.2, 0.5}; §4.3 varies the number of sampling steps <var>T</var> ∈ {128, 256, 1024}.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" id="tb-64" aria-pressed="true">64 × 64 (Table 1)</button><button class="btn" id="tb-128" aria-pressed="false">128 × 128 (Table 2)</button><span id="tb-sub"></span></div>
+    <div class="svgbox"><svg id="tb" viewBox="0 0 600 260" role="img" aria-label="FID and Inception score against guidance weight from Tables 1 and 2"></svg></div>
+    <p class="readout" id="tb-r"></p>
+    <figcaption>Values from the paper's Tables 1 and 2 (guidance weights 0 to 1 in steps of 0.1, then 2, 3 and 4; the horizontal axis is not to scale). Left: FID (lower is better), with the comparison baseline marked. Right: Inception Score (higher is better). FID is U-shaped while IS rises monotonically.</figcaption>
+  </figure>
+  <div class="prose">
+    <p>Best FIDs: 1.55 at 64 × 64 (<var>w</var> = 0.1, <var>p</var><sub>uncond</sub> = 0.1), against ADM's 2.07, though slightly above the cascaded diffusion model's 1.48; 2.43 at 128 × 128 (<var>w</var> = 0.3, <var>T</var> = 256 or 1024), against ADM-G's 2.97, LOGAN's 3.36 and BigGAN-deep's 5.7. (Table 2 labels the third step count 1024; the Fig. 5 legend says 512.) <var>p</var><sub>uncond</sub> = 0.1 and 0.2 perform about equally, and the paper finds 0.5 gives a worse trade-off: at a given FID it reaches a lower IS (its raw FID at moderate <var>w</var> is lower simply because its IS, and hence its guidance effect, is weaker). More sampling steps help: at <var>w</var> = 0.3, <var>T</var> = 128 gives 3.04 and <var>T</var> = 256 gives 2.43.</p>
+  </div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §5–6 and lineage</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose"><ul>
+    <li><strong>Two forward passes per step.</strong> Classifier guidance can be cheaper when the classifier is smaller than the denoiser. The authors suggest injecting conditioning late in the network to share computation, leaving it to future work. In practice the two passes are batched together.</li>
+    <li><strong>Diversity.</strong> The authors flag that reduced diversity could be harmful where some data are underrepresented.</li>
+    <li><strong>Not an exact sampler.</strong> Eq. 6 does not sample any well-defined tilted distribution exactly, and high weights push intermediate states off the data manifold (over-saturation, simplified images).</li>
+  </ul></div>
+  <div class="later"><span class="label">Later refinements</span>GLIDE (Nichol et al., 2021) found classifier-free guidance preferable to CLIP guidance for text-to-image; DALL·E 2, Imagen (which added dynamic thresholding to cope with large weights) and <a href="ldm.html">latent diffusion</a> / Stable Diffusion all adopted it. Meng et al. (2023) distilled guided models into one forward pass per step. Kynkäänniemi et al. (2024) showed guidance is best applied only over a limited interval of noise levels, and Karras et al. (2024) replaced the unconditional model with a smaller, less-trained version of the conditional one ("autoguidance"). Guidance carries over directly to <a href="flowmatch.html">flow matching</a> models by combining velocities instead of noise predictions.</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>λ</dt><dd>Log signal-to-noise ratio of <b>z</b><sub>λ</sub>, log(α<sub>λ</sub><sup>2</sup>/σ<sub>λ</sub><sup>2</sup>).</dd>
+    <dt><var>w</var></dt><dd>Guidance strength; <var>w</var> = 0 is the unguided conditional model.</dd>
+    <dt><var>p</var><sub>uncond</sub></dt><dd>Probability of replacing the condition with the null token during training.</dd>
+    <dt>∅ (null token)</dt><dd>A learned "no condition" input that turns the conditional network into an unconditional one.</dd>
+    <dt>Implicit classifier</dt><dd><var>p</var>(<b>c</b> | <b>z</b>) ∝ <var>p</var>(<b>z</b> | <b>c</b>)/<var>p</var>(<b>z</b>), defined by the two generative models rather than trained separately.</dd>
+    <dt>Conservative field</dt><dd>A vector field that is the gradient of some scalar function; Eq. 6's field need not be.</dd>
+    <dt>IS / FID</dt><dd>Inception Score (higher = more confident, varied classes) and Fréchet Inception Distance (lower = closer to real statistics).</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+var G2=(function(){ var M=[[-1.2,-0.6],[1.2,-0.6],[0,1.1]], SD=0.45, T=100, beta=[0], al=[1], ab=[1];
+  for (var t=1;t<=T;t++){ var b=1e-3+(0.2-1e-3)*(t-1)/(T-1); beta.push(b); al.push(1-b); ab.push(ab[t-1]*(1-b)); }
+  // returns conditional score, unconditional score at noise step t
+  function scores(z,t,c){ var a=Math.sqrt(ab[t]), v=ab[t]*SD*SD+1-ab[t], ls=[], sc=[];
+    for (var k=0;k<3;k++){ var dx=z[0]-a*M[k][0], dy=z[1]-a*M[k][1]; ls.push(-(dx*dx+dy*dy)/(2*v)); sc.push([-dx/v,-dy/v]); }
+    var mx=Math.max(ls[0],ls[1],ls[2]), w=ls.map(function(l){ return Math.exp(l-mx); }), s=w[0]+w[1]+w[2];
+    var su=[0,0]; for (var k=0;k<3;k++){ su[0]+=w[k]/s*sc[k][0]; su[1]+=w[k]/s*sc[k][1]; }
+    return {c:sc[c],u:su}; }
+  function sample(n,c,w,seed){ var r=rng(seed), out=[];
+    for (var i=0;i<n;i++){ var z=[gauss(r),gauss(r)];
+      for (var t=T;t>=1;t--){ var S2=scores(z,t,c), sg=[(1+w)*S2.c[0]-w*S2.u[0],(1+w)*S2.c[1]-w*S2.u[1]];
+        // eps = -sqrt(1-ab) * score ; mean = (z - beta/sqrt(1-ab) eps)/sqrt(al) = (z + beta*score)/sqrt(al)
+        for (var d=0;d<2;d++) z[d]=(z[d]+beta[t]*sg[d])/Math.sqrt(al[t])+(t>1?Math.sqrt(beta[t])*gauss(r):0); }
+      out.push(z); }
+    return out; }
+  return {M:M,SD:SD,ab:ab,scores:scores,sample:sample};
+})();
+function pick(prefix,k,n){ for (var j=0;j<n;j++){ var b=$('#'+prefix+j); b.classList.toggle('on',j===k); b.setAttribute('aria-pressed',j===k); } }
+(function(){ // vector field
+  var svg=$('#vf'), c=0, w=2, t=40, names=['A','B','C'];
+  function X(x){ return 300+x*85; } function Y(y){ return 150-y*85; }
+  function draw(){ clear(svg); var a=Math.sqrt(G2.ab[t]);
+    var sv=Math.sqrt(G2.ab[t]*G2.SD*G2.SD+1-G2.ab[t]);
+    G2.M.forEach(function(m,k){ S('circle',{cx:X(a*m[0]),cy:Y(a*m[1]),r:sv*85,'class':k===c?'box-fire':'area','fill-opacity':0.6},svg); S('text',{x:X(a*m[0]),y:Y(a*m[1])+4,'class':k===c?'t-fire mid':'t-s mid'},svg,names[k]); });
+    var away=0, tot=0;
+    for (var gx=-3.0;gx<=3.01;gx+=0.5) for (var gy=-1.5;gy<=1.51;gy+=0.5){ var z=[gx,gy], s=G2.scores(z,t,c), g=[(1+w)*s.c[0]-w*s.u[0],(1+w)*s.c[1]-w*s.u[1]];
+      function arrow(v,cl){ var L=Math.sqrt(v[0]*v[0]+v[1]*v[1]); if (L<1e-6) return; var len=Math.min(24,8+L*4); S('line',{x1:X(gx),y1:Y(gy),x2:X(gx)+v[0]/L*len,y2:Y(gy)-v[1]/L*len,'class':cl},svg); }
+      if (w>0) arrow(g,'w-fire'); arrow(s.c,'w'); S('circle',{cx:X(gx),cy:Y(gy),r:2,'class':'f-ink'},svg);
+      tot++; var cd=s.c[0]*g[0]+s.c[1]*g[1], ang=Math.acos(Math.max(-1,Math.min(1,cd/(Math.sqrt((s.c[0]*s.c[0]+s.c[1]*s.c[1])*(g[0]*g[0]+g[1]*g[1]))+1e-12)))); away+=ang; }
+    $('#vf-r').innerHTML='Label <b>'+names[c]+'</b>, <var>w</var> = <b>'+fmt(w,1)+'</b>, noise level '+t+' (signal kept '+fmt(a,2)+'). Average turn between labelled and guided arrows: <b>'+fmt(away/tot*180/Math.PI,0)+'°</b>.'; }
+  [0,1,2].forEach(function(k){ $('#vf-'+k).onclick=function(){ c=k; pick('vf-',k,3); draw(); }; });
+  bindRange('vf-w',function(v){ w=v; draw(); }); bindRange('vf-t',function(v){ t=v; draw(); });
+})();
+(function(){ // guided samples
+  var svg=$('#gd'), c=0, w=0, timer=null, names=['A','B','C'];
+  function X(x){ return 300+x*85; } function Y(y){ return 150-y*85; }
+  function draw(){ clear(svg); var pts=G2.sample(600,c,w,17);
+    G2.M.forEach(function(m,k){ S('circle',{cx:X(m[0]),cy:Y(m[1]),r:G2.SD*85*2,'class':'area'},svg); S('text',{x:X(m[0])+(k===0?-82:82),y:Y(m[1])+4,'class':(k===c?'t-fire':'t-s')+(k===0?' end':'')},svg,'class '+names[k]); });
+    var mx=0,my=0; pts.forEach(function(p){ mx+=p[0]; my+=p[1]; S('circle',{cx:Math.max(4,Math.min(596,X(p[0]))),cy:Math.max(4,Math.min(296,Y(p[1]))),r:2.2,'class':'f-fire','fill-opacity':0.6},svg); });
+    mx/=pts.length; my/=pts.length; var sp=0; pts.forEach(function(p){ sp+=(p[0]-mx)*(p[0]-mx)+(p[1]-my)*(p[1]-my); }); sp=Math.sqrt(sp/pts.length/2);
+    var m=G2.M[c]; $('#gd-r').innerHTML='<var>w</var> = <b>'+fmt(w,1)+'</b>: spread <b>'+fmt(sp,2)+'</b> (class alone: '+fmt(G2.SD,2)+'); cloud centre is <b>'+fmt(Math.sqrt((mx-m[0])*(mx-m[0])+(my-m[1])*(my-m[1])),2)+'</b> from the class centre.'; }
+  function sched(){ if (timer) clearTimeout(timer); timer=setTimeout(draw,40); }
+  [0,1,2].forEach(function(k){ $('#gd-'+k).onclick=function(){ c=k; pick('gd-',k,3); sched(); }; });
+  bindRange('gd-w',function(v){ w=v; sched(); });
+})();
+(function(){ // 1-D tilted target
+  var svg=$('#tg'), w=1, c=1, M=[-1.1,0,1.1], SDs=[0.35,0.3,0.35];
+  function np(x,m,s){ return Math.exp(-0.5*(x-m)*(x-m)/(s*s))/(s*Math.sqrt(2*Math.PI)); }
+  function draw(){ clear(svg); var lo=-2.4, hi=2.4, n=480, du=(hi-lo)/n, P=[], C=[], Q=[], Z=0;
+    for (var i=0;i<=n;i++){ var x=lo+i*du, p=(np(x,M[0],SDs[0])+np(x,M[1],SDs[1])+np(x,M[2],SDs[2]))/3, pc=np(x,M[c],SDs[c]); P.push(p); C.push(pc); var q=Math.exp((1+w)*Math.log(pc+1e-300)-w*Math.log(p+1e-300)); Q.push(q); Z+=q*du; }
+    Q=Q.map(function(q){ return q/Z; }); var mx=Math.max.apply(null,Q.concat(C)); function X(u){ return 40+(u-lo)/(hi-lo)*530; } function Y(p){ return 215-p/mx*180; }
+    function line(arr,cl){ var d=''; arr.forEach(function(v,i){ d+=(i?'L':'M')+fmt(X(lo+i*du),1)+','+fmt(Y(v),1); }); S('path',{d:d,'class':cl},svg); }
+    line(P,'w-ink'); line(C,'w-dash'); line(Q,'w-fire');
+    S('line',{x1:40,y1:215,x2:570,y2:215,'class':'axis'},svg); [-2,-1,0,1,2].forEach(function(u){ S('text',{x:X(u),y:232,'class':'t-s mid'},svg,u); });
+    var m=0,v=0; Q.forEach(function(q,i){ m+=q*(lo+i*du)*du; }); Q.forEach(function(q,i){ v+=q*Math.pow(lo+i*du-m,2)*du; });
+    $('#tg-r').innerHTML='Tilted target: mean <b>'+fmt(m,2)+'</b> (class mean '+fmt(M[c],2)+'), standard deviation <b>'+fmt(Math.sqrt(v),3)+'</b> (class '+fmt(SDs[c],2)+').'; }
+  [0,1,2].forEach(function(k){ $('#tg-'+k).onclick=function(){ c=k; pick('tg-',k,3); draw(); }; });
+  bindRange('tg-w',function(v){ w=v; draw(); });
+})();
+(function(){ // Tables 1-2
+  var svg=$('#tb'), res=64, sub=0;
+  var W=[0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,2.0,3.0,4.0];
+  var D64={labels:['p_uncond 0.1','p_uncond 0.2','p_uncond 0.5'],
+    fid:[[1.8,1.55,2.04,3.03,4.3,5.74,7.19,8.62,10.08,11.41,12.6,21.03,24.83,26.22],[1.8,1.62,2.1,2.93,4.0,5.19,6.48,7.73,8.9,10.09,11.21,18.79,22.36,23.84],[2.21,1.91,2.08,2.65,3.44,4.34,5.27,6.23,7.25,8.21,9.13,16.16,19.75,21.48]],
+    is:[[53.71,66.11,78.91,92.8,106.2,119.3,131.1,141.8,151.6,161.0,170.1,225.5,250.4,260.2],[52.9,64.58,76.99,88.64,101.11,112.15,122.13,131.6,140.82,150.26,158.29,212.98,237.65,248.97],[47.61,56.1,65.6,74.92,84.27,92.95,102.0,109.8,116.9,124.6,131.1,183.0,208.9,225.1]],
+    base:[2.07,'ADM']};
+  var D128={labels:['T = 128','T = 256','T = 1024'],
+    fid:[[8.11,5.31,3.7,3.04,3.02,3.43,4.09,4.96,5.93,6.89,7.88,15.9,19.77,21.55],[7.27,4.53,3.03,2.43,2.49,2.98,3.76,4.67,5.74,6.8,7.86,15.93,19.77,21.53],[7.22,4.5,3.0,2.43,2.48,2.96,3.73,4.69,5.71,6.81,7.8,15.75,19.56,21.45]],
+    is:[[81.46,105.01,130.79,156.09,183.01,206.94,227.72,247.92,265.54,280.19,295.29,378.56,409.16,422.29],[82.45,106.12,132.54,158.47,183.41,207.98,228.83,249.25,267.99,283.41,297.98,377.37,407.44,421.03],[81.54,104.67,130.09,156.0,180.88,204.31,226.76,247.89,265.52,281.14,294.56,373.18,405.68,419.06]],
+    base:[2.97,'ADM-G']};
+  function draw(){ clear(svg); var D=res===64?D64:D128, f=D.fid[sub], s=D.is[sub];
+    function X(i,x0){ return x0+i/(W.length-1)*230; }
+    var fmax=Math.max.apply(null,f)*1.05, imax=Math.max.apply(null,s)*1.05;
+    [[20,'FID',f,fmax,'w-fire','u-on'],[320,'Inception Score',s,imax,'w','u-wire']].forEach(function(P){ var x0=P[0]+30;
+      S('text',{x:P[0]+30,y:20,'class':'t-h'},svg,P[1]); S('line',{x1:x0,y1:210,x2:x0+240,y2:210,'class':'axis'},svg); S('line',{x1:x0,y1:30,x2:x0,y2:210,'class':'axis'},svg);
+      [0,3,10,13].forEach(function(i){ S('text',{x:X(i,x0),y:226,'class':'t-s mid'},svg,W[i]); }); S('text',{x:x0+120,y:244,'class':'t-s mid'},svg,'guidance w');
+      S('text',{x:x0-4,y:34,'class':'t-s end'},svg,fmt(P[3],0)); S('text',{x:x0-4,y:214,'class':'t-s end'},svg,'0');
+      var d=''; P[2].forEach(function(v,i){ d+=(i?'L':'M')+X(i,x0)+','+(210-v/P[3]*180); }); S('path',{d:d,'class':P[4]},svg);
+      P[2].forEach(function(v,i){ S('circle',{cx:X(i,x0),cy:210-v/P[3]*180,r:3,'class':P[5]},svg); });
+      if (P[1]==='FID'){ var yb=210-D.base[0]/P[3]*180; S('line',{x1:x0,y1:yb,x2:x0+240,y2:yb,'class':'w-dash'},svg); S('text',{x:x0+236,y:yb-5,'class':'t-s end'},svg,D.base[1]+' '+D.base[0]); } });
+    var bi=f.indexOf(Math.min.apply(null,f));
+    $('#tb-r').innerHTML=res+' × '+res+', '+D.labels[sub]+': best FID <b>'+f[bi]+'</b> at <var>w</var> = <b>'+W[bi]+'</b> (IS '+s[bi]+'); at <var>w</var> = 4, FID '+f[13]+' and IS <b>'+s[13]+'</b>.';
+    var box=$('#tb-sub'); box.innerHTML=''; D.labels.forEach(function(l,k){ var b=document.createElement('button'); b.className='btn'+(k===sub?' on':''); b.textContent=l; b.setAttribute('aria-pressed',k===sub); b.onclick=function(){ sub=k; draw(); }; box.appendChild(b); box.appendChild(document.createTextNode(' ')); }); }
+  $('#tb-64').onclick=function(){ res=64; sub=0; pick('tb-',-1,0); this.classList.add('on'); this.setAttribute('aria-pressed','true'); $('#tb-128').classList.remove('on'); $('#tb-128').setAttribute('aria-pressed','false'); draw(); };
+  $('#tb-128').onclick=function(){ res=128; sub=1; this.classList.add('on'); this.setAttribute('aria-pressed','true'); $('#tb-64').classList.remove('on'); $('#tb-64').setAttribute('aria-pressed','false'); draw(); };
+  draw();
+})();
+</script>

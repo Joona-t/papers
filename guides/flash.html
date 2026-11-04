@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FlashAttention (2022) study guide</title>
+<meta name="description" content="Attention was slow and memory-hungry on long inputs, and most attempts to fix it computed a cheaper approximation. Dao and colleagues noticed that the real bottleneck on a GPU is not the arithmetic but moving a huge table of scores in and out of slow memory. FlashAttention computes exactly the same ">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Language models &amp; AI</b> · 2022</p>
+  <h1>FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness</h1>
+  <p class="cite">Tri Dao, Daniel Fu, Stefano Ermon, Atri Rudra, Christopher Ré · NeurIPS 2022</p>
+  <p class="lede">Attention was slow and memory-hungry on long inputs, and most attempts to fix it computed a cheaper approximation. Dao and colleagues noticed that the real bottleneck on a GPU is not the arithmetic but moving a huge table of scores in and out of slow memory. FlashAttention computes exactly the same answer in small tiles that never leave the chip's fast memory, making attention several times faster and letting models read much longer texts.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/2205.14135">Read the paper (free)</a> <a href="https://lovespark.love/papers/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, independent AI review, but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Attention compares every word with every other word, producing a table of scores whose size grows with the square of the text length.</p>
+  <p>On a GPU, that table is too big for the small, very fast memory on the chip, so it gets written out to the large, slower main memory and read back several times, and this shuttling, not the maths, is what takes most of the time.</p>
+  <p>FlashAttention processes the attention in small tiles that fit in fast memory, using a running-total trick so the final answer is exactly the same, and never stores the full table.</p>
+  <p>Training became 15% to 3× faster depending on the model, and the memory saved let models handle inputs of thousands to tens of thousands of words, which improved their quality.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1 · §2.1 · Fig. 1</p>
+  <h2>The slow part is fetching, not cooking</h2>
+  <div class="prose">
+    <p>A GPU, the chip that trains neural networks, has two kinds of memory. A small amount of very fast memory sits right next to the calculating units (about 20 MB in total on the Nvidia A100 the paper uses, split into many small pieces). A large amount of slower memory, called <strong>HBM</strong>, sits beside the chip (40 or 80 GB). The fast memory moves data roughly ten times faster.</p>
+    <p>GPUs have become so fast at arithmetic that many operations spend most of their time waiting for data to arrive from HBM. The authors' point is that attention is one of them. The standard way of computing it builds the whole table of scores (every word against every word), writes it to HBM, reads it back to turn scores into weights, writes the weights out, and reads them back again to blend the values.</p>
+    <p>Most earlier work on fast attention tried to do fewer calculations, often by approximating. These methods frequently didn't run faster in practice, because they did nothing about the memory traffic. The paper's slogan is that attention should be <strong>IO-aware</strong>: designed around the cost of input and output between memory levels.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Text length N <input type="range" id="mm-n" min="9" max="16" step="1" value="11"><output id="mm-n-o">11</output></label><label>Copies (batch × heads) <input type="range" id="mm-c" min="0" max="10" step="1" value="7"><output id="mm-c-o">7</output></label></div>
+    <div class="svgbox"><svg id="mm" viewBox="0 0 600 230" role="img" aria-label="Size of the attention score table compared with GPU memory sizes"></svg></div>
+    <p class="readout" id="mm-r"></p>
+    <figcaption>The sliders are powers of two (N = 2<sup>slider</sup> tokens; copies = 2<sup>slider</sup>, e.g. 8 sentences × 16 heads = 128). Bars, on a log scale: the score table for one head of one text (N × N numbers at 2 bytes each), the same for all copies, the A100's on-chip memory (about 20 MB in total, but only 192 KB in each of its 108 processing units) and its HBM (40 GB). The time estimate assumes standard attention writes and reads both the score table and the weight table once each at 1.5 TB/s, the HBM speed in the paper's Fig. 1.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>A chef with a tiny worktop and a big pantry down the hall. The chef chops very fast, but if every recipe step means carrying everything back to the pantry and fetching it again, most of the evening is spent walking. The fix isn't a faster knife; it's organising the work so ingredients stay on the worktop.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>On modern GPUs, standard attention is slow because it moves a huge score table to and from slow memory, not because the arithmetic is hard.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Doubling the text length multiplies the score table's size by how much?</dt>
+    <dd>Four: the table is N × N, so twice the rows and twice the columns.</dd>
+    <dt>Why did many "fast" approximate attention methods not speed up training much?</dt>
+    <dd>They cut the number of calculations but not the memory traffic, which was the real bottleneck.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §3.1 · Algorithm 1</p>
+  <h2>Work in tiles with a running total</h2>
+  <div class="prose">
+    <p>The obvious fix is to split the work into tiles small enough for fast memory: take a block of queries and a block of keys, compute their scores, use them, move on. The trouble is the <strong>softmax</strong>, the step that turns a row of scores into weights. It divides each exponentiated score by the total over the <em>whole</em> row, and also (for numerical safety) subtracts the row's largest score first. You don't know the total or the maximum until you've seen every key.</p>
+    <p>The trick is a running tally that can be corrected. Keep, for each query, three things: the biggest score seen so far, the running sum of exponentiated scores, and the running blend of values. When a new block arrives with a bigger maximum, shrink the old sum and old blend by the right factor and add the new block's contribution. At the end, divide by the sum. The answer is exactly the same as doing it all at once, up to rounding.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="os-step">Next block</button><button class="btn" id="os-reset">Restart</button><button class="btn" id="os-new">New scores</button></div>
+    <div class="svgbox wide"><svg id="os" viewBox="0 0 640 290" role="img" aria-label="Online softmax processing scores block by block"></svg></div>
+    <p class="readout" id="os-r"></p>
+    <figcaption>One query's 12 scores against 12 keys, each key carrying a value (a single number here). The scores are processed in blocks of 4, as FlashAttention processes key blocks. After each block, the running maximum <var>m</var>, running sum ℓ and running unnormalised output are updated, with old totals rescaled by e<sup>(old <var>m</var> − new <var>m</var>)</sup> whenever the maximum grows. The last line compares the result with ordinary softmax over all 12 at once.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>Tallying an exam where marks will be scaled so the top score is 100. You don't need to wait for all papers: keep a running total scaled to the best so far, and whenever a new paper beats the best, rescale your running total once. The final numbers match marking everything at the end.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Softmax can be computed block by block with a correctable running total, so attention can be tiled into fast memory without changing the answer.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Is FlashAttention an approximation of attention?</dt>
+    <dd>No. It computes exactly the same result as standard attention, differing only by floating-point rounding.</dd>
+    <dt>Why must old totals be rescaled when a larger maximum appears?</dt>
+    <dd>They were computed relative to the old maximum. Multiplying by e<sup>(old − new)</sup> re-expresses them relative to the new one, so all terms share one reference.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §3.1 · Recomputation</p>
+  <h2>Recompute rather than store</h2>
+  <div class="prose">
+    <p>Training also needs a backward pass, in which the network works out how to adjust itself. Normally the backward pass reads the stored table of attention weights. FlashAttention never stored it. Instead it keeps only the tiny per-row numbers from the running tally (the maximum and the sum), and in the backward pass it recomputes each tile of scores on the chip when needed.</p>
+    <p>That means doing some arithmetic twice. It sounds wasteful, but arithmetic is cheap and memory traffic is expensive, so it is faster overall. In the paper's measurement for a GPT-2 sized model, FlashAttention did about 13% more arithmetic than standard attention but moved about 9 times less data to and from HBM, and ran about 5.7 times faster.</p>
+    <p>The memory saved is just as important. The space needed now grows in proportion to the text length instead of its square, which is what allows much longer inputs.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Doing a bit more arithmetic to avoid storing and reloading a huge table is a winning trade on modern hardware.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>FlashAttention does more calculations yet runs faster. How?</dt>
+    <dd>The run time was dominated by memory transfers, and it cuts those by roughly an order of magnitude; the extra calculations cost far less than the transfers saved.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §4 · Tables 1–6</p>
+  <h2>Faster training, longer inputs, better models</h2>
+  <div class="prose">
+    <p>The speed-ups were real, end to end, not just for attention in isolation. Training BERT-large to a standard benchmark target was 15% faster than Nvidia's record-setting implementation. GPT-2 trained up to 3 times faster than the widely used Hugging Face code and about 1.7 times faster than Nvidia's Megatron.</p>
+    <p>Because memory no longer grew with the square of the length, models could take in more text. GPT-2 with four times the usual context (4,096 tokens) trained faster than the standard 1,024-token version under Megatron, and predicted text better. On classifying long medical and legal documents, longer inputs improved accuracy markedly. And a Transformer became the first to do better than chance on "Path-X", a puzzle that requires reading a sequence of 16,000 items, previously out of reach.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>FlashAttention-2 (Dao, 2023) reorganised the work across the GPU's processing units and cut non-matrix arithmetic, roughly doubling speed again; FlashAttention-3 (2024) exploited features of newer Nvidia chips. The approach is now built into PyTorch and most training and serving software, so most large language models use it without anyone thinking about it.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Exact, IO-aware attention made transformers faster to train and, by freeing memory, let them use much longer contexts.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Transformers are slow and memory-hungry on long sequences because self-attention is quadratic in time and memory. Approximate methods trade quality for complexity but often give no wall-clock speed-up. The missing principle is IO-awareness: accounting for reads and writes between GPU memory levels. FlashAttention is an exact attention algorithm that uses tiling to reduce reads and writes between HBM and on-chip SRAM. Its IO complexity is analysed, shown to require fewer HBM accesses than standard attention, and shown optimal for a range of SRAM sizes. Extended to block-sparse attention, it gives a faster approximate method. Results: 15% end-to-end speed-up on BERT-large (seq. 512) over the MLPerf 1.1 record, 3× on GPT-2 (seq. 1K), 2.4× on Long Range Arena (1K–4K); longer context gives 0.7 better perplexity on GPT-2 and 6.4 points of lift on long-document classification, and the first better-than-chance Transformers on Path-X (16K, 61.4%) and Path-256 (64K, 63.1%). NeurIPS 2022 (arXiv 2205.14135).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2 · Algorithm 0</p>
+  <h2>Hardware model and standard attention</h2>
+  <div class="prose">
+    <p><strong>Memory hierarchy (§2.1, Fig. 1).</strong> A100: 40–80 GB HBM at 1.5–2.0 TB/s; on-chip SRAM of 192 KB per streaming multiprocessor across 108 SMs, at an estimated 19 TB/s. Operations are <em>compute-bound</em> (matmul with large inner dimension) or <em>memory-bound</em> (elementwise ops, reductions: softmax, dropout, masking). Kernel fusion helps memory-bound ops, but in training intermediate values must still be written to HBM for the backward pass.</p>
+    <p><strong>Standard attention (§2.2).</strong> With <var>Q</var>, <var>K</var>, <var>V</var> ∈ ℝ<sup><var>N</var>×<var>d</var></sup>: <var>S</var> = <var>QK</var><sup>⊤</sup> ∈ ℝ<sup><var>N</var>×<var>N</var></sup>, <var>P</var> = softmax(<var>S</var>) row-wise, <var>O</var> = <var>PV</var>. Algorithm 0 loads <var>Q</var>, <var>K</var>, writes <var>S</var>; reads <var>S</var>, writes <var>P</var>; reads <var>P</var>, <var>V</var>, writes <var>O</var>. Since typically <var>N</var> ≫ <var>d</var> (e.g. GPT-2: <var>N</var> = 1024, <var>d</var> = 64), the Θ(<var>N</var><sup>2</sup>) traffic for <var>S</var> and <var>P</var> dominates, and most of the time is spent in memory-bound softmax, masking and dropout rather than in the matmuls.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" data-f2="0">GFLOPs</button><button class="btn" data-f2="1">HBM read/write (GB)</button><button class="btn" data-f2="2">Runtime (ms)</button></div>
+    <div class="svgbox"><svg id="f2" viewBox="0 0 600 170" role="img" aria-label="Standard attention versus FlashAttention, values from the paper's Figure 2"></svg></div>
+    <p class="readout" id="f2-r"></p>
+    <figcaption>Values from the paper's Fig. 2 (left): forward + backward attention for GPT-2 medium (sequence length 1024, head dimension 64, 16 heads, batch 64) on an A100. FlashAttention does more FLOPs (recomputation) yet is far faster because HBM traffic falls by about 9×.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3.1 · Algorithm 1</p>
+  <h2>Tiling with online softmax</h2>
+  <div class="prose"><p>For a vector <var>x</var> ∈ ℝ<sup><var>B</var></sup>, define <var>m</var>(<var>x</var>) = max<sub><var>i</var></sub> <var>x<sub>i</sub></var>, <var>f</var>(<var>x</var>) = [<var>e</var><sup><var>x</var><sub>1</sub>−<var>m</var>(<var>x</var>)</sup>, …], ℓ(<var>x</var>) = Σ<sub><var>i</var></sub> <var>f</var>(<var>x</var>)<sub><var>i</var></sub>, softmax(<var>x</var>) = <var>f</var>(<var>x</var>)/ℓ(<var>x</var>). For a concatenation <var>x</var> = [<var>x</var><sup>(1)</sup> <var>x</var><sup>(2)</sup>]:</p></div>
+  <div class="eq"><var>m</var>(<var>x</var>) = max(<var>m</var>(<var>x</var><sup>(1)</sup>), <var>m</var>(<var>x</var><sup>(2)</sup>)), &nbsp; ℓ(<var>x</var>) = <var>e</var><sup><var>m</var>(<var>x</var><sup>(1)</sup>)−<var>m</var>(<var>x</var>)</sup> ℓ(<var>x</var><sup>(1)</sup>) + <var>e</var><sup><var>m</var>(<var>x</var><sup>(2)</sup>)−<var>m</var>(<var>x</var>)</sup> ℓ(<var>x</var><sup>(2)</sup>)</div>
+  <div class="prose"><p>and similarly for <var>f</var>. So keeping two statistics per row (<var>m</var>, ℓ) suffices to combine blocks exactly (the online-softmax normaliser of Milakov &amp; Gimelshein, 2018, here fused with the <var>PV</var> product).</p></div>
+  <pre class="algo"><span class="c">Algorithm 1 (forward), SRAM size M</span>
+B_c = ⌈M / 4d⌉,  B_r = min(⌈M / 4d⌉, d)
+init in HBM: O = 0 (N×d), ℓ = 0 (N), m = −∞ (N)
+split Q into T_r = ⌈N/B_r⌉ blocks; K, V into T_c = ⌈N/B_c⌉ blocks
+for j = 1..T_c:                         <span class="c"># outer loop: key/value blocks</span>
+  load K_j, V_j to SRAM
+  for i = 1..T_r:                       <span class="c"># inner loop: query blocks</span>
+    load Q_i, O_i, ℓ_i, m_i to SRAM
+    S_ij = Q_i K_jᵀ                      <span class="c"># B_r × B_c, on chip</span>
+    m̃ = rowmax(S_ij);  P̃ = exp(S_ij − m̃);  ℓ̃ = rowsum(P̃)
+    m_new = max(m_i, m̃)
+    ℓ_new = e^(m_i − m_new) ℓ_i + e^(m̃ − m_new) ℓ̃
+    O_i ← diag(ℓ_new)⁻¹ ( diag(ℓ_i) e^(m_i − m_new) O_i + e^(m̃ − m_new) P̃ V_j )
+    write O_i, ℓ_i ← ℓ_new, m_i ← m_new to HBM
+return O</pre>
+  <figure class="live">
+    <div class="ctl"><label>log<sub>2</sub> N <input type="range" id="tl-n" min="8" max="14" step="1" value="10"><output id="tl-n-o">10</output></label><label>d <input type="range" id="tl-d" min="32" max="128" step="32" value="64"><output id="tl-d-o">64</output></label><label>M (K elements) <input type="range" id="tl-m" min="8" max="96" step="8" value="96"><output id="tl-m-o">96</output></label><button class="btn" id="tl-run">Run loops</button></div>
+    <div class="svgbox"><svg id="tl" viewBox="0 0 600 280" role="img" aria-label="Tiles of the score matrix visited by Algorithm 1 and HBM access counts"></svg></div>
+    <p class="readout" id="tl-r"></p>
+    <figcaption>The <var>N</var> × <var>N</var> score matrix as <var>T<sub>r</sub></var> × <var>T<sub>c</sub></var> tiles of size <var>B<sub>r</sub></var> × <var>B<sub>c</sub></var>, with block sizes from Algorithm 1 (M = 96K two-byte elements is the A100's 192 KB per SM). Run the loops to see the visiting order: outer over key/value blocks (columns), inner over query blocks. Bars count HBM element accesses exactly as the pseudocode above and Algorithm 0 perform them; the IO ratio approaches the Θ(<var>N</var><sup>2</sup>) vs Θ(<var>N</var><sup>2</sup><var>d</var><sup>2</sup>/<var>M</var>) gap of Theorem 2. Real kernels differ in details (and FlashAttention-2 swaps the loop order).</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is <var>B<sub>c</sub></var> set to about <var>M</var>/4<var>d</var>?</dt>
+    <dd>SRAM must hold roughly four <var>B</var> × <var>d</var> blocks at once (<var>Q<sub>i</sub></var>, <var>K<sub>j</sub></var>, <var>V<sub>j</sub></var>, <var>O<sub>i</sub></var>), so each can have about <var>M</var>/4<var>d</var> rows.</dd>
+    <dt>In this loop order, how many times is each <var>O<sub>i</sub></var> read and written?</dt>
+    <dd><var>T<sub>c</sub></var> times each, once per key/value block; this is the Θ(<var>T<sub>c</sub>Nd</var>) term that dominates the IO count.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §3.1–3.2 · Theorems 1–2 · Proposition 3</p>
+  <h2>Backward pass and IO complexity</h2>
+  <div class="prose">
+    <p><strong>Recomputation.</strong> The forward pass stores only <var>O</var> and the statistics (<var>m</var>, ℓ), i.e. O(<var>N</var>) extra memory. The backward pass (App. B) reloads <var>Q</var>, <var>K</var>, <var>V</var> blocks, recomputes <var>S<sub>ij</sub></var> and <var>P<sub>ij</sub></var> in SRAM from the saved statistics, and accumulates <var>dQ</var>, <var>dK</var>, <var>dV</var>. Dropout masks are regenerated from the saved random-number-generator state rather than stored.</p>
+    <p><strong>Theorem 1.</strong> Algorithm 1 returns <var>O</var> = softmax(<var>QK</var><sup>⊤</sup>)<var>V</var> with O(<var>N</var><sup>2</sup><var>d</var>) FLOPs and O(<var>N</var>) additional memory beyond inputs and output.</p>
+    <p><strong>Theorem 2.</strong> With SRAM size <var>M</var>, <var>d</var> ≤ <var>M</var> ≤ <var>Nd</var>, standard attention requires Θ(<var>Nd</var> + <var>N</var><sup>2</sup>) HBM accesses; FlashAttention requires Θ(<var>N</var><sup>2</sup><var>d</var><sup>2</sup><var>M</var><sup>−1</sup>). For typical <var>d</var> = 64–128 and <var>M</var> ≈ 100 KB, <var>d</var><sup>2</sup> is many times smaller than <var>M</var>.</p>
+    <p><strong>Proposition 3.</strong> No exact attention algorithm can asymptotically improve on this for all <var>M</var> ∈ [<var>d</var>, <var>Nd</var>]: there is no algorithm with o(<var>N</var><sup>2</sup><var>d</var><sup>2</sup><var>M</var><sup>−1</sup>) HBM accesses over that whole range.</p>
+    <p>The paper also shows (Fig. 2 middle and right) that runtime tracks HBM accesses as block size grows, up to a point: beyond block size 256 runtime is bottlenecked by other factors (arithmetic, shared resources).</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Plug in <var>N</var> = 1024, <var>d</var> = 64, <var>M</var> ≈ 100K elements. Roughly what is the ratio of standard to Flash HBM accesses predicted by Theorem 2?</dt>
+    <dd><var>N</var><sup>2</sup> / (<var>N</var><sup>2</sup><var>d</var><sup>2</sup>/<var>M</var>) = <var>M</var>/<var>d</var><sup>2</sup> ≈ 100,000/4,096 ≈ 24, up to constants. The measured 40.3 GB vs 4.4 GB (≈ 9×) is the same order once constants and the backward pass are included.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §3.3 · §4 · Tables 1–6</p>
+  <h2>Block-sparse extension and experiments</h2>
+  <div class="prose">
+    <p><strong>Block-sparse FlashAttention (§3.3).</strong> Given a block mask, skip zero blocks; Proposition 4 gives Θ(<var>Nd</var> + <var>N</var><sup>2</sup><var>d</var><sup>2</sup><var>M</var><sup>−1</sup><var>s</var>) accesses for nonzero-block fraction <var>s</var>. The experiments use a fixed butterfly sparsity pattern.</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Experiment</th><th>Baseline</th><th>FlashAttention</th></tr></thead>
+    <tbody>
+      <tr><td>BERT-large, time to 72.0% MLM accuracy, 8×A100 (Table 1)</td><td class="num">20.0 ± 1.5 min (Nvidia MLPerf 1.1)</td><td class="num">17.4 ± 1.4 min</td></tr>
+      <tr><td>GPT-2 small, OpenWebText (Table 2)</td><td class="num">HF 9.5 d; Megatron 4.7 d</td><td class="num">2.7 d (3.5× / 1.7×)</td></tr>
+      <tr><td>GPT-2 medium (Table 2)</td><td class="num">HF 21.0 d; Megatron 11.5 d</td><td class="num">6.9 d (3.0× / 1.7×)</td></tr>
+      <tr><td>Long Range Arena average (Table 3)</td><td class="num">Transformer 59.3</td><td class="num">59.8 (2.4× faster); block-sparse 59.6 (2.8×)</td></tr>
+      <tr><td>GPT-2 small, context length (Table 4)</td><td class="num">Megatron 1K: 18.2 ppl, 4.7 d</td><td class="num">4K: 17.5 ppl, 3.6 d</td></tr>
+      <tr><td>MIMIC-III micro-F1 (Table 5)</td><td class="num">52.8 at 512 tokens</td><td class="num">57.1 at 16K</td></tr>
+      <tr><td>ECtHR micro-F1 (Table 5)</td><td class="num">72.2 at 512 tokens</td><td class="num">80.7 at 8K</td></tr>
+      <tr><td>Path-X (16K) / Path-256 (64K) (Table 6)</td><td class="num">chance (50%) for prior Transformers</td><td class="num">61.4 / block-sparse 63.1</td></tr>
+    </tbody></table></div>
+  <div class="prose">
+    <p>Table 2 prints speed-ups relative to Hugging Face (Megatron-LM 2.0× and 1.8×; FlashAttention 3.5× and 3.0×), which is about 1.7× over Megatron; the abstract's "3×" is relative to Hugging Face. <strong>Benchmarks (§4.3).</strong> Attention runtime up to 3× faster than PyTorch at common lengths; memory footprint linear in <var>N</var> and up to 20× smaller than exact baselines, and still about 2× smaller than Linformer at 64K. Approximate methods (Linformer, Performer, Reformer etc.) begin to cross over with exact FlashAttention at sequence lengths between 512 and 1024; block-sparse FlashAttention is faster than all of them at every length tested.</p>
+  </div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §5 · Lineage</p>
+  <h2>Limitations and what followed</h2>
+  <div class="prose"><ul>
+    <li><strong>Authors' limitations (§5).</strong> Each new attention variant needs a new hand-written CUDA kernel, a large engineering effort that may not transfer across GPU architectures; the authors hope for a high-level language that compiles to IO-aware kernels. The IO analysis covers a single GPU; multi-GPU IO-awareness is future work.</li>
+    <li><strong>Related work.</strong> Online softmax: Milakov &amp; Gimelshein (2018). Rabe &amp; Staats (2021) showed attention does not need quadratic extra memory; the paper notes their method still has quadratic HBM accesses, and derives its own backward pass rather than relying on gradient checkpointing. IO complexity analysis follows Aggarwal &amp; Vitter (1988).</li>
+    <li><strong>FlashAttention-2</strong> (Dao, 2023): parallelises over the sequence dimension as well as batch and heads, swaps the loop order (queries outer) so each <var>O<sub>i</sub></var> stays on chip, defers the final rescaling, and reduces non-matmul FLOPs; about 2× over v1.</li>
+    <li><strong>FlashAttention-3</strong> (Shah, Bikshandi, Zhang, Thakkar, Ramani, Dao, 2024): Hopper-specific asynchrony (TMA, warp specialisation) and FP8.</li>
+    <li><strong>Inference.</strong> Flash-Decoding applies the same IO-aware ideas to generation; PagedAttention (vLLM, 2023) manages key–value cache memory in pages to cut fragmentation.</li>
+    <li><strong>Adoption.</strong> Integrated into PyTorch's <code>scaled_dot_product_attention</code> (PyTorch 2.0), and standard in LLM training stacks. Combined with <a href="rope.html">RoPE</a> context extension, it underlies today's 100K+ token contexts.</li>
+  </ul></div>
+  <div class="later"><span class="label">The broader lesson</span>Asymptotic FLOP counts were the wrong cost model for attention on GPUs. Exact attention with better data movement beat most approximate sub-quadratic methods in practice, which is one reason the <a href="transformer.html">Transformer</a>'s full attention survived rather than being replaced.</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>HBM</dt><dd>High-bandwidth memory: the GPU's large off-chip DRAM (40–80 GB on A100).</dd>
+    <dt>SRAM</dt><dd>On-chip memory (shared memory / registers), small but about 10× faster.</dd>
+    <dt>SM</dt><dd>Streaming multiprocessor: one of the GPU's parallel processing units.</dd>
+    <dt>IO complexity</dt><dd>Number of transfers between memory levels, as opposed to FLOPs.</dd>
+    <dt>Memory-bound</dt><dd>Run time dominated by data movement rather than arithmetic.</dd>
+    <dt>Kernel fusion</dt><dd>Combining several operations into one GPU kernel so intermediates stay on chip.</dd>
+    <dt>Tiling</dt><dd>Splitting matrices into blocks that fit in fast memory.</dd>
+    <dt>Online softmax</dt><dd>Computing softmax in one pass by rescaling partial sums when the running maximum changes.</dd>
+    <dt>Recomputation</dt><dd>Recalculating intermediates in the backward pass instead of storing them (a form of checkpointing).</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="transformer.html">Transformer (2017)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers/">Papers worth reading</a> (<a href="https://lovespark.love/papers/#flash">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // memory sizes
+  var svg=$('#mm'), ln=11, lc=7;
+  function human(b){ var u=['B','KB','MB','GB','TB','PB']; var i=0; while (b>=1024&&i<u.length-1){ b/=1024; i++; } return (b<10?fmt(b,1):Math.round(b))+' '+u[i]; }
+  function draw(){ clear(svg); var N=Math.pow(2,ln), C=Math.pow(2,lc), one=N*N*2, all=one*C;
+    var rows=[['score table, 1 head',one,'f-fire'],['all copies',all,'f-fire'],['on-chip, 1 unit',192*1024,'f-ok'],['on-chip, all units',20*1024*1024,'f-ok'],['HBM (A100 40 GB)',40*Math.pow(1024,3),'f-wire']];
+    var lo=10, hi=50; function X(b){ return 170+(Math.log2(b)-lo)/(hi-lo)*400; }
+    for (var e=lo;e<=hi;e+=10){ S('line',{x1:X(Math.pow(2,e)),y1:12,x2:X(Math.pow(2,e)),y2:200,'class':'grid'},svg); S('text',{x:X(Math.pow(2,e)),y:216,'class':'t-s mid'},svg,human(Math.pow(2,e))); }
+    rows.forEach(function(r,i){ var y=14+i*38; S('text',{x:160,y:y+18,'class':'t end'},svg,r[0]); S('rect',{x:170,y:y,width:Math.max(2,X(r[1])-170),height:26,'class':r[2],'fill-opacity':0.8},svg); var tx=X(r[1])+6; S('text',{x:Math.min(tx,540),y:y+18,'class':'t-s'},svg,human(r[1])); });
+    var t=4*all/1.5e12*1000;
+    $('#mm-r').innerHTML='N = <b>'+N.toLocaleString()+'</b>, '+C+' copies: score tables total <b>'+human(all)+'</b>'+(all>40*Math.pow(1024,3)?' (more than the whole HBM!)':'')+'. Moving them in and out (write and read scores, write and read weights) takes about <b>'+(t<1?fmt(t,2):fmt(t,0))+' ms</b> per layer at 1.5 TB/s.'; }
+  bindRange('mm-n',function(v){ ln=v; $('#mm-n-o').textContent=Math.pow(2,v).toLocaleString(); draw(); });
+  bindRange('mm-c',function(v){ lc=v; $('#mm-c-o').textContent=Math.pow(2,v); draw(); });
+})();
+(function(){ // online softmax
+  var svg=$('#os'), seed=4, s, v, step;
+  function init(){ var r=rng(seed*17+3); s=[]; v=[]; for (var i=0;i<12;i++){ s.push(fmt(gauss(r)*2,1)*1); v.push(Math.round((r()*10-5)*10)/10); }
+    // order the blocks so the running maximum grows, which shows the rescaling step
+    var B=[0,1,2].map(function(b){ return [s.slice(b*4,b*4+4),v.slice(b*4,b*4+4)]; }).sort(function(a,b){ return Math.max.apply(null,a[0])-Math.max.apply(null,b[0]); });
+    s=[].concat(B[0][0],B[1][0],B[2][0]); v=[].concat(B[0][1],B[1][1],B[2][1]); step=0; }
+  function draw(){ clear(svg); var m=-Infinity, l=0, o=0, hist=[];
+    for (var b=0;b<step;b++){ var blk=s.slice(b*4,b*4+4), vb=v.slice(b*4,b*4+4), mt=Math.max.apply(null,blk), mn=Math.max(m,mt), sc=(m===-Infinity?0:Math.exp(m-mn));
+      var p=blk.map(function(x){ return Math.exp(x-mn); }), lt=p.reduce(function(a,c){return a+c;},0), ot=p.reduce(function(a,c,k){ return a+c*vb[k]; },0);
+      l=l*sc+lt; o=o*sc+ot; hist.push([mn,sc,l,o]); m=mn; }
+    var x0=90, cw=44;
+    S('text',{x:x0-8,y:40,'class':'t-s end'},svg,'score'); S('text',{x:x0-8,y:68,'class':'t-s end'},svg,'value');
+    for (var i=0;i<12;i++){ var X=x0+i*cw+Math.floor(i/4)*8, done=i<step*4, cur=i>=(step-1)*4&&i<step*4;
+      S('rect',{x:X,y:24,width:cw-4,height:24,'class':cur?'box-fire':(done?'box-wire':'box')},svg); S('text',{x:X+(cw-4)/2,y:41,'class':'t mid'},svg,fmt(s[i],1));
+      S('text',{x:X+(cw-4)/2,y:68,'class':'t-s mid'},svg,fmt(v[i],1)); }
+    for (b=0;b<3;b++) S('text',{x:x0+b*(4*cw+8)+2*cw-2,y:16,'class':'t-s mid'},svg,'block '+(b+1));
+    var hy=100; ['after block','running max m','rescale old by','running sum ℓ','running Σ e·v'].forEach(function(h,k){ S('text',{x:[10,120,250,380,500][k],y:hy,'class':'t-s'},svg,h); });
+    hist.forEach(function(hh,k){ var y=hy+24+k*24; [String(k+1),fmt(hh[0],2),k?fmt(hh[1],4):'–',fmt(hh[2],4),fmt(hh[3],4)].forEach(function(t,j){ S('text',{x:[10,120,250,380,500][j],y:y,'class':k===hist.length-1?'t-fire':'t'},svg,t); }); });
+    var M=Math.max.apply(null,s), Z=s.reduce(function(a,x){return a+Math.exp(x-M);},0), exact=s.reduce(function(a,x,k){ return a+Math.exp(x-M)/Z*v[k]; },0);
+    S('line',{x1:10,y1:208,x2:630,y2:208,'class':'grid'},svg);
+    if (step===3){ var res=o/l; S('text',{x:10,y:236,'class':'t-h'},svg,'tiled result o/ℓ = '+fmt(res,6)); S('text',{x:10,y:262,'class':'t-h'},svg,'ordinary softmax over all 12 = '+fmt(exact,6));
+      $('#os-r').innerHTML='Done. Difference between tiled and ordinary softmax: <b>'+Math.abs(res-exact).toExponential(1)+'</b> (rounding only).'; }
+    else { S('text',{x:10,y:236,'class':'t-s'},svg,step?'Processed '+step*4+' of 12 scores. Output so far (if we stopped now) = '+fmt(o/l,4):'Nothing processed yet.');
+      $('#os-r').innerHTML=step?'Block '+step+': max is now <b>'+fmt(m,2)+'</b>'+(step>1?(hist[step-1][1]<0.9999?', so old totals were shrunk by ×'+fmt(hist[step-1][1],4)+'.':'; it did not change, so no rescaling (×1).'):'.'):'Press "Next block" to process the first 4 scores.'; } }
+  $('#os-step').onclick=function(){ if (step<3) step++; draw(); }; $('#os-reset').onclick=function(){ step=0; draw(); }; $('#os-new').onclick=function(){ seed++; init(); draw(); };
+  init(); draw();
+})();
+(function(){ // Fig 2 bars
+  var svg=$('#f2'), k=0, data=[['GFLOPs',66.6,75.2],['HBM R/W (GB)',40.3,4.4],['Runtime (ms)',41.7,7.3]];
+  function draw(){ clear(svg); var d=data[k], mx=Math.max(d[1],d[2])*1.1;
+    [['Standard attention',d[1],'f-wire'],['FlashAttention',d[2],'f-fire']].forEach(function(r,i){ var y=24+i*60; S('text',{x:150,y:y+24,'class':'t end'},svg,r[0]); S('rect',{x:160,y:y,width:r[1]/mx*380,height:36,'class':r[2]},svg); S('text',{x:166+r[1]/mx*380,y:y+24,'class':'t-s'},svg,r[1]); });
+    S('text',{x:160,y:160,'class':'t-s'},svg,d[0]);
+    $('#f2-r').innerHTML=d[0]+': FlashAttention / standard = <b>'+fmt(d[2]/d[1],2)+'×</b>.';
+    $$('[data-f2]').forEach(function(b){ b.classList.toggle('on',+b.dataset.f2===k); }); }
+  $$('[data-f2]').forEach(function(b){ b.onclick=function(){ k=+b.dataset.f2; draw(); }; }); draw();
+})();
+(function(){ // tiling + IO counts
+  var svg=$('#tl'), ln=10, d=64, Mk=96, cur=null, timer=null;
+  function cfg(){ var N=Math.pow(2,ln), M=Mk*1024, Bc=Math.ceil(M/(4*d)), Br=Math.min(Bc,d); Bc=Math.min(Bc,N); Br=Math.min(Br,N); return {N:N,M:M,Bc:Bc,Br:Br,Tr:Math.ceil(N/Br),Tc:Math.ceil(N/Bc)}; }
+  function draw(){ clear(svg); var c=cfg(), N=c.N, std=4*N*N+4*N*d, fl=2*N*d+c.Tc*N*(3*d+4);
+    var G=250, sx=G/N; S('rect',{x:20,y:15,width:G,height:G,'class':'box'},svg);
+    var showTiles=c.Tr<=64&&c.Tc<=64;
+    if (showTiles){ for (var i=0;i<=c.Tr;i++) S('line',{x1:20,y1:15+Math.min(N,i*c.Br)*sx,x2:20+G,y2:15+Math.min(N,i*c.Br)*sx,'class':'grid'},svg); for (var j=0;j<=c.Tc;j++) S('line',{x1:20+Math.min(N,j*c.Bc)*sx,y1:15,x2:20+Math.min(N,j*c.Bc)*sx,y2:15+G,'class':'grid'},svg); }
+    if (cur){ var done=cur[0]*c.Tr+cur[1]; for (var jj=0;jj<=cur[0];jj++){ var h=jj<cur[0]?N:Math.min(N,(cur[1]+1)*c.Br); S('rect',{x:20+jj*c.Bc*sx,y:15,width:Math.min(c.Bc,N-jj*c.Bc)*sx,height:h*sx,'class':'f-wire','fill-opacity':0.25},svg); }
+      S('rect',{x:20+cur[0]*c.Bc*sx,y:15+cur[1]*c.Br*sx,width:Math.min(c.Bc,N-cur[0]*c.Bc)*sx,height:Math.min(c.Br,N-cur[1]*c.Br)*sx,'class':'f-fire'},svg); }
+    S('text',{x:145,y:278,'class':'t-s mid'},svg,'keys → (outer loop j)');
+    var bx=300; S('text',{x:bx,y:30,'class':'t-h'},svg,'HBM element accesses');
+    var mx=Math.max(std,fl);
+    [['standard (Alg. 0)',std,'f-wire'],['FlashAttention (Alg. 1)',fl,'f-fire']].forEach(function(r,i){ var y=50+i*58; S('text',{x:bx,y:y,'class':'t'},svg,r[0]); var bw=Math.max(2,r[1]/mx*220); S('rect',{x:bx,y:y+8,width:bw,height:22,'class':r[2]},svg); S('text',{x:bx+bw+6,y:y+24,'class':'t-s'},svg,(r[1]/1e6).toFixed(r[1]<1e7?2:1)+' M'); });
+    [['B_r × B_c',c.Br+' × '+c.Bc],['T_r × T_c tiles',c.Tr+' × '+c.Tc],['Theorem 2 ratio M/d²',fmt(c.M/(d*d),1)]].forEach(function(r,i){ S('text',{x:bx,y:200+i*22,'class':'t-s'},svg,r[0]); S('text',{x:bx+170,y:200+i*22,'class':'t'},svg,r[1]); });
+    $('#tl-r').innerHTML='N = '+N.toLocaleString()+', d = '+d+': FlashAttention makes <b>'+fmt(std/fl,1)+'×</b> fewer HBM accesses than standard attention'+(showTiles?'':' (too many tiles to draw)')+(cur?'. Visiting tile (i = '+(cur[1]+1)+', j = '+(cur[0]+1)+').':'.'); }
+  function stop(){ if (timer){ clearInterval(timer); timer=null; } }
+  bindRange('tl-n',function(v){ ln=v; stop(); cur=null; draw(); }); bindRange('tl-d',function(v){ d=v; stop(); cur=null; draw(); }); bindRange('tl-m',function(v){ Mk=v; stop(); cur=null; draw(); });
+  $('#tl-run').onclick=function(){ stop(); var c=cfg(); if (c.Tr*c.Tc>400){ cur=[c.Tc-1,c.Tr-1]; draw(); return; } cur=[0,0]; draw(); timer=setInterval(function(){ var c2=cfg(); cur[1]++; if (cur[1]>=c2.Tr){ cur[1]=0; cur[0]++; } if (cur[0]>=c2.Tc){ cur=[c2.Tc-1,c2.Tr-1]; stop(); } draw(); },Math.max(15,1500/(c.Tr*c.Tc))); };
+})();
+</script>
+
+</body>
+</html>

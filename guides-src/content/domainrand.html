@@ -1,0 +1,278 @@
+<!--LEDE-->
+Robots could learn cheaply in simulation if only the simulated camera images looked like the real world, and they never quite do. This paper turns the problem around: render the simulated scenes with absurd random textures, lighting, camera angles and clutter, so that a network trained on them treats the real world as just one more variation. A detector trained only on such images located objects on a real table to within about 1.5 cm, well enough to grasp them in clutter.
+<!--SIMPLE-->
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Simulators can generate unlimited labelled training images for robots, but networks trained on them usually fail on real camera images because the simulated ones look different: the "reality gap".</p>
+  <p>Instead of making the simulator more realistic, the authors made it wildly unrealistic in random ways: random colours and patterns on every surface, random lights, a jittered camera, random clutter and random noise.</p>
+  <p>A network trained only on these images has to learn what stays the same across all the variation (the shape and position of the object), and so it works on the real world without ever having seen a real training image.</p>
+  <p>The resulting detector found eight kinds of geometric objects on a real table with an average error of about 1.5 cm, and a robot used it to pick objects out of clutter in 38 of 40 attempts.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §I</p>
+  <h2>The reality gap</h2>
+  <div class="prose">
+    <p>Training a robot in the real world is slow, expensive and occasionally destructive. In a <strong>simulator</strong> you can run thousands of experiments an hour, and every image comes with perfect labels for free: you know exactly where every object is, because you put it there.</p>
+    <p>The trouble is that a network trained on simulated images learns the simulator's quirks. Real cameras have odd colours, glare, shadows, blur and messy backgrounds that the simulator never showed. A network that relied on, say, "the table is always this exact shade of grey" falls apart on a real table. Closing this <strong>reality gap</strong> usually meant painstaking photo-realistic rendering, or collecting at least some real images to adapt with.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A student who only ever practised with one textbook's diagrams can be thrown by a slightly different drawing in the exam. A student who practised with diagrams from twenty different books, in different styles, focuses on what the diagrams have in common.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Simulated images are cheap and perfectly labelled, but a network trained on them learns the simulator's look along with the task.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §III.A · Fig. 1</p>
+  <h2>Randomise everything that should not matter</h2>
+  <div class="prose">
+    <p>The paper's idea, <strong>domain randomisation</strong>, is to make every visual detail that is irrelevant to the task change at random in every training image. The authors used a basic, deliberately non-photorealistic renderer and randomised:</p>
+    <ul>
+      <li>the number and shapes of distractor objects on the table (0 to 10);</li>
+      <li>the position and texture (colour pattern) of every object, plus the textures of the table, floor, background and robot;</li>
+      <li>the camera's position, angle and field of view, within small ranges around the real camera's placement;</li>
+      <li>the number of lights and their positions, directions and shininess;</li>
+      <li>the type and amount of random noise added to the image.</li>
+    </ul>
+    <p>Textures were simple: a single random colour, a gradient between two random colours, or a checkerboard of two random colours. The result looks nothing like reality, which is the point. Generate a few scenes below.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn" id="sc-new">New random scene</button><button class="btn" id="sc-real">Plain "real" stand-in</button>
+      <button class="btn" id="sc-tex" aria-pressed="true">Textures</button><button class="btn" id="sc-dis" aria-pressed="true">Distractors</button><button class="btn" id="sc-cam" aria-pressed="true">Camera</button><button class="btn" id="sc-lit" aria-pressed="true">Lighting</button><button class="btn" id="sc-noi" aria-pressed="true">Noise</button>
+    </div>
+    <div class="svgbox"><svg id="sc" viewBox="0 0 600 270" role="img" aria-label="A randomly textured simulated scene with a target object and distractors on a table"></svg></div>
+    <p class="readout" id="sc-r"></p>
+    <figcaption>A cartoon of the paper's scene generator (its renderer was MuJoCo's built-in one, and its real images came from a webcam). The target is the object in the dashed box; its true position is the label the network learns to output. Switch factors off to see what the network would otherwise be able to rely on. "Plain stand-in" draws one sober, consistent scene to play the role of the real world: from the network's point of view it is just one more variation.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>If colours, lighting, camera and clutter change in every training image, the only thing the network can rely on is what actually matters: the object's shape and position.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why randomise the camera position slightly, rather than fixing it exactly where the real camera is?</dt>
+    <dd>The real camera's position is never measured perfectly. Training across a small range makes the network robust to that error (and the paper's ablation found this mattered).</dd>
+    <dt>Why add distractor objects?</dt>
+    <dd>So the network learns to find the target shape rather than "the only object on the table". Without distractors in training, its error with real distractors rose several-fold.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §IV.C · Fig. 5</p>
+  <h2>How much variety is enough?</h2>
+  <div class="prose">
+    <p>A network trained on a few textures can still do well on the simulator, because it learns to "subtract" those particular backgrounds. On a new background it has never seen, that trick fails. Only when it has seen a huge variety does it learn to ignore backgrounds in general. The paper found that real-world accuracy degraded significantly with fewer than about 1,000 distinct textures in training.</p>
+    <p>The toy below shows the same effect in miniature. Each "image" is a row of 32 pixels: a bright blob (the object) on a background pattern. A simple learner estimates the blob's position. It trains on 600 images using a limited set of background patterns, then is tested on images with brand-new patterns, playing the part of the real world.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Background patterns in training <input type="range" id="tx-k" min="0" max="6" step="1" value="1"><output id="tx-k-o">2</output></label>
+      <button class="btn" id="tx-go">Train again (new patterns)</button>
+    </div>
+    <div class="svgbox"><svg id="tx" viewBox="0 0 600 270" role="img" aria-label="One-dimensional images with true and predicted object positions, for training and new backgrounds"></svg></div>
+    <p class="readout" id="tx-r"></p>
+    <figcaption>An illustrative toy, not the paper's model: a linear (ridge) regression from 32 pixel values to the blob position, trained on 600 images. Backgrounds are random flat colours, gradients or checkers, like the paper's texture types. Each strip is one image; the ring marks the true position, the amber tick the prediction. Left: images using training patterns. Right: images with patterns never seen in training. With 1 or 2 patterns the gap between left and right is large; by 100 or so it nearly closes.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Doing well on simulated images is easy; doing well on unseen ones needs a very wide variety of randomised appearances.</p>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §IV · Tables I–II</p>
+  <h2>Results, and what mattered</h2>
+  <div class="prose">
+    <p>The network looks at a single image from an ordinary webcam and outputs the position of one particular object. On real images, its average error was about 1.5 cm across eight shapes (cone, cube, cylinder, prisms, pyramid, tetrahedron), and it coped with distractors and partial occlusion. On simulated images it was much more accurate (0.3 to 0.5 cm), so it still overfits to the simulator somewhat.</p>
+    <p>The authors switched ingredients off one at a time. Removing distractors from training was the most damaging: with real distractors on the table, the average error jumped from 1.8 cm to 7.2 cm. Removing camera randomisation made every condition worse by half a centimetre or more. Removing noise barely changed accuracy, though it helped training converge. Starting from a network pre-trained on ordinary photos (ImageNet) helped most when training data were scarce; with tens of thousands of simulated images, starting from scratch did almost as well.</p>
+    <p>Finally, a Fetch robot used the detector to grasp target objects from increasingly cluttered tables, succeeding in 38 of 40 attempts.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>Domain randomisation became a standard tool. Peng et al. (2018) randomised physics (masses, friction, delays) as well as appearance. OpenAI's robot hand (2018) learned to rotate a block, and later (2019) to solve a Rubik's Cube, trained entirely in randomised simulation; the second used "automatic domain randomisation", which widens the random ranges as the robot improves. Other work learned to translate randomised images into a canonical look (RCAN, 2019) or adapted with a little real data.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Trained only on cartoonish random images, a detector reached about 1.5 cm real-world accuracy. Variety in clutter and camera mattered most.</p>
+</section>
+<!--TECH-->
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Bridging the reality gap between simulation and physical robots is a major obstacle to using simulated data. Domain randomisation trains models on simulated images with randomised rendering so that, with enough variability, the real world appears to the model as just another variation. Applied to object localisation, it yields the first successful transfer, to the authors' knowledge, of a deep network trained only on simulated RGB images (without pre-training on real images) to the real world for robotic control. The detector is accurate to 1.5 cm and robust to distractors and partial occlusions, and is used to grasp in clutter. IROS 2017, arXiv:1703.06907.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §III.A</p>
+  <h2>Problem and randomisation</h2>
+  <div class="prose">
+    <p><strong>Task.</strong> Learn a detector <var>f</var><sub>θ</sub> mapping one monocular RGB frame <var>I</var> to the Cartesian coordinates (<var>x</var>, <var>y</var>, <var>z</var>) of each object of interest, in the presence of distractors to be ignored. The table height is fixed, so the task is effectively 2-D pose estimation on the table plane.</p>
+    <p><strong>Randomised at training time</strong> (each sample is drawn independently):</p>
+    <ul>
+      <li>number and shape of distractors on the table (0–10);</li>
+      <li>position and texture of all objects; textures of table, floor, skybox and robot;</li>
+      <li>camera position within a 10 × 5 × 10 cm box, orientation offset up to 0.1 rad, field of view scaled by up to 5%;</li>
+      <li>number, position, orientation and specular characteristics of lights;</li>
+      <li>type and amount of random noise added to images.</li>
+    </ul>
+    <p>Textures are drawn from: (a) a random RGB value, (b) a gradient between two random RGB values, (c) a checker pattern between two random RGB values. Rendering uses MuJoCo's built-in renderer, which is not intended to be photorealistic; the authors stress that physically plausible appearance is unnecessary.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §III.B · Fig. 2</p>
+  <h2>Model and training</h2>
+  <div class="prose">
+    <p>A modified VGG-16: the convolutional stack of VGG-16 (convolutions, ReLU, max-pooling), input a 224 × 224 downsized webcam frame, followed by fully connected layers of 256 and 64 units without dropout, and a linear output of (<var>x</var>, <var>y</var>, <var>z</var>). Loss: L2 between predicted and true position; optimiser Adam with learning rate around 10<sup>−4</sup> (rather than the standard 10<sup>−3</sup>). Convolutional layers were usually initialised from ImageNet weights, though random initialisation "works as well in most cases".</p>
+    <p>Note the nuance in the "trained only on simulated images" claim: the reported detectors typically started from ImageNet-pretrained convolutional weights, but the authors show (Fig. 4) that with enough simulated data, random initialisation reaches similar accuracy, so real images are not required. With pretraining, as few as 5,000 simulated samples gave reasonable real-world accuracy, improving up to around 50,000.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="sw-go">Re-run with new random seeds</button></div>
+    <div class="svgbox"><svg id="sw" viewBox="0 0 600 250" role="img" aria-label="Error on training textures and on unseen textures against number of textures"></svg></div>
+    <p class="readout" id="sw-r"></p>
+    <figcaption>The toy from the Plain English tab, swept over the number of distinct background textures (log scale), averaged over three seeds. Blue: error on images with the training textures; amber: error on unseen textures. The generalisation gap closes as texture diversity grows, the qualitative shape of the paper's Fig. 5 (where real-world error degrades significantly below about 1,000 textures). Units are pixels in a 32-pixel image; the toy's numbers are not comparable to the paper's centimetres.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §IV.A–C · Tables I–II</p>
+  <h2>Localisation accuracy and ablations</h2>
+  <div class="prose"><p>Real-world evaluation: objects on a table imaged by the webcam, under three conditions: object alone, with distractors, and partially occluded. Average errors are about 1.5 cm overall; on simulated validation images the error was 0.3–0.5 cm, indicating residual overfitting to simulation.</p></div>
+  <figure class="live">
+    <div class="ctl" id="tb-ctl"></div>
+    <div class="svgbox"><svg id="tb" viewBox="0 0 600 300" role="img" aria-label="Mean and standard deviation of localisation error from Tables I and II"></svg></div>
+    <p class="readout" id="tb-r"></p>
+    <figcaption>Mean ± standard deviation of real-world localisation error in cm. Table I: each object, three conditions. Table II: ablations on real images with 20,000 training examples (full method versus removing noise, camera randomisation, or distractors). Values from the paper.</figcaption>
+  </figure>
+  <div class="prose">
+    <p><strong>Readings.</strong> Distractors in training are critical for robustness to real distractors (1.8 → 7.2 cm without them). Camera randomisation improves accuracy in all three conditions. Noise has a negligible effect on accuracy but helps convergence. Fig. 4: pretraining matters more with less data. Fig. 5 (10,000 examples): accuracy degrades significantly with fewer than 1,000 unique textures. The worst Table I entries (tetrahedron and cylinder under occlusion) have large standard deviations, consistent with occasional gross failures rather than uniform imprecision.</p>
+    <p><strong>Robot experiments (§IV.D).</strong> On a Fetch robot, the detector drove a grasping pipeline that succeeded in 38 of 40 trials across 20 increasingly cluttered scenes. A detector for a YCB Spam can, with unseen food items as distractors, gave 9 of 10 successful trials.</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is a low simulated error combined with a higher real error evidence of overfitting to simulation, not of a bad model?</dt>
+    <dd>The model can fit the simulator's distribution well; the gap shows that some sim-specific cues still help it, and the real images fall partly outside the randomised distribution.</dd>
+    <dt>Which ablation shows the largest effect, and why does it make sense?</dt>
+    <dd>Removing distractors: a network that never saw other objects can rely on "the only object present", a shortcut that fails as soon as real clutter appears.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §V and lineage</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose"><ul>
+    <li><strong>Precision.</strong> About 1.5 cm suffices for grasping simple shapes but not for contact-rich or high-precision manipulation, which the authors name as future work.</li>
+    <li><strong>Narrow task.</strong> Simple geometric objects on one table, fixed table height, from a camera near a known position.</li>
+    <li><strong>Hand-chosen ranges.</strong> What to randomise and by how much is designed by hand; too little leaves a gap, too much makes the task needlessly hard.</li>
+    <li><strong>Visual only.</strong> Only appearance is randomised; the detector supplies positions, and dynamics are not part of what is learned.</li>
+  </ul></div>
+  <div class="later"><span class="label">Later refinements</span>Dynamics randomisation for sim-to-real control (Peng et al., 2018); OpenAI's dexterous in-hand manipulation (2018) and Rubik's Cube (2019), the latter with automatic domain randomisation that grows ranges with performance; structured domain randomisation for driving scenes (Prakash et al., 2019); randomised-to-canonical adaptation networks (James et al., 2019); and synthetic-data pipelines for perception generally. In legged locomotion, randomised physics plus large-scale parallel simulation became the standard route to real robots. Later work on generalist robot policies such as <a href="oxe.html">Open X-Embodiment</a> instead pooled large amounts of real robot data.</div>
+</section>
+
+<section class="kp" id="t5" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Reality gap</dt><dd>Mismatch between simulated and real observations or dynamics that breaks transfer.</dd>
+    <dt>Domain randomisation</dt><dd>Training across randomised simulator parameters so that the real world falls within the training distribution.</dd>
+    <dt>Domain adaptation</dt><dd>Using (usually some) real data to align a model trained on one domain with another.</dd>
+    <dt>Distractor</dt><dd>A non-target object placed in the scene to prevent shortcut solutions.</dd>
+    <dt>Skybox</dt><dd>The background surrounding a rendered scene.</dd>
+    <dt>MuJoCo</dt><dd>A physics simulator with a simple built-in renderer.</dd>
+    <dt>VGG-16</dt><dd>A 16-layer convolutional network for image classification, often used as a pretrained feature extractor.</dd>
+    <dt>Fetch</dt><dd>A mobile manipulator robot with a single arm and parallel gripper.</dd>
+  </dl>
+</section>
+<!--SCRIPT-->
+<script>
+(function(){ // scene generator
+  var svg=$('#sc'), on={tex:true,dis:true,cam:true,lit:true,noi:true}, seed=1, real=false, CL=['f-fire','f-wire','f-ok','f-inh','f-muted','f-ink','f-card','f-rule'];
+  function pick(r,a){ return a[Math.floor(r()*a.length)]; }
+  function texture(g,r,x,y,w,h,def){
+    if (!on.tex || real){ S('rect',{x:x,y:y,width:w,height:h,'class':def[0],'fill-opacity':def[1]},g); return; }
+    var t=Math.floor(r()*3), c1=pick(r,CL), c2=pick(r,CL), o1=0.3+0.7*r(), o2=0.3+0.7*r();
+    if (t===0) S('rect',{x:x,y:y,width:w,height:h,'class':c1,'fill-opacity':o1},g);
+    else if (t===1){ var n=10; for (var i=0;i<n;i++){ var f=i/(n-1); S('rect',{x:x+i*w/n,y:y,width:w/n+0.5,height:h,'class':f<0.5?c1:c2,'fill-opacity':(f<0.5?o1*(1-f*2)+0.15:o2*(f*2-1)+0.15)},g); } }
+    else { var cs=8+Math.floor(r()*20); S('rect',{x:x,y:y,width:w,height:h,'class':c1,'fill-opacity':o1},g);
+      for (var i=0;i*cs<w;i++) for (var j=0;j*cs<h;j++) if ((i+j)%2) S('rect',{x:x+i*cs,y:y+j*cs,width:Math.min(cs,w-i*cs),height:Math.min(cs,h-j*cs),'class':c2,'fill-opacity':o2},g); } }
+  function shape(g,r,kind,cx,cy,s,def){ var gg=S('g',{},g), cid='scc'+Math.floor(r()*1e9);
+    var cp=S('clipPath',{id:cid},gg), d;
+    if (kind===0) d='M'+(cx-s)+','+(cy-s)+'h'+2*s+'v'+2*s+'h'+(-2*s)+'z';
+    else if (kind===1) d='M'+cx+','+(cy-s)+'L'+(cx+s)+','+(cy+s)+'L'+(cx-s)+','+(cy+s)+'z';
+    else if (kind===2){ d=''; for (var k=0;k<6;k++){ var a=Math.PI/3*k; d+=(k?'L':'M')+(cx+s*Math.cos(a))+','+(cy+s*Math.sin(a)); } d+='z'; }
+    else d='M'+(cx-s)+','+(cy-s*0.6)+'h'+2*s+'v'+1.6*s+'h'+(-2*s)+'z';
+    S('path',{d:d},cp); var inner=S('g',{'clip-path':'url(#'+cid+')'},gg); texture(inner,r,cx-s,cy-s,2*s,2*s,def); S('path',{d:d,'class':'w-ink'},gg); }
+  function draw(){ clear(svg); var r=rng(seed*7919+(real?3:0)), defs=S('defs',{},svg);
+    var cam = on.cam && !real ? {dx:(r()-0.5)*30, dy:(r()-0.5)*20, s:1+(r()-0.5)*0.1, rot:(r()-0.5)*6} : {dx:0,dy:0,s:1,rot:0};
+    var root=S('g',{transform:'translate(300,135) rotate('+cam.rot+') scale('+cam.s+') translate('+(-300+cam.dx)+','+(-135+cam.dy)+')'},svg);
+    texture(root,r,-40,-40,680,150,['f-card',1]); texture(root,r,-40,110,680,200,['f-rule',0.7]);
+    var tg=S('g',{},root), tid='tbl'+seed+(real?'r':''), cp=S('clipPath',{id:tid},defs); S('path',{d:'M140,130 L460,130 L520,235 L80,235 z'},cp);
+    var tin=S('g',{'clip-path':'url(#'+tid+')'},tg); texture(tin,r,80,130,440,105,['f-muted',0.35]); S('path',{d:'M140,130 L460,130 L520,235 L80,235 z','class':'w-ink'},tg);
+    var arm=S('g',{},root); texture(arm,r,520,-40,26,110,['f-muted',0.6]); S('rect',{x:520,y:-40,width:26,height:110,'class':'w-ink'},arm);
+    texture(arm,r,470,60,76,18,['f-muted',0.6]); S('rect',{x:470,y:60,width:76,height:18,'class':'w-ink'},arm);
+    var tx=180+r()*220, ty=160+r()*55;
+    var nd = on.dis && !real ? Math.floor(r()*11) : 0;
+    for (var i=0;i<nd;i++){ var x=150+r()*300, y=145+r()*80; if (Math.abs(x-tx)<26 && Math.abs(y-ty)<20) continue; shape(root,r,1+Math.floor(r()*3),x,y,8+r()*6,['f-wire',0.7]); }
+    shape(root,r,0,tx,ty,12,['f-fire',0.9]); S('rect',{x:tx-19,y:ty-19,width:38,height:38,'class':'box-inh'},root);
+    if (on.lit && !real){ var nl=1+Math.floor(r()*3); for (var k=0;k<nl;k++){ var lx=r()*600; S('circle',{cx:lx,cy:-20+r()*60,r:90+r()*120,'class':r()<0.5?'f-card':'f-ink','fill-opacity':0.12+r()*0.25},root); } }
+    if (on.noi && !real){ var amt=Math.floor(r()*400); for (var k=0;k<amt;k++) S('rect',{x:r()*600,y:r()*270,width:2,height:2,'class':r()<0.5?'f-ink':'f-card','fill-opacity':0.5},svg); }
+    S('rect',{x:0,y:0,width:600,height:270,'class':'area'},svg);
+    $('#sc-r').innerHTML = real ? 'Stand-in for the real world: one consistent look. To a network trained on enough randomised scenes, this is just another variation.' : 'Scene #'+seed+': <b>'+nd+'</b> distractors'+(on.cam?', camera shifted by '+fmt(cam.dx,0)+', '+fmt(cam.dy,0)+' px and rotated '+fmt(cam.rot,1)+'°':'')+'. Target: the dashed box.'; }
+  $('#sc-new').onclick=function(){ real=false; seed++; draw(); }; $('#sc-real').onclick=function(){ real=true; draw(); };
+  [['tex','tex'],['dis','dis'],['cam','cam'],['lit','lit'],['noi','noi']].forEach(function(p){ $('#sc-'+p[0]).onclick=function(){ on[p[1]]=!on[p[1]]; this.setAttribute('aria-pressed',on[p[1]]); real=false; draw(); }; });
+  draw();
+})();
+var DRT=(function(){ // shared toy: ridge regression on 1-D images
+  var P=32;
+  function tex(r){ var t=Math.floor(r()*3), a=r(), b=r(), w=2+Math.floor(r()*5), x=[]; for (var i=0;i<P;i++) x.push(t===0?a:(t===1?a+(b-a)*i/(P-1):((Math.floor(i/w)%2)?a:b))); return x; }
+  function img(p,bg,r){ var x=[]; for (var i=0;i<P;i++){ var d=i-p; x.push(bg[i]*0.6+Math.exp(-d*d/4)+0.03*gauss(r)); } return x; }
+  function solve(A,b){ var n=b.length; A=A.map(function(rw,i){ return rw.concat([b[i]]); });
+    for (var c=0;c<n;c++){ var m=c; for (var q=c+1;q<n;q++) if (Math.abs(A[q][c])>Math.abs(A[m][c])) m=q; var t=A[c]; A[c]=A[m]; A[m]=t;
+      for (var q=0;q<n;q++) if (q!==c){ var f=A[q][c]/A[c][c]; for (var k=c;k<=n;k++) A[q][k]-=f*A[c][k]; } }
+    return A.map(function(rw,i){ return rw[n]/rw[i]; }); }
+  function fit(X,y){ var d=X[0].length, A=[], b=[]; for (var i=0;i<d;i++){ var z=[]; for (var j=0;j<d;j++) z.push(0); A.push(z); b.push(0); }
+    X.forEach(function(x,k){ for (var i=0;i<d;i++){ b[i]+=x[i]*y[k]; for (var j=0;j<d;j++) A[i][j]+=x[i]*x[j]; } }); for (var i=0;i<d-1;i++) A[i][i]+=0.1; return solve(A,b); }
+  function pred(w,x){ var q=w[P]; for (var i=0;i<P;i++) q+=w[i]*x[i]; return q; }
+  function exp(K,seed){ var r=rng(seed), texs=[]; for (var k=0;k<K;k++) texs.push(tex(r));
+    var X=[], y=[]; for (var n=0;n<600;n++){ var p=4+r()*24; X.push(img(p,texs[n%K],r).concat([1])); y.push(p); }
+    var w=fit(X,y), se=0, ss=0, ex={sim:[],real:[]};
+    for (var n=0;n<200;n++){ var p=4+r()*24, x=img(p,tex(r),r), q=pred(w,x); se+=(q-p)*(q-p); if (n<4) ex.real.push([x,p,q]); }
+    for (var n=0;n<200;n++){ var p=4+r()*24, x=img(p,texs[n%K],r), q=pred(w,x); ss+=(q-p)*(q-p); if (n<4) ex.sim.push([x,p,q]); }
+    return {real:Math.sqrt(se/200), sim:Math.sqrt(ss/200), ex:ex}; }
+  return {exp:exp, P:P};
+})();
+(function(){ // texture count toy
+  var svg=$('#tx'), Ks=[1,2,5,10,30,100,300], K=2, seed=1;
+  function draw(){ clear(svg); var o=DRT.exp(K,seed);
+    function col(x0,title,arr,err){ S('text',{x:x0,y:20,'class':'t-h'},svg,title); var cw=8.4;
+      arr.forEach(function(e,k){ var y=40+k*48; e[0].forEach(function(v,i){ S('rect',{x:x0+i*cw,y:y,width:cw,height:22,'class':'f-ink','fill-opacity':Math.max(0,Math.min(1,v/1.6))},svg); });
+        S('rect',{x:x0,y:y,width:32*cw,height:22,'class':'area'},svg);
+        S('circle',{cx:x0+(e[1]+0.5)*cw,cy:y+32,r:5,'class':'w-ok'},svg);
+        var px=x0+(Math.max(-2,Math.min(33,e[2]))+0.5)*cw; S('line',{x1:px,y1:y-3,x2:px,y2:y+40,'class':'w-fire'},svg); });
+      S('text',{x:x0,y:250,'class':'t-s'},svg,'typical error: '+fmt(err,2)+' px'); }
+    col(20,'Training patterns',o.ex.sim,o.sim); col(320,'Unseen patterns',o.ex.real,o.real);
+    $('#tx-r').innerHTML='Trained with <b>'+K+'</b> background pattern'+(K>1?'s':'')+'. Error on training patterns: <b>'+fmt(o.sim,2)+'</b> px; on unseen patterns: <b>'+fmt(o.real,2)+'</b> px'+(o.real>1.8*o.sim?': a big reality gap.':'.'); }
+  bindRange('tx-k',function(v){ K=Ks[v]; $('#tx-k-o').textContent=K; draw(); });
+  $('#tx-go').onclick=function(){ seed++; draw(); };
+})();
+(function(){ // sweep
+  var svg=$('#sw'), Ks=[1,2,5,10,20,50,100,300], base=100;
+  function axes(){ clear(svg); S('line',{x1:60,y1:210,x2:580,y2:210,'class':'axis'},svg); S('line',{x1:60,y1:20,x2:60,y2:210,'class':'axis'},svg);
+    Ks.forEach(function(k){ var x=60+Math.log10(k)/Math.log10(300)*510; S('text',{x:x,y:228,'class':'t-s mid'},svg,String(k)); });
+    S('text',{x:580,y:244,'class':'t-s end'},svg,'distinct textures in training (log scale)'); S('text',{x:66,y:30,'class':'t-s'},svg,'RMS error (px)'); }
+  function run(){ axes(); var sim=[], re=[];
+    Ks.forEach(function(k){ var a=0,b=0; for (var s=1;s<=3;s++){ var o=DRT.exp(k,base+s); a+=o.sim; b+=o.real; } sim.push(a/3); re.push(b/3); });
+    var mx=Math.max.apply(null,re)*1.1, X=function(i){ return 60+Math.log10(Ks[i])/Math.log10(300)*510; }, Y=function(v){ return 210-v/mx*180; };
+    for (var v=0; v<=mx; v+=1){ S('line',{x1:60,y1:Y(v),x2:580,y2:Y(v),'class':'grid'},svg); S('text',{x:54,y:Y(v)+4,'class':'t-s end'},svg,String(v)); }
+    [[sim,'w','u-wire'],[re,'w-fire','u-on']].forEach(function(s){ var d=''; s[0].forEach(function(v,i){ d+=(i?'L':'M')+X(i)+','+Y(v); }); S('path',{d:d,'class':s[1]},svg); s[0].forEach(function(v,i){ S('circle',{cx:X(i),cy:Y(v),r:4,'class':s[2]},svg); }); });
+    S('text',{x:X(3)+8,y:Y(re[3])-10,'class':'t-fire'},svg,'unseen textures'); S('text',{x:X(3)+8,y:Y(sim[3])+20,'class':'t-wire'},svg,'training textures');
+    $('#sw-r').innerHTML='With 1 texture: <b>'+fmt(sim[0],2)+'</b> px on training textures vs <b>'+fmt(re[0],2)+'</b> px on unseen ones. With 300: <b>'+fmt(sim[7],2)+'</b> vs <b>'+fmt(re[7],2)+'</b>.'; }
+  $('#sw-go').onclick=function(){ base+=10; run(); }; run();
+})();
+(function(){ // Tables I and II
+  var svg=$('#tb'), mode='t1', cond=0;
+  var T1=[['Cone',[1.3,1.1],[1.5,1.0],[1.4,0.6]],['Cube',[1.3,0.6],[1.8,1.2],[1.4,0.6]],['Cylinder',[1.1,0.9],[1.9,2.8],[1.9,2.9]],['Hexagonal prism',[0.7,0.5],[0.6,0.3],[1.0,1.0]],['Pyramid',[0.9,0.3],[1.0,0.5],[1.1,0.7]],['Rectangular prism',[1.3,0.7],[1.2,0.4],[0.9,0.6]],['Tetrahedron',[0.8,0.4],[1.0,0.4],[3.2,5.8]],['Triangular prism',[0.9,0.4],[0.9,0.4],[1.9,2.2]]];
+  var T2=[['Full method',[1.3,0.6],[1.8,1.7],[2.4,3.0]],['No noise added',[1.4,0.7],[1.9,2.0],[2.4,2.8]],['No camera randomisation',[2.0,2.1],[2.4,2.3],[2.9,3.5]],['No distractors in training',[1.5,0.6],[7.2,4.5],[7.4,5.3]]];
+  var CN=['Object only','Distractors','Occlusions'], ctl=$('#tb-ctl');
+  [['t1','Table I: objects'],['t2','Table II: ablations']].forEach(function(m){ var b=document.createElement('button'); b.className='btn'; b.textContent=m[1]; b.dataset.m=m[0]; b.onclick=function(){ mode=m[0]; draw(); }; ctl.appendChild(b); });
+  CN.forEach(function(c,i){ var b=document.createElement('button'); b.className='btn'; b.textContent=c; b.dataset.c=i; b.onclick=function(){ cond=i; draw(); }; ctl.appendChild(b); });
+  function draw(){ $$('#tb-ctl .btn').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.m ? b.dataset.m===mode : +b.dataset.c===cond); }); clear(svg);
+    var rows = mode==='t1'?T1:T2, X=function(v){ return 190+v/13*390; }, rh = mode==='t1'?32:60;
+    for (var v=0; v<=13; v+=2){ S('line',{x1:X(v),y1:10,x2:X(v),y2:276,'class':'grid'},svg); S('text',{x:X(v),y:292,'class':'t-s mid'},svg,v+' cm'); }
+    rows.forEach(function(r,i){ var m=r[cond+1][0], sd=r[cond+1][1], y=16+i*rh;
+      S('text',{x:180,y:y+13,'class':'t end'},svg,r[0]);
+      S('rect',{x:190,y:y,width:X(m)-190,height:18,'class':(mode==='t2'&&i===0)?'f-fire':'f-wire','fill-opacity':0.85},svg);
+      S('line',{x1:X(Math.max(0,m-sd)),y1:y+9,x2:X(m+sd),y2:y+9,'class':'w-ink'},svg); S('line',{x1:X(m+sd),y1:y+3,x2:X(m+sd),y2:y+15,'class':'w-ink'},svg);
+      S('text',{x:X(m+sd)+9,y:y+13,'class':'t-s'},svg,fmt(m,1)+' ± '+fmt(sd,1)); });
+    var ms=rows.map(function(r){ return r[cond+1][0]; }), worst=rows[ms.indexOf(Math.max.apply(null,ms))][0];
+    $('#tb-r').innerHTML=(mode==='t1'?'Table I':'Table II')+', '+CN[cond].toLowerCase()+': mean of the rows <b>'+fmt(ms.reduce(function(a,b){return a+b;})/ms.length,2)+' cm</b>; largest: <b>'+worst+'</b>.'; }
+  draw();
+})();
+</script>

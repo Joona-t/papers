@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LSTM (1997) study guide</title>
+<meta name="description" content="Networks that read sequences, like sentences or sound, kept forgetting anything more than a few steps back, because the learning signal faded as it travelled back in time. Hochreiter and Schmidhuber fix this with a memory cell whose contents are protected by gates, so information and error can survi">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Neural networks</b> · 1997</p>
+  <h1>Long Short-Term Memory</h1>
+  <p class="cite">Sepp Hochreiter, Jürgen Schmidhuber · Neural Computation</p>
+  <p class="lede">Networks that read sequences, like sentences or sound, kept forgetting anything more than a few steps back, because the learning signal faded as it travelled back in time. Hochreiter and Schmidhuber fix this with a memory cell whose contents are protected by gates, so information and error can survive for over a thousand steps.</p>
+  <p class="paperlinks"><a href="https://deeplearning.cs.cmu.edu/F23/document/readings/LSTM.pdf">Read the paper (free)</a> <a href="https://lovespark.love/papers/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, independent AI review, but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>A recurrent network reads a sequence one step at a time, passing a memory forward. To learn, it sends error signals backwards through those steps.</p>
+  <p>Each step multiplies the signal by some factor. Below 1, it shrinks to nothing within a few dozen steps; above 1, it blows up. So long-range lessons can't be learned.</p>
+  <p>LSTM adds a memory cell that copies its value forward unchanged (factor exactly 1), so the signal neither fades nor explodes.</p>
+  <p>Learned "gates" decide when to write into the cell and when to read from it, so the cell isn't disturbed by irrelevant inputs. The "forget" gate every modern LSTM has was added three years later.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1–3</p>
+  <h2>Reading a sequence with a memory</h2>
+  <div class="prose">
+    <p>Some data comes in order: words in a sentence, notes in a song, readings from a sensor. A <strong>recurrent</strong> network handles this by reading one item at a time and carrying a small internal memory from each step to the next, like a person reading a sentence word by word.</p>
+    <p>To learn, it uses <a href="backprop.html">backpropagation</a>, unrolled through time: the error at the end is passed back step by step to the moments that caused it. The trouble starts when the cause is far back, say the subject of a long sentence that decides a verb many words later.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Reading a mystery novel where the clue is on page 3 and the reveal on page 300. You only learn to spot clues if the "aha" at the end can reach back to page 3.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Recurrent networks learn from sequences by passing error back through time, which gets hard when cause and effect are far apart.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §3</p>
+  <h2>Why the signal fades or explodes</h2>
+  <div class="prose">
+    <p>Every step back in time, the error signal gets multiplied by roughly the same number (a weight times the slope of the unit). Multiply by 0.9 a hundred times and you get 0.00003: the signal has <strong>vanished</strong>. Multiply by 1.1 a hundred times and you get 13,780: it has <strong>exploded</strong>. Only a factor of exactly 1 keeps it steady.</p>
+    <p>Hochreiter had worked this out in detail in his 1991 diploma thesis. It means ordinary recurrent networks effectively can't learn links longer than about 5–10 steps.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Factor per step <input type="range" id="vg-f" min="0.5" max="1.3" step="0.01" value="0.9" data-fmt="2"><output id="vg-f-o">0.90</output></label><button class="btn" id="vg-one">Set to exactly 1 (LSTM's trick)</button></div>
+    <div class="svgbox"><svg id="vg" viewBox="0 0 600 240" role="img" aria-label="Error signal strength versus number of steps back in time"></svg></div>
+    <p class="readout" id="vg-r"></p>
+    <figcaption>Height of each bar = how much of the error signal reaches that many steps back (log scale; the dashed line is 1, no loss). Below 1 the bars drain away; above 1 they shoot off the chart.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Repeated multiplication makes learning signals vanish or explode over long time gaps. A factor of exactly 1 is the only stable choice.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Roughly how much signal is left after 50 steps at factor 0.8?</dt>
+    <dd>0.8<sup>50</sup> ≈ 0.000014, essentially nothing.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §4</p>
+  <h2>A memory cell with gates</h2>
+  <div class="prose">
+    <p>LSTM's core is a <strong>memory cell</strong> that connects to itself with a factor of exactly 1. Left alone, it keeps its value forever, and error flowing back through it stays the same size. The authors call this the <em>constant error carousel</em>.</p>
+    <p>But a cell that everything writes into gets scrambled, and a cell that always broadcasts disturbs everything else. So the cell gets two learned <strong>gates</strong>: an <strong>input gate</strong> that decides when new information may be written in, and an <strong>output gate</strong> that decides when the stored value is let out. Each gate is a number between 0 (closed) and 1 (open), computed from the current situation.</p>
+    <p>Below, open the input gate at the moment you want to store something, keep it closed while noise goes by, and open the output gate when you want to read it.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="mc-demo">Example: store step 1, read at step 10</button><button class="btn" id="mc-clear">Close all gates</button><label><input type="checkbox" id="mc-fg"> Add a forget gate (2000 version)</label></div>
+    <div class="svgbox wide"><svg id="mc" viewBox="0 0 660 300" role="img" aria-label="Timeline of inputs, gate settings, cell contents and output"></svg></div>
+    <p class="readout" id="mc-r"></p>
+    <figcaption>Click the gate squares to open (amber) or close them. The cell adds input × input gate at each step and never loses anything in the 1997 design. With the forget gate on, a third row appears: closing it at a step wipes the cell.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>The cell remembers by copying itself forward unchanged; the gates control what gets written in and what gets read out.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What would happen without an input gate?</dt>
+    <dd>Every input would be added to the cell, so irrelevant inputs would overwrite the information it is meant to keep.</dd>
+    <dt>What can't the 1997 cell do that the forget gate fixes?</dt>
+    <dd>It cannot clear itself. Its contents only accumulate, which becomes a problem on long, continuous streams.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §5</p>
+  <h2>Tests built to need long memory</h2>
+  <div class="prose">
+    <p>The authors design tasks where the answer depends on something seen long before, with nothing but noise in between. In the "adding problem", the network sees a long stream of random numbers, two of which are marked, and at the end must output their sum. In others, it must remember one symbol from the start of a sequence over 100 or even 1,000 steps.</p>
+    <p>Other recurrent methods of the time failed or learned very slowly once the gap went beyond about ten steps. LSTM solved these tasks with gaps of over 1,000 steps, and learned faster.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>On tasks designed to require long memory, LSTM succeeded where earlier recurrent networks failed.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · What came next</p>
+  <h2>From 1997 cell to modern LSTM</h2>
+  <div class="prose">
+    <p>The LSTM most people use differs from this paper. In 2000, Gers, Schmidhuber and Cummins added the <a href="forget-gate.html">forget gate</a>, letting the cell gradually let go of old information or reset. Later came "peephole" connections and full training through time. For about two decades LSTMs powered speech recognition, machine translation and phone keyboards, until <a href="transformer.html">transformers</a> took over by attending to every earlier step directly.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>The forget gate (2000) is so standard that "LSTM" today means the version with it. The 1997 design here has only input and output gates.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>LSTM's gated, self-copying memory solved the long-memory problem for recurrent networks and dominated sequence learning until transformers.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Learning to store information over extended time intervals by recurrent backpropagation takes very long, mostly because of insufficient, decaying error backflow. LSTM is a gradient-based method that truncates the gradient where this does no harm and enforces constant error flow through "constant error carousels" within special units. Multiplicative gate units learn to open and close access to the constant error flow. LSTM is local in space and time, with computational complexity O(1) per time step and weight, and bridges lags exceeding 1,000 discrete steps even with noisy, incompressible inputs. <em>Neural Computation</em> 9(8), 1735–1780 (1997).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §3.1</p>
+  <h2>Exponential error decay</h2>
+  <div class="prose"><p>For a fully recurrent net with unit activations <var>y<sup>i</sup></var>(<var>t</var>) = <var>f<sub>i</sub></var>(net<sub><var>i</var></sub>(<var>t</var>)), the error signal ϑ propagated back <var>q</var> steps from unit <var>v</var> to unit <var>u</var> scales as</p></div>
+  <div class="eq">∂ϑ<sub><var>v</var></sub>(<var>t</var>−<var>q</var>) / ∂ϑ<sub><var>u</var></sub>(<var>t</var>) = Σ<sub><var>l</var><sub>1</sub>…<var>l</var><sub><var>q</var>−1</sub></sub> ∏<sub><var>m</var>=1</sub><sup><var>q</var></sup> <var>f</var>′<sub><var>l<sub>m</sub></var></sub>(net<sub><var>l<sub>m</sub></var></sub>(<var>t</var>−<var>m</var>)) <var>w</var><sub><var>l<sub>m</sub></var><var>l</var><sub><var>m</var>−1</sub></sub></div>
+  <div class="prose">
+    <p>If |<var>f</var>′(net)·<var>w</var>| &gt; 1 for all terms the product grows exponentially (explodes; weights oscillate); if &lt; 1 it decays exponentially. With logistic units, <var>f</var>′ ≤ 0.25, so |<var>w</var>| &lt; 4 guarantees decay. The analysis follows Hochreiter's 1991 diploma thesis; Bengio, Simard and Frasconi (1994) reached similar conclusions independently.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3.2</p>
+  <h2>The constant error carousel and two conflicts</h2>
+  <div class="prose">
+    <p>For a single unit <var>j</var> with a self-connection, constant error flow requires <var>f</var>′<sub><var>j</var></sub>(net<sub><var>j</var></sub>(<var>t</var>)) <var>w<sub>jj</sub></var> = 1.0, which integrates to <var>f<sub>j</sub></var> linear and <var>w<sub>jj</sub></var> = 1: the <strong>constant error carousel</strong> (CEC).</p>
+    <p>A naive CEC has two problems. <strong>Input weight conflict:</strong> the same incoming weight must sometimes store an input and at other times protect the stored value from irrelevant inputs. <strong>Output weight conflict:</strong> the same outgoing weight must sometimes retrieve the content and at other times keep it from perturbing other units. LSTM resolves both by moving the decision to multiplicative, context-sensitive gates.</p>
+  </div>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §4 · Figs. 1–2</p>
+  <h2>The memory cell</h2>
+  <div class="prose"><p>Cell <var>c<sub>j</sub></var> has input gate in<sub><var>j</var></sub> and output gate out<sub><var>j</var></sub>, both logistic. With <var>g</var> a centred logistic squashing to [−2, 2] and <var>h</var> one squashing to [−1, 1]:</p></div>
+  <div class="eq"><var>y</var><sup>in<sub>j</sub></sup>(<var>t</var>) = <var>f</var><sub>in<sub>j</sub></sub>(net<sub>in<sub>j</sub></sub>(<var>t</var>)), &nbsp;&nbsp; <var>y</var><sup>out<sub>j</sub></sup>(<var>t</var>) = <var>f</var><sub>out<sub>j</sub></sub>(net<sub>out<sub>j</sub></sub>(<var>t</var>))</div>
+  <div class="eq"><var>s<sub>c<sub>j</sub></sub></var>(<var>t</var>) = <var>s<sub>c<sub>j</sub></sub></var>(<var>t</var>−1) + <var>y</var><sup>in<sub>j</sub></sup>(<var>t</var>) · <var>g</var>(net<sub><var>c<sub>j</sub></var></sub>(<var>t</var>))</div>
+  <div class="eq"><var>y</var><sup><var>c<sub>j</sub></var></sup>(<var>t</var>) = <var>y</var><sup>out<sub>j</sub></sup>(<var>t</var>) · <var>h</var>(<var>s<sub>c<sub>j</sub></sub></var>(<var>t</var>))</div>
+  <div class="prose">
+    <p>Cells sharing the same gates form a <strong>memory cell block</strong> of size <var>S</var>. All net inputs may come from input units, gates, cells and conventional hidden units. Note what is absent relative to the modern cell: there is no forget gate (the internal state's self-weight is fixed at 1) and no peephole connections from the state to the gates.</p>
+    <p><strong>Learning.</strong> A variant of real-time recurrent learning in which errors arriving at net inputs of cells and gates are truncated: they do not propagate further back in time, except within the CEC, where they flow unchanged indefinitely. This gives O(W) cost per time step, with W the number of weights, and is local in space and time.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Input gate level <input type="range" id="dr-g" min="0" max="1" step="0.05" value="0.3" data-fmt="2"><output id="dr-g-o">0.30</output></label><label>Forget gate (2000) <input type="range" id="dr-f" min="0.8" max="1" step="0.01" value="1" data-fmt="2"><output id="dr-f-o">1.00</output></label></div>
+    <div class="svgbox wide"><svg id="dr" viewBox="0 0 640 220" role="img" aria-label="Internal state over 300 steps of a continuous input stream"></svg></div>
+    <p class="readout" id="dr-r"></p>
+    <figcaption>Internal state drift. The cell receives a continuous stream of mostly positive inputs <var>g</var> ∈ [−0.5, 1.5]. With forget level 1 (the 1997 cell) <var>s<sub>c</sub></var> grows without bound and <var>h</var>(<var>s<sub>c</sub></var>) saturates, killing the gradient through <var>h</var>. Any forget level below 1 bounds the state at about mean input × gate / (1 − <var>f</var>).</figcaption>
+  </figure>
+  <div class="prose"><p>The paper is aware of this <strong>internal state drift</strong> (§4.8, "Internal state drift and remedies") and suggests biasing input gates negatively at initialisation. A separate issue, §4.7 "Abuse problem and solutions" (cells being used early in training as mere bias units), is handled with sequential network construction and a negative initial output-gate bias. The principled fix, a learned forget gate, came in 2000.</p></div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §5</p>
+  <h2>Experiments</h2>
+  <div class="tablebox"><table>
+    <thead><tr><th>Exp.</th><th>Task</th><th>What it tests</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td>Embedded Reber grammar</td><td>A standard benchmark with short lags; LSTM learns faster and more reliably than RTRL, Elman nets, recurrent cascade-correlation.</td></tr>
+      <tr><td class="num">2</td><td>Noise-free and noisy sequences with long lags</td><td>Remember the first symbol of a sequence; lags up to 1,000 steps, including with many distractor symbols.</td></tr>
+      <tr><td class="num">3</td><td>Noise and signal on the same channel</td><td>Classify a sequence whose relevant information is buried in continuous-valued noise.</td></tr>
+      <tr><td class="num">4</td><td>Adding problem</td><td>Output the sum of two marked real values in a long sequence; lags of 100–1,000.</td></tr>
+      <tr><td class="num">5</td><td>Multiplication problem</td><td>As 4, with a product; tests non-integrative computation.</td></tr>
+      <tr><td class="num">6</td><td>Temporal order</td><td>Classify by the order of two or three widely separated symbols.</td></tr>
+    </tbody></table></div>
+  <div class="prose"><p>Comparisons were with real-time recurrent learning (RTRL), backpropagation through time (BPTT), Elman nets, recurrent cascade-correlation and neural sequence chunking. The authors also report that random weight guessing solves several earlier "long-lag" benchmarks from the literature, motivating their harder tasks.</p></div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does truncating gradients outside the CEC not hurt long-lag learning?</dt>
+    <dd>The long-range credit is carried entirely by the CEC, where error flows unchanged; the truncated paths are the ones that would vanish anyway.</dd>
+    <dt>Why does <var>g</var> map to [−2, 2] but <var>h</var> to [−1, 1]?</dt>
+    <dd>These are the paper's choices of squashing ranges for cell input and output; modern cells use tanh for both.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · Lineage</p>
+  <h2>The modern cell</h2>
+  <div class="eq"><var>c<sub>t</sub></var> = <var>f<sub>t</sub></var> ⊙ <var>c</var><sub><var>t</var>−1</sub> + <var>i<sub>t</sub></var> ⊙ tanh(<var>W<sub>c</sub></var>[<var>h</var><sub><var>t</var>−1</sub>, <var>x<sub>t</sub></var>] + <var>b<sub>c</sub></var>), &nbsp;&nbsp; <var>h<sub>t</sub></var> = <var>o<sub>t</sub></var> ⊙ tanh(<var>c<sub>t</sub></var>)</div>
+  <div class="prose"><ul>
+    <li><a href="forget-gate.html">Gers, Schmidhuber &amp; Cummins (2000)</a>: forget gate <var>f<sub>t</sub></var> on the self-connection.</li>
+    <li>Gers &amp; Schmidhuber (2000), Gers et al. (2002): peephole connections from the state to the gates.</li>
+    <li>Graves &amp; Schmidhuber (2005): full BPTT instead of truncated gradients; bidirectional LSTM.</li>
+    <li>Cho et al. (2014): the GRU, a simplified gated unit. Greff et al. (2017, "LSTM: A Search Space Odyssey") found the forget gate and output activation the most critical components.</li>
+  </ul></div>
+  <div class="later"><span class="label">Where it led</span>Gated recurrence underpinned sequence-to-sequence translation and the attention mechanism of <a href="bahdanau.html">Bahdanau et al. (2014)</a>, before the <a href="transformer.html">Transformer</a> (2017) replaced recurrence with attention over all positions.</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>RNN</dt><dd>Recurrent neural network; units feed back into themselves across time steps.</dd>
+    <dt>BPTT</dt><dd>Backpropagation through time: backprop on the network unrolled over the sequence.</dd>
+    <dt>RTRL</dt><dd>Real-time recurrent learning: forward-mode gradient computation online.</dd>
+    <dt>Vanishing gradient</dt><dd>Exponential decay of error signals propagated back over many steps.</dd>
+    <dt>CEC</dt><dd>Constant error carousel: a linear unit with self-weight 1.</dd>
+    <dt>Gate</dt><dd>A logistic unit whose output multiplies a signal, controlling its flow.</dd>
+    <dt>Memory block</dt><dd>Cells sharing one input gate and one output gate.</dd>
+    <dt>State drift</dt><dd>Unbounded growth of the cell state on long input streams.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="backprop.html">Backpropagation (1986)</a></p>
+  <p><strong>Led to:</strong> <a href="forget-gate.html">Forget gate (2000)</a>, <a href="bahdanau.html">Attention (2014)</a>, <a href="transformer.html">Transformer (2017)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers/">Papers worth reading</a> (<a href="https://lovespark.love/papers/#lstm">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // vanishing / exploding
+  var svg=$('#vg'), f=0.9;
+  function draw(){ clear(svg); var T=60, top=30, bot=210, lmin=-6, lmax=2;
+    function Y(v){ var l=Math.log10(Math.max(v,1e-12)); l=Math.max(lmin,Math.min(lmax,l)); return bot-(l-lmin)/(lmax-lmin)*(bot-top); }
+    [1e2,1,1e-2,1e-4,1e-6].forEach(function(v){ S('line',{x1:60,y1:Y(v),x2:590,y2:Y(v),'class':v===1?'w-dash':'grid'},svg); S('text',{x:54,y:Y(v)+4,'class':'t-s end'},svg,v===1?'1':(v>1?'100':'10'+String(Math.log10(v)).replace('-','⁻').replace('2','²').replace('4','⁴').replace('6','⁶'))); });
+    for (var q=0;q<T;q++){ var v=Math.pow(f,q), y=Y(v); S('rect',{x:64+q*8.7,y:y,width:6,height:bot-y,'class':v>1.0001?'f-inh':(Math.abs(v-1)<1e-4?'f-ok':'f-wire')},svg); }
+    S('text',{x:325,y:232,'class':'t-s mid'},svg,'steps back in time →');
+    var v50=Math.pow(f,50); $('#vg-r').innerHTML='After 50 steps the signal is multiplied by <b>'+(v50>1e4||v50<1e-4?v50.toExponential(1):fmt(v50,4))+'</b>. '+(Math.abs(f-1)<1e-9?'Constant: this is the constant error carousel.':(f<1?'Vanishing.':'Exploding.')); }
+  var r=bindRange('vg-f',function(v){f=v;draw();});
+  $('#vg-one').onclick=function(){ r.value=1; r.dispatchEvent(new Event('input')); };
+})();
+(function(){ // memory cell gates timeline
+  var svg=$('#mc'), T=12, inp=[0.8,-0.5,0.3,-0.9,0.6,0.2,-0.4,0.7,-0.2,0.5,0.1,-0.6], ig=[], og=[], fg=[], useF=false;
+  function clr(){ ig=new Array(T).fill(0); og=new Array(T).fill(0); fg=new Array(T).fill(1); }
+  clr();
+  function draw(){ clear(svg); var x0=150, w=40, s=0, cell=[], out=[];
+    for (var t=0;t<T;t++){ s=(useF?fg[t]:1)*s + ig[t]*inp[t]; cell.push(s); out.push(og[t]*Math.tanh(s)); }
+    var rows=[['input',inp,null],['input gate',ig,'ig']]; if (useF) rows.push(['forget gate',fg,'fg']); rows.push(['cell',cell,null],['output gate',og,'og'],['output',out,null]);
+    for (var t=0;t<T;t++) S('text',{x:x0+t*w+w/2-4,y:18,'class':'t-s mid'},svg,t+1);
+    rows.forEach(function(r,i){ var y=28+i*44; S('text',{x:x0-10,y:y+22,'class':r[2]?'t-wire end':(r[0]==='cell'?'t-h end':'t end')},svg,r[0]);
+      for (var t=0;t<T;t++){ var v=r[1][t], X=x0+t*w;
+        if (r[2]){ var rc=S('rect',{x:X+2,y:y+4,width:w-8,height:28,'class':(v?'box-fire':'box')+' clickable'},svg); S('text',{x:X+w/2-2,y:y+22,'class':'t-s mid'},svg,v?'open':'shut');
+          (function(arr,tt){ rc.addEventListener('click',function(){ arr[tt]=arr[tt]?0:1; draw(); }); })(r[2]==='ig'?ig:(r[2]==='og'?og:fg),t); }
+        else { S('rect',{x:X+2,y:y+4,width:w-8,height:28,'class':Math.abs(v)<1e-9?'box':(r[0]==='cell'?'box-ok':'box-wire')},svg); S('text',{x:X+w/2-2,y:y+22,'class':'t mid'},svg,Math.abs(v)<1e-9?'0':fmt(v,1)); } } });
+    var lastOut=out.map(function(v,i){return [v,i];}).filter(function(p){return Math.abs(p[0])>1e-9;});
+    $('#mc-r').innerHTML = lastOut.length ? 'Output read at step(s) '+lastOut.map(function(p){return p[1]+1;}).join(', ')+'. Final cell value <b>'+fmt(cell[T-1],2)+'</b>.' : 'Nothing has been read out yet. Final cell value <b>'+fmt(cell[T-1],2)+'</b>.';
+  }
+  $('#mc-demo').onclick=function(){ clr(); ig[0]=1; og[9]=1; draw(); };
+  $('#mc-clear').onclick=function(){ clr(); draw(); };
+  $('#mc-fg').addEventListener('change',function(){ useF=this.checked; draw(); });
+  ig[0]=1; og[9]=1; draw();
+})();
+(function(){ // drift
+  var svg=$('#dr'), g=0.3, f=1;
+  var r=rng(4), xs=[]; for (var t=0;t<300;t++) xs.push(-0.5+2*r());
+  function draw(){ clear(svg); var s=0, ss=[]; xs.forEach(function(x){ s=f*s+g*x; ss.push(s); }); var mx=Math.max(5,Math.max.apply(null,ss.map(Math.abs)));
+    S('line',{x1:60,y1:190,x2:620,y2:190,'class':'axis'},svg); S('line',{x1:60,y1:20,x2:60,y2:190,'class':'axis'},svg);
+    var d=''; ss.forEach(function(v,i){ var X=60+i/299*560; d+=(i?'L':'M')+X+','+(190-v/mx*160); });
+    S('path',{d:d,'class':'w-fire'},svg);
+    var hd=''; ss.forEach(function(v,i){ var X=60+i/299*560; hd+=(i?'L':'M')+X+','+(190-(Math.tanh(v)+0)/1*40); }); S('path',{d:hd,'class':'w'},svg);
+    S('text',{x:66,y:30,'class':'t-fire'},svg,'cell state s_c (max '+fmt(mx,1)+')'); S('text',{x:620,y:146,'class':'t-wire end'},svg,'h(s_c), saturates at 1');
+    S('text',{x:340,y:210,'class':'t-s mid'},svg,'time step →');
+    var sat=ss.slice(-50).every(function(v){return Math.abs(Math.tanh(v))>0.99;});
+    $('#dr-r').innerHTML='Final state <b>'+fmt(ss[299],1)+'</b>. '+(sat?'h(s) is saturated, so its slope is ≈ 0 and gradients through the output are blocked.':'State stays in a usable range.'); }
+  bindRange('dr-g',function(v){g=v;draw();}); bindRange('dr-f',function(v){f=v;draw();});
+})();
+</script>
+
+</body>
+</html>

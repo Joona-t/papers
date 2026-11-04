@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPT-1 (2018) study guide</title>
+<meta name="description" content="Labelled examples for language tasks are scarce and expensive, but plain text is everywhere. Radford and colleagues at OpenAI first train a Transformer simply to predict the next word across 7,000 unpublished books, then lightly adapt that same network to each task. With almost no task-specific desi">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Language models &amp; AI</b> · 2018</p>
+  <h1>Improving Language Understanding by Generative Pre-Training</h1>
+  <p class="cite">Alec Radford, Karthik Narasimhan, Tim Salimans, Ilya Sutskever · OpenAI</p>
+  <p class="lede">Labelled examples for language tasks are scarce and expensive, but plain text is everywhere. Radford and colleagues at OpenAI first train a Transformer simply to predict the next word across 7,000 unpublished books, then lightly adapt that same network to each task. With almost no task-specific design, it set new records on 9 of the 12 benchmarks they tried: the first "GPT".</p>
+  <p class="paperlinks"><a href="https://cdn.openai.com/research-covers/language-unsupervised/language_understanding_paper.pdf">Read the paper (free)</a> <a href="https://lovespark.love/papers/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, independent AI review, but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Teaching a computer a language task, like judging whether one sentence follows from another, normally needs many thousands of examples labelled by people, which few tasks have.</p>
+  <p>This paper first trains a large network on a task that needs no labels at all: read books and guess each next word. To get good at that, the network has to pick up grammar, facts and some reasoning.</p>
+  <p>Then the same network is trained a little more on each labelled task, with the task's inputs simply written out as one stretch of text with marker symbols in between.</p>
+  <p>This "pre-train, then fine-tune" recipe beat specially designed systems on 9 of 12 benchmarks and became the blueprint for GPT-2, GPT-3 and today's chatbots.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1–2</p>
+  <h2>Labels are scarce, text is plentiful</h2>
+  <div class="prose">
+    <p>Most machine-learning systems of 2018 learned a task from labelled examples: thousands of sentence pairs marked "follows", "contradicts" or "unrelated", say. Every new task meant a new labelled dataset and often a new model design. Meanwhile, the world has vast amounts of ordinary text with no labels at all.</p>
+    <p>People had already found a way to use unlabelled text: learn <a href="word2vec.html">word vectors</a> from it, then feed those into a task-specific model. But that only transfers knowledge about single words. The question here is whether a whole network, one that understands words in context, can be learned from raw text and then reused for many tasks with minimal changes.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Rather than training a new employee from scratch for every job, hire someone who has read widely for years, then give them a short induction for each role.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The aim is to learn general language ability from unlabelled text, so each task needs only a little labelled data.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §3.1 · Eq. 1</p>
+  <h2>Step one: guess the next word, millions of times</h2>
+  <div class="prose">
+    <p>The pre-training task is simple to state: given the words so far, predict the next one. The text itself supplies the right answer, so no human labelling is needed. A model that does this well must learn a great deal: which words fit grammatically, what tends to follow what, who did what in the story so far.</p>
+    <p>The more context the model can use, the better its guesses. The toy below uses the crudest possible predictor, counting which word followed which in a short passage, to show how extra context sharpens guesses. GPT does the same job with a 12-layer <a href="transformer.html">Transformer</a> that looks back over up to 512 tokens (words and word pieces), and it generalises instead of just counting.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Words of context <input type="range" id="ng-k" min="1" max="3" step="1" value="1"><output id="ng-k-o">1</output></label><button class="btn" data-ng="the old">"the old"</button><button class="btn" data-ng="she opened the">"she opened the"</button><button class="btn" data-ng="the lighthouse keeper">"the lighthouse keeper"</button><button class="btn" id="ng-gen">Write 12 more words</button></div>
+    <div class="svgbox"><svg id="ng" viewBox="0 0 600 230" role="img" aria-label="Probabilities of the next word given the context"></svg></div>
+    <p class="readout" id="ng-r"></p>
+    <figcaption>A word-counting model "trained" on a 150-word story written for this guide. With 1 word of context the guesses are vague; with 3 they become confident (here, too confident: the model mostly recites the story, because the text is tiny). A neural language model learns from billions of words and can guess sensibly about word sequences it has never seen. Illustrative only.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Predicting the next word is a free, endless source of training signal, and doing it well forces a model to learn a lot about language.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is next-word prediction called "unsupervised" or "self-supervised"?</dt>
+    <dd>Nobody labels anything: the correct answer for each position is just the next word in the text.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §4.1</p>
+  <h2>Why books, and why a Transformer</h2>
+  <div class="prose">
+    <p>The authors pre-trained on <strong>BooksCorpus</strong>, over 7,000 unpublished books in genres such as adventure, fantasy and romance. They chose books on purpose: they contain long stretches of continuous text, so the model can learn to use context from far back. A similar-sized collection of shuffled single sentences would not teach that.</p>
+    <p>The network is a stack of 12 Transformer layers of the "decoder" kind: each word may only look at words before it, which is what next-word prediction requires. Compared with the recurrent networks used in similar earlier work, the Transformer's attention gives it direct access to distant words, and the paper finds it transfers markedly better.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Long continuous text plus a Transformer that can attend far back let the model learn long-range structure.</p>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §3.2–3.3 · Fig. 1</p>
+  <h2>Step two: a short fine-tune, with tasks written as text</h2>
+  <div class="prose">
+    <p>After pre-training, the network is trained for a few more passes on each labelled task. The only new part is one small final layer that turns the network's last output into an answer (for example "follows" / "contradicts" / "neutral").</p>
+    <p>The neat trick is how inputs are presented. The network only knows how to read a single stretch of text. So a pair of sentences is just written one after the other with a special <strong>separator</strong> symbol between them, framed by special <strong>start</strong> and <strong>end</strong> symbols. A multiple-choice question becomes several stretches of text, one per answer, each scored separately. No new machinery per task.</p>
+    <p>During fine-tuning the model also keeps practising next-word prediction on the task's text as a side exercise, which the authors found helped, especially on larger datasets.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" data-tx="0">Classification</button><button class="btn" data-tx="1">Entailment</button><button class="btn" data-tx="2">Similarity</button><button class="btn" data-tx="3">Multiple choice</button></div>
+    <div class="svgbox wide"><svg id="tx" viewBox="0 0 640 250" role="img" aria-label="How each task's input is laid out as token sequences"></svg></div>
+    <p class="readout" id="tx-r"></p>
+    <figcaption>After the paper's Fig. 1 (right). Each row is one pass through the same pre-trained Transformer. The output at the final "end" token feeds a small new linear layer. For similarity, where order shouldn't matter, both orderings are run and their outputs added. For multiple choice, each answer gets its own pass and a softmax picks among them. Example sentences are made up.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Every task is turned into text the pre-trained model can already read, so almost nothing new has to be learned from scratch.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why run both orderings for similarity tasks?</dt>
+    <dd>The model reads left to right, so "A then B" and "B then A" produce different outputs. Similarity is symmetric, so combining both removes the arbitrary order.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §4.2 · §5 · What came next</p>
+  <h2>Results, and the seed of GPT-2 and GPT-3</h2>
+  <div class="prose">
+    <p>One model, lightly adapted, beat the best published systems on 9 of 12 datasets, many of which had been designed by hand for their task. The biggest jumps were on a common-sense story-ending test (8.9 points better) and on school reading-comprehension exams (5.7 points better). It fell short on the other three (RTE, SST-2 and MRPC), two of which are among the smallest datasets tested.</p>
+    <p>Two analyses pointed to the future. Removing pre-training dropped average performance by about 15 points, so the pre-training was doing most of the work. And even <em>before</em> any fine-tuning, the pre-trained model could do some tasks a little, using simple hand-written rules on its predictions, and this "zero-shot" ability grew steadily as pre-training went on (Fig. 2, right).</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>A few months later <a href="bert.html">BERT</a> showed that letting the model look at words on both sides (filling in blanks rather than predicting the next word) did even better on these understanding tasks. But <a href="gpt2.html">GPT-2</a> (2019) and <a href="gpt3.html">GPT-3</a> (2020) followed the zero-shot thread instead: make the same next-word model far larger, train it on far more text, and skip fine-tuning altogether by describing the task in the prompt. That path led to today's chatbots.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Generative pre-training plus light fine-tuning beat task-specific designs, and the model's emerging zero-shot skills hinted at the scaled-up GPTs to come.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Natural language understanding spans tasks such as textual entailment, question answering, semantic similarity assessment and document classification. Unlabelled text is abundant but labelled data for each task is scarce, making discriminatively trained models hard to make perform well. Large gains come from generative pre-training of a language model on a diverse unlabelled corpus followed by discriminative fine-tuning on each task, using task-aware input transformations so the architecture changes minimally. The task-agnostic model beats discriminatively trained models with task-specific architectures, improving the state of the art on 9 of the 12 tasks studied: absolute gains of 8.9% on commonsense reasoning (Story Cloze), 5.7% on question answering (RACE) and 1.5% on textual entailment (MultiNLI). OpenAI technical report, June 2018.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §3.1 · Eqs. 1–2</p>
+  <h2>Unsupervised pre-training</h2>
+  <div class="prose"><p>Given an unlabelled token corpus 𝒰 = {<var>u</var><sub>1</sub>, …, <var>u<sub>n</sub></var>}, maximise the standard language-modelling likelihood with context window <var>k</var>:</p></div>
+  <div class="eq"><var>L</var><sub>1</sub>(𝒰) = Σ<sub><var>i</var></sub> log <var>P</var>(<var>u<sub>i</sub></var> | <var>u</var><sub><var>i</var>−<var>k</var></sub>, …, <var>u</var><sub><var>i</var>−1</sub>; Θ) <span class="n">(1)</span></div>
+  <div class="prose"><p>using a multi-layer Transformer decoder (the decoder-only variant of Liu et al., 2018): masked multi-head self-attention followed by position-wise feed-forward layers.</p></div>
+  <div class="eq"><var>h</var><sub>0</sub> = <var>UW<sub>e</sub></var> + <var>W<sub>p</sub></var>, &nbsp; <var>h<sub>l</sub></var> = transformer_block(<var>h</var><sub><var>l</var>−1</sub>) ∀<var>l</var> ∈ [1, <var>n</var>], &nbsp; <var>P</var>(<var>u</var>) = softmax(<var>h<sub>n</sub>W<sub>e</sub></var><sup>⊤</sup>) <span class="n">(2)</span></div>
+  <div class="prose"><p><var>U</var> is the one-hot context matrix, <var>W<sub>e</sub></var> the token embedding (tied with the output projection), <var>W<sub>p</sub></var> learned position embeddings. Because of the causal mask, one forward pass yields a prediction at every position, so a 512-token sequence provides 511 training targets in parallel.</p></div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" id="cm-gpt">Causal (GPT)</button><button class="btn" id="cm-bert">Bidirectional (BERT, for contrast)</button></div>
+    <div class="svgbox"><svg id="cm" viewBox="0 0 600 290" role="img" aria-label="Attention mask matrix with next-token targets"></svg></div>
+    <p class="readout" id="cm-r"></p>
+    <figcaption>Rows: the position doing the attending; columns: positions it may attend to (filled). Click a row. Under the causal mask, row <var>i</var> sees tokens 1…<var>i</var> and is trained to predict token <var>i</var>+1 (right column): all targets are learned in one pass. A bidirectional mask (as in <a href="bert.html">BERT</a>) lets every position see everything, so next-token prediction becomes trivial copying and a different objective (masked tokens) is needed.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3.2–3.3 · Eqs. 3–5 · Fig. 1</p>
+  <h2>Supervised fine-tuning and input transformations</h2>
+  <div class="prose"><p>For a labelled dataset 𝒞 of token sequences <var>x</var><sup>1</sup>, …, <var>x<sup>m</sup></var> with label <var>y</var>, the final block's activation at the last token, <var>h<sub>l</sub><sup>m</sup></var>, feeds one added linear layer <var>W<sub>y</sub></var>:</p></div>
+  <div class="eq"><var>P</var>(<var>y</var> | <var>x</var><sup>1</sup>, …, <var>x<sup>m</sup></var>) = softmax(<var>h<sub>l</sub><sup>m</sup>W<sub>y</sub></var>), &nbsp; <var>L</var><sub>2</sub>(𝒞) = Σ<sub>(<var>x</var>,<var>y</var>)</sub> log <var>P</var>(<var>y</var> | <var>x</var><sup>1</sup>, …, <var>x<sup>m</sup></var>) <span class="n">(3–4)</span></div>
+  <div class="eq"><var>L</var><sub>3</sub>(𝒞) = <var>L</var><sub>2</sub>(𝒞) + λ · <var>L</var><sub>1</sub>(𝒞), &nbsp; λ = 0.5 <span class="n">(5)</span></div>
+  <div class="prose">
+    <p>The auxiliary LM term on the task data improves generalisation and speeds convergence. The only new parameters are <var>W<sub>y</sub></var> and embeddings for the delimiter tokens. <strong>Input transformations (§3.3):</strong> all add randomly initialised start and end tokens ⟨<var>s</var>⟩, ⟨<var>e</var>⟩. Entailment: premise $ hypothesis. Similarity: both orderings processed independently, final representations <var>h<sub>l</sub><sup>m</sup></var> added element-wise before <var>W<sub>y</sub></var>. Question answering and commonsense reasoning: for context <var>z</var>, question <var>q</var> and answers {<var>a<sub>k</sub></var>}, each [<var>z</var>; <var>q</var>; $; <var>a<sub>k</sub></var>] is processed independently and normalised with a softmax over answers. This "traversal-style" approach (after Rocktäschel et al., 2015) avoids task-specific architectures on top of the transferred network, unlike ELMo-style feature extraction.</p>
+  </div>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §4.1</p>
+  <h2>Setup</h2>
+  <div class="prose">
+    <p><strong>Data.</strong> BooksCorpus (over 7,000 unique unpublished books). The authors contrast it with the 1B Word Benchmark, similar in size but shuffled at sentence level, which destroys long-range structure. The model reaches a very low token-level perplexity of 18.4 on BooksCorpus.</p>
+    <p><strong>Model.</strong> 12-layer decoder-only Transformer, <var>d</var><sub>model</sub> = 768, 12 heads, feed-forward inner size 3072; learned position embeddings; GELU activations; BPE vocabulary with 40,000 merges; weights initialised N(0, 0.02); text cleaned with ftfy and pre-tokenised with spaCy. (Later reported as about 117M parameters; the paper does not state the count.)</p>
+    <p><strong>Pre-training.</strong> Adam, max learning rate 2.5·10<sup>−4</sup>, linear warm-up over the first 2,000 updates then cosine annealing to 0; 100 epochs on minibatches of 64 random contiguous 512-token sequences; residual, embedding and attention dropout 0.1; a modified L2 regularisation (<var>w</var> = 0.01) on non-bias/gain weights.</p>
+    <p><strong>Fine-tuning.</strong> Reuse the pre-training hyperparameters except: classifier dropout 0.1, learning rate 6.25·10<sup>−5</sup>, batch size 32, 3 epochs for most tasks, linear decay with warm-up over 0.2% of training, λ = 0.5.</p>
+  </div>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §4.2 · Tables 2–4</p>
+  <h2>Results on 12 datasets</h2>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" data-rg="all">All 12</button><button class="btn" data-rg="nli">Inference</button><button class="btn" data-rg="qa">QA / commonsense</button><button class="btn" data-rg="cls">Similarity / classification</button></div>
+    <div class="svgbox"><svg id="rs" viewBox="0 0 600 330" role="img" aria-label="Fine-tuned GPT versus previous best on each dataset"></svg></div>
+    <p class="readout" id="rs-r"></p>
+    <figcaption>Difference between the fine-tuned Transformer LM and the best previous result listed in Tables 2–4 (points; accuracy, except CoLA Matthews correlation, MRPC and QQP F1, STS-B Pearson). MNLI uses the matched set. Several previous bests are ensembles. Values from the paper.</figcaption>
+  </figure>
+  <div class="prose">
+    <p>Notable: Story Cloze 86.5 vs 77.6; RACE 59.0 vs 53.3 (a 9-model ensemble); SciTail 88.3 vs 83.3; QNLI 88.1 vs 82.3; MNLI 82.1/81.4 vs 80.6/80.1 (a 3-model ensemble); CoLA 45.4 vs 35.0, which the authors attribute to linguistic knowledge learned in pre-training; GLUE overall 72.8 vs 68.9. Misses: RTE (2,490 examples) 56.0 vs 61.7 for a multi-task BiLSTM; SST-2 91.3 vs 93.2; MRPC 82.3 vs 86.0 F1.</p>
+  </div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §5 · Table 5 · Fig. 2 · Lineage</p>
+  <h2>Analysis, limitations and lineage</h2>
+  <div class="prose">
+    <p><strong>Layers transferred (Fig. 2 left).</strong> Transferring embeddings helps, and each additional Transformer layer adds more, up to about 9% on MultiNLI for full transfer: every pre-trained layer contains useful functionality.</p>
+    <p><strong>Zero-shot behaviours (Fig. 2 right).</strong> Heuristic zero-shot solutions using the generative model alone (e.g. for SST-2, append "very" and compare the LM's probability of "positive" vs "negative"; for linguistic acceptability, threshold average token log-probability) improve steadily over pre-training, more stably than for an LSTM, suggesting the LM objective itself teaches task-relevant abilities.</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Ablation (Table 5)</th><th>Avg. score</th></tr></thead>
+    <tbody>
+      <tr><td>Transformer with auxiliary LM (full)</td><td class="num">74.7</td></tr>
+      <tr><td>Transformer without pre-training</td><td class="num">59.9</td></tr>
+      <tr><td>Transformer without auxiliary LM</td><td class="num">75.0</td></tr>
+      <tr><td>LSTM with auxiliary LM</td><td class="num">69.1</td></tr>
+    </tbody></table></div>
+  <div class="prose">
+    <p>The auxiliary objective helps on the larger datasets (NLI, QQP) but not on smaller ones, so its net average effect is slightly negative. The single-layer 2048-unit LSTM loses 5.6 points on average versus the Transformer, outperforming it only on MRPC.</p>
+    <ul>
+      <li><strong>Contemporaries.</strong> ELMo (Peters et al., 2018) transferred bidirectional LSTM features into task-specific models; ULMFiT (Howard &amp; Ruder, 2018) fine-tuned an LSTM LM for classification; Dai &amp; Le (2015) pre-trained sequence autoencoders and LMs for fine-tuning. GPT's distinctive choices were the Transformer and a single architecture for all task types.</li>
+      <li><strong>Unidirectionality.</strong> <a href="bert.html">BERT</a> (Oct. 2018) argued the left-to-right constraint is a key limitation for understanding tasks and replaced it with masked-LM pre-training, beating GPT across GLUE with a same-size model (BERT-base).</li>
+      <li><strong>Scaling and prompting.</strong> <a href="gpt2.html">GPT-2</a> scaled the same decoder to 1.5B parameters on WebText, moved LayerNorm to the start of each block, and emphasised zero-shot task transfer; <a href="gpt3.html">GPT-3</a> (175B) introduced in-context few-shot learning; <a href="instructgpt.html">InstructGPT</a> added human-feedback fine-tuning.</li>
+      <li><strong>Data concerns.</strong> BooksCorpus was later criticised for copyright and duplication issues (e.g. Bandy &amp; Vincent, 2021).</li>
+    </ul>
+  </div>
+  <div class="later"><span class="label">What survived</span>Decoder-only causal Transformer, next-token pre-training on large unlabelled corpora, tied input/output embeddings, and adaptation of a single pre-trained model to many tasks. What changed: fine-tuning per task was largely replaced by prompting and instruction tuning.</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Language model</dt><dd>A model of the probability of the next token given the previous ones.</dd>
+    <dt>Pre-training</dt><dd>Training on a generic, usually self-supervised objective before task training.</dd>
+    <dt>Fine-tuning</dt><dd>Continuing training of all weights on a labelled task.</dd>
+    <dt>Causal mask</dt><dd>Attention mask allowing each position to attend only to earlier positions.</dd>
+    <dt>BPE</dt><dd>Byte-pair encoding subword vocabulary.</dd>
+    <dt>GELU</dt><dd>Gaussian error linear unit, x·Φ(x).</dd>
+    <dt>Auxiliary objective</dt><dd>The LM loss L<sub>1</sub> added during fine-tuning with weight λ.</dd>
+    <dt>Zero-shot</dt><dd>Performing a task with no task-specific training.</dd>
+    <dt>GLUE</dt><dd>General Language Understanding Evaluation benchmark of nine tasks.</dd>
+    <dt>RACE / Story Cloze</dt><dd>Exam reading comprehension; choosing the right ending to a four-sentence story.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="transformer.html">Transformer (2017)</a></p>
+  <p><strong>Led to:</strong> <a href="bert.html">BERT (2018)</a>, <a href="gpt2.html">GPT-2 (2019)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers/">Papers worth reading</a> (<a href="https://lovespark.love/papers/#gpt1">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // n-gram toy
+  var text='the old lighthouse keeper lived alone on the island . every night the lighthouse keeper climbed the stairs and lit the lamp . one night a storm came and the old lamp went dark . she opened the door and looked at the sea . the sea was black and the waves were high . she opened the box of matches and climbed the stairs again . the lighthouse keeper lit the lamp and the light swept over the sea . far away a small boat saw the light and turned toward the island . in the morning the boat was safe in the harbour and the old keeper slept . the keeper dreamed of the sea and the light and the small boat .';
+  var W=text.split(' '), svg=$('#ng'), k=1, ctx='the old'.split(' '), gen=[], r=rng(5);
+  function dist(c){ var key=c.slice(-k).join(' '), cnt={}, tot=0; for (var i=k;i<W.length;i++){ if (W.slice(i-k,i).join(' ')===key){ cnt[W[i]]=(cnt[W[i]]||0)+1; tot++; } } return [Object.keys(cnt).map(function(w){ return [w,cnt[w]/tot]; }).sort(function(a,b){ return b[1]-a[1]; }),tot]; }
+  function draw(){ clear(svg); var full=ctx.concat(gen), dd=dist(full), d=dd[0];
+    S('text',{x:10,y:22,'class':'t-s'},svg,'context used ('+k+' word'+(k>1?'s':'')+'):'); S('text',{x:200,y:22,'class':'t-fire'},svg,'… '+full.slice(-k).join(' ')+'  →  ?');
+    if (!d.length){ S('text',{x:10,y:80,'class':'t'},svg,'This context never occurs in the story, so the counting model has no guess.'); }
+    d.slice(0,6).forEach(function(p,i){ var y=40+i*30; S('text',{x:150,y:y+17,'class':'t end'},svg,p[0]); S('rect',{x:160,y:y+3,width:380,height:20,'class':'f-rule'},svg); S('rect',{x:160,y:y+3,width:380*p[1],height:20,'class':'f-fire'},svg); S('text',{x:546,y:y+17,'class':'t-s'},svg,Math.round(p[1]*100)+'%'); });
+    $('#ng-r').innerHTML=(gen.length?'Generated: <b>'+ctx.join(' ')+'</b> '+gen.join(' ')+'<br>':'')+(d.length?d.length+' different next words seen after this context; top guess <b>'+d[0][0]+'</b> ('+Math.round(d[0][1]*100)+'%).':''); }
+  bindRange('ng-k',function(v){ k=v; gen=[]; draw(); });
+  $$('[data-ng]').forEach(function(b){ b.onclick=function(){ ctx=b.dataset.ng.split(' '); gen=[]; draw(); }; });
+  $('#ng-gen').onclick=function(){ gen=[]; for (var i=0;i<12;i++){ var d=dist(ctx.concat(gen))[0]; if (!d.length) break; var u=r(), acc=0, pick=d[0][0]; for (var j=0;j<d.length;j++){ acc+=d[j][1]; if (u<=acc){ pick=d[j][0]; break; } } gen.push(pick); } draw(); };
+  draw();
+})();
+(function(){ // input transformations
+  var svg=$('#tx'), mode=0;
+  var tasks=[
+    {name:'Classification',rows:[[['start','s'],['the film was a delight','t'],['end','s']]],head:'Linear',note:'One pass; the end token\'s output is classified (e.g. positive / negative).'},
+    {name:'Entailment',rows:[[['start','s'],['a man is playing guitar','t'],['$','d'],['a person makes music','t'],['end','s']]],head:'Linear',note:'Premise and hypothesis joined by the delimiter $; output: entails / contradicts / neutral.'},
+    {name:'Similarity',rows:[[['start','s'],['how do I learn French','t'],['$','d'],['best way to study French','t'],['end','s']],[['start','s'],['best way to study French','t'],['$','d'],['how do I learn French','t'],['end','s']]],head:'+ then Linear',note:'Both orderings are processed; their final outputs are added element-wise before the linear layer.'},
+    {name:'Multiple choice',rows:[[['start','s'],['story … question','t'],['$','d'],['answer 1','t'],['end','s']],[['start','s'],['story … question','t'],['$','d'],['answer 2','t'],['end','s']],[['start','s'],['story … question','t'],['$','d'],['answer 3','t'],['end','s']]],head:'Linear each, then softmax',note:'One pass per candidate answer; each gets a score and a softmax over candidates picks the answer.'}];
+  function draw(){ clear(svg); var t=tasks[mode], n=t.rows.length, h=Math.min(56,200/n);
+    t.rows.forEach(function(row,i){ var y=20+i*(h+12), x=10;
+      row.forEach(function(tok){ var w=tok[1]==='t'?Math.max(110,tok[0].length*7.4+16):(tok[0]==='$'?30:52);
+        S('rect',{x:x,y:y,width:w,height:h-14,'class':tok[1]==='t'?'box':(tok[1]==='d'?'box-wire':'box-fire')},svg); S('text',{x:x+w/2,y:y+(h-14)/2+4,'class':tok[1]==='t'?'t mid':'t-s mid'},svg,tok[0]); x+=w+4; });
+      S('line',{x1:x+2,y1:y+(h-14)/2,x2:448,y2:y+(h-14)/2,'class':'w','marker-end':'url(#aw)'},svg);
+      S('rect',{x:450,y:y,width:90,height:h-14,'class':'box-ok'},svg); S('text',{x:495,y:y+(h-14)/2+4,'class':'t-s mid'},svg,'Transformer');
+      S('line',{x1:540,y1:y+(h-14)/2,x2:566,y2:20+(n*(h+12)-12)/2,'class':'w'},svg); });
+    var cy=20+(n*(h+12)-12)/2; S('rect',{x:566,y:cy-16,width:68,height:32,'class':'box-wire'},svg); S('text',{x:600,y:cy+4,'class':'t-s mid'},svg,'Linear');
+    S('text',{x:600,y:Math.min(240,cy+34),'class':'t-s mid'},svg,mode===2?'(sum first)':(mode===3?'+ softmax':''));
+    $('#tx-r').innerHTML='<b>'+t.name+'</b>: '+t.note;
+    $$('[data-tx]').forEach(function(b){ b.classList.toggle('on',+b.dataset.tx===mode); }); }
+  $$('[data-tx]').forEach(function(b){ b.onclick=function(){ mode=+b.dataset.tx; draw(); }; }); draw();
+})();
+(function(){ // causal mask
+  var svg=$('#cm'), toks=['the','keeper','lit','the','lamp','and','the','light','swept'], causal=true, sel=4;
+  function draw(){ clear(svg); var n=toks.length, c=26, x0=90, y0=50;
+    toks.forEach(function(t,j){ S('text',{x:0,y:0,'class':'t-s',transform:'translate('+(x0+j*c+c/2+4)+','+(y0-6)+') rotate(-50)'},svg,t); });
+    S('text',{x:x0+n*c+30,y:y0-8,'class':'t-s'},svg,causal?'target':'');
+    for (var i=0;i<n;i++){ var row=S('text',{x:x0-8,y:y0+i*c+17,'class':(i===sel?'t-fire':'t')+' end clickable'},svg,toks[i]); (function(ii){ row.addEventListener('click',function(){ sel=ii; draw(); }); })(i);
+      for (var j=0;j<n;j++){ var ok=causal?j<=i:true; var rc=S('rect',{x:x0+j*c,y:y0+i*c,width:c-2,height:c-2,'class':ok?(i===sel?'f-fire':'f-wire'):'f-rule','fill-opacity':ok?(i===sel?0.9:0.45):0.4},svg); rc.classList.add('clickable'); (function(ii){ rc.addEventListener('click',function(){ sel=ii; draw(); }); })(i); }
+      if (causal) S('text',{x:x0+n*c+30,y:y0+i*c+17,'class':i===sel?'t-fire':'t-s'},svg,i<n-1?toks[i+1]:'(next)'); }
+    $('#cm-r').innerHTML=causal?'Position '+(sel+1)+' ("'+toks[sel]+'") sees <b>'+(sel+1)+'</b> tokens and is trained to predict <b>'+(sel<n-1?toks[sel+1]:'the following token')+'</b>.':'Position '+(sel+1)+' sees all <b>'+n+'</b> tokens, including the next one, so "predict the next token" would leak the answer.';
+    $('#cm-gpt').classList.toggle('on',causal); $('#cm-bert').classList.toggle('on',!causal); }
+  $('#cm-gpt').onclick=function(){ causal=true; draw(); }; $('#cm-bert').onclick=function(){ causal=false; draw(); }; draw();
+})();
+(function(){ // results vs prior best
+  var svg=$('#rs'), g='all', D=[['SNLI','nli',89.9,89.3],['MNLI-m','nli',82.1,80.6],['SciTail','nli',88.3,83.3],['QNLI','nli',88.1,82.3],['RTE','nli',56.0,61.7],['Story Cloze','qa',86.5,77.6],['RACE','qa',59.0,53.3],['CoLA','cls',45.4,35.0],['SST-2','cls',91.3,93.2],['MRPC','cls',82.3,86.0],['STS-B','cls',82.0,81.0],['QQP','cls',70.3,66.1]];
+  function draw(){ clear(svg); var rows=D.filter(function(r){ return g==='all'||r[1]===g; }), zx=250, sc=14;
+    S('line',{x1:zx,y1:10,x2:zx,y2:300,'class':'axis'},svg); [-6,-3,3,6,9].forEach(function(v){ S('line',{x1:zx+v*sc,y1:10,x2:zx+v*sc,y2:300,'class':'grid'},svg); S('text',{x:zx+v*sc,y:316,'class':'t-s mid'},svg,(v>0?'+':'')+v); });
+    var h=Math.min(30,285/rows.length);
+    rows.forEach(function(r,i){ var dlt=r[2]-r[3], y=14+i*h; S('text',{x:120,y:y+h*0.6,'class':'t end'},svg,r[0]);
+      S('rect',{x:dlt>=0?zx:zx+dlt*sc,y:y+2,width:Math.abs(dlt)*sc,height:h-6,'class':dlt>=0?'f-ok':'f-inh'},svg);
+      S('text',{x:dlt>=0?zx+dlt*sc+6:zx+dlt*sc-6,y:y+h*0.6,'class':'t-s'+(dlt>=0?'':' end')},svg,(dlt>=0?'+':'')+fmt(dlt,1));
+      S('text',{x:600,y:y+h*0.6,'class':'t-s end'},svg,fmt(r[2],1)+' vs '+fmt(r[3],1)); });
+    var win=rows.filter(function(r){ return r[2]>r[3]; }).length;
+    $('#rs-r').innerHTML='New state of the art on <b>'+win+' of '+rows.length+'</b> datasets shown.';
+    $$('[data-rg]').forEach(function(b){ b.classList.toggle('on',b.dataset.rg===g); }); }
+  $$('[data-rg]').forEach(function(b){ b.onclick=function(){ g=b.dataset.rg; draw(); }; }); draw();
+})();
+</script>
+
+</body>
+</html>

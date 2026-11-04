@@ -140,9 +140,15 @@ def entry(p, by_id, built_on):
           <h3><a class="entry-link" href="{esc(p["url"])}" target="_blank" rel="noopener">{esc(p["title"])}<span class="sr-only">{sr}</span></a></h3>
           <p class="entry-finding">{esc(p["finding"])}</p>
           <div class="entry-meta">{esc(p["authors"])} · {esc(p["venue"])} · <span class="entry-src">{src} <span aria-hidden="true">↗</span></span></div>
-          {rel_links("Built on", built_on.get(p["id"], []), by_id)}{rel_links("Led to", p["next"], by_id)}{also}
+          {rel_links("Built on", built_on.get(p["id"], []), by_id)}{rel_links("Led to", p["next"], by_id)}{also}{guide_link(p)}
         </div>
       </article>"""
+
+def guide_link(p):
+    """Link to the paper's study guide (guides/<id>.html), written with Claude; only if the file exists."""
+    if not (ROOT / "guides" / f'{p["id"]}.html').exists(): return ""
+    return (f'<div class="entry-rel entry-guide"><span class="rel-label">Study guide</span>'
+            f'<a href="guides/{p["id"]}.html">Plain English + in depth, made with AI <span class="sr-only">(study guide for {esc(p["short"])})</span></a></div>')
 
 GROUP_NAMES = {"papers": "Finding new papers"}
 
@@ -204,7 +210,7 @@ def build():
     korean = "".join(f'<button type="button" role="menuitemradio" aria-checked="false" data-theme="kr-{k}"><span class="swatch" style="background:linear-gradient(135deg,{t["paper"]} 50%,{t["swatch"]} 50%)"></span>{n}<span class="kr-name" lang="ko">{ko}</span></button>' for k, n, ko, t in KOREAN)
     fonts = "".join(f'<button type="button" role="menuitemradio" aria-checked="false" data-font="{k}"><span class="fontpreview" style="{st}" aria-hidden="true">Aa</span>{n}</button>' for k, n, st in FONTS)
     passes = "".join(f"<li><h3>{esc(t)}</h3><p>{esc(d)}</p></li>" for t, d in PASSES)
-    field_links = "".join(f'<a class="text-link" href="#{f["id"]}">{ROMAN[k]} · {esc(f["nav"])} →</a>' for k, f in enumerate(data["fields"])) + '<a class="text-link" href="#learn">Free resources →</a>'
+    field_links = "".join(f'<a class="text-link" href="#{f["id"]}">{ROMAN[k]} · {esc(f["nav"])} →</a>' for k, f in enumerate(data["fields"])) + '<a class="text-link" href="#learn">Free resources →</a><a class="text-link" href="guides/index.html">Study guides →</a>'
     return f"""<!doctype html>
 <html lang="en" data-theme="kr-seoul" data-font="serif">
 <head>
@@ -269,6 +275,9 @@ def build():
       <h2>How to use this archive</h2>
       <p>Each field runs oldest to newest. Pick a field, read down the line, and open the papers whose finding surprises you. The <strong>title</strong> opens the full paper in a new tab, usually its free arXiv page. <strong>Built on</strong> and <strong>Led to</strong> jump to the papers before and after it, sometimes in another field: the transformer came out of translation work, and diffusion moved from images into robot control.</p>
       <p>The one-line findings are summaries, not quotes, so the paper is always the authority. Every title and link was checked against its source in {esc(data["checked"])}. Incident reports are marked as such: they are not peer-reviewed papers. A paper marked <strong>No free copy</strong> has no free version without a sign-in, so its title opens a free explainer instead.</p>
+      <h3 id="guides">Study guides, made with AI</h3>
+      <p>Every paper has a <strong>Study guide</strong> link: a page with a Plain English tab for anyone and an In depth tab for academics and professionals, with diagrams you can play with. <a href="guides/index.html">See all the guides</a>. They were written by Claude, an AI model, and each was checked against its paper by a second, independent AI review. I have not personally read all of them yet, so mistakes can remain: use them to get into a paper, and check anything that matters against the paper itself.</p>
+      <p>You can also have an AI make a guide just for you, at your level and in the format you like: an interactive page, flashcards, a slide deck, even a video. <a href="guides/make-your-own.html">Here is how to ask, and how to check the result</a>.</p>
     </section>
     {"".join(fields)}
     {resources_html(data)}

@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Forget gate (2000) study guide</title>
+<meta name="description" content="The original LSTM could hold a memory for a thousand steps but could never let go of it. Fed one long, unbroken stream, its memory cells filled up and jammed. This paper adds a third, learned gate that lets each cell fade or wipe its contents, which turned LSTM into the version used for the next twe">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Neural networks</b> · 2000</p>
+  <h1>Learning to Forget: Continual Prediction with LSTM</h1>
+  <p class="cite">Felix Gers, Jürgen Schmidhuber, Fred Cummins · Neural Computation</p>
+  <p class="lede">The original <a href="lstm.html">LSTM</a> could hold a memory for a thousand steps but could never let go of it. Fed one long, unbroken stream, its memory cells filled up and jammed. This paper adds a third, learned gate that lets each cell fade or wipe its contents, which turned LSTM into the version used for the next twenty years.</p>
+  <p class="paperlinks"><a href="https://sferics.idsia.ch/pub/juergen/FgGates-NC.pdf">Read the paper (free)</a> <a href="https://lovespark.love/papers/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, independent AI review, but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>The 1997 LSTM memory cell only ever adds to what it holds. That works when someone resets the network between examples, but real data (speech, text, sensor feeds) arrives as one endless stream.</p>
+  <p>On an endless stream the cell's contents keep growing until it saturates and stops learning.</p>
+  <p>The fix is a <strong>forget gate</strong>: a learned dial between 0 and 1 that multiplies the cell's old contents at every step. Near 1 it remembers; near 0 it wipes.</p>
+  <p>With forget gates, LSTM learns by itself to reset at the right moments, and solves continual tasks that the original LSTM failed.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1–2</p>
+  <h2>A memory that can't forget fills up</h2>
+  <div class="prose">
+    <p>An LSTM cell is a running total. Each step, its input gate decides how much new information to add, and the cell keeps everything it has added so far. In the 1997 experiments this was fine, because each training sequence was short and the network was reset to zero before the next one.</p>
+    <p>Now imagine listening to a radio station that never stops. There is no "start of the next example" for anyone to press reset. The cell keeps adding, its value creeps up and up, and eventually it saturates: its output is stuck at the maximum, and the learning signal through it dies. The authors call the general version of this problem the inability to deal with <em>continual</em> input streams.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" data-m="0">1997 cell (no forget gate)</button><button class="btn" data-m="1">Cell with a forget gate</button></div>
+    <div class="svgbox wide"><svg id="st" viewBox="0 0 640 230" role="img" aria-label="Cell contents over an unbroken stream of sentences"></svg></div>
+    <p class="readout" id="st-r"></p>
+    <figcaption>A stream of "sentences" (grey bands) with no resets between them. Each sentence starts with one fact worth remembering. Without a forget gate, every sentence's fact piles on top of the previous ones. With a forget gate that has learned to close at each sentence boundary, the cell holds only the current fact.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>A memory that only accumulates works for short, separated examples, but jams on a continuous stream.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §2</p>
+  <h2>The forget gate is a fading dial</h2>
+  <div class="prose">
+    <p>The new gate sits on the cell's loop back to itself. Each step, the old contents are multiplied by the forget gate's value before anything new is added. At 1, nothing is lost (the old LSTM). At 0, the slate is wiped. In between, memory fades smoothly, like a sound echoing away.</p>
+    <p>Crucially, the gate is <em>learned</em> and <em>changes with the input</em>. The network can keep the gate at nearly 1 while a sentence is in progress, then drop it to near 0 exactly when the sentence ends.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Forget gate value <input type="range" id="hl-f" min="0" max="1" step="0.01" value="0.9" data-fmt="2"><output id="hl-f-o">0.90</output></label></div>
+    <div class="svgbox"><svg id="hl" viewBox="0 0 600 200" role="img" aria-label="How a stored value fades over 40 steps for a given forget gate value"></svg></div>
+    <p class="readout" id="hl-r"></p>
+    <figcaption>A value of 1 is stored at step 0 and then left alone. Each bar is what remains after that many steps if the forget gate stays at the chosen value.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>A whiteboard in a meeting. The 1997 LSTM can only add notes. The forget gate is the eraser: use it a little to tidy up, or wipe the board when the topic changes.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The forget gate multiplies the old memory by a learned number between 0 and 1 at every step, so the cell can keep, fade or wipe its contents.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Which forget gate value reproduces the original 1997 LSTM?</dt>
+    <dd>Exactly 1, at every step.</dd>
+    <dt>With the gate at 0.5, how much of a stored value is left after 3 steps?</dt>
+    <dd>0.5 × 0.5 × 0.5 = 0.125, one eighth.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §3–4</p>
+  <h2>It learns when to reset, on its own</h2>
+  <div class="prose">
+    <p>The main test is a "grammar" game. Strings of letters follow fixed rules, and the second letter of each string must be remembered until near its end, where it has to be predicted again. In the continual version, the strings are glued together into one endless stream with no resets.</p>
+    <p>The original LSTM fails this continual task. The LSTM with forget gates solves it, and when the authors looked inside they found what they hoped: the forget gates drop toward zero right at the end of each string, wiping the cell just when the old information stops being useful. Nobody told the network where strings end; it worked that out because resetting there made the predictions better.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Given a forget gate, the network discovers by itself where one piece of the stream ends and resets its memory there.</p>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · Legacy</p>
+  <h2>"LSTM" now means this version</h2>
+  <div class="prose">
+    <p>Almost every LSTM used since includes the forget gate, so much so that textbooks often present it as part of the original design. Speech recognition, machine translation, handwriting recognition and phone keyboards ran on this cell through the 2000s and 2010s, until <a href="transformer.html">transformers</a> took over.</p>
+    <p>One practical lesson stuck: start the forget gate close to "remember" (open) when training begins, so the network doesn't wipe its memory before it has learned what is worth keeping.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>The forget gate is the piece that made LSTM practical on real, unsegmented data.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>LSTM can solve many tasks not solvable by previous learning algorithms for recurrent networks. But when processing continual input streams without explicitly marked sequence ends, its internal state values may grow indefinitely and eventually cause the network to break down. The remedy is an adaptive forget gate that enables an LSTM cell to learn to reset itself at appropriate times, releasing internal resources. Standard LSTM fails on continual versions of benchmark problems that extended LSTM solves. Gers, Schmidhuber &amp; Cummins, <em>Neural Computation</em> 12(10), 2451–2471 (2000); first presented at ICANN 1999.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2</p>
+  <h2>Extended LSTM equations</h2>
+  <div class="prose"><p>Keep the 1997 notation: memory block with cells <var>c<sub>j</sub><sup>v</sup></var>, input gate in<sub><var>j</var></sub>, output gate out<sub><var>j</var></sub>, cell-input squashing <var>g</var> ∈ [−2, 2], cell-output squashing <var>h</var> ∈ [−1, 1]. Add a forget gate φ<sub><var>j</var></sub> per block, a logistic unit with its own weighted inputs:</p></div>
+  <div class="eq"><var>y</var><sup>φ<sub>j</sub></sup>(<var>t</var>) = <var>f</var><sub>φ<sub>j</sub></sub>( Σ<sub><var>m</var></sub> <var>w</var><sub>φ<sub>j</sub><var>m</var></sub> <var>y<sup>m</sup></var>(<var>t</var>−1) )</div>
+  <div class="eq"><var>s<sub>c</sub></var>(<var>t</var>) = <var>y</var><sup>φ<sub>j</sub></sup>(<var>t</var>) · <var>s<sub>c</sub></var>(<var>t</var>−1) + <var>y</var><sup>in<sub>j</sub></sup>(<var>t</var>) · <var>g</var>(net<sub><var>c</var></sub>(<var>t</var>)), &nbsp;&nbsp; <var>s<sub>c</sub></var>(0) = 0</div>
+  <div class="prose">
+    <p>The output equation is unchanged: <var>y<sup>c</sup></var>(<var>t</var>) = <var>y</var><sup>out<sub>j</sub></sup>(<var>t</var>) <var>h</var>(<var>s<sub>c</sub></var>(<var>t</var>)). The constant error carousel becomes a gated carousel: ∂<var>s<sub>c</sub></var>(<var>t</var>)/∂<var>s<sub>c</sub></var>(<var>t</var>−1) = <var>y</var><sup>φ</sup>(<var>t</var>) (along the direct path), so error flows unattenuated exactly when the gate is open and is cut when the network chooses to forget. The authors keep the 1997 truncated gradient, extended with the partial derivatives for forget-gate weights, preserving O(1) cost per weight and time step.</p>
+    <p>The forget gates are meant to start open (remembering), otherwise the cell would forget everything before learning what matters; a positive initial bias does this. Jozefowicz, Zaremba &amp; Sutskever (2015) later found a forget-gate bias of 1 to be an important default in a large architecture search.</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Doesn't a gate below 1 bring back the vanishing gradient?</dt>
+    <dd>Only by choice. The gradient over a span is the product of the gate values along it, so if the network holds the gate near 1 while information matters, the signal survives; it decays only where the network has decided to forget.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §3–4</p>
+  <h2>Benchmarks: continual Reber and noisy sequences</h2>
+  <div class="prose">
+    <p>The <strong>embedded Reber grammar</strong> (ERG) wraps an inner Reber string between an outer B·T…T·E or B·P…P·E; predicting the second-to-last symbol requires remembering whether the second symbol was T or P across the inner string. In the <strong>continual</strong> ERG (CERG) strings are concatenated into one stream with no resets, and the network must predict every next symbol. A trial counts as a success only if the trained network then processes a long test stream without prediction errors. Generate examples below.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn" id="rb-gen">Generate a stream of 3 strings</button></div>
+    <div class="svgbox wide"><svg id="rb" viewBox="0 0 660 140" role="img" aria-label="A continual embedded Reber stream with long-range dependencies highlighted"></svg></div>
+    <p class="readout" id="rb-r"></p>
+    <figcaption>Each string: B, then T or P (amber, must be remembered), then an inner Reber string (generated from its finite-state grammar), then the same T or P again (amber, the long-range prediction), then E. In CERG the next string starts immediately, so the old T/P must be forgotten.</figcaption>
+  </figure>
+  <div class="prose">
+    <p>A second experiment uses a continual version of one of the 1997 noisy long-lag tasks. In both, standard LSTM fails on the unbroken stream; its state grows until the cell output saturates. The paper also compares standard LSTM with external resets supplied by hand at string ends (which work, but need boundaries that a continual stream does not provide). Among methods given no boundary information, the learned, input-dependent forget gate is what makes the continual tasks solvable, and learning-rate decay improves its success rate further.</p>
+    <p><strong>Analysis.</strong> Plots of cell states and forget-gate activations in trained networks show the forget gates dropping to near zero at string boundaries, implementing learned resets, while some blocks also learn slower, partial decay.</p>
+  </div>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · Lineage</p>
+  <h2>Where the forget gate sits in the LSTM family</h2>
+  <div class="prose"><ul>
+    <li><strong>Peepholes</strong> (Gers &amp; Schmidhuber 2000; Gers, Schraudolph &amp; Schmidhuber 2002): gates also see the cell state, enabling precise timing tasks.</li>
+    <li><strong>Full BPTT</strong> (Graves &amp; Schmidhuber 2005) replaced truncated gradients, giving the "vanilla LSTM" of textbooks.</li>
+    <li><strong>GRU</strong> (Cho et al. 2014) couples forget and input gates (<var>z</var> and 1 − <var>z</var>) and drops the separate cell state.</li>
+    <li><strong>Ablations</strong>: Greff et al. (2017) found removing the forget gate one of the most damaging changes across speech, handwriting and music tasks.</li>
+  </ul></div>
+  <div class="later"><span class="label">Echoes today</span>Data-dependent decay is back in state-space and linear-recurrence language models (for example, input-dependent "selection" in Mamba, and gated linear attention), which are often described as learned forgetting over a long stream.</div>
+</section>
+
+<section class="kp" id="t4" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Continual stream</dt><dd>Input with no externally marked sequence boundaries or resets.</dd>
+    <dt>Forget gate φ</dt><dd>Logistic gate multiplying the previous cell state.</dd>
+    <dt>State drift</dt><dd>Unbounded growth of <var>s<sub>c</sub></var> leading to saturated <var>h</var>.</dd>
+    <dt>ERG / CERG</dt><dd>Embedded Reber grammar; its continual (concatenated) version.</dd>
+    <dt>Peephole</dt><dd>Connection from cell state to the gates (a later addition).</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="lstm.html">LSTM (1997)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers/">Papers worth reading</a> (<a href="https://lovespark.love/papers/#forget-gate">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // stream with/without forget
+  var svg=$('#st'), mode=0, L=10, N=6;
+  function draw(){ clear(svg); var s=0, pts=[], T=L*N, r=rng(9), facts=[];
+    for (var k=0;k<N;k++) facts.push(0.6+0.6*r());
+    for (var t=0;t<T;t++){ var start=t%L===0; if (mode && start) s=0; if (start) s+=facts[t/L]; s+= (r()-0.3)*0.08; pts.push(s); }
+    var mx=Math.max(4,Math.max.apply(null,pts));
+    for (var k=0;k<N;k++){ S('rect',{x:60+k*L*9,y:20,width:L*9-2,height:170,'class':'f-rule','fill-opacity':k%2?0.25:0.5},svg); S('text',{x:60+k*L*9+L*4.5,y:206,'class':'t-s mid'},svg,'sentence '+(k+1)); }
+    var d=''; pts.forEach(function(v,i){ d+=(i?'L':'M')+(60+i*9)+','+(190-v/mx*160); }); S('path',{d:d,'class':mode?'w-ok':'w-fire'},svg);
+    S('line',{x1:60,y1:190-1/mx*160,x2:600,y2:190-1/mx*160,'class':'w-dash'},svg); S('text',{x:604,y:194-1/mx*160,'class':'t-s'},svg,'1');
+    S('text',{x:54,y:30,'class':'t-s end'},svg,'cell'); S('text',{x:54,y:194,'class':'t-s end'},svg,'0');
+    $('#st-r').innerHTML = mode ? 'With a forget gate, the cell holds about one fact at a time: final value <b>'+fmt(pts[T-1],2)+'</b>.' : 'Without one, facts pile up: final value <b>'+fmt(pts[T-1],2)+'</b>, and it would keep growing on a longer stream.'; }
+  $$('[data-m]').forEach(function(b){ b.addEventListener('click',function(){ mode=+b.dataset.m; $$('[data-m]').forEach(function(x){x.classList.toggle('on',x===b);}); draw(); }); });
+  draw();
+})();
+(function(){ // half-life
+  var svg=$('#hl'), f=0.9;
+  function draw(){ clear(svg); S('line',{x1:40,y1:170,x2:590,y2:170,'class':'axis'},svg);
+    for (var k=0;k<=40;k++){ var v=Math.pow(f,k), h=v*140; S('rect',{x:44+k*13.4,y:170-h,width:10,height:Math.max(h,0.5),'class':'f-wire'},svg); }
+    S('text',{x:40,y:190,'class':'t-s'},svg,'0'); S('text',{x:590,y:190,'class':'t-s end'},svg,'40 steps'); S('text',{x:36,y:34,'class':'t-s end'},svg,'1');
+    var hl = f>=1 ? Infinity : (f<=0 ? 0 : Math.log(0.5)/Math.log(f));
+    $('#hl-r').innerHTML = f>=1 ? 'Gate at 1: nothing is ever forgotten (the 1997 LSTM).' : (f<=0 ? 'Gate at 0: the cell is wiped every step.' : 'Half of the memory is gone after <b>'+fmt(hl,1)+'</b> steps.'); }
+  bindRange('hl-f',function(v){f=v;draw();});
+})();
+(function(){ // continual embedded Reber stream
+  var svg=$('#rb');
+  // Reber grammar transitions: state -> [[symbol,next],[symbol,next]]
+  var G={0:[['T',1],['P',2]],1:[['S',1],['X',3]],2:[['T',2],['V',4]],3:[['X',2],['S',5]],4:[['P',3],['V',5]]};
+  function inner(r){ var s=['B'], st=0; while (st!==5){ var o=G[st][r()<0.5?0:1]; s.push(o[0]); st=o[1]; } s.push('E'); return s; }
+  function gen(){ clear(svg); var r=Math.random, seq=[];
+    for (var k=0;k<3;k++){ var tp=r()<0.5?'T':'P'; seq.push(['B',0,k]); seq.push([tp,1,k]); inner(r).forEach(function(c){ seq.push([c,0,k]); }); seq.push([tp,2,k]); seq.push(['E',0,k]); }
+    var w=Math.min(22, 640/seq.length);
+    seq.forEach(function(c,i){ var x=10+i*w; S('rect',{x:x,y:40,width:w-2,height:28,'class':c[1]?'box-fire':(c[2]%2?'box':'box-wire')},svg); S('text',{x:x+w/2-1,y:59,'class':'t mid'},svg,c[0]); });
+    var firsts=[], seconds=[]; seq.forEach(function(c,i){ if (c[1]===1) firsts.push(i); if (c[1]===2) seconds.push(i); });
+    firsts.forEach(function(a,k){ var b=seconds[k], xa=10+a*w+w/2, xb=10+b*w+w/2; S('path',{d:'M'+xa+',72 C'+xa+',120 '+xb+',120 '+xb+',74','class':'w-fire','marker-end':'url(#af)'},svg); S('text',{x:(xa+xb)/2,y:118,'class':'t-s mid'},svg,'lag '+(b-a)); });
+    S('text',{x:10,y:24,'class':'t-s'},svg,'stream → (no resets between strings)');
+    $('#rb-r').innerHTML='Stream of <b>'+seq.length+'</b> symbols. Lags between the remembered and predicted T/P: <b>'+firsts.map(function(a,k){return seconds[k]-a;}).join(', ')+'</b> steps.'; }
+  $('#rb-gen').onclick=gen; gen();
+})();
+</script>
+
+</body>
+</html>

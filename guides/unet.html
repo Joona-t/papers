@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>U-Net (2015) study guide</title>
+<meta name="description" content="How do you teach a network to outline every cell in a microscope image, pixel by pixel, when you only have a few dozen hand-labelled examples? This paper&#x27;s answer is a U-shaped network that first squeezes the image down to understand what is there, then expands it back to full size, with direct">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Computer vision</b> · 2015</p>
+  <h1>U-Net: Convolutional Networks for Biomedical Image Segmentation</h1>
+  <p class="cite">Olaf Ronneberger, Philipp Fischer, Thomas Brox · MICCAI 2015</p>
+  <p class="lede">How do you teach a network to outline every cell in a microscope image, pixel by pixel, when you only have a few dozen hand-labelled examples? This paper's answer is a U-shaped network that first squeezes the image down to understand what is there, then expands it back to full size, with direct links that hand over the fine detail lost on the way down. Its shape became one of the most widely used designs in imaging, from medical scans to the image generators of today.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/1505.04597">Read the paper (free)</a> <a href="https://lovespark.love/papers/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, independent AI review, but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Segmentation means labelling every pixel of an image ("cell" or "background", say), which needs both the big picture (what is this?) and precise detail (exactly where is the edge?).</p>
+  <p>U-Net shrinks the image step by step to gather context, then grows it back step by step, and at each size it copies across the detailed features from the shrinking side so edges can be placed precisely.</p>
+  <p>Because labelled medical images are scarce, it trains on heavily warped copies of a few images, and it weights the loss so the thin gaps between touching cells count extra.</p>
+  <p>Trained on just a few dozen images, it beat the previous best method on a nerve-tissue challenge, won the 2015 cell tracking challenge by a wide margin, and segments a 512 by 512 image in under a second.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1</p>
+  <h2>Label every pixel, from very few examples</h2>
+  <div class="prose">
+    <p>Networks like <a href="alexnet.html">AlexNet</a> answer one question per image: "is this a cat?". Biologists need something different. Given a microscope image, they want to know which pixels belong to which cell, so they can count cells, measure them, and track them over time. This is called <strong>segmentation</strong>: the output is a label for every single pixel.</p>
+    <p>Two things make it hard. First, there are very few labelled images, because outlining cells by hand takes experts hours. Second, the task needs two kinds of knowledge at once: <strong>context</strong> (is this blob a cell or a speck of dirt?) and <strong>precise location</strong> (exactly which pixel is the cell's edge?).</p>
+    <p>The best previous method slid a small window across the image and classified the centre pixel of each window, one by one. It worked, but it was slow (every pixel needs its own run of the network, and neighbouring windows repeat most of the work), and there was a trade-off: bigger windows gave more context but blurrier edges.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Colouring in a map by hand, you glance at the whole region to know it is a lake, then look closely at the shoreline to colour exactly up to the edge. A segmentation network needs both glances.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Segmentation needs context and precision at the same time, and in biomedicine it has to be learned from a handful of examples.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §2 · Fig. 1</p>
+  <h2>Squeeze, expand, and pass the details across</h2>
+  <div class="prose">
+    <p>U-Net has two halves. The <strong>contracting path</strong> (left side of the U) works like an ordinary image-recognition network: detect patterns, then halve the image size, four times over. Each halving lets later layers see a wider area, so they understand context, but blurs where exactly things are.</p>
+    <p>The <strong>expanding path</strong> (right side) does the reverse: double the size, four times, back up to a detailed map. On its own, it could only produce a blurry, blocky outline, because the precise detail was thrown away on the way down. So at every size, U-Net <strong>copies the features from the matching level of the left side</strong> straight across and joins them on. These are the <strong>skip connections</strong>, the horizontal bars of the U.</p>
+    <p>The toy below makes the trade-off visible. A noisy image contains three cells. A purely "fine" detector looks at each pixel on its own: sharp but fooled by noise. A purely "coarse" one averages big blocks: robust but blocky. Combining them, as the skip connections let U-Net do, gets the best of both.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Noise <input type="range" id="sk-n" min="0" max="0.8" step="0.05" value="0.45" data-fmt="2"><output id="sk-n-o">0.45</output></label><label>Coarse block size <input type="range" id="sk-b" min="2" max="16" step="2" value="8"><output id="sk-b-o">8</output></label><button class="btn" id="sk-new">New noise</button></div>
+    <div class="svgbox"><svg id="sk" viewBox="0 0 600 220" role="img" aria-label="Noisy image, fine-only, coarse-only and combined segmentations"></svg></div>
+    <p class="readout" id="sk-r"></p>
+    <figcaption>Each map is 48 × 48 pixels. Fine: threshold each pixel on its own. Coarse: average over big blocks, threshold, then blow back up. Combined: average the evidence from each pixel's 3 × 3 neighbourhood with the smoothly enlarged coarse evidence, then threshold. Overlap with the true cells is measured as IoU (1.00 is perfect). A hand-built illustration of why the U needs both paths; U-Net learns its own combination.</figcaption>
+  </figure>
+  <figure>
+    <div class="svgbox"><svg viewBox="0 0 600 250" role="img" aria-label="The U-Net shape: contracting path down, expanding path up, skip connections across">
+      <g>
+        <rect x="40" y="20" width="60" height="30" class="box-wire"/><text x="70" y="40" class="t mid">64</text>
+        <rect x="80" y="70" width="60" height="30" class="box-wire"/><text x="110" y="90" class="t mid">128</text>
+        <rect x="120" y="120" width="60" height="30" class="box-wire"/><text x="150" y="140" class="t mid">256</text>
+        <rect x="160" y="170" width="60" height="30" class="box-wire"/><text x="190" y="190" class="t mid">512</text>
+        <rect x="260" y="210" width="80" height="30" class="box-fire"/><text x="300" y="230" class="t mid">1024</text>
+        <rect x="380" y="170" width="60" height="30" class="box-ok"/><text x="410" y="190" class="t mid">512</text>
+        <rect x="420" y="120" width="60" height="30" class="box-ok"/><text x="450" y="140" class="t mid">256</text>
+        <rect x="460" y="70" width="60" height="30" class="box-ok"/><text x="490" y="90" class="t mid">128</text>
+        <rect x="500" y="20" width="60" height="30" class="box-ok"/><text x="530" y="40" class="t mid">64</text>
+        <path d="M80,52 L96,68 M120,102 L136,118 M160,152 L176,168 M210,202 L256,220" class="w" marker-end="url(#aw)"/>
+        <path d="M344,220 L392,202 M430,168 L446,152 M470,118 L486,102 M510,68 L526,52" class="w-ok" marker-end="url(#ao)"/>
+        <path d="M102,35 L496,35 M142,85 L456,85 M182,135 L416,135 M222,185 L376,185" class="w-fire" marker-end="url(#af)"/>
+        <text x="300" y="30" class="t-fire mid">copy and join (skip connections)</text>
+        <text x="20" y="130" class="t-s">down: detect,</text><text x="20" y="144" class="t-s">then halve</text>
+        <text x="510" y="130" class="t-s">up: double,</text><text x="510" y="144" class="t-s">then detect</text>
+      </g>
+    </svg></div>
+    <figcaption>Redrawn after Fig. 1. Numbers are feature channels at each level: they double each time the image is halved, and halve again on the way up.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>The bottom of the U knows <em>what</em> is in the image; the skip connections remember <em>where</em>. Together they give sharp, sensible outlines.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What would the output look like without the skip connections?</dt>
+    <dd>Roughly right but blurry or blocky around the edges, because the expanding path would have only the coarse, low-resolution features to work from.</dd>
+    <dt>Why not skip the shrinking altogether and work at full size throughout?</dt>
+    <dd>Each layer would then see only a tiny neighbourhood, so the network would lack context: it could not tell a cell from noise that looks locally similar.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §2 · Fig. 2</p>
+  <h2>Big images, one tile at a time</h2>
+  <div class="prose">
+    <p>U-Net only ever uses pixels it actually has: its layers never pad the image with made-up zeros at the edges. The price is that the output is smaller than the input: give it 572 by 572 pixels and it labels the central 388 by 388. Every output pixel was computed from real surrounding context.</p>
+    <p>To segment a large image, it is cut into overlapping tiles, each processed separately, and the labelled centres fit together seamlessly. At the outer edge of the whole image, where there is no real context to give, the missing area is filled with a <strong>mirror image</strong> of the nearby pixels. Because the network can work on any image size, it can also process a whole 512 by 512 image in under a second on a graphics card.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Tiles with overlapping borders let U-Net handle images of any size, limited only by memory, with no visible seams.</p>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §3.1</p>
+  <h2>Turn thirty images into thousands</h2>
+  <div class="prose">
+    <p>With only about 30 labelled images, a network would quickly memorise them. The fix is <strong>data augmentation</strong>: show it altered copies, with the labels altered the same way. U-Net's key alteration is <strong>elastic deformation</strong>: the image is gently warped as if printed on a rubber sheet and stretched unevenly. Real tissue really does vary like this from sample to sample, so the warped copies look like plausible new images.</p>
+    <p>The warp is made by pushing the points of a coarse 3 by 3 grid in random directions and smoothly spreading those pushes across the whole image. Try a few:</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Push strength (pixels) <input type="range" id="el-s" min="0" max="30" step="1" value="10"><output id="el-s-o">10</output></label><button class="btn" id="el-new">New random warp</button></div>
+    <div class="svgbox"><svg id="el" viewBox="0 0 600 260" role="img" aria-label="A drawn cell before and after a random elastic deformation"></svg></div>
+    <p class="readout" id="el-r"></p>
+    <figcaption>Left: original. Right: warped copy. Amber dots are the 3 × 3 control grid; each is pushed by a random amount whose typical size is the slider value (standard deviation, in pixels of a 512-pixel image; the paper uses 10). The pushes are spread smoothly over every pixel (bilinear here; the paper uses bicubic interpolation). The same warp is applied to the label map, so labels still match.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>Teaching someone to recognise handwriting, you would show the same words written by many people, slightly squashed, slanted and stretched. Elastic deformation fakes that variety from a single example.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Realistic, label-preserving warps let a network learn from a tiny dataset without memorising it.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why must the same warp be applied to the label map?</dt>
+    <dd>Otherwise the labels would no longer line up with the warped image, and the network would be taught wrong answers.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §3 · Fig. 3 · §4</p>
+  <h2>Mind the gap between touching cells</h2>
+  <div class="prose">
+    <p>Cells often touch. If the network labels the whole clump as "cell", you cannot count or measure them separately. The thin strip of background between two cells is only a pixel or two wide, so it hardly affects an ordinary error score. U-Net fixes this by giving every pixel a <strong>weight</strong> in the training error: background pixels squeezed between two nearby cells get a much larger weight, so mistakes there are punished heavily. (The In depth tab lets you play with the exact formula.)</p>
+    <p><strong>Results.</strong> On a challenge to trace nerve-cell boundaries in electron-microscope images (30 training images), U-Net beat the previous best method, the sliding-window network. In the 2015 cell tracking challenge it scored 92% overlap with the true outlines on one type of light-microscope image, against 83% for the runner-up, and 77.5% against 46% on another. Training took about 10 hours on a single graphics card.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>U-Net's shape spread far beyond microscopy. Medical imaging adopted it as a default, later with 3D versions and the self-configuring "nnU-Net". Most surprisingly, the image generators of the 2020s use a U-Net at their core: <a href="ddpm.html">diffusion models</a> train a U-Net to remove noise from images step by step, and <a href="ldm.html">Stable Diffusion</a> runs one on a compressed version of the image. More recent systems such as <a href="sam.html">Segment Anything</a> use a transformer instead, trained on vastly more data.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Weighting the loss towards hard, thin boundaries is what lets U-Net separate cells that touch.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Successful training of deep networks is commonly thought to need many thousands of annotated samples. The paper presents a network and training strategy that rely on strong data augmentation to use the available annotated samples more efficiently. The architecture has a contracting path to capture context and a symmetric expanding path that enables precise localisation. It can be trained end to end from very few images and outperforms the prior best method (a sliding-window convolutional network) on the ISBI challenge for segmenting neuronal structures in electron-microscopic stacks; trained on transmitted-light microscopy images (phase contrast and DIC), it won the ISBI cell tracking challenge 2015 in these categories by a large margin. Segmenting a 512 × 512 image takes less than a second on a recent GPU. MICCAI 2015.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §1 · §2 · Fig. 1</p>
+  <h2>Architecture</h2>
+  <div class="prose">
+    <p><strong>Starting point.</strong> The design builds on the fully convolutional network (FCN) of Long, Shelhamer and Darrell: supplement a contracting network with layers where pooling is replaced by upsampling, and combine high-resolution features from the contracting path with the upsampled output. U-Net's modification is a large number of feature channels in the upsampling part, so context can propagate to higher-resolution layers, making the expanding path roughly symmetric to the contracting one. There are no fully connected layers.</p>
+    <p><strong>Contracting path.</strong> Repeated application of two 3 × 3 unpadded convolutions, each followed by ReLU, then 2 × 2 max-pooling with stride 2. Channels double at each downsampling: 64, 128, 256, 512, 1024. <strong>Expanding path.</strong> Each step: a 2 × 2 "up-convolution" that halves the channels, concatenation with the correspondingly <em>cropped</em> feature map from the contracting path (cropping is needed because unpadded convolutions lose border pixels), then two 3 × 3 convolutions with ReLU. A final 1 × 1 convolution maps the 64-component features to the classes. In total, 23 convolutional layers.</p>
+    <p><strong>Valid convolutions and sizes.</strong> Each 3 × 3 unpadded convolution removes 2 pixels in each dimension, so the output map contains only pixels for which the full context is available. To tile seamlessly the input size must be chosen so that every 2 × 2 pooling sees an even-sized map. Check the arithmetic:</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><label>Input tile size <input type="range" id="ts-n" min="140" max="700" step="2" value="572"><output id="ts-n-o">572</output></label></div>
+    <div class="svgbox wide"><svg id="ts" viewBox="0 0 640 260" role="img" aria-label="Feature map sizes at each level of the U for the chosen input tile"></svg></div>
+    <p class="readout" id="ts-r"></p>
+    <figcaption>Each box shows the spatial size after the two 3 × 3 valid convolutions at that level (−4), then the map is halved by pooling (down) or doubled by up-convolution (up). Red marks an odd size reaching a 2 × 2 pooling, which breaks seamless tiling. 572 gives the paper's 388 output; the border lost on each side is (input − output)/2.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why are skip-connection features cropped before concatenation?</dt>
+    <dd>With unpadded convolutions the contracting-path maps are larger than the upsampled maps at the same level (e.g. 64 vs 56 at the deepest skip for a 572 input), so their centres are cropped to match.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §2 · Fig. 2</p>
+  <h2>Overlap-tile strategy</h2>
+  <div class="prose">
+    <p>Because the network uses only valid parts of each convolution, predicting the segmentation of a tile (yellow area in the paper's Fig. 2) requires the image data in a larger surrounding region (blue area). With input 572 and output 388, the extra context is 92 pixels on each side. For pixels at the border of the whole image, the missing context is extrapolated by mirroring the input image. Tiling is important for applying the network to large images, since otherwise the resolution would be limited by GPU memory.</p>
+    <p>This is also why §3 favours large input tiles over a large batch: the batch is reduced to a single image, and a high momentum (0.99) is used so that a large number of previously seen training samples determine each update.</p>
+  </div>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §3 · Eqs. 1–2 · Fig. 3</p>
+  <h2>Loss, weight map and initialisation</h2>
+  <div class="prose"><p>The energy is a pixel-wise softmax over the final feature map combined with a weighted cross-entropy. With <var>a<sub>k</sub></var>(<b>x</b>) the activation in channel <var>k</var> at pixel <b>x</b>, <var>p<sub>k</sub></var>(<b>x</b>) = exp(<var>a<sub>k</sub></var>(<b>x</b>)) / Σ<sub><var>k′</var></sub> exp(<var>a<sub>k′</sub></var>(<b>x</b>)), and ℓ(<b>x</b>) the true label:</p></div>
+  <div class="eq"><var>E</var> = Σ<sub><b>x</b>∈Ω</sub> <var>w</var>(<b>x</b>) log <var>p</var><sub>ℓ(<b>x</b>)</sub>(<b>x</b>) <span class="n">(1)</span></div>
+  <div class="prose"><p>(As printed, Eq. 1 is a log-likelihood to be maximised; equivalently, the loss minimised is its negative.) The weight map is precomputed from each ground-truth segmentation:</p></div>
+  <div class="eq"><var>w</var>(<b>x</b>) = <var>w<sub>c</sub></var>(<b>x</b>) + <var>w</var><sub>0</sub> · exp( −(<var>d</var><sub>1</sub>(<b>x</b>) + <var>d</var><sub>2</sub>(<b>x</b>))<sup>2</sup> / 2σ<sup>2</sup> ) <span class="n">(2)</span></div>
+  <div class="prose"><p>Here <var>w<sub>c</sub></var> balances class frequencies, <var>d</var><sub>1</sub> is the distance to the border of the nearest cell and <var>d</var><sub>2</sub> to the border of the second nearest. The paper sets <var>w</var><sub>0</sub> = 10 and σ ≈ 5 pixels. The morphological separation of touching cells is computed beforehand, so the network is forced to learn the small separation borders.</p></div>
+  <figure class="live">
+    <div class="ctl"><label><var>w</var><sub>0</sub> <input type="range" id="wm-w" min="0" max="20" step="1" value="10"><output id="wm-w-o">10</output></label><label>σ <input type="range" id="wm-s" min="1" max="12" step="0.5" value="5" data-fmt="1"><output id="wm-s-o">5.0</output></label><label>Gap between cells <input type="range" id="wm-g" min="1" max="12" step="1" value="3"><output id="wm-g-o">3</output></label></div>
+    <div class="svgbox"><svg id="wm" viewBox="0 0 600 250" role="img" aria-label="Weight map around three cells per Eq. 2"></svg></div>
+    <p class="readout" id="wm-r"></p>
+    <figcaption>Eq. 2 on an 80 × 34 pixel toy with three round cells (outlined). Shading is the extra weight <var>w</var><sub>0</sub> exp(−(<var>d</var><sub>1</sub> + <var>d</var><sub>2</sub>)<sup>2</sup>/2σ<sup>2</sup>) on background pixels, with <var>w<sub>c</sub></var> taken as 1 for simplicity. Narrow the gap: weight piles up in the separating strip. With σ ≈ 5 the term is negligible once the two borders are more than about 15 pixels apart in total.</figcaption>
+  </figure>
+  <div class="prose"><p><strong>Initialisation.</strong> Weights are drawn from a Gaussian with standard deviation √(2/<var>N</var>), <var>N</var> the number of incoming nodes of one neuron (e.g. 9 · 64 = 576 for a 3 × 3 convolution with 64 input channels), so that each feature map has approximately unit variance; important when alternating convolution and ReLU in deep networks.</p></div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why use <var>d</var><sub>1</sub> + <var>d</var><sub>2</sub> rather than only <var>d</var><sub>1</sub>?</dt>
+    <dd>A pixel near a single isolated cell has small <var>d</var><sub>1</sub> but large <var>d</var><sub>2</sub>. Only pixels close to two different cells, i.e. in a separating gap, have a small sum.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §3.1 · §4 · Tables 1–2</p>
+  <h2>Augmentation and experiments</h2>
+  <div class="prose">
+    <p><strong>Augmentation (§3.1).</strong> Shift and rotation invariance plus robustness to deformations and grey-value variations are the main needs with microscopy. Random elastic deformations are described as the key concept for training with very few annotated images: displacement vectors are sampled on a coarse 3 × 3 grid from a Gaussian with 10-pixel standard deviation, and per-pixel displacements are computed by bicubic interpolation. Drop-out layers at the end of the contracting path perform further implicit augmentation.</p>
+    <p><strong>EM segmentation (ISBI 2012).</strong> 30 training images of 512 × 512 (serial-section transmission EM of the Drosophila first-instar larva ventral nerve cord), with full annotation of cells and membranes; evaluation by thresholding the predicted membrane probability at 10 levels and computing warping, Rand and pixel errors. Averaged over 7 rotated versions of the input and with no further pre- or post-processing, U-Net achieves warping error 0.000353 (a new best at the time) and Rand error 0.0382, against 0.000420 and 0.0504 for the sliding-window network of Cireşan et al. (Table 1). Some challenge entries ranked higher on Rand error, using highly data-set-specific post-processing applied to the probability map of Cireşan et al.</p>
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>ISBI cell tracking 2015 (Table 2)</th><th>PhC-U373</th><th>DIC-HeLa</th></tr></thead>
+    <tbody>
+      <tr><td>U-Net (IOU)</td><td class="num">0.9203</td><td class="num">0.7756</td></tr>
+      <tr><td>Second best</td><td class="num">0.83</td><td class="num">0.46</td></tr>
+    </tbody></table></div>
+  <div class="prose"><p>PhC-U373 is glioblastoma-astrocytoma cells under phase-contrast microscopy, DIC-HeLa is HeLa cells under differential interference contrast; both come with small, partially annotated training sets. Training time is about 10 hours on an NVIDIA Titan GPU (6 GB), in Caffe.</p></div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §5 · lineage</p>
+  <h2>Limitations and lineage</h2>
+  <div class="prose">
+    <ul>
+      <li><strong>Narrow evaluation.</strong> Three 2D datasets, all transmitted-light or EM microscopy; no ablation isolating skip connections, weight map or augmentation.</li>
+      <li><strong>Engineering choices of the day.</strong> Valid convolutions and overlap-tiling were motivated by GPU memory; most later implementations use padded convolutions so input and output sizes match, with batch normalisation added.</li>
+      <li><strong>Instance separation via loss weighting.</strong> Touching objects are separated only through a semantic boundary class and weighting; true instance segmentation came later with dedicated heads (e.g. Mask R-CNN) or learned embeddings.</li>
+    </ul>
+  </div>
+  <div class="later"><span class="label">Later refinements</span>3D U-Net (Çiçek et al., 2016) and V-Net (Milletari et al., 2016, with a Dice loss) extended it to volumes; UNet++ (2018) densified the skip pathways; nnU-Net (Isensee et al., 2021) showed that a carefully self-configured plain U-Net remains a top performer across many medical segmentation tasks. In generative modelling, <a href="ddpm.html">DDPM</a> (2020) used a U-Net with residual blocks and self-attention as its noise predictor, and <a href="ldm.html">latent diffusion</a> ran one in an autoencoder's latent space with cross-attention conditioning; transformer backbones (DiT, 2023) later started to replace it there. For promptable general-purpose segmentation, <a href="sam.html">SAM</a> uses a <a href="vit.html">ViT</a> encoder and a lightweight decoder trained on 1.1 billion masks.</div>
+</section>
+
+<section class="kp" id="t6" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Segmentation</dt><dd>Assigning a class label to every pixel.</dd>
+    <dt>Contracting path</dt><dd>Convolutions and pooling that reduce resolution and increase channels.</dd>
+    <dt>Expanding path</dt><dd>Up-convolutions and convolutions that restore resolution.</dd>
+    <dt>Up-convolution</dt><dd>A learned 2 × 2 upsampling (transposed convolution) that halves channels.</dd>
+    <dt>Valid convolution</dt><dd>Unpadded convolution; output shrinks by kernel size − 1.</dd>
+    <dt>Overlap-tile</dt><dd>Predicting large images tile by tile with context borders, mirroring at image edges.</dd>
+    <dt>Weight map</dt><dd>Per-pixel loss weights emphasising separating borders (Eq. 2).</dd>
+    <dt>IOU</dt><dd>Intersection over union of predicted and true regions.</dd>
+    <dt>Warping error</dt><dd>A topology-aware segmentation metric counting splits and mergers.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Led to:</strong> <a href="ddpm.html">DDPM (2020)</a>, <a href="sam.html">Segment Anything (2023)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers/">Papers worth reading</a> (<a href="https://lovespark.love/papers/#unet">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // fine / coarse / combined
+  var svg=$('#sk'), noise=0.45, B=8, seed=3, N=48;
+  var cells=[[14,16,8],[33,13,6],[28,34,9]];
+  function truth(){ var t=[]; for (var y=0;y<N;y++){ var r=[]; for (var x=0;x<N;x++){ var on=0; cells.forEach(function(c){ if ((x-c[0])*(x-c[0])+(y-c[1])*(y-c[1])<=c[2]*c[2]) on=1; }); r.push(on); } t.push(r); } return t; }
+  var T=truth();
+  function iou(a){ var i=0,u=0; for (var y=0;y<N;y++) for (var x=0;x<N;x++){ if (a[y][x]&&T[y][x]) i++; if (a[y][x]||T[y][x]) u++; } return i/u; }
+  function draw(){ clear(svg); var r=rng(seed), img=T.map(function(row){ return row.map(function(v){ return v*0.7+0.15+gauss(r)*noise; }); });
+    var loc=[], fine=[], coarse=[], comb=[];
+    for (var y=0;y<N;y++){ loc.push([]); for (var x=0;x<N;x++){ var s=0,n=0; for (var dy=-1;dy<=1;dy++) for (var dx=-1;dx<=1;dx++){ var yy=y+dy, xx=x+dx; if (yy>=0&&yy<N&&xx>=0&&xx<N){ s+=img[yy][xx]; n++; } } loc[y].push(s/n); } }
+    var nb=Math.ceil(N/B), cm=[]; for (var by=0;by<nb;by++){ cm.push([]); for (var bx=0;bx<nb;bx++){ var s=0,n=0; for (var y=by*B;y<Math.min(N,by*B+B);y++) for (var x=bx*B;x<Math.min(N,bx*B+B);x++){ s+=img[y][x]; n++; } cm[by].push(s/n); } }
+    function cup(y,x){ var fy=(y+0.5)/B-0.5, fx=(x+0.5)/B-0.5, i=Math.max(0,Math.min(nb-1,Math.floor(fy))), j=Math.max(0,Math.min(nb-1,Math.floor(fx))), i2=Math.min(nb-1,i+1), j2=Math.min(nb-1,j+1), ty=Math.max(0,Math.min(1,fy-i)), tx=Math.max(0,Math.min(1,fx-j));
+      return (1-ty)*((1-tx)*cm[i][j]+tx*cm[i][j2])+ty*((1-tx)*cm[i2][j]+tx*cm[i2][j2]); }
+    for (var y=0;y<N;y++){ fine.push([]); coarse.push([]); comb.push([]); for (var x=0;x<N;x++){ fine[y].push(img[y][x]>0.5?1:0); coarse[y].push(cm[Math.floor(y/B)][Math.floor(x/B)]>0.5?1:0); comb[y].push((loc[y][x]+cup(y,x))/2>0.5?1:0); } }
+    var panels=[['noisy image',img,1],['fine only',fine,0],['coarse only',coarse,0],['combined',comb,0]], cs=2.9;
+    panels.forEach(function(p,k){ var ox=10+k*148, oy=36; S('text',{x:ox,y:22,'class':'t-s'},svg,p[0]);
+      S('rect',{x:ox,y:oy,width:N*cs,height:N*cs,'class':'box'},svg);
+      for (var y=0;y<N;y++) for (var x=0;x<N;x++){ var v=p[1][y][x]; if (p[2]){ var c=Math.max(0,Math.min(1,v)); if (c>0.05) S('rect',{x:ox+x*cs,y:oy+y*cs,width:cs,height:cs,'class':'f-ink','fill-opacity':c},svg); }
+        else if (v) S('rect',{x:ox+x*cs,y:oy+y*cs,width:cs,height:cs,'class':k===3?'f-ok':'f-fire'},svg); }
+      if (!p[2]) S('text',{x:ox,y:oy+N*cs+18,'class':'t'},svg,'IoU '+fmt(iou(p[1]),2)); });
+    $('#sk-r').innerHTML='Overlap with the true cells (IoU): fine <b>'+fmt(iou(fine),2)+'</b>, coarse <b>'+fmt(iou(coarse),2)+'</b>, combined <b>'+fmt(iou(comb),2)+'</b>.'; }
+  bindRange('sk-n',function(v){ noise=v; draw(); }); bindRange('sk-b',function(v){ B=v; draw(); });
+  $('#sk-new').onclick=function(){ seed++; draw(); };
+})();
+(function(){ // elastic deformation
+  var svg=$('#el'), sd=10, seed=4, D;
+  function sample(){ var r=rng(seed); D=[]; for (var i=0;i<3;i++){ D.push([]); for (var j=0;j<3;j++) D[i].push([gauss(r),gauss(r)]); } }
+  function disp(x,y){ // x,y in [0,1]; bilinear over 3x3 control points at 0, .5, 1
+    var gx=Math.min(1.999,x*2), gy=Math.min(1.999,y*2), i=Math.floor(gy), j=Math.floor(gx), fy=gy-i, fx=gx-j, s=sd*240/512;
+    function c(a,b,k){ return D[a][b][k]; }
+    var dx=(1-fy)*((1-fx)*c(i,j,0)+fx*c(i,j+1,0))+fy*((1-fx)*c(i+1,j,0)+fx*c(i+1,j+1,0));
+    var dy=(1-fy)*((1-fx)*c(i,j,1)+fx*c(i,j+1,1))+fy*((1-fx)*c(i+1,j,1)+fx*c(i+1,j+1,1));
+    return [dx*s,dy*s]; }
+  function shapes(g,ox,oy,warp){ var P=function(x,y){ if (!warp) return [ox+x,oy+y]; var d=disp(x/220,y/220); return [ox+x+d[0],oy+y+d[1]]; };
+    function poly(pts,cls){ var d=''; pts.forEach(function(p,i){ var q=P(p[0],p[1]); d+=(i?'L':'M')+fmt(q[0],1)+','+fmt(q[1],1); }); S('path',{d:d+'Z','class':cls},g); }
+    for (var k=0;k<=10;k++){ var a=[],b=[]; for (var t=0;t<=20;t++){ a.push([k*22,t*11]); b.push([t*11,k*22]); }
+      [a,b].forEach(function(line){ var d=''; line.forEach(function(p,i){ var q=P(p[0],p[1]); d+=(i?'L':'M')+fmt(q[0],1)+','+fmt(q[1],1); }); S('path',{d:d,'class':'grid'},g); }); }
+    var cell=[], nuc=[], cell2=[]; for (var t=0;t<40;t++){ var th=t/40*2*Math.PI; cell.push([100+62*Math.cos(th),110+44*Math.sin(th)+6*Math.sin(3*th)]); nuc.push([92+20*Math.cos(th),104+15*Math.sin(th)]); cell2.push([180+26*Math.cos(th),186+22*Math.sin(th)]); }
+    poly(cell,'box-wire'); poly(nuc,'box-fire'); poly(cell2,'box-ok');
+    if (warp) for (var i=0;i<3;i++) for (var j=0;j<3;j++){ var q=P(j*110,i*110); S('circle',{cx:q[0],cy:q[1],r:4,'class':'u-on'},g); S('line',{x1:ox+j*110,y1:oy+i*110,x2:q[0],y2:q[1],'class':'w-fire'},g); } }
+  function draw(){ clear(svg); var g1=S('g',{},svg), g2=S('g',{},svg); shapes(g1,30,26,false); shapes(g2,340,26,true);
+    S('text',{x:30,y:16,'class':'t-s'},svg,'original'); S('text',{x:340,y:16,'class':'t-s'},svg,'elastically deformed');
+    var m=0; for (var i=0;i<3;i++) for (var j=0;j<3;j++) m=Math.max(m,Math.hypot(D[i][j][0],D[i][j][1])*sd);
+    $('#el-r').innerHTML='Largest control-point push: <b>'+fmt(m,1)+'</b> pixels (of a 512-pixel image). Press "New random warp" for another sample.'; }
+  bindRange('el-s',function(v){ sd=v; if (!D) sample(); draw(); });
+  $('#el-new').onclick=function(){ seed++; sample(); draw(); };
+})();
+(function(){ // tile sizes
+  var svg=$('#ts'), n=572;
+  function draw(){ clear(svg); var s=n, down=[], ok=true, bad=-1, lvl;
+    for (lvl=0;lvl<4;lvl++){ s-=4; down.push(s); if (s<=0){ ok=false; break; } if (s%2){ ok=false; bad=lvl; } s=Math.floor(s/2); }
+    var bottom=null, up=[];
+    if (ok){ s-=4; bottom=s; for (var k=0;k<4;k++){ s=s*2-4; up.push(s); } }
+    var pos=[[20,20],[80,70],[140,120],[200,170]], upos=[[500,20],[440,70],[380,120],[320,170]];
+    S('text',{x:20,y:12,'class':'t-s'},svg,'input '+n);
+    down.forEach(function(v,i){ var p=pos[i]; S('rect',{x:p[0],y:p[1]+4,width:100,height:30,'class':i===bad?'box-inh':'box-wire'},svg); S('text',{x:p[0]+50,y:p[1]+24,'class':i===bad?'t-inh mid':'t mid'},svg,v>0?v+'×'+v:'too small'); });
+    if (ok){ S('rect',{x:260,y:214,width:120,height:30,'class':'box-fire'},svg); S('text',{x:320,y:234,'class':'t mid'},svg,bottom+'×'+bottom);
+      up.forEach(function(v,i){ var p=upos[3-i]; S('rect',{x:p[0],y:p[1]+4,width:100,height:30,'class':'box-ok'},svg); S('text',{x:p[0]+50,y:p[1]+24,'class':'t mid'},svg,v+'×'+v); });
+      for (var i=0;i<4;i++){ var a=pos[i], b=upos[i], skip=down[i], tgt=up[3-i]+4; S('line',{x1:a[0]+104,y1:a[1]+19,x2:b[0]-4,y2:b[1]+19,'class':'w-dash'},svg); if (i<3) S('text',{x:(a[0]+b[0]+100)/2,y:a[1]+14,'class':'t-s mid'},svg,'crop '+skip+' → '+tgt); else S('text',{x:a[0]-6,y:a[1]+24,'class':'t-s end'},svg,'crop '+skip+' → '+tgt); } }
+    if (ok){ var out=up[3]; $('#ts-r').innerHTML='Valid tile. Output <b>'+out+' × '+out+'</b>; border lost per side <b>'+((n-out)/2)+'</b> pixels; the network needs '+n+'² input pixels to label '+out+'² ('+fmt(out*out/(n*n)*100,0)+'%).'; }
+    else { var nx=n; while (true){ nx+=2; var t=nx, g=true; for (var k=0;k<4;k++){ t-=4; if (t<=0||t%2){ g=false; break; } t/=2; } if (g && t-4>0) break; }
+      $('#ts-r').innerHTML=(bad>=0?'Invalid: an odd size ('+down[bad]+') reaches the pooling at level '+(bad+1)+'.':'Invalid: tile too small.')+' Next valid size up: <b>'+nx+'</b>.'; } }
+  bindRange('ts-n',function(v){ n=v; draw(); });
+})();
+(function(){ // weight map
+  var svg=$('#wm'), w0=10, sg=5, gap=3, W=80, H=34, cs=6.8;
+  function draw(){ clear(svg); var r=8, c1=[10,17], c2=[10+2*r+gap,17];
+        var cells=[[c1[0],c1[1],r],[c2[0],c2[1],r],[c2[0]+2*r+gap,18,r-1]];
+    var mx=0, vals=[];
+    for (var y=0;y<H;y++) for (var x=0;x<W;x++){ var px=x+0.5, py=y+0.5, ds=cells.map(function(c){ return Math.hypot(px-c[0],py-c[1])-c[2]; }), inside=ds.some(function(d){ return d<=0; });
+      ds.sort(function(a,b){ return a-b; }); var v=inside?0:w0*Math.exp(-Math.pow(ds[0]+ds[1],2)/(2*sg*sg)); vals.push([x,y,v,inside]); if (v>mx) mx=v; }
+    vals.forEach(function(p){ if (p[3]) S('rect',{x:20+p[0]*cs,y:10+p[1]*cs,width:cs,height:cs,'class':'f-wire','fill-opacity':0.35},svg); else if (p[2]>0.05) S('rect',{x:20+p[0]*cs,y:10+p[1]*cs,width:cs,height:cs,'class':'f-fire','fill-opacity':Math.min(1,p[2]/Math.max(w0,1))},svg); });
+    cells.forEach(function(c){ S('circle',{cx:20+c[0]*cs,cy:10+c[1]*cs,r:c[2]*cs,'class':'w-ink'},svg); });
+    S('rect',{x:20,y:10,width:W*cs,height:H*cs,'class':'area'},svg);
+    $('#wm-r').innerHTML='Gap <b>'+gap+'</b> px. Largest total weight on a background pixel: <b>'+fmt(1+mx,2)+'</b> (that is, <var>w<sub>c</sub></var> = 1 plus <b>'+fmt(mx,2)+'</b>), versus 1 for ordinary pixels.'; }
+  bindRange('wm-w',function(v){ w0=v; draw(); }); bindRange('wm-s',function(v){ sg=v; draw(); }); bindRange('wm-g',function(v){ gap=v; draw(); });
+})();
+</script>
+
+</body>
+</html>

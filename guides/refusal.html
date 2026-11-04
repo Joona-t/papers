@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Abliteration (2024) study guide</title>
+<meta name="description" content="When a chat model says &quot;I&#x27;m sorry, I can&#x27;t help with that&quot;, is the refusal spread across the whole network or does it hang on one thread? Arditi and colleagues show that, in 13 open chat models, it hangs on one thread: a single direction in the model&#x27;s internal activations. ">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Safety &amp; security</b> · 2024</p>
+  <h1>Refusal in Language Models Is Mediated by a Single Direction</h1>
+  <p class="cite">Andy Arditi et al. · NeurIPS 2024</p>
+  <p class="lede">When a chat model says "I'm sorry, I can't help with that", is the refusal spread across the whole network or does it hang on one thread? Arditi and colleagues show that, in 13 open chat models, it hangs on one thread: a single direction in the model's internal activations. Remove that direction and the model stops refusing; add it and the model refuses harmless requests. Editing the weights to remove it permanently became known as "abliteration".</p>
+  <p class="paperlinks"><a href="https://arxiv.org/abs/2406.11717">Read the paper (free)</a> <a href="https://lovespark.love/papers/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, independent AI review, but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>Inside a language model, every word is represented by a long list of numbers, and "directions" in that space of numbers can stand for ideas.</p>
+  <p>Compare the model's internal numbers on harmful requests with those on harmless ones, take the average difference, and you get one arrow, the <strong>refusal direction</strong>.</p>
+  <p>Erase that arrow from the model's thinking and it answers requests it used to refuse; add it and it refuses even "write a poem about spring".</p>
+  <p>The erasing can be written permanently into the model's weights at almost no cost to its other skills, which shows that the safety training of these open models is shallow and easy to undo.</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1–2.1</p>
+  <h2>Ideas live in directions</h2>
+  <div class="prose">
+    <p>A language model reads text as tokens (word pieces). For each token it keeps a long list of numbers, a few thousand of them, which is updated layer by layer as the text flows through the network. Researchers call this list the <strong>residual stream</strong>: think of it as a shared notepad that every layer reads from and writes onto.</p>
+    <p>A list of numbers can be drawn as an arrow (a <strong>vector</strong>) in a space with thousands of dimensions. A long-standing observation in interpretability research is that many concepts correspond to particular <em>directions</em> in that space. Move the arrow further along the "French" direction and the text gets more French; along another direction, more positive in tone. This is called the <strong>linear representation</strong> idea.</p>
+    <p>Chat models are trained, after their main training, to refuse harmful requests. Nobody wrote a "refusal" rule into them; the behaviour was learned. The paper asks: where did that behaviour end up inside the network?</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A mixing desk with thousands of sliders. Most ideas are not one slider but a particular combination of them, a "direction" you can push the whole desk in. The question is whether "refuse" is one such combination or something smeared across everything.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>A model's internal state is a long list of numbers, and concepts often correspond to directions in that space.</p>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Idea</b> · §2.3</p>
+  <h2>Finding the refusal arrow: subtract two averages</h2>
+  <div class="prose">
+    <p>The method is strikingly simple. Feed the model 128 harmful instructions and 128 harmless ones. At a chosen layer, record the internal arrow for each. Average the harmful arrows, average the harmless arrows, and subtract. The result, called the <strong>difference in means</strong>, points from "typical harmless request" towards "typical harmful request".</p>
+    <p>No training is involved, and no examples of harmful answers are needed: only two sets of questions. The figure shows the idea in two dimensions instead of thousands.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>How different the two kinds look <input type="range" id="dm-sep" min="0" max="3" step="0.1" value="1.6" data-fmt="1"><output id="dm-sep-o">1.6</output></label>
+      <label>Spread within each kind <input type="range" id="dm-sd" min="0.3" max="1.6" step="0.1" value="0.8" data-fmt="1"><output id="dm-sd-o">0.8</output></label>
+      <button class="btn" id="dm-new">New samples</button>
+    </div>
+    <div class="svgbox"><svg id="dm" viewBox="0 0 600 300" role="img" aria-label="Two clouds of points, harmful and harmless, with their averages and the arrow between them"></svg></div>
+    <p class="readout" id="dm-r"></p>
+    <figcaption>Illustrative toy, not the paper's data. Amber dots: harmful requests. Blue dots: harmless requests. Crosses: the two averages. The arrow between them is the difference-in-means direction. The readout says how often simply measuring "how far along the arrow" a point sits sorts it into the right group.</figcaption>
+  </figure>
+  <div class="analogy"><span class="label">Everyday picture</span>Average the height of basketball players and of jockeys and subtract: you get one number that captures the main way the two groups differ, without having to understand anything else about them.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The refusal direction is just the average internal state on harmful prompts minus the average on harmless prompts.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why does the method not need any examples of harmful answers?</dt>
+    <dd>It only looks at the model's internal state while reading the request, before it answers. Two lists of prompts are enough.</dd>
+    <dt>In the toy, what happens to sorting accuracy when you shrink the separation to 0?</dt>
+    <dd>It falls to about chance (50%): if both groups have the same average, the difference arrow is just noise.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Idea</b> · §3 · Figs. 1, 3</p>
+  <h2>One dial, both ways</h2>
+  <div class="prose">
+    <p>Finding an arrow that <em>correlates</em> with harmfulness is not the same as showing it <em>causes</em> refusal. So the authors intervene. They test two edits while the model runs:</p>
+    <ul>
+      <li><strong>Remove</strong> the direction: at every layer and every token, subtract whatever part of the internal arrow points along the refusal direction, leaving everything else untouched. The model now answers harmful requests it used to refuse.</li>
+      <li><strong>Add</strong> the direction: push the internal arrow further along it on a harmless request. The model now refuses perfectly innocent requests.</li>
+    </ul>
+    <p>This held for all 13 chat models tested, from five families (Qwen, Yi, Gemma, Llama-2 and Llama-3) and from 1.8 to 72 billion parameters. Try both edits on a toy model below.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn on" data-rf="0">No edit</button>
+      <button class="btn" data-rf="1">Remove the direction</button>
+      <button class="btn" data-rf="2">Add the direction</button>
+      <label>Amount added <input type="range" id="rf-a" min="0.5" max="2.5" step="0.1" value="1.5" data-fmt="1"><output id="rf-a-o">1.5</output></label>
+    </div>
+    <div class="svgbox"><svg id="rf" viewBox="0 0 600 280" role="img" aria-label="Two prompts in a toy activation space, with a refusal zone along one direction"></svg></div>
+    <p class="readout" id="rf-r"></p>
+    <figcaption>Illustrative toy. The horizontal axis is the refusal direction; the vertical axis stands for every other direction. The toy model refuses whenever a prompt's arrow reaches the shaded zone. "Remove" sets each arrow's horizontal part to zero but keeps its vertical part, which is why the model's other knowledge survives. "Add" shifts both arrows to the right.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>Removing the direction stops refusals and adding it causes them: in these models refusal is controlled by one direction.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why do the authors run both experiments, removing and adding?</dt>
+    <dd>Removal alone shows the direction is necessary for refusal; addition shows it is sufficient to trigger refusal. Together they make the causal case.</dd>
+    <dt>When the direction is removed, why can the model still write fluent, knowledgeable text?</dt>
+    <dd>Only one direction out of thousands is erased. Everything the arrow says along the other directions is left as it was.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Idea</b> · §4 · Tables 2–3</p>
+  <h2>Writing it into the weights</h2>
+  <div class="prose">
+    <p>Removing the direction while the model runs requires changing its code. The authors show something more consequential: the same effect can be achieved by a one-time edit of the model's weights, so that no layer can ever write anything along the refusal direction. The edited model is an ordinary file that behaves as if the direction were removed on every run. The community soon named this <strong>abliteration</strong> (ablation plus obliteration).</p>
+    <p>How much does it cost the model's other abilities? Very little on the benchmarks they checked. On general-knowledge tests (MMLU, ARC) and grade-school maths (GSM8K), the edited models scored within about a point or two of the originals. The one consistent drop was on TruthfulQA, a test of avoiding common misconceptions, which fell by 1 to 3.5 points.</p>
+    <p>The authors are frank about the ethics. Their method, they write, "marginally lowers the bar" for jailbreaking open-weight models, though they argue it does not substantially change the risk of releasing them, since fine-tuning could already remove safety training. They note it can be done on a 70-billion-parameter model for under $5 of compute.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Rather than blocking one slider every time the desk is used, you saw off the wire that connects it. The desk works as before in every other way.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>A tiny, one-off weight edit can strip refusal from an open-weight model while leaving most other skills intact.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Idea</b> · §5 · Figs. 5–6</p>
+  <h2>Why jailbreak gibberish works</h2>
+  <div class="prose">
+    <p>Earlier work (<a href="gcg.html">GCG</a>) found strange strings of characters that, added to the end of a harmful request, make models comply. Why do they work? The authors look inside a small model (Qwen 1.8B) and find that these "adversarial suffixes" turn the refusal direction down: with the suffix, the model's internal state on a harmful request looks like its state on a harmless one. Random strings of the same length do not do this.</p>
+    <p>They also find how: a handful of attention heads (parts of the network that decide which earlier words to focus on) normally carry the "this is harmful" signal from the request into the refusal direction. The suffix pulls their attention away from the request and onto itself.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>Adversarial suffixes jailbreak models by distracting the parts of the network that feed the refusal direction.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>What does the single-direction finding explain about suffix attacks?</dt>
+    <dd>An attack does not need to change everything the model knows; it only needs to stop the refusal direction from being switched on, which can be done by redirecting a few attention heads.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s6">
+  <p class="eyebrow"><b>Idea</b> · §7 · Later work</p>
+  <h2>What it means, and what came after</h2>
+  <div class="prose">
+    <p>The headline lesson is that safety fine-tuning on these models was <strong>brittle</strong>: the behaviour hung on one direction that anyone with the weights could find in minutes. It is also a success story for interpretability, since understanding a mechanism immediately predicted how to switch it on and off.</p>
+    <p>The authors say plainly that their result is "an existence proof" that such a direction exists, not a careful study of the best way to find it, and that it may not hold for untested or larger models.</p>
+  </div>
+  <div class="later"><span class="label">Later refinement</span>"One direction" turned out to be too simple. <a href="cones.html">Wollschläger et al. (2025)</a> found several independent refusal directions forming multi-dimensional "concept cones". <a href="abl-defense.html">Abu Shairah et al. (2025)</a> showed that training models to explain their refusals makes abliteration much less effective. <a href="abl-compare.html">Young (2025)</a> compared the open-source tools that implement the idea and found that the damage they do to other skills varies widely between models.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Refusal in 2024's open chat models was a thin layer on top, easy to find and easy to peel off; later work showed the picture has more dimensions and can be made sturdier.</p>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Conversational LLMs are fine-tuned to obey benign instructions and refuse harmful ones, but the mechanism is poorly understood. Across 13 popular open-source chat models up to 72B parameters, refusal is mediated by a one-dimensional subspace: for each model there is a direction whose erasure from the residual-stream activations prevents refusal of harmful instructions, and whose addition elicits refusal on harmless ones. This yields a white-box jailbreak, a rank-one weight edit that disables refusal with minimal effect on other capabilities. Mechanistically, adversarial suffixes suppress propagation of the refusal-mediating direction. The results underline the brittleness of current safety fine-tuning and show how internals can be used to control behaviour. Arditi, Obeso, Syed, Paleka, Panickssery, Gurnee &amp; Nanda, NeurIPS 2024 (arXiv:2406.11717).</p>
+</div>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2.1–2.2 · Eq. 1 · Table 1</p>
+  <h2>Setting: residual stream, data and models</h2>
+  <div class="prose"><p>Decoder-only transformer with residual stream activation <var>x</var><sub><var>i</var></sub><sup>(<var>l</var>)</sup> ∈ ℝ<sup><var>d</var><sub>model</sub></sup> at token <var>i</var> and layer <var>l</var>. Each block adds attention and MLP outputs to the stream:</p></div>
+  <div class="eq"><var>x̃</var><sub><var>i</var></sub><sup>(<var>l</var>)</sup> = <var>x</var><sub><var>i</var></sub><sup>(<var>l</var>)</sup> + Attn<sup>(<var>l</var>)</sup>(<var>x</var><sub>1:<var>i</var></sub><sup>(<var>l</var>)</sup>), &nbsp; <var>x</var><sub><var>i</var></sub><sup>(<var>l</var>+1)</sup> = <var>x̃</var><sub><var>i</var></sub><sup>(<var>l</var>)</sup> + MLP<sup>(<var>l</var>)</sup>(<var>x̃</var><sub><var>i</var></sub><sup>(<var>l</var>)</sup>) <span class="n">(1)</span></div>
+  <div class="prose">
+    <p><strong>Data.</strong> 𝒟<sub>harmful</sub> is drawn from AdvBench, MaliciousInstruct, TDC2023 and HarmBench; 𝒟<sub>harmless</sub> from Alpaca. Each has a train split of 128 and a validation split of 32, filtered to avoid overlap with evaluation sets. Evaluation uses JailbreakBench (100 harmful instructions) for bypassing, 100 held-out Alpaca instructions for inducing, and the 159 HarmBench "standard behaviours" for the jailbreak comparison.</p>
+    <p><strong>Models (Table 1).</strong> Qwen Chat 1.8B/7B/14B/72B and Yi Chat 6B/34B (aligned by fine-tuning, AFT); Gemma IT 2B/7B, Llama-2 Chat 7B/13B/70B and Llama-3 Instruct 8B/70B (aligned by preference optimisation, APO).</p>
+    <p><strong>Metrics (§2.5).</strong> Greedy decoding to 512 tokens. <em>Refusal score</em>: 1 if the completion contains any of a list of refusal substrings ("I'm sorry", "As an AI", ...), else 0. <em>Safety score</em>: 1 if Llama Guard 2 judges the completion safe. The two are complementary: string matching catches memorised refusals but says nothing about whether a non-refusal is coherent or actually harmful.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §2.3 · Eq. 2 · App. C</p>
+  <h2>Difference-in-means and choosing one vector</h2>
+  <div class="prose"><p>For each layer <var>l</var> and each post-instruction token position <var>i</var> ∈ <var>I</var> (the chat-template tokens after the user's message), compute the mean activation over harmful and harmless training prompts:</p></div>
+  <div class="eq"><var>μ</var><sub><var>i</var></sub><sup>(<var>l</var>)</sup> = (1/|𝒟<sub>harmful</sub><sup>(train)</sup>|) Σ<sub><var>t</var>∈𝒟<sub>harmful</sub></sub> <var>x</var><sub><var>i</var></sub><sup>(<var>l</var>)</sup>(<var>t</var>), &nbsp; <var>ν</var><sub><var>i</var></sub><sup>(<var>l</var>)</sup> = (1/|𝒟<sub>harmless</sub><sup>(train)</sup>|) Σ<sub><var>t</var>∈𝒟<sub>harmless</sub></sub> <var>x</var><sub><var>i</var></sub><sup>(<var>l</var>)</sup>(<var>t</var>) <span class="n">(2)</span></div>
+  <div class="eq"><var>r</var><sub><var>i</var></sub><sup>(<var>l</var>)</sup> = <var>μ</var><sub><var>i</var></sub><sup>(<var>l</var>)</sup> − <var>ν</var><sub><var>i</var></sub><sup>(<var>l</var>)</sup></div>
+  <div class="prose">
+    <p>This yields |<var>I</var>| × <var>L</var> candidates. Each is scored on the validation splits for how well ablating it bypasses refusal on harmful prompts, how well adding it induces refusal on harmless prompts, and how little ablating it changes the model's behaviour on harmless prompts (a KL-divergence check); candidates too close to the final layers, where directions start to align with the unembedding, are excluded (App. C). The winning vector is normalised to <var>r̂</var>. The selected layers sit in the middle of the network for most models (for example layer 14 of 32 for Llama-2 7B, layer 23 of 40 for Qwen 14B; App. C, Table 5).</p>
+    <p>Difference-in-means is the simplest linear probe imaginable; the paper notes it is chosen for simplicity and works well, consistent with earlier representation-engineering and steering work (e.g. Marks &amp; Tegmark 2023; Zou et al. 2023; Turner et al. 2023).</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why restrict the search to post-instruction token positions?</dt>
+    <dd>Those template tokens are where the model has read the whole request and is about to start answering, so a decision such as "refuse" should be represented there; they are also identical across prompts, making averages comparable.</dd>
+    <dt>Why include a KL check on harmless prompts when selecting a direction?</dt>
+    <dd>A direction can bypass refusal simply by breaking the model. Requiring little change on harmless prompts selects a direction that is specific to refusal rather than generally destructive.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §2.4, §4.1 · Eqs. 3–5 · App. E</p>
+  <h2>Three interventions, one projection</h2>
+  <div class="prose"><p><strong>Activation addition</strong> (at the source layer <var>l</var>* only, all positions) and <strong>directional ablation</strong> (every layer, every position) are:</p></div>
+  <div class="eq"><var>x</var><sup>(<var>l</var>)′</sup> ← <var>x</var><sup>(<var>l</var>)</sup> + <var>r</var><sup>(<var>l</var>)</sup> <span class="n">(3)</span></div>
+  <div class="eq"><var>x</var>′ ← <var>x</var> − <var>r̂</var><var>r̂</var><sup>⊤</sup><var>x</var> <span class="n">(4)</span></div>
+  <div class="prose"><p>Ablation zeroes the stream's component along <var>r̂</var> while leaving its orthogonal complement untouched. Because the residual stream is a sum of writes (embedding, then every attention and MLP output), the same effect is achieved by projecting <var>r̂</var> out of every matrix that writes to the stream:</p></div>
+  <div class="eq"><var>W</var><sub>out</sub>′ ← <var>W</var><sub>out</sub> − <var>r̂</var><var>r̂</var><sup>⊤</sup><var>W</var><sub>out</sub> <span class="n">(5)</span></div>
+  <div class="prose"><p>applied to the embedding matrix, positional embeddings, attention output projections, MLP output projections and any output biases. Appendix E proves equivalence to inference-time ablation: if no write has any component along <var>r̂</var>, then no residual activation does. The edit is rank-one per matrix. The figure shows a 2-D slice.</p></div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Angle of <var>r̂</var> <input type="range" id="wo-th" min="0" max="170" step="5" value="20"><output id="wo-th-o">20</output>°</label>
+      <button class="btn" id="wo-tog" aria-pressed="false">Apply Eq. 5</button>
+    </div>
+    <div class="svgbox"><svg id="wo" viewBox="0 0 600 300" role="img" aria-label="Write vectors of weight matrices before and after projecting out the refusal direction"></svg></div>
+    <p class="readout" id="wo-r"></p>
+    <figcaption>Left: five "write" vectors (columns of different <var>W</var><sub>out</sub> matrices) in a 2-D slice of the residual stream, and the dashed refusal direction <var>r̂</var>. Applying Eq. 5 drops each write onto the line orthogonal to <var>r̂</var>. Right: the residual stream is the running sum of the writes; after the edit its component along <var>r̂</var> is exactly zero, as Eq. 4 would have made it. In real models <var>d</var><sub>model</sub> is in the thousands, so the orthogonal complement retains almost everything.</figcaption>
+  </figure>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is the weight edit equivalent to ablation at every layer, rather than at one layer?</dt>
+    <dd>Every component that adds to the residual stream is edited, so the stream's projection onto <var>r̂</var> starts at zero (embeddings) and every subsequent addition contributes zero; it stays zero at every layer and position.</dd>
+    <dt>Why is addition applied only at one layer while ablation is applied everywhere?</dt>
+    <dd>Adding at one layer is enough to push the state into "refuse" territory, which later layers then propagate. Ablation must stop any layer re-introducing the direction, so it has to act everywhere.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §3–4 · Figs. 1, 3 · Tables 2–3</p>
+  <h2>Results: bypass, induce, compare, coherence</h2>
+  <div class="prose">
+    <p><strong>Bypass (§3.1, Fig. 1).</strong> On JailbreakBench, directional ablation drives refusal scores down and safety scores down across all 13 models, i.e. the models comply with harmful requests rather than emitting incoherent text. <strong>Induce (§3.2, Fig. 3).</strong> Without intervention the models rarely refuse the 100 harmless Alpaca prompts; activation addition of <var>r</var> at <var>l</var>* sharply raises the refusal rate on these same prompts.</p>
+    <p><strong>Jailbreak comparison (Table 2).</strong> HarmBench attack success rate (ASR, %) of the orthogonalised model ("Ortho") against baselines. GCG-M and GCG-T are universal (multi-prompt, transfer) suffixes; GCG, AutoPrompt (AP) and PAIR are optimised per prompt; DR is direct request. Ortho is reported with the model's default system prompt and, in parentheses, without one. For Qwen, Ortho is on par with per-prompt GCG; Llama-2 is strongly system-prompt dependent (22.6% with, 79.9% without for 7B).</p>
+    <p><strong>Coherence (Table 3, §4.3).</strong> MMLU, ARC, GSM8K and TruthfulQA for orthogonalised vs original models. Apart from Qwen 7B and Yi 34B, all orthogonalised scores lie within 99% confidence intervals of the originals; TruthfulQA drops consistently. Cross-entropy on held-out text (App. G.3) suggests directional ablation is "more surgical" than activation-addition methods.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn on" data-tb="asr">Table 2: HarmBench ASR</button>
+      <button class="btn" data-tb="MMLU">Table 3: MMLU</button>
+      <button class="btn" data-tb="ARC">ARC</button>
+      <button class="btn" data-tb="GSM8K">GSM8K</button>
+      <button class="btn" data-tb="TruthfulQA">TruthfulQA</button>
+    </div>
+    <div class="svgbox"><svg id="tb" viewBox="0 0 600 300" role="img" aria-label="Bar chart of the paper's reported results"></svg></div>
+    <p class="readout" id="tb-r"></p>
+    <figcaption>Values transcribed from Tables 2 and 3 of the paper. ASR view: Ortho (with system prompt), direct request (DR) and per-prompt GCG; GCG was not reported for Qwen 72B. Benchmark views: change in score (points) after orthogonalisation; the bars that matter are the TruthfulQA ones, all negative.</figcaption>
+  </figure>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §5 · Figs. 5–6 · App. H</p>
+  <h2>Mechanism of adversarial suffixes</h2>
+  <div class="prose">
+    <p>On Qwen 1.8B Chat the authors take 128 harmful instructions (from JailbreakBench and HarmBench) and run each with no suffix, with a GCG-optimised adversarial suffix, and with a random suffix of equal length. They measure the cosine similarity between the last-token activation and <var>r̂</var>.</p>
+    <ul>
+      <li><strong>Suppression (§5.1, Fig. 5).</strong> With the adversarial suffix, the refusal-direction expression is heavily suppressed and closely resembles that of harmless instructions; random suffixes do not have this effect.</li>
+      <li><strong>Head hijacking (§5.2, Fig. 6).</strong> Using direct feature attribution, the eight attention heads that write most strongly onto <var>r̂</var> have their contribution sharply reduced by the suffix, and their attention shifts from the instruction tokens to the suffix tokens.</li>
+    </ul>
+    <p>This contrasts with Zou et al. (2023a), who had reported that adversarial suffixes do not significantly alter a "harmfulness" representation; here, what they alter is the refusal representation downstream of it.</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why is the random-suffix control essential?</dt>
+    <dd>Any extra text dilutes attention somewhat. The control shows that suppression of <var>r̂</var> is specific to the optimised suffix, not a generic effect of a longer prompt.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t6">
+  <p class="eyebrow"><b>Section</b> · §7 · Lineage</p>
+  <h2>Limitations, ethics and what came next</h2>
+  <div class="prose"><ul>
+    <li><strong>Existence proof.</strong> The authors stress that difference-in-means is a simple choice and the work demonstrates that a refusal-mediating direction exists, not how best to extract it; results may not generalise to untested or larger models.</li>
+    <li><strong>Coarse metrics.</strong> Refusal is detected by substring matching and harm by Llama Guard 2; neither measures how useful a non-refused answer actually is.</li>
+    <li><strong>Ethics.</strong> The method needs no gradient optimisation and no harmful completions, and costs under $5 of compute for a 70B model. The authors judge that it marginally lowers the bar for jailbreaking open weights without substantially changing the risk profile, since fine-tuning attacks already existed.</li>
+    <li><strong>Implication for alignment.</strong> If preference optimisation and fine-tuning leave refusal concentrated in one direction, then robust safety for open-weight models cannot rest on that training alone.</li>
+  </ul></div>
+  <div class="later"><span class="label">Later refinements</span><a href="cones.html">Wollschläger et al. (ICML 2025)</a> learn refusal directions by gradient descent and find multi-dimensional <em>concept cones</em> and several representationally independent directions, so "single direction" is better read as "a dominant direction". <a href="abl-defense.html">Abu Shairah et al. (2025)</a> fine-tune on extended, justified refusals and keep refusal above 90% after abliteration. <a href="abl-compare.html">Young (2025)</a> benchmarks four public abliteration tools on 16 models and finds the side effects (especially on GSM8K) depend strongly on the tool and model. Outside the archive, "norm-preserving" variants of the edit and tamper-resistant safety training are active lines of work.</div>
+</section>
+
+<section class="kp" id="t7" data-extra data-toc="Glossary">
+  <p class="eyebrow">Reference</p>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Residual stream</dt><dd>The per-token activation vector that every block reads from and adds to.</dd>
+    <dt>Difference-in-means</dt><dd><var>μ</var> − <var>ν</var>: mean harmful activation minus mean harmless activation.</dd>
+    <dt>Directional ablation</dt><dd>Removing the component along <var>r̂</var>: <var>x</var> − <var>r̂</var><var>r̂</var><sup>⊤</sup><var>x</var>.</dd>
+    <dt>Activation addition</dt><dd>Adding a steering vector to the stream at one layer.</dd>
+    <dt>Weight orthogonalisation</dt><dd>Projecting <var>r̂</var> out of every stream-writing matrix (Eq. 5); "abliteration".</dd>
+    <dt>AFT / APO</dt><dd>Aligned by fine-tuning / by preference optimisation.</dd>
+    <dt>ASR</dt><dd>Attack success rate, here judged by the HarmBench classifier.</dd>
+    <dt>DFA</dt><dd>Direct feature attribution: a head's output projected onto a direction.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p><strong>Built on:</strong> <a href="gcg.html">Universal jailbreaks (GCG) (2023)</a></p>
+  <p><strong>Led to:</strong> <a href="cones.html">Refusal concept cones (2025)</a>, <a href="abl-defense.html">Defending against abliteration (2025)</a>, <a href="abl-compare.html">Abliteration tools compared (2025)</a></p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers/">Papers worth reading</a> (<a href="https://lovespark.love/papers/#refusal">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // difference in means toy
+  var svg=$('#dm'), sep=1.6, sd=0.8, seed=3;
+  function X(v){ return 300+v*55; } function Y(v){ return 150-v*42; }
+  function draw(){ clear(svg); var r=rng(seed), H=[], B=[], n=40, ang=0.5;
+    var ux=Math.cos(ang), uy=Math.sin(ang);
+    for (var k=0;k<n;k++){ H.push([ sep/2*ux+gauss(r)*sd, sep/2*uy+gauss(r)*sd*0.9 ]); B.push([ -sep/2*ux+gauss(r)*sd, -sep/2*uy+gauss(r)*sd*0.9 ]); }
+    function mean(A){ var s=[0,0]; A.forEach(function(p){ s[0]+=p[0]; s[1]+=p[1]; }); return [s[0]/A.length, s[1]/A.length]; }
+    var mh=mean(H), mb=mean(B), d=[mh[0]-mb[0], mh[1]-mb[1]], L=Math.hypot(d[0],d[1])||1e-9, u=[d[0]/L,d[1]/L], mid=[(mh[0]+mb[0])/2,(mh[1]+mb[1])/2];
+    S('rect',{x:20,y:10,width:560,height:280,'class':'area'},svg);
+    B.forEach(function(p){ S('circle',{cx:X(p[0]),cy:Y(p[1]),r:4,'class':'f-wire','fill-opacity':0.7},svg); });
+    H.forEach(function(p){ S('circle',{cx:X(p[0]),cy:Y(p[1]),r:4,'class':'f-fire','fill-opacity':0.8},svg); });
+    // line through means (the direction), extended
+    S('line',{x1:X(mid[0]-u[0]*5),y1:Y(mid[1]-u[1]*5),x2:X(mid[0]+u[0]*5),y2:Y(mid[1]+u[1]*5),'class':'w-dash'},svg);
+    [mh,mb].forEach(function(m,i){ var cx=X(m[0]), cy=Y(m[1]); S('path',{d:'M'+(cx-7)+','+(cy-7)+'L'+(cx+7)+','+(cy+7)+'M'+(cx-7)+','+(cy+7)+'L'+(cx+7)+','+(cy-7),'class':'w-ink','stroke-width':3},svg); });
+    if (L>0.05) S('line',{x1:X(mb[0]),y1:Y(mb[1]),x2:X(mh[0]),y2:Y(mh[1]),'class':'w-fire','marker-end':'url(#af)'},svg);
+    S('text',{x:30,y:30,'class':'t-fire'},svg,'● harmful requests'); S('text',{x:30,y:48,'class':'t-wire'},svg,'● harmless requests');
+    S('text',{x:570,y:280,'class':'t-s end'},svg,'2-D stand-in for thousands of dimensions');
+    var ok=0; H.forEach(function(p){ if ((p[0]-mid[0])*u[0]+(p[1]-mid[1])*u[1]>0) ok++; }); B.forEach(function(p){ if ((p[0]-mid[0])*u[0]+(p[1]-mid[1])*u[1]<=0) ok++; });
+    $('#dm-r').innerHTML='Length of the difference arrow: <b>'+fmt(L,2)+'</b>. Sorting by position along the arrow gets <b>'+Math.round(ok/(2*n)*100)+'%</b> of the 80 requests right.'; }
+  bindRange('dm-sep',function(v){ sep=v; draw(); }); bindRange('dm-sd',function(v){ sd=v; draw(); });
+  $('#dm-new').onclick=function(){ seed++; draw(); };
+})();
+(function(){ // remove / add toy
+  var svg=$('#rf'), mode=0, amt=1.5, TH=0.6;
+  var P=[{n:'harmful request',p:[1.4,1.1],c:'fire'},{n:'harmless request',p:[-0.3,-0.9],c:'wire'}];
+  function X(v){ return 230+v*95; } function Y(v){ return 140-v*70; }
+  function draw(){ clear(svg);
+    S('rect',{x:X(TH),y:15,width:X(3)-X(TH),height:250,'class':'f-inh','fill-opacity':0.12},svg);
+    S('text',{x:X(3)-8,y:255,'class':'t-inh end'},svg,'refusal zone');
+    S('line',{x1:30,y1:Y(0),x2:540,y2:Y(0),'class':'axis','marker-end':'url(#ai)'},svg); S('line',{x1:X(0),y1:262,x2:X(0),y2:15,'class':'axis','marker-end':'url(#ai)'},svg);
+    S('text',{x:538,y:Y(0)+18,'class':'t-s end'},svg,'refusal direction →'); S('text',{x:X(0)-6,y:24,'class':'t-s end'},svg,'all other directions');
+    var out=[];
+    P.forEach(function(q,i){ var p=q.p.slice(); if (mode===1) p=[0,p[1]]; if (mode===2) p=[p[0]+amt,p[1]];
+      if (mode) S('line',{x1:X(0),y1:Y(0),x2:X(q.p[0]),y2:Y(q.p[1]),'class':'w-dash'},svg);
+      S('line',{x1:X(0),y1:Y(0),x2:X(p[0]),y2:Y(p[1]),'class':q.c==='fire'?'w-fire':'w','stroke-width':2.4,'marker-end':q.c==='fire'?'url(#af)':'url(#aw)'},svg);
+      var ref=p[0]>=TH; out.push(ref);
+      S('circle',{cx:X(p[0]),cy:Y(p[1]),r:5,'class':q.c==='fire'?'f-fire':'f-wire'},svg);
+      S('text',{x:X(p[0])+(p[0]>2.2?-8:8),y:Y(p[1])+(i?16:-8),'class':'t'+(p[0]>2.2?' end':'')},svg,q.n);
+      S('rect',{x:20,y:215+i*30-14,width:150,height:22,'class':ref?'box-fire':'box-ok'},svg);
+      S('text',{x:95,y:215+i*30+1,'class':'t mid'},svg,(i?'harmless: ':'harmful: ')+(ref?'refuses':'answers')); });
+    var msg=['Original model: refuses the harmful request, answers the harmless one.','Direction removed: neither arrow has any refusal component left, so the harmful request is answered. The vertical parts are untouched.','Direction added: both arrows are pushed into the refusal zone'+(out[1]?', so even the harmless request is refused.':'; with this little added, the harmless one is still answered.')];
+    $('#rf-r').textContent=msg[mode]; }
+  $$('[data-rf]').forEach(function(b){ b.addEventListener('click',function(){ mode=+b.dataset.rf; $$('[data-rf]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }); });
+  bindRange('rf-a',function(v){ amt=v; draw(); });
+})();
+(function(){ // weight orthogonalisation
+  var svg=$('#wo'), th=20, on=false;
+  var W=[[1.0,0.5],[0.3,-0.8],[-0.6,0.7],[0.9,0.9],[0.2,0.4]];
+  function draw(){ clear(svg); var a=th*Math.PI/180, r=[Math.cos(a),Math.sin(a)];
+    function proj(v){ var d=v[0]*r[0]+v[1]*r[1]; return [v[0]-d*r[0], v[1]-d*r[1]]; }
+    var cx=150, cy=150, s=80;
+    S('text',{x:20,y:22,'class':'t-h'},svg,'writes to the stream');
+    S('line',{x1:cx-r[0]*130,y1:cy+r[1]*130,x2:cx+r[0]*130,y2:cy-r[1]*130,'class':'w-dash'},svg);
+    S('text',{x:cx+r[0]*118+(r[0]<0?-4:4),y:cy-r[1]*118-6,'class':'t-inh'+(r[0]<0?' end':'')},svg,'r̂');
+    var maxB=0, sum=[0,0], sum0=[0,0];
+    W.forEach(function(v){ var w=on?proj(v):v; maxB=Math.max(maxB,Math.abs(v[0]*r[0]+v[1]*r[1])); sum[0]+=w[0]; sum[1]+=w[1]; sum0[0]+=v[0]; sum0[1]+=v[1];
+      if (on) S('line',{x1:cx,y1:cy,x2:cx+v[0]*s,y2:cy-v[1]*s,'class':'w-faint'},svg);
+      S('line',{x1:cx,y1:cy,x2:cx+w[0]*s,y2:cy-w[1]*s,'class':'w','stroke-width':2,'marker-end':'url(#aw)'},svg); });
+    // right: running sum
+    var ox=360, oy=230, s2=55;
+    S('text',{x:340,y:22,'class':'t-h'},svg,'residual stream = sum');
+    S('line',{x1:ox-r[0]*150,y1:oy+r[1]*150,x2:ox+r[0]*150,y2:oy-r[1]*150,'class':'w-dash'},svg);
+    var p=[0,0]; W.forEach(function(v){ var w=on?proj(v):v; var q=[p[0]+w[0],p[1]+w[1]]; S('line',{x1:ox+p[0]*s2,y1:oy-p[1]*s2,x2:ox+q[0]*s2,y2:oy-q[1]*s2,'class':'w-faint'},svg); p=q; });
+    S('line',{x1:ox,y1:oy,x2:ox+p[0]*s2,y2:oy-p[1]*s2,'class':'w-fire','marker-end':'url(#af)'},svg);
+    var comp=p[0]*r[0]+p[1]*r[1];
+    S('text',{x:590,y:285,'class':'t-s end'},svg,'component of sum along r̂: '+fmt(comp,2));
+    $('#wo-r').innerHTML=on?'After the edit: every write has component <b>0.00</b> along r̂, so the stream does too. Length of the summed stream kept: <b>'+Math.round(Math.hypot(p[0],p[1])/Math.hypot(sum0[0],sum0[1])*100)+'%</b> (only the r̂ part is lost).':'Before the edit: the largest single write along r̂ is <b>'+fmt(maxB,2)+'</b>; the summed stream has <b>'+fmt(comp,2)+'</b> along r̂.'; }
+  bindRange('wo-th',function(v){ th=v; draw(); });
+  $('#wo-tog').onclick=function(){ on=!on; this.setAttribute('aria-pressed',on); this.classList.toggle('on',on); this.textContent=on?'Undo Eq. 5':'Apply Eq. 5'; draw(); };
+})();
+(function(){ // paper tables
+  var svg=$('#tb'), mode='asr';
+  var asr=[['Llama-2 7B',22.6,0.0,34.5],['Llama-2 13B',6.9,0.5,28.0],['Llama-2 70B',4.4,0.0,36.0],['Qwen 7B',79.2,7.0,79.5],['Qwen 14B',84.3,9.5,83.5],['Qwen 72B',78.0,8.5,null]];
+  var coh={names:['Gemma 7B','Yi 34B','Llama-2 70B','Llama-3 70B','Qwen 72B'],
+    MMLU:[[51.8,51.7],[73.5,74.9],[63.1,63.0],[79.8,79.9],[76.5,77.2]], ARC:[[51.7,51.5],[65.6,64.9],[65.2,65.4],[71.5,71.8],[67.2,67.6]],
+    GSM8K:[[31.3,32.0],[65.5,65.0],[54.5,53.0],[90.8,91.2],[76.3,75.5]], TruthfulQA:[[44.7,47.1],[51.9,55.4],[51.8,52.8],[59.5,61.8],[55.0,56.4]]};
+  function draw(){ clear(svg);
+    if (mode==='asr'){ var x0=140, w=420, y0=30;
+      S('text',{x:x0,y:20,'class':'t-s'},svg,'HarmBench ASR, %');
+      [0,25,50,75,100].forEach(function(t){ var x=x0+t/100*w; S('line',{x1:x,y1:26,x2:x,y2:282,'class':'grid'},svg); S('text',{x:x,y:296,'class':'t-s mid'},svg,t); });
+      asr.forEach(function(r,i){ var y=y0+i*42; S('text',{x:x0-8,y:y+20,'class':'t end'},svg,r[0]);
+        [[r[1],'f-fire','Ortho'],[r[2],'f-muted','DR'],[r[3],'f-wire','GCG']].forEach(function(b,j){ if (b[0]==null){ S('text',{x:x0+4,y:y+j*11+9,'class':'t-s','font-size':9},svg,'GCG not reported'); return; }
+          S('rect',{x:x0,y:y+j*11,width:Math.max(1,b[0]/100*w),height:9,'class':b[1]},svg); }); });
+      S('rect',{x:440,y:32,width:10,height:9,'class':'f-fire'},svg); S('text',{x:455,y:40,'class':'t-s'},svg,'Ortho (orthogonalised)');
+      S('rect',{x:440,y:48,width:10,height:9,'class':'f-muted'},svg); S('text',{x:455,y:56,'class':'t-s'},svg,'DR (just ask)');
+      S('rect',{x:440,y:64,width:10,height:9,'class':'f-wire'},svg); S('text',{x:455,y:72,'class':'t-s'},svg,'GCG (per prompt)');
+      $('#tb-r').innerHTML='Qwen 14B: Ortho <b>84.3%</b> vs per-prompt GCG <b>83.5%</b>. Llama-2 7B with its system prompt: Ortho <b>22.6%</b>, rising to <b>79.9%</b> without it.';
+    } else { var d=coh[mode], x0=390, sc=55, y0=40;
+      S('text',{x:x0,y:22,'class':'t-s mid'},svg,mode+': orthogonalised minus original (points)');
+      [-4,-2,0,2].forEach(function(t){ var x=x0+t*sc; S('line',{x1:x,y1:30,x2:x,y2:270,'class':t?'grid':'axis'},svg); S('text',{x:x,y:288,'class':'t-s mid'},svg,(t>0?'+':'')+t); });
+      var tot=0; d.forEach(function(p,i){ var dv=p[0]-p[1], y=y0+i*46; tot+=dv; S('text',{x:12,y:y+18,'class':'t'},svg,coh.names[i]);
+        var x=dv<0?x0+dv*sc:x0; S('rect',{x:x,y:y+4,width:Math.max(1.5,Math.abs(dv)*sc),height:20,'class':dv<0?'f-inh':'f-ok'},svg);
+        S('text',{x:x0+(dv>0?dv*sc:0)+6,y:y+18,'class':'t-s'},svg,(dv>0?'+':'')+fmt(dv,1)+'  ('+p[1]+' → '+p[0]+')'); });
+      $('#tb-r').innerHTML='Average change on '+mode+' across these five models: <b>'+(tot>0?'+':'')+fmt(tot/5,2)+'</b> points.'; } }
+  $$('[data-tb]').forEach(function(b){ b.addEventListener('click',function(){ mode=b.dataset.tb; $$('[data-tb]').forEach(function(x){ x.classList.toggle('on',x===b); }); draw(); }); });
+  draw();
+})();
+</script>
+
+</body>
+</html>
