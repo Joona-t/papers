@@ -246,7 +246,6 @@ def build():
         <p class="menu-label">Reading font</p>{fonts}
       </div>
     </div>
-    <a class="guides-btn" href="guides/index.html" aria-label="Study guides"><span aria-hidden="true">📚</span> <span class="long">Study guides</span></a>
   </nav>
 </header>
 
@@ -268,7 +267,8 @@ def build():
 </section>
 
 <div class="layout">
-  <nav class="toc" aria-label="Contents"><p class="eyebrow">Contents</p>{toc_items}</nav>
+  <nav class="toc" aria-label="Contents"><div class="toc-top"><p class="eyebrow">Contents</p><a class="guides-pill" href="guides/index.html"><span aria-hidden="true">📚</span> Study guides</a></div>{toc_items}</nav>
+  <a class="guides-float" href="guides/index.html"><span aria-hidden="true">📚</span> Study guides</a>
   <main id="main">
     <details class="toc-mobile"><summary>Contents</summary>{toc_items}</details>
     <section id="start">

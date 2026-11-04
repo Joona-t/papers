@@ -80,3 +80,9 @@
 - Joona: add a "📚 Study guides" button to the right of Change Font & Theme. It is a pill styled like the theme button and links to guides/index.html. It stays visible when the section links fold, and below 720 px it shows just 📚 (aria-label "Study guides").
 - The extra pill took room from the wordmark, which then wrapped onto more lines (caught by an independent review). Fixes: the section links fold at 1240 px instead of 1080 px; the nav gap is 18 px while they show; the nav doesn't wrap above 560 px; the gaps are tighter below 380 px.
 - Checks: verify.mjs passes. In Chromium, header and wordmark heights match main at every width from 1560 to 390 px. At 360 and 320 px the header is 10–20 px taller. There is no horizontal overflow and no script error, the theme menu still opens, and the button text contrast is at least 8.46:1 in all 9 themes.
+
+## ITER-011 · 2026-11-04 · Study guides link moves beside Contents
+- Joona: the top right is a bad place for the button; put it to the right of Contents so it stays visible while scrolling. The top-bar pill and its nav changes from ITER-010 are undone (the section links fold at 1080 px again).
+- Wide screens: a "📚 Study guides" pill sits beside the "Contents" label in the sticky sidebar. At 1080 px and below the sidebar folds, so a floating pill stays in the bottom-right corner instead (our suggestion; Joona asked for design suggestions).
+- Independent review: the floating pill covered the footer's "source on GitHub" link on phones, so the page now has 72 px of bottom padding at 1080 px and below. Contrast is at least 8.46:1 in all 9 themes, and both links are reachable by keyboard.
+- Checks: verify.mjs passes. In Chromium, scrolled 6000 px down at 1560, 1280 and 1081 px, the sidebar pill is visible. At 1080, 390 and 320 px the floating pill is visible. There is no horizontal overflow and no script error.
