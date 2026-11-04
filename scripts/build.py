@@ -220,7 +220,7 @@ def build():
 <meta name="description" content="{esc(desc)}">
 <meta property="og:title" content="Papers worth reading · a LoveSpark archive">
 <meta property="og:description" content="{esc(desc)}">
-<meta property="og:url" content="https://lovespark.love/papers-worth-reading/">
+<meta property="og:url" content="https://lovespark.love/papers/">
 <meta name="theme-color" content="{bar}">
 <style>
 {css}</style>
@@ -287,7 +287,7 @@ def build():
 <footer>
   <div class="foot-inner">
     <img src="{mascot}" alt="Sparky, the LoveSpark wolf mascot">
-    <div>One self-contained page: no server, no tracking, nothing leaves your machine except the papers you choose to open. Built from <code>data/papers.json</code> · MIT licensed · a <a href="https://lovespark.love/" rel="noopener">LoveSpark</a> archive · <a href="https://github.com/Joona-t/papers-worth-reading" rel="noopener">source on GitHub</a>.</div>
+    <div>One self-contained page: no server, no tracking, nothing leaves your machine except the papers you choose to open. Built from <code>data/papers.json</code> · MIT licensed · a <a href="https://lovespark.love/" rel="noopener">LoveSpark</a> archive · <a href="https://github.com/Joona-t/papers" rel="noopener">source on GitHub</a>.</div>
   </div>
 </footer>
 

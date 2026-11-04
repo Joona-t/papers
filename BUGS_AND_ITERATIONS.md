@@ -72,3 +72,6 @@
 - Checks: verify.mjs 3590 PASS. In Chromium, all figures render at 800 and 390 px with no horizontal overflow and no script errors.
 - The repo was renamed from `papers` to `papers-worth-reading`, which moved the site to lovespark.love/papers-worth-reading/ (the old /papers/ address now 404s). Every link to the site and to the GitHub source now uses the new name.
 - Independent review: no errors. The disclaimers now say the second review was also by Claude, and that "I" on the main page is Joona; the dropout guide says half of the *hidden* units. verify.mjs now also requires each guide's "not yet read" note.
+
+## ITER-009 · 2026-11-04 · Back to lovespark.love/papers/
+- Joona: the /papers/ link is already posted on other sites, so the repo goes back to the name `papers` (Joona renames it on GitHub) and every link returns to lovespark.love/papers/ and github.com/Joona-t/papers. This undoes the link change in ITER-008.

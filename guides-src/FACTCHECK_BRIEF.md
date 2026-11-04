@@ -1,6 +1,6 @@
 # Brief: independent fact-check of study guides
 
-You are an independent fact-checker for study guides about AI papers in Joona's archive (https://lovespark.love/papers-worth-reading/). The reader learns from these, so a wrong claim is worse than a missing one. Another writer produced the guides; check them with fresh eyes against primary sources.
+You are an independent fact-checker for study guides about AI papers in Joona's archive (https://lovespark.love/papers/). The reader learns from these, so a wrong claim is worse than a missing one. Another writer produced the guides; check them with fresh eyes against primary sources.
 
 Guides are content fragments at `guides-src/content/<id>.html`. Paper metadata (title, authors, year, url, the archive's one-line finding) is in `guides-src/papers.json`. Each file has a Plain English part (after `<!--SIMPLE-->`), an In depth part (after `<!--TECH-->`) and JavaScript (after `<!--SCRIPT-->`).
 

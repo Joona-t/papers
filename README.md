@@ -8,7 +8,7 @@ A **Further reading & learning** section ends the page: 28 free resources, with 
 
 **Every link is open, free and needs no sign-in.** Papers link to arXiv, the proceedings, or an author's or lab's own PDF, never a publisher page with a paywall or login. `verify.mjs` refuses known walled hosts (doi.org, ACM, Nature, IEEE, APA, MIT Press, Springer, Coursera and others).
 
-Read it at **[lovespark.love/papers-worth-reading](https://lovespark.love/papers-worth-reading/)**, or open `index.html` in any browser. `index.html` is one self-contained file, and so is each study guide in `guides/`: fonts and the mascot are inlined, it makes no network requests, and nothing leaves your machine except the papers you choose to open.
+Read it at **[lovespark.love/papers](https://lovespark.love/papers/)**, or open `index.html` in any browser. `index.html` is one self-contained file, and so is each study guide in `guides/`: fonts and the mascot are inlined, it makes no network requests, and nothing leaves your machine except the papers you choose to open.
 
 ## Editing
 

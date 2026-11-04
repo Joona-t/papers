@@ -1,6 +1,6 @@
 # Brief: writing study guides for "Papers worth reading"
 
-You are writing study guides for papers in Joona's archive https://lovespark.love/papers-worth-reading/. Joona reads one paper each morning and wants real understanding. Each guide has two tabs:
+You are writing study guides for papers in Joona's archive https://lovespark.love/papers/. Joona reads one paper each morning and wants real understanding. Each guide has two tabs:
 
 - **Plain English**: for someone never formally taught the field. Everyday analogies, no jargon without explanation, short paragraphs. Simplify, but never say something false.
 - **In depth**: for academics and professionals. The paper's actual setup, equations, algorithm, experiments with real numbers, limitations, and later refinements, with section/equation/table/figure references.
