@@ -8,7 +8,7 @@ import html, json, pathlib, re, sys, time, urllib.error, urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DATA = json.loads((ROOT / "data/papers.json").read_text(encoding="utf-8"))
-UA = {"User-Agent": "lovespark-papers-linkcheck/1.0 (+https://lovespark.love/papers-worth-reading/)"}
+UA = {"User-Agent": "lovespark-papers-linkcheck/1.0 (+https://lovespark.love/papers/)"}
 
 def norm(t):
     return re.sub(r"[^a-z0-9]+", " ", t.replace("$\\pi_0$", "π0").lower().replace("π", "pi")).strip()
