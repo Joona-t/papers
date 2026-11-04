@@ -77,6 +77,6 @@
 - Joona: the /papers/ link is already posted on other sites, so the repo goes back to the name `papers` (Joona renames it on GitHub) and every link returns to lovespark.love/papers/ and github.com/Joona-t/papers. This undoes the link change in ITER-008.
 
 ## ITER-010 · 2026-11-04 · 📚 Study guides button
-- Joona: add a "📚 Study guides" button to the right of Change Font & Theme. It is a pill styled like the theme button and links to guides/index.html. It stays visible when the section links fold at 1080 px, shortens to "📚 Guides" below 560 px and to just 📚 below 380 px (aria-label "Study guides").
-- Nav links and the theme button no longer wrap onto two lines (they did once the extra button took space).
-- Checks: verify.mjs passes. In Chromium at 1560, 1000, 390 and 320 px the button sits right of the theme button on the same row, with no horizontal overflow and no script errors.
+- Joona: add a "📚 Study guides" button to the right of Change Font & Theme. It is a pill styled like the theme button and links to guides/index.html. It stays visible when the section links fold, and below 720 px it shows just 📚 (aria-label "Study guides").
+- The extra pill took room from the wordmark, which then wrapped onto more lines (caught by an independent review). Fixes: the section links fold at 1240 px instead of 1080 px; the nav gap is 18 px while they show; the nav doesn't wrap above 560 px; the gaps are tighter below 380 px.
+- Checks: verify.mjs passes. In Chromium, header and wordmark heights match main at every width from 1560 to 390 px. At 360 and 320 px the header is 10–20 px taller. There is no horizontal overflow and no script error, the theme menu still opens, and the button text contrast is at least 8.46:1 in all 9 themes.

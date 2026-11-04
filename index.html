@@ -187,14 +187,14 @@ sub, sup { line-height: 0; }
 #themeBtn:hover { border-color: var(--accent); color: var(--accent); }
 /* study guides pill, beside the theme button (Joona 2026-11-04) */
 .topnav a.guides-btn {
-  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border: 1px solid var(--line-strong);
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; box-sizing: border-box; padding: 0 14px; border: 1px solid var(--line-strong);
   border-radius: 999px; font-size: 12.5px; color: var(--ink-soft); white-space: nowrap;
 }
 .topnav a.guides-btn:hover { border-color: var(--accent); color: var(--accent); }
-.topnav a, #themeBtn { white-space: nowrap; }
-.guides-btn .short { display: none; }
-@media (max-width: 560px) { .guides-btn .long { display: none; } .guides-btn .short { display: inline; } .topnav { gap: 8px; } #themeBtn, .topnav a.guides-btn { padding: 0 10px; } }
-@media (max-width: 380px) { .guides-btn .short { display: none; } #themeBtn { white-space: normal; } }
+@media (min-width: 561px) { .topnav a, #themeBtn { white-space: nowrap; } }
+@media (min-width: 1241px) { .topnav { gap: 18px; } }
+@media (max-width: 720px) { .guides-btn .long { display: none; } .topnav { gap: 10px; } .topnav a.guides-btn { padding: 0 10px; } }
+@media (max-width: 380px) { .topnav { gap: 6px; } #themeBtn { padding: 0 10px; } }
 #themeMenu {
   position: absolute; right: 0; top: calc(100% + 8px); z-index: 100; min-width: 220px; padding: 10px;
   background: var(--paper); border: 1px solid var(--line-strong); box-shadow: 0 12px 32px rgba(0,0,0,.12);
@@ -432,7 +432,7 @@ footer { border-top: 1px solid var(--line); }
   .toc-mobile .toc-group { border: 0; background: none; }
   .toc-mobile .toc-group > ol { display: block; margin: 0; padding: 0 18px 8px 54px; border-left: 0; }
 }
-@media (max-width: 1080px) { .topnav a:not(.guides-btn) { display: none; } }   /* the parts rail folds here too; frees room for "Change Font & Theme" */
+@media (max-width: 1240px) { .topnav a:not(.guides-btn) { display: none; } }   /* the parts rail folds here too; frees room for "Change Font & Theme" */
 @media (max-width: 860px) {
   .hero { grid-template-columns: 1fr; gap: 44px; padding-top: 48px; }
 }
@@ -637,7 +637,7 @@ main .res p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-so
         <p class="menu-label">Reading font</p><button type="button" role="menuitemradio" aria-checked="false" data-font="serif"><span class="fontpreview" style="font-family:var(--serif)" aria-hidden="true">Aa</span>Serif</button><button type="button" role="menuitemradio" aria-checked="false" data-font="sans"><span class="fontpreview" style="font-family:var(--sans)" aria-hidden="true">Aa</span>Sans</button><button type="button" role="menuitemradio" aria-checked="false" data-font="dyslexic"><span class="fontpreview" style="font-family:var(--dys)" aria-hidden="true">Aa</span>OpenDyslexic</button><button type="button" role="menuitemradio" aria-checked="false" data-font="lexend"><span class="fontpreview" style="font-family:Lexend,sans-serif" aria-hidden="true">Aa</span>Lexend</button><button type="button" role="menuitemradio" aria-checked="false" data-font="comfortaa"><span class="fontpreview" style="font-family:Comfortaa,sans-serif" aria-hidden="true">Aa</span>Comfortaa</button><button type="button" role="menuitemradio" aria-checked="false" data-font="atkinson"><span class="fontpreview" style="font-family:'Atkinson Hyperlegible',sans-serif" aria-hidden="true">Aa</span>Atkinson Hyperlegible</button>
       </div>
     </div>
-    <a class="guides-btn" href="guides/index.html" aria-label="Study guides"><span aria-hidden="true">📚</span> <span class="long">Study guides</span><span class="short">Guides</span></a>
+    <a class="guides-btn" href="guides/index.html" aria-label="Study guides"><span aria-hidden="true">📚</span> <span class="long">Study guides</span></a>
   </nav>
 </header>
 

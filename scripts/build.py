@@ -246,7 +246,7 @@ def build():
         <p class="menu-label">Reading font</p>{fonts}
       </div>
     </div>
-    <a class="guides-btn" href="guides/index.html" aria-label="Study guides"><span aria-hidden="true">📚</span> <span class="long">Study guides</span><span class="short">Guides</span></a>
+    <a class="guides-btn" href="guides/index.html" aria-label="Study guides"><span aria-hidden="true">📚</span> <span class="long">Study guides</span></a>
   </nav>
 </header>
 
