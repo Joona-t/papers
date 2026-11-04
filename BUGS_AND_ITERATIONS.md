@@ -84,4 +84,5 @@
 ## ITER-011 · 2026-11-04 · Study guides link moves beside Contents
 - Joona: the top right is a bad place for the button; put it to the right of Contents so it stays visible while scrolling. The top-bar pill and its nav changes from ITER-010 are undone (the section links fold at 1080 px again).
 - Wide screens: a "📚 Study guides" pill sits beside the "Contents" label in the sticky sidebar. At 1080 px and below the sidebar folds, so a floating pill stays in the bottom-right corner instead (our suggestion; Joona asked for design suggestions).
+- Independent review: the floating pill covered the footer's "source on GitHub" link on phones, so the page now has 72 px of bottom padding at 1080 px and below. Contrast is at least 8.46:1 in all 9 themes, and both links are reachable by keyboard.
 - Checks: verify.mjs passes. In Chromium, scrolled 6000 px down at 1560, 1280 and 1081 px, the sidebar pill is visible. At 1080, 390 and 320 px the floating pill is visible. There is no horizontal overflow and no script error.
