@@ -220,7 +220,7 @@ def build():
 <meta name="description" content="{esc(desc)}">
 <meta property="og:title" content="Papers worth reading · a LoveSpark archive">
 <meta property="og:description" content="{esc(desc)}">
-<meta property="og:url" content="https://lovespark.love/papers/">
+<meta property="og:url" content="https://lovespark.love/papers-worth-reading/">
 <meta name="theme-color" content="{bar}">
 <style>
 {css}</style>
@@ -276,7 +276,7 @@ def build():
       <p>Each field runs oldest to newest. Pick a field, read down the line, and open the papers whose finding surprises you. The <strong>title</strong> opens the full paper in a new tab, usually its free arXiv page. <strong>Built on</strong> and <strong>Led to</strong> jump to the papers before and after it, sometimes in another field: the transformer came out of translation work, and diffusion moved from images into robot control.</p>
       <p>The one-line findings are summaries, not quotes, so the paper is always the authority. Every title and link was checked against its source in {esc(data["checked"])}. Incident reports are marked as such: they are not peer-reviewed papers. A paper marked <strong>No free copy</strong> has no free version without a sign-in, so its title opens a free explainer instead.</p>
       <h3 id="guides">Study guides, made with AI</h3>
-      <p>Every paper has a <strong>Study guide</strong> link: a page with a Plain English tab for anyone and an In depth tab for academics and professionals, with diagrams you can play with. <a href="guides/index.html">See all the guides</a>. They were written by Claude, an AI model, and each was checked against its paper by a second, independent AI review. I have not personally read all of them yet, so mistakes can remain: use them to get into a paper, and check anything that matters against the paper itself.</p>
+      <p>Every paper has a <strong>Study guide</strong> link: a page with a Plain English tab for anyone and an In depth tab for academics and professionals, with diagrams you can play with. <a href="guides/index.html">See all the guides</a>. They were written by Claude, an AI model, and each was checked against its paper by a second, separate AI review (also by Claude). I (Joona) have not personally read all of them yet, so mistakes can remain: use them to get into a paper, and check anything that matters against the paper itself.</p>
       <p>You can also have an AI make a guide just for you, at your level and in the format you like: an interactive page, flashcards, a slide deck, even a video. <a href="guides/make-your-own.html">Here is how to ask, and how to check the result</a>.</p>
     </section>
     {"".join(fields)}
@@ -287,7 +287,7 @@ def build():
 <footer>
   <div class="foot-inner">
     <img src="{mascot}" alt="Sparky, the LoveSpark wolf mascot">
-    <div>One self-contained page: no server, no tracking, nothing leaves your machine except the papers you choose to open. Built from <code>data/papers.json</code> · MIT licensed · a <a href="https://lovespark.love/" rel="noopener">LoveSpark</a> archive · <a href="https://github.com/Joona-t/papers" rel="noopener">source on GitHub</a>.</div>
+    <div>One self-contained page: no server, no tracking, nothing leaves your machine except the papers you choose to open. Built from <code>data/papers.json</code> · MIT licensed · a <a href="https://lovespark.love/" rel="noopener">LoveSpark</a> archive · <a href="https://github.com/Joona-t/papers-worth-reading" rel="noopener">source on GitHub</a>.</div>
   </div>
 </footer>
 

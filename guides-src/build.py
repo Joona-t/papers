@@ -64,7 +64,7 @@ def build(pid):
         if not c.get(k, '').strip(): sys.exit(f'{pid}: missing {k}')
     links = [f'<a href="{esc(p["url"])}">{"Free explainer (" + esc(p["nofree"]) + ")" if p.get("nofree") else "Read the paper (free)"}</a>']
     if p.get('nofree'): links.append('<span class="badge">No free copy of the original</span>')
-    links.append('<a href="https://lovespark.love/papers/">The archive</a>')
+    links.append('<a href="https://lovespark.love/papers-worth-reading/">The archive</a>')
     lede = c['LEDE'].strip()
     rep = {
         'SHORT': esc(p['short']), 'YEAR': str(p['year']), 'TITLE': esc(p['title']),
@@ -96,8 +96,8 @@ def index():
 <style>.idx section{{padding-top:36px}} .idx ol{{margin:12px 0 0;padding-left:1.4em;display:grid;gap:10px}} .idx .t2{{color:var(--muted);font-size:.92rem}} .idx .soon{{color:var(--muted)}}</style>
 </head><body><div class="wrap idx">
 <header class="top"><p class="eyebrow">Study guides · {len(have)} of {len(papers)} ready</p><h1>Papers explained</h1>
-<p class="lede">One guide per paper in <a href="https://lovespark.love/papers/">Papers worth reading</a>. Each has a Plain English tab for anyone and an In depth tab for specialists, with diagrams you can play with.</p>
-<aside class="aimade"><span class="label">Made with AI · check it yourself</span><p>These guides were written by Claude, an AI model, and each was checked against its paper by a second, independent AI review. Joona, who runs the archive, has not personally read all of them yet, so mistakes can remain. The papers are the authority: verify anything that matters to you.</p><p>You can also <a href="make-your-own.html">ask an AI to make a guide just for you</a>, at your level and in the format you like.</p></aside></header>
+<p class="lede">One guide per paper in <a href="https://lovespark.love/papers-worth-reading/">Papers worth reading</a>. Each has a Plain English tab for anyone and an In depth tab for specialists, with diagrams you can play with.</p>
+<aside class="aimade"><span class="label">Made with AI · check it yourself</span><p>These guides were written by Claude, an AI model, and each was checked against its paper by a second, separate AI review (also by Claude). Joona, who runs the archive, has not personally read all of them yet, so mistakes can remain. The papers are the authority: verify anything that matters to you.</p><p>You can also <a href="make-your-own.html">ask an AI to make a guide just for you</a>, at your level and in the format you like.</p></aside></header>
 {"".join(rows)}
 </div></body></html>'''
     open(os.path.join(OUT, 'index.html'), 'w').write(head + body)

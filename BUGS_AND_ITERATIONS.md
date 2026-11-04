@@ -70,3 +70,5 @@
 - Each guide was written by Claude, then fact-checked against its paper by an independent AI review; every finding was fixed. The guides use system fonts only (no Google Fonts), so the no-network rule holds for them too.
 - verify.mjs now checks: every paper has a guide and is linked exactly once; each guide has the AI notice, no external script, image or stylesheet, no network API, no walled host, no local path, and no broken link to another guide.
 - Checks: verify.mjs 3590 PASS. In Chromium, all figures render at 800 and 390 px with no horizontal overflow and no script errors.
+- The repo was renamed from `papers` to `papers-worth-reading`, which moved the site to lovespark.love/papers-worth-reading/ (the old /papers/ address now 404s). Every link to the site and to the GitHub source now uses the new name.
+- Independent review: no errors. The disclaimers now say the second review was also by Claude, and that "I" on the main page is Joona; the dropout guide says half of the *hidden* units. verify.mjs now also requires each guide's "not yet read" note.

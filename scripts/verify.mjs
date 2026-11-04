@@ -86,6 +86,7 @@ for (const p of data.papers) {
 for (const f of gfiles) {
   const g = readFileSync(new URL('guides/' + f, root), 'utf8');
   ok(/Made with AI|written with Claude/.test(g), `guides/${f}: missing AI-made notice`);
+  if (f !== 'make-your-own.html') ok(/not (yet all|personally) read/.test(g), `guides/${f}: missing 'not yet read by Joona' note`);
   ok(!/<(?:script|img|iframe)\b[^>]*\bsrc\s*=\s*["']https?:/i.test(g), `guides/${f}: external script/img`);
   ok(!/<link\b[^>]*\bhref\s*=\s*["']https?:/i.test(g), `guides/${f}: external stylesheet`);
   ok(!/\b(fetch|XMLHttpRequest|WebSocket|sendBeacon)\s*\(/.test(g), `guides/${f}: network API`);
