@@ -91,3 +91,8 @@
 - Added Panfilov et al., "Stealing Reasoning Traces from Proprietary LLM APIs" (arXiv:2608.09867), to Safety & security with a one-line finding and a free arXiv link.
 - Added a brief abstract-based guide; its Codex authorship and lack of independent review are explicit. Guide notices distinguish the original Claude-reviewed collection from later additions.
 - Validation: 3,696 offline checks passed across 76 papers; the new arXiv title and URL passed the online check. The full online check found one unrelated existing failure: the Nature DQN PDF host klab.tch.harvard.edu did not resolve. Existing link preserved.
+
+## ITER · 2026-11-05 · Remove the reasoning-trace guide
+- Removed the brief reasoning-trace guide and its source at the user's request; retained the paper citation, summary and arXiv link in Safety.
+- Removed its guide-index entry and archive guide link. Marked the entry with guide: false so checks enforce the intentional absence without weakening checks for the other 75 guides.
+- Removed the abstract-summary attribution special case and restored the original guides' authorship text. Validation: 3,682 offline checks pass; paper placement and absence of guide files/links checked directly.

@@ -25,6 +25,8 @@ To add a paper, add an object to `papers` with `id`, `field`, `year`, `short`, `
 
 ## Design and accessibility
 
+Set `"guide": false` on a paper to deliberately omit its study guide. Keep both its guide source and generated guide absent; the build omits guide links and the verifier checks that they stay absent. A paper entry does not require creating a guide when this flag is set.
+
 Same template as the [Qwen guide](https://lovespark.love/qwen-guide/): flat paper, hairline rules, a contents rail of numbered field cards. The **Change Font & Theme** menu has the five LoveSpark themes (Basalt, Bubblegum, Retro Pink, Dark Noir and Beige Paper) and the four **Korean** themes from the LoveSpark Retro Cursor extension's popup: Seoul Y2K 서울 (the default for new readers), Gingham Sticker 깅엄, Holo Mochi 모찌 and Neon Usagi 네온. Each keeps its own palette, background and card style, and the build refuses any theme whose text falls below 4.8:1 contrast against anything it can sit on, gradient stops included. Six reading fonts: Serif, Sans, OpenDyslexic, and the extension's Lexend, Comfortaa and Atkinson Hyperlegible (all SIL OFL 1.1, bundled in the file). Keyboard navigation, visible focus, `prefers-reduced-motion`, and it works down to 320 px.
 
 ## License

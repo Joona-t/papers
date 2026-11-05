@@ -1086,7 +1086,7 @@
    "finding": "Reusing encrypted reasoning blocks across models within a provider lets weaker models reveal hidden traces, exposing private data and enabling concealed prompt injections; the authors propose cryptographic and system-level mitigations.",
    "url": "https://arxiv.org/abs/2608.09867",
    "next": [],
-   "guide_kind": "abstract-summary"
+   "guide": false
   }
  ],
  "resources": {

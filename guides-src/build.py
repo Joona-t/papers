@@ -74,12 +74,6 @@ def build(pid):
     }
     s = shell
     for k, v in rep.items(): s = s.replace('{{' + k + '}}', v)
-    if p.get('guide_kind') == 'abstract-summary':
-        notice = ('This brief guide was written with Codex (AI) from the paper\'s abstract. '
-                  'It has not had a second, independent AI review. Joona has not personally read this guide. '
-                  'Check the full paper for experimental details and limitations.')
-        s = re.sub(r'<p>This guide was written by Claude.*?</p>', '<p>' + notice + '</p>', s)
-        s = re.sub(r'<p>Written by Claude \(AI\).*?</p>', '<p>AI-written abstract summary; not a full-paper review.</p>', s)
     assert '{{' not in s.replace('{{', '', 0) or True
     open(os.path.join(OUT, pid + '.html'), 'w').write(s)
 
@@ -90,6 +84,7 @@ def index():
         items = [p for p in d['papers'] if p['field'] == f['id']]
         lis = []
         for p in items:
+            if p.get('guide') is False: continue
             name = f'{esc(p["short"])} <span class="cite">{p["year"]}</span>'
             if p['id'] in have:
                 lis.append(f'<li><a href="{p["id"]}.html">{name}</a><br><span class="t2">{esc(p["title"])}</span></li>')
@@ -97,13 +92,13 @@ def index():
                 lis.append(f'<li class="soon">{name} <span class="cite">coming</span><br><span class="t2">{esc(p["title"])}</span></li>')
         rows.append(f'<section><h2>{esc(f["name"])}</h2><ol>{"".join(lis)}</ol></section>')
     css = re.search(r'<style>.*?</style>', shell, re.S).group(0)
-    head = shell.split('<style>')[0].replace('{{SHORT}} ({{YEAR}}) study guide', 'Papers explained').replace('{{DESC}}', 'Study guides for every paper in the Papers worth reading archive.')
+    head = shell.split('<style>')[0].replace('{{SHORT}} ({{YEAR}}) study guide', 'Papers explained').replace('{{DESC}}', 'Available study guides for the Papers worth reading archive.')
     body = f'''{css}
 <style>.idx section{{padding-top:36px}} .idx ol{{margin:12px 0 0;padding-left:1.4em;display:grid;gap:10px}} .idx .t2{{color:var(--muted);font-size:.92rem}} .idx .soon{{color:var(--muted)}}</style>
 </head><body><div class="wrap idx">
 <header class="top"><p class="eyebrow">Study guides · {len(have)} of {len(papers)} ready</p><h1>Papers explained</h1>
-<p class="lede">One guide per paper in <a href="https://lovespark.love/papers/">Papers worth reading</a>. Each has Plain English and In depth tabs; many include diagrams you can play with.</p>
-<aside class="aimade"><span class="label">Made with AI · check it yourself</span><p>The original guides were written and separately reviewed by Claude (AI). Later additions state their author and review status on the guide itself; brief abstract summaries are labelled as such. Joona, who runs the archive, has not personally read all of them yet, so mistakes can remain. The papers are the authority: verify anything that matters to you.</p><p>You can also <a href="make-your-own.html">ask an AI to make a guide just for you</a>, at your level and in the format you like.</p></aside></header>
+<p class="lede">Study guides for papers in <a href="https://lovespark.love/papers/">Papers worth reading</a>. Each has a Plain English tab for anyone and an In depth tab for specialists, with diagrams you can play with.</p>
+<aside class="aimade"><span class="label">Made with AI · check it yourself</span><p>These guides were written by Claude, an AI model, and each was checked against its paper by a second, separate AI review (also by Claude). Joona, who runs the archive, has not personally read all of them yet, so mistakes can remain. The papers are the authority: verify anything that matters to you.</p><p>You can also <a href="make-your-own.html">ask an AI to make a guide just for you</a>, at your level and in the format you like.</p></aside></header>
 {"".join(rows)}
 </div></body></html>'''
     open(os.path.join(OUT, 'index.html'), 'w').write(head + body)

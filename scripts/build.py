@@ -142,11 +142,11 @@ def entry(p, by_id, built_on):
           <div class="entry-meta">{esc(p["authors"])} · {esc(p["venue"])} · <span class="entry-src">{src} <span aria-hidden="true">↗</span></span></div>
           {rel_links("Built on", built_on.get(p["id"], []), by_id)}{rel_links("Led to", p["next"], by_id)}{also}{guide_link(p)}
         </div>
-      </article>"""
+      </article>""".replace("\n          \n", "\n\n")
 
 def guide_link(p):
     """Link to the paper's study guide (guides/<id>.html), written with Claude; only if the file exists."""
-    if not (ROOT / "guides" / f'{p["id"]}.html').exists(): return ""
+    if p.get('guide') is False or not (ROOT / "guides" / f'{p["id"]}.html').exists(): return ""
     return (f'<div class="entry-rel entry-guide"><span class="rel-label">Study guide</span>'
             f'<a href="guides/{p["id"]}.html">Plain English + in depth, made with AI <span class="sr-only">(study guide for {esc(p["short"])})</span></a></div>')
 
@@ -277,7 +277,7 @@ def build():
       <p>Each field runs oldest to newest. Pick a field, read down the line, and open the papers whose finding surprises you. The <strong>title</strong> opens the full paper in a new tab, usually its free arXiv page. <strong>Built on</strong> and <strong>Led to</strong> jump to the papers before and after it, sometimes in another field: the transformer came out of translation work, and diffusion moved from images into robot control.</p>
       <p>The one-line findings are summaries, not quotes, so the paper is always the authority. Every title and link was checked against its source in {esc(data["checked"])}. Incident reports are marked as such: they are not peer-reviewed papers. A paper marked <strong>No free copy</strong> has no free version without a sign-in, so its title opens a free explainer instead.</p>
       <h3 id="guides">Study guides, made with AI</h3>
-      <p>Every paper has a <strong>Study guide</strong> link: a page with Plain English and In depth tabs. Many include diagrams you can play with. <a href="guides/index.html">See all the guides</a>. The original guides were written and separately reviewed by Claude (AI). Later additions state their author and review status on the guide itself; brief abstract summaries are labelled as such. I (Joona) have not personally read all of them yet, so mistakes can remain: use them to get into a paper, and check anything that matters against the paper itself.</p>
+      <p>Where available, a <strong>Study guide</strong> link opens a page with a Plain English tab for anyone and an In depth tab for academics and professionals, with diagrams you can play with. <a href="guides/index.html">See all the guides</a>. They were written by Claude, an AI model, and each was checked against its paper by a second, separate AI review (also by Claude). I (Joona) have not personally read all of them yet, so mistakes can remain: use them to get into a paper, and check anything that matters against the paper itself.</p>
       <p>You can also have an AI make a guide just for you, at your level and in the format you like: an interactive page, flashcards, a slide deck, even a video. <a href="guides/make-your-own.html">Here is how to ask, and how to check the result</a>.</p>
     </section>
     {"".join(fields)}

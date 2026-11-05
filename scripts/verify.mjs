@@ -76,10 +76,15 @@ ok(!/\b(fetch|XMLHttpRequest|WebSocket|sendBeacon)\s*\(/.test(script), 'network 
 const personal = /\/Users\/[A-Za-z]|\/home\/[A-Za-z]|C:\\Users\\/;
 for (const [name, text] of [['index.html', html.replace(/data:[^"')]+/g, '')], ['data', JSON.stringify(data)]]) ok(!personal.test(text), `personal reference in ${name}: ${text.match(personal)}`);
 
-// 6. study guides (guides/, written with Claude 2026-11-04): one per paper, linked once, each says it is AI-made,
+// 6. study guides (guides/, written with Claude 2026-11-04): required unless explicitly disabled, linked once, each says it is AI-made,
 //    and each obeys the same rules as the main page (no external resources, no walled hosts, no local paths)
-const gfiles = [...data.papers.map(p => p.id + '.html'), 'index.html', 'make-your-own.html'];
+const gfiles = [...data.papers.filter(p => p.guide !== false).map(p => p.id + '.html'), 'index.html', 'make-your-own.html'];
 for (const p of data.papers) {
+  if (p.guide === false) {
+    ok(!existsSync(new URL(`guides/${p.id}.html`, root)), `${p.id}: disabled guide still exists`);
+    ok(!html.includes(`href="guides/${p.id}.html"`), `${p.id}: disabled guide still linked`);
+    continue;
+  }
   ok(existsSync(new URL(`guides/${p.id}.html`, root)), `${p.id}: no study guide`);
   ok(html.split(`href="guides/${p.id}.html"`).length === 2, `${p.id}: study guide not linked exactly once`);
 }
