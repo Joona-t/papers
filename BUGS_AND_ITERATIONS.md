@@ -86,3 +86,8 @@
 - Wide screens: a "📚 Study guides" pill sits beside the "Contents" label in the sticky sidebar. At 1080 px and below the sidebar folds, so a floating pill stays in the bottom-right corner instead (our suggestion; Joona asked for design suggestions).
 - Independent review: the floating pill covered the footer's "source on GitHub" link on phones, so the page now has 72 px of bottom padding at 1080 px and below. Contrast is at least 8.46:1 in all 9 themes, and both links are reachable by keyboard.
 - Checks: verify.mjs passes. In Chromium, scrolled 6000 px down at 1560, 1280 and 1081 px, the sidebar pill is visible. At 1080, 390 and 320 px the floating pill is visible. There is no horizontal overflow and no script error.
+
+## ITER · 2026-11-05 · Reasoning-trace extraction paper
+- Added Panfilov et al., "Stealing Reasoning Traces from Proprietary LLM APIs" (arXiv:2608.09867), to Safety & security with a one-line finding and a free arXiv link.
+- Added a brief abstract-based guide; its Codex authorship and lack of independent review are explicit. Guide notices distinguish the original Claude-reviewed collection from later additions.
+- Validation: 3,696 offline checks passed across 76 papers; the new arXiv title and URL passed the online check. The full online check found one unrelated existing failure: the Nature DQN PDF host klab.tch.harvard.edu did not resolve. Existing link preserved.
