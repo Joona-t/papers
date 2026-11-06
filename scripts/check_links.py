@@ -25,7 +25,7 @@ def get(url, method="GET", tries=4, limit=None):
 
 papers = DATA["papers"]
 fails = 0
-arxiv = {re.search(r"arxiv\.org/abs/([\d.]+)", p["url"]).group(1): p for p in papers if "arxiv.org/abs/" in p["url"]}
+arxiv = {re.search(r"arxiv\.org/(?:abs|pdf)/([\d.]+)", p["url"]).group(1): p for p in papers if re.search(r"arxiv\.org/(?:abs|pdf)/", p["url"])}
 for aid, p in list(arxiv.items()):
     # abstract pages carry the title in a citation_title meta tag; the export API rate-limits hard
     _, body = get(f"https://arxiv.org/abs/{aid}")
@@ -38,7 +38,7 @@ for aid, p in list(arxiv.items()):
 for aid in arxiv:
     fails += 1; print(f"MISSING {aid} (not returned by arXiv)")
 
-others = [(p["id"], p["url"]) for p in papers if "arxiv.org/abs/" not in p["url"]]
+others = [(p["id"], p["url"]) for p in papers if not re.search(r"arxiv\.org/(?:abs|pdf)/", p["url"])]
 others += [(p["id"], a["url"]) for p in papers for a in p.get("also", [])]
 others += [(r["id"], r["url"]) for r in DATA["resources"]["items"]]
 class NoFollow(urllib.request.HTTPRedirectHandler):

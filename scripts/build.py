@@ -114,8 +114,8 @@ def extra_fonts_css():
 ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
 
 def source_label(url):
-    m = re.search(r"arxiv\.org/abs/([\d.]+)", url)
-    if m: return f"arXiv {m.group(1)}"
+    m = re.search(r"arxiv\.org/(abs|pdf)/([\d.]+)", url)
+    if m: return f"arXiv {m.group(2)}" + (" · PDF" if m.group(1) == "pdf" else "")
     if "doi.org/" in url: return "DOI " + url.split("doi.org/", 1)[1]
     if url.endswith(".pdf"): return "PDF"
     return re.sub(r"^https?://(www\.)?([^/]+).*$", r"\2", url)
