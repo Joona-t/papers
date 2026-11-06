@@ -96,3 +96,10 @@
 - Removed the brief reasoning-trace guide and its source at the user's request; retained the paper citation, summary and arXiv link in Safety.
 - Removed its guide-index entry and archive guide link. Marked the entry with guide: false so checks enforce the intentional absence without weakening checks for the other 75 guides.
 - Removed the abstract-summary attribution special case and restored the original guides' authorship text. Validation: 3,682 offline checks pass; paper placement and absence of guide files/links checked directly.
+
+## ITER-012 · 2026-11-06 · Reasoning-traces card opens the paper; full study guide
+- Joona: make the "Stealing Reasoning Traces" card link straight to the paper, and write a study guide that explains how the research and experiments were done.
+- The card now opens the arXiv PDF (https://arxiv.org/pdf/2608.09867). Its source label reads "arXiv 2608.09867 · PDF". check_links.py checks arXiv PDF links against the arXiv title like abs links.
+- `guide: false` is removed and the guide is written by Claude from the full paper (v1), not the abstract. It has seven Plain English ideas and eight In depth sections organised around method: the compatibility test, decoder choice, the token-ratio proxy, first- and third-party experiments, the public-log privacy study, injection demos, disclosure and mitigations. It has three interactive figures. It explains the attack conceptually and leaves out the transcription prompts and Appendix C pipelines.
+- Independent fact-check against the paper: about 75 claims verified and 0 errors. Fixes: the Fig. 6 counts carry the paper's own scope inconsistency (the §4.1 text says genuine sessions, the caption says all sources); Appendix B's Opus and Sol prefills are now separate; the 1:1 ratio is placed in the Fig. 7 caption context; "semi-hidden" is cited to §5.5; the judge-model wording is clarified.
+- Checks: verify.mjs passes (76 papers). In Chromium at 900 and 390 px, the figures render with no overflow and no script errors.

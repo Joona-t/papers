@@ -1084,9 +1084,8 @@
    "authors": "Alexander Panfilov, David Schmotz, Ilia Shumailov, Luca Beurer-Kellner, Joachim Schaeffer, Ameya Prabhu, Jonas Geiping, Maksym Andriushchenko",
    "venue": "arXiv preprint",
    "finding": "Reusing encrypted reasoning blocks across models within a provider lets weaker models reveal hidden traces, exposing private data and enabling concealed prompt injections; the authors propose cryptographic and system-level mitigations.",
-   "url": "https://arxiv.org/abs/2608.09867",
-   "next": [],
-   "guide": false
+   "url": "https://arxiv.org/pdf/2608.09867",
+   "next": []
   }
  ],
  "resources": {

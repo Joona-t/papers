@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stealing reasoning traces (2026) study guide</title>
+<meta name="description" content="Reasoning models think before they answer. Providers hide that thinking, so they send it back to the user&#x27;s software as a sealed, encrypted block to pass along on the next request. This paper shows that in July 2026 those sealed blocks could be accepted by other conversations, other users and o">
+<style>
+/* One reading column on graph-paper ground. Two tabs share the header: Plain English (no background assumed) and In depth (for specialists). */
+:root {
+  --paper: #eef1f4; --card: #f9fafb; --ink: #18212c; --muted: #586473; --rule: #cbd3dc;
+  --wire: #34588a; --fire: #d27a22; --fire-soft: #f4dcc2; --inhib: #b0384a;
+  --set1: #dce6f3; --set2: #efe2d3; --ok: #2f7a4f; --ok-soft: #d8ecdf;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+    --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+    --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151b; --card: #171e27; --ink: #e2e7ed; --muted: #98a4b3; --rule: #2b3541;
+  --wire: #86a8d6; --fire: #f0a052; --fire-soft: #4a3320; --inhib: #e57787;
+  --set1: #1e2c3e; --set2: #362a1f; --ok: #6fc493; --ok-soft: #1c3527; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+p { margin: 0; }
+.mono, .eyebrow, figcaption, .label { font-family: var(--mono); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--fire); font-weight: 500; }
+a { color: var(--wire); }
+a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--fire); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--card); border: 1px solid var(--rule); padding: 0 4px; }
+
+header.top { display: grid; gap: 14px; padding-bottom: 24px; }
+.cite { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+.paperlinks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 0.82rem; }
+.aimade { margin-top: 18px; border: 1px solid var(--inhib); background: color-mix(in srgb, var(--inhib) 8%, var(--card)); padding: 12px 16px; font-size: 0.95rem; display: grid; gap: 6px; }
+.aimade .label { font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--inhib); }
+.badge { font-family: var(--mono); font-size: 0.7rem; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--inhib); color: var(--inhib); padding: 1px 6px; }
+
+/* tabs */
+.tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 0; margin: 0 -16px; padding: 0 16px; background: var(--paper); border-bottom: 2px solid var(--ink); }
+.tabs button { appearance: none; border: 0; background: none; color: var(--muted); font-family: var(--display); font-size: 1.05rem; font-weight: 600; padding: 12px 16px 10px; cursor: pointer; border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fire); }
+.tabs button small { display: block; font-family: var(--mono); font-weight: 400; font-size: 0.68rem; letter-spacing: .04em; color: var(--muted); }
+.tabpanel[hidden] { display: none; }
+
+.summary-box { margin-top: 28px; background: var(--card); border: 1px solid var(--rule); padding: 20px 22px; display: grid; gap: 10px; }
+.summary-box > .eyebrow { color: var(--fire); }
+nav.toc { margin-top: 28px; }
+nav.toc ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-family: var(--mono); font-size: 0.85rem; }
+nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; }
+nav.toc li a span { color: var(--muted); min-width: 2ch; font-variant-numeric: tabular-nums; }
+nav.toc li a:hover { color: var(--wire); }
+
+section.kp { padding-top: 48px; display: grid; gap: 16px; scroll-margin-top: 60px; }
+section.kp > * { min-width: 0; }
+.prose { display: grid; gap: 12px; max-width: 66ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.analogy { border: 1px solid var(--rule); background: var(--set1); padding: 12px 16px; max-width: 66ch; }
+.analogy .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); margin-bottom: 2px; }
+.later { border: 1px solid var(--ok); background: var(--ok-soft); padding: 12px 16px; max-width: 66ch; }
+.later .label { display: block; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); margin-bottom: 2px; }
+
+figure { margin: 6px 0; background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+figure.live { border-color: var(--wire); }
+figure.live::before { content: "Interactive"; font-family: var(--mono); font-size: 0.68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--wire); }
+.svgbox { overflow-x: auto; }
+.svgbox svg { display: block; width: 100%; height: auto; }
+.svgbox.wide svg { min-width: 520px; }
+figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-family: var(--mono); font-size: 0.82rem; }
+.ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.ctl input[type=range] { width: 150px; accent-color: var(--fire); }
+.ctl output, .readout b { font-variant-numeric: tabular-nums; color: var(--fire); font-weight: 500; }
+.btn { appearance: none; font-family: var(--mono); font-size: 0.8rem; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); padding: 5px 11px; cursor: pointer; }
+.btn:hover { background: var(--fire-soft); }
+.btn.on, .btn[aria-pressed="true"] { background: var(--fire); color: var(--card); border-color: var(--fire); }
+.readout { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); min-height: 1.5em; }
+
+.takeaway { border-left: 4px solid var(--fire); padding: 10px 16px; background: var(--fire-soft); font-family: var(--display); font-size: 1.08rem; font-weight: 500; line-height: 1.4; }
+.takeaway .label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; margin-bottom: 2px; color: var(--ink); opacity: .75; }
+details.check { border: 1px dashed var(--rule); padding: 10px 14px; background: var(--card); }
+details.check summary { cursor: pointer; font-family: var(--mono); font-size: 0.85rem; color: var(--wire); }
+details.check[open] summary { margin-bottom: 8px; }
+details.check dl { margin: 0; display: grid; gap: 10px; }
+details.check dt { font-weight: 600; }
+details.check dd { margin: 2px 0 0; color: var(--muted); }
+
+.eq { font-family: var(--body); font-size: 1.05rem; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; white-space: nowrap; text-align: center; }
+.eq .n { float: right; font-family: var(--mono); font-size: .75rem; color: var(--muted); }
+var, .v { font-style: italic; font-family: var(--body); }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+pre.algo { font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; background: var(--card); border: 1px solid var(--rule); padding: 12px 14px; overflow-x: auto; margin: 0; }
+pre.algo .c { color: var(--muted); }
+
+dl.gloss { display: grid; grid-template-columns: minmax(110px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-family: var(--mono); font-size: 0.85rem; padding-top: 2px; }
+dl.gloss dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; gap: 2px; } dl.gloss dd { margin-bottom: 8px; } .tabs button { padding: 10px 10px 8px; font-size: .98rem; } }
+
+.next { border-top: 2px solid var(--ink); margin-top: 56px; padding-top: 24px; display: grid; gap: 12px; }
+.next ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { margin-top: 40px; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); display: grid; gap: 6px; }
+
+/* SVG styling via tokens */
+.t { fill: var(--ink); font-family: var(--mono); font-size: 12px; }
+.t-s { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.t-h { fill: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; }
+.t-fire { fill: var(--fire); font-family: var(--mono); font-size: 12px; }
+.t-wire { fill: var(--wire); font-family: var(--mono); font-size: 12px; }
+.t-inh { fill: var(--inhib); font-family: var(--mono); font-size: 12px; }
+.t-ok { fill: var(--ok); font-family: var(--mono); font-size: 12px; }
+.t-big { fill: var(--ink); font-family: var(--display); font-size: 22px; font-weight: 700; }
+.mid { text-anchor: middle; } .end { text-anchor: end; }
+.w { stroke: var(--wire); stroke-width: 1.3; fill: none; }
+.w-faint { stroke: var(--wire); stroke-width: 1; fill: none; opacity: .45; }
+.w-fire { stroke: var(--fire); stroke-width: 2.2; fill: none; }
+.w-inh { stroke: var(--inhib); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.w-ok { stroke: var(--ok); stroke-width: 2; fill: none; }
+.w-ink { stroke: var(--ink); stroke-width: 1.3; fill: none; }
+.w-dash { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+.u { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.u-on { fill: var(--fire); stroke: var(--ink); stroke-width: 1.3; }
+.u-wire { fill: var(--wire); stroke: var(--ink); stroke-width: 1.3; }
+.u-off { fill: var(--card); stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.box { fill: var(--card); stroke: var(--ink); stroke-width: 1.3; }
+.box-fire { fill: var(--fire-soft); stroke: var(--fire); stroke-width: 1.5; }
+.box-wire { fill: var(--set1); stroke: var(--wire); stroke-width: 1.5; }
+.box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.area { fill: none; stroke: var(--rule); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.box-inh { fill: none; stroke: var(--inhib); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.f-fire { fill: var(--fire); } .f-wire { fill: var(--wire); } .f-inh { fill: var(--inhib); } .f-ok { fill: var(--ok); } .f-muted { fill: var(--muted); } .f-ink { fill: var(--ink); } .f-card { fill: var(--card); } .f-rule { fill: var(--rule); }
+.axis { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+.m-wire { fill: var(--wire); } .m-ink { fill: var(--ink); } .m-fire { fill: var(--fire); } .m-ok { fill: var(--ok); }
+.m-inh { stroke: var(--inhib); stroke-width: 2.2; fill: none; }
+.clickable { cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .anim { transition: all .35s ease; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-wire"/></marker>
+  <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ink"/></marker>
+  <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-fire"/></marker>
+  <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+  <marker id="bar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M5,0 L5,10" class="m-inh"/></marker>
+</defs></svg>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Study guide · <b>Safety &amp; security</b> · 2026</p>
+  <h1>Stealing Reasoning Traces from Proprietary LLM APIs</h1>
+  <p class="cite">Alexander Panfilov, David Schmotz, Ilia Shumailov, Luca Beurer-Kellner, Joachim Schaeffer, Ameya Prabhu, Jonas Geiping, Maksym Andriushchenko · arXiv preprint</p>
+  <p class="lede">Reasoning models think before they answer. Providers hide that thinking, so they send it back to the user's software as a sealed, encrypted block to pass along on the next request. This paper shows that in July 2026 those sealed blocks could be accepted by other conversations, other users and other models from the same company. A cheaper model could then be asked to read a stronger model's hidden reasoning aloud. This guide explains how the authors established that, what they measured, and what they recommend.</p>
+  <p class="paperlinks"><a href="https://arxiv.org/pdf/2608.09867">Read the paper (free)</a> <a href="https://lovespark.love/papers/">The archive</a></p>
+  <aside class="aimade" aria-label="About this guide">
+    <span class="label">Made with AI · check it yourself</span>
+    <p>This guide was written by Claude, an AI model, for the <a href="https://lovespark.love/papers/">Papers worth reading</a> archive. Each guide was checked against its paper by a second, separate AI review (also by Claude), but Joona, who runs the archive, has not personally read every guide yet, and mistakes can remain. Treat the paper as the authority, and verify anything that matters to you against it.</p>
+    <p>Want one tailored to you instead? <a href="make-your-own.html">How to ask an AI to make your own guide</a>.</p>
+  </aside>
+</header>
+<div class="tabs" role="tablist" aria-label="Choose a level">
+  <button role="tab" id="tab-simple" aria-controls="simple" aria-selected="true">Plain English<small>no background needed</small></button>
+  <button role="tab" id="tab-tech" aria-controls="tech" aria-selected="false" tabindex="-1">In depth<small>for academics &amp; professionals</small></button>
+</div>
+<main>
+<div class="tabpanel" id="simple" role="tabpanel" aria-labelledby="tab-simple">
+<div class="summary-box">
+  <p class="eyebrow">The paper in four sentences</p>
+  <p>When you use a reasoning model through an API, its hidden thinking comes back to you as an encrypted block. You send that block back with your next message so the model remembers what it was thinking.</p>
+  <p>The authors found that, at Anthropic, OpenAI and Google, those blocks were not tied to the conversation, user or model that made them. A block made by a strong model could be handed to a weaker model from the same company, and the weaker model could read it and write it out in plain text.</p>
+  <p>They used this to study four risks: copying a model's private reasoning, finding passwords and personal data inside reasoning people had published online, revealing harmful content that the visible answer had refused, and hiding instructions inside a block that nobody can read.</p>
+  <p>They told the companies first, the companies fixed it (the attacks stopped working by August 2026), and the paper proposes how to seal these blocks properly.</p>
+</div>
+<aside class="later"><span class="label">How to read this guide</span><p>This is a security paper. The guide explains <em>how the research was done</em>: what was tested, how, and how results were measured. It deliberately leaves out the instructions the authors used to make models reveal reasoning. Section and figure numbers refer to arXiv v1 (10 August 2026). It is a preprint and has not been peer-reviewed yet.</p></aside>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Ideas in this guide</p><ol></ol></nav>
+
+<section class="kp" id="s1">
+  <p class="eyebrow"><b>Idea</b> · §1, §2.2</p>
+  <h2>What an encrypted reasoning block is</h2>
+  <div class="prose">
+    <p>A reasoning model writes out its working, often thousands of words, before giving a short answer. Companies keep this working hidden. They give two reasons: it is valuable (others could train their own models on it, which is called <strong>distillation</strong>), and it may contain things the final answer leaves out.</p>
+    <p>But APIs are <strong>stateless</strong>: the company's servers don't remember your conversation between requests, so your software sends the whole conversation every time. To let the model continue its earlier thinking without showing it to you, the company encrypts the reasoning and gives you a sealed block. You can't read it. You just pass it back, and the company's servers unseal it for the model.</p>
+    <p>No provider publishes exactly how these blocks are built, so the authors worked it out from how the APIs behaved (§2.2). They describe the blocks as encrypted with a tamper-proof seal (the technical term is an AEAD envelope). Their key observation was what the seal did <em>not</em> check: who you are, which conversation it came from, or which model made it.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>A cloakroom gives you a sealed envelope to hand back later. The envelope is genuinely sealed, so you can't open it. But the cloakroom will accept any genuine envelope from anyone, at any of its branches, and staff at a small branch will read the contents out to whoever handed it in.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>The encryption itself wasn't broken. The flaw was that a sealed block could be used anywhere within the same company.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why do providers send the reasoning back to the user at all, if they want it hidden?</dt>
+    <dd>Because the API doesn't store conversations. The client has to resend everything, so the hidden reasoning must travel with it, sealed.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s2">
+  <p class="eyebrow"><b>Method</b> · §2.3 · Table 1 · Fig. 2</p>
+  <h2>Step one: testing where a block is accepted</h2>
+  <div class="prose">
+    <p>The first experiment was a careful compatibility test. The authors generated blocks with their own accounts, then sent each block back in different situations and recorded whether the API accepted it. They tested three levels, each looser than the last:</p>
+    <ul>
+      <li><strong>Same or new conversation:</strong> can a block be reused in a fresh request, or moved around within one?</li>
+      <li><strong>Another user:</strong> does a block made on one account work on a different account?</li>
+      <li><strong>Another model:</strong> does a block made by one model work in a request to a different model from the same company?</li>
+    </ul>
+    <p>They mapped this for Claude, GPT and Gemini models (Table 1). They also checked where in a conversation a foreign block could be placed (Fig. 2). Within each family the answer was mostly "yes, it works". Some exceptions were noted: for Claude, Fable 5's blocks were the exception, and on the GPT side only the newest series accepted all older blocks. The pattern suggested each company used a single key for every block.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <button class="btn on" data-rt="session">Reuse in a new conversation</button><button class="btn" data-rt="user">Another user</button><button class="btn" data-rt="model">Another model</button>
+      <button class="btn" id="rt-bind" aria-pressed="false">Seal bound to user, session &amp; model: off</button>
+    </div>
+    <div class="svgbox"><svg id="rt" viewBox="0 0 600 230" role="img" aria-label="Diagram of a reasoning block being replayed into another request"></svg></div>
+    <p class="readout" id="rt-r"></p>
+    <figcaption>A diagram of the compatibility test (§2.3), simplified. Pick where the block is sent. "Seal bound" switches on the fix the authors propose (§5.5, Appendix A), in which the seal also records who, which conversation and which model, so a mismatch is rejected. Which models accepted which blocks varied by provider and model (Table 1); this diagram shows the general pattern the paper found in July 2026.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>The research started with a systematic map of what the APIs accepted, before any attack was attempted.</p>
+</section>
+
+<section class="kp" id="s3">
+  <p class="eyebrow"><b>Method</b> · §2.4–2.5 · Fig. 1</p>
+  <h2>Step two: getting a cheaper model to read it out</h2>
+  <div class="prose">
+    <p>If a block works in another model's request, the receiving model can see the reasoning inside it as if it were its own earlier thinking. The authors picked, for each company, a <strong>decoder</strong>: a cheaper model that accepted the stronger models' blocks and could be persuaded to copy that reasoning into its visible answer. For Claude this was Haiku 4.5, for GPT it was GPT-5.6 Luna, and for Gemini it was Gemini Robotics 1.6.</p>
+    <p>Why a weaker model? Attacking the strong model directly means beating its refusals plus the company's input and output filters. The weaker model often has fewer protections, and it is cheaper to run at scale. Even so, for GPT the authors needed several attempts and workarounds for anti-distillation safeguards.</p>
+    <p><strong>Test material</strong> (§2.5): to get blocks they could study, they asked the strong models hard problems from three benchmarks: AIME 2025 (maths competition), Codeforces (programming contests) and Humanity's Last Exam (expert questions).</p>
+    <p><strong>How they judged success</strong>: the hidden reasoning can't be checked word for word, because nobody outside the company has the original. But the API reports how many "thinking tokens" the model used. So the authors compared that reported count with the length of the reasoning the decoder wrote out. If the two track each other, the decoder is probably copying the whole thing, not summarising or inventing. Figure 1 plots this for 120 Codeforces problems, and the authors say the counts "track each other closely across all tested models".</p>
+  </div>
+  <figure class="live">
+    <div class="ctl">
+      <label>Reported thinking tokens <input type="range" id="tk-a" min="500" max="12000" step="100" value="6000" data-fmt="0"><output id="tk-a-o">6000</output></label>
+      <label>Length of decoded text <input type="range" id="tk-b" min="0" max="12000" step="100" value="5800" data-fmt="0"><output id="tk-b-o">5800</output></label>
+    </div>
+    <div class="svgbox"><svg id="tk" viewBox="0 0 600 260" role="img" aria-label="Scatter plot comparing reported and decoded token counts"></svg></div>
+    <p class="readout" id="tk-r"></p>
+    <figcaption>How the paper's main quality check works (Fig. 1, §2.4). Each dot would be one problem. Dots on the diagonal mean the decoded text is as long as the reasoning the API says happened. The grey dots are made up to show the idea, not the paper's data; move the sliders to place your own dot. The authors stress that this is a proxy: matching length makes a full copy likely but doesn't prove it.</figcaption>
+  </figure>
+  <p class="takeaway"><span class="label">Takeaway</span>With no original text to compare against, the authors measured success indirectly: does the decoded reasoning have the length the provider itself reported?</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why can't the authors simply compare the decoded text with the real hidden reasoning?</dt>
+    <dd>Only the provider can see the real reasoning. The reported token count is the one piece of ground truth an outsider gets, so it serves as the yardstick.</dd>
+    <dt>What would a decoded text much shorter than the reported count suggest?</dt>
+    <dd>That the decoder summarised or skipped parts rather than copying the whole trace.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s4">
+  <p class="eyebrow"><b>Experiment</b> · §3 · Figs. 3–4</p>
+  <h2>Risks from your own blocks: copying and hidden content</h2>
+  <div class="prose">
+    <p>The paper sorts its experiments by who holds the block. A <strong>first-party</strong> attacker makes blocks with their own account, then reads them out with the cheaper model.</p>
+    <p><strong>Copying reasoning (§3.1).</strong> Full reasoning is a much richer training signal than final answers, so readable traces would make distillation easier. The authors estimate that decoding 10,000 long traces would cost about $720 at Haiku 4.5 prices. They also ran a probe on open models: they gave each model a short piece of decoded Claude reasoning to continue (Fig. 3, Appendix B). Some, such as Kimi-K3, then reasoned and wrote noticeably more like Claude. The authors say plainly that this "cannot establish a causal claim" that those models were trained on Claude's reasoning.</p>
+    <p><strong>Content hidden behind a refusal (§3.2).</strong> Models are trained to keep harmful details out of their answers, but not necessarily out of their thinking. In one example (Fig. 4), a harmful-style test question got a harmless visible answer, while the decoded reasoning contained information the answer had left out. This is a single illustration, not a measured rate.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>The first-party experiments mostly show what becomes possible. Apart from the cost estimate, they are demonstrations, not large measured studies.</p>
+</section>
+
+<section class="kp" id="s5">
+  <p class="eyebrow"><b>Experiment</b> · §4.1 · Figs. 5–6 · Table 4</p>
+  <h2>Risks from other people's blocks: secrets in public logs</h2>
+  <div class="prose">
+    <p>A <strong>third-party</strong> attacker uses blocks that other people made. Where would they find them? Developers often publish logs of AI agents at work, for example on GitHub or Hugging Face. Those logs still contain the sealed reasoning blocks.</p>
+    <p>The authors collected <strong>6,708</strong> such public agent logs from Claude, GPT and Gemini models. They decoded every block they found, <strong>315,320</strong> in total. An AI model then labelled each decoded trace for private information such as passwords, API keys or addresses, in two stages (Appendix D).</p>
+    <p>About 0.3% of blocks (1,028) contained at least one leak, and 4.9% of logs (328) leaked at least one real sensitive item. In logs from real users they counted, among other things, 62 API keys, 33 passwords and 24 access tokens (§4.1, Fig. 6; the figure's caption says it covers all sources, so the paper is not fully consistent about scope). The paper's abstract summarises the findings as 367 pieces of personal information and 182 credentials.</p>
+    <p>A common cause was ironic: asking an agent to <em>clean up</em> or anonymise a log before publishing it. To decide what to remove, the model re-read the history and wrote the secrets out in its hidden reasoning. In 64 cases the secret appeared only in the reasoning, not in the visible log (Table 4).</p>
+    <p><strong>Ethics</strong> (§5.3): all decoding and labelling ran in an isolated environment, the recovered secrets were deleted after counting, and the platforms and providers were told before publication.</p>
+  </div>
+  <figure class="live">
+    <div class="ctl"><button class="btn on" data-fn="funnel">How the study narrowed down</button><button class="btn" data-fn="kinds">What was found in real users' logs</button></div>
+    <div class="svgbox"><svg id="fn" viewBox="0 0 600 270" role="img" aria-label="Chart of the public-log study"></svg></div>
+    <p class="readout" id="fn-r"></p>
+    <figcaption>Numbers as reported in §4.1 and Fig. 6 of arXiv v1. In the first view the bars are on a log scale so that 6,708 logs and 315,320 blocks fit on one chart; the second view is to scale. The labels come from an automated AI judge, so counts may include some errors.</figcaption>
+  </figure>
+  <aside class="later"><span class="label">Read the numbers carefully</span><p>The paper gives several totals that count different things: 912 artifacts including benchmark logs (whose personal data is often invented test personas), 704 from real user sessions, and "367 PII artifacts and 182 credentials" in the abstract. The paper does not fully reconcile these, so check which group a number describes before quoting it.</p></aside>
+  <p class="takeaway"><span class="label">Takeaway</span>This was the paper's largest measured experiment. It showed that reasoning published "safely" sealed was readable and sometimes held secrets the visible log didn't show.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Why could asking an agent to remove secrets make things worse?</dt>
+    <dd>To find the secrets, it restates them in its hidden reasoning. That reasoning stays in the published log as a sealed block, which this flaw made readable.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="s6">
+  <p class="eyebrow"><b>Experiment</b> · §4.2</p>
+  <h2>Hidden instructions inside a block</h2>
+  <div class="prose">
+    <p>The flaw also works in the other direction. If a model accepts a foreign block as its own earlier thinking, someone could plant a block carrying an instruction. Anyone who later continues that conversation, for example by reusing a shared agent log, gives their model a "memory" it never had. Neither the person nor a safety monitor reading the visible text can see the instruction, because it is sealed.</p>
+    <p>The authors showed this in two demonstrations. In both, a block made by a smaller model was carried into a larger one, and the larger model followed the planted behaviour on an unrelated task. One ran inside a long, realistic coding-agent session (PostTrainBench in the Claude Code tool). The paper reports these as proofs of concept, with no success rate.</p>
+  </div>
+  <div class="analogy"><span class="label">Everyday picture</span>Imagine someone could slip a note into your diary in your own handwriting. You would read it later and trust it, because it seems to be your own thought.</div>
+  <p class="takeaway"><span class="label">Takeaway</span>Unreadable reasoning that is also replayable is a hiding place for instructions that monitoring of visible text can't catch.</p>
+</section>
+
+<section class="kp" id="s7">
+  <p class="eyebrow"><b>Outcome</b> · §5.2, §5.5 · Appendix A</p>
+  <h2>Disclosure, fixes and limits</h2>
+  <div class="prose">
+    <p><strong>Disclosure.</strong> Before publishing, the authors reported to the major model providers, Microsoft and Hugging Face. They note that an independent researcher, Green, had reported that blocks were interchangeable in May 2026. According to the paper, providers did not acknowledge security implications at that time. After this paper's report, all providers acknowledged it, and the authors "were unable to launch the same attacks". By August 2026 the Figure 1 results were no longer reproducible. The project cost about $30,000 in API fees.</p>
+    <p><strong>Proposed fixes.</strong></p>
+    <ul>
+      <li>Keep the reasoning on the company's servers and give users only a reference number.</li>
+      <li>Bind each seal to the user, the conversation and the model, and chain each block to the one before it, so blocks can't be moved.</li>
+      <li>Block cross-model use at the gateway.</li>
+      <li>Watch for the same block appearing in many conversations.</li>
+      <li>Revoke leaked blocks.</li>
+      <li>Train models to refuse requests to transcribe their reasoning.</li>
+    </ul>
+    <p>The authors add a deeper point: any model that can read its own sealed reasoning can, in principle, be talked into revealing it, so sealed reasoning is only "semi-hidden" (§5.5).</p>
+    <p><strong>Limits</strong> (§5.1): the tests reflect the APIs of early July 2026, which have since changed. The decoders are random, and without the original text, completeness can only be estimated. The public-log scan was a targeted demonstration, not a full audit.</p>
+  </div>
+  <p class="takeaway"><span class="label">Takeaway</span>The study followed the usual responsible-disclosure path: find, measure, report privately, wait for fixes, then publish with recommendations.</p>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>If you publish AI agent logs, what does the paper recommend?</dt>
+    <dd>Strip the sealed reasoning blocks out before sharing, especially if any secrets or private data might have come up in the session (§5.4).</dd>
+  </dl></details>
+</section>
+
+<section class="kp" data-extra id="s8">
+  <h2>How this connects to the rest of the archive</h2>
+  <div class="prose">
+    <p>Hidden reasoning exists because of <a href="cot.html">chain-of-thought prompting</a> and reasoning models trained with reinforcement learning, such as <a href="r1.html">DeepSeek-R1</a>. Copying a model by training on its outputs is <a href="distill.html">knowledge distillation</a>. The hidden-instruction risk is a new kind of <a href="injection.html">prompt injection</a>.</p>
+  </div>
+</section>
+
+</div>
+<div class="tabpanel" id="tech" role="tabpanel" aria-labelledby="tab-tech" hidden>
+<div class="summary-box">
+  <p class="eyebrow">Abstract, restated</p>
+  <p>Major providers hide reasoning traces and return them to clients as encrypted, signed blocks that are replayed with later requests. The authors show that in July 2026 these blocks were interchangeable across sessions, users and models within a provider. This enabled a "decryption jailbreak": a stronger model's block is replayed into a weaker sibling, which transcribes the plaintext. They demonstrate four abuse classes on Anthropic, OpenAI and Google models: (1) extraction of proprietary reasoning that bypasses anti-distillation defences; (2) large-scale private-data extraction (315,320 blocks decoded from public repositories; 367 PII artifacts and 182 credentials reported in the abstract); (3) exposure of hazardous content present in reasoning but refused in the answer; (4) invisible prompt injection via poisoned blocks in agent rollouts. Disclosure, mitigations and a context-bound envelope design follow. Panfilov, Schmotz, Shumailov, Beurer-Kellner, Schaeffer, Prabhu, Geiping and Andriushchenko, arXiv 2608.09867 (cs.CR), v1 10 August 2026.</p>
+</div>
+<aside class="later"><span class="label">Scope of this tab</span><p>This tab covers threat models, measurement design and results. Provider-specific extraction pipelines (Appendix C) and transcription prompts are intentionally not reproduced. Model names are as given in the paper. The work is a preprint (v1), not yet peer-reviewed, and the behaviour it describes was mitigated after disclosure.</p></aside>
+<nav class="toc" aria-label="Contents"><p class="eyebrow">Sections</p><ol></ol></nav>
+
+<section class="kp" id="t1">
+  <p class="eyebrow"><b>Section</b> · §2.1–2.2</p>
+  <h2>Threat model and the inferred envelope</h2>
+  <div class="prose">
+    <p>Both adversaries are <strong>unprivileged API users</strong>. The shared prerequisite is access to a compatible decoder model in the provider's ecosystem.</p>
+    <ul>
+      <li><strong>First-party:</strong> the attacker "generates their own encrypted reasoning traces by querying a capable, safeguarded target model" and replays them into a weaker decoder.</li>
+      <li><strong>Third-party:</strong> the attacker "intercepts, scrapes, or otherwise acquires legitimate encrypted reasoning blobs" generated by others. They use these either as a decryption oracle or to inject blocks into a victim's context.</li>
+    </ul>
+    <p>Providers do not document their construction. The authors model the block as an AEAD envelope inferred from behaviour (§2.2): a header (model, block type, version, key ID), a nonce, a tag and ciphertext. They identify its design goals as confidentiality, integrity and statelessness. The vulnerability sits in what the associated data omits. If authentication covers only the ciphertext and coarse metadata, a valid envelope is valid in any request that reaches the same key.</p>
+  </div>
+</section>
+
+<section class="kp" id="t2">
+  <p class="eyebrow"><b>Section</b> · §2.3 · Table 1 · Fig. 2</p>
+  <h2>Compatibility mapping</h2>
+  <div class="prose">
+    <p>The authors define three nested permissiveness levels: in- and cross-session, cross-user, and cross-model. They test them empirically with self-generated blocks. Table 1 gives the cross-model matrix per provider as of July 2026. As summarised in the text:</p>
+    <ul>
+      <li><strong>Claude:</strong> any model's block replays into any other, "except Fable 5's thoughts".</li>
+      <li><strong>GPT:</strong> the GPT-5.6 series replays blocks from all earlier generations.</li>
+      <li><strong>Gemini:</strong> any-to-any.</li>
+    </ul>
+    <p>Figure 2 reports which injection placements each model accepts: the current turn versus past turns. Cross-user and cross-model acceptance is consistent with a single provider-wide key. This is the authors' inference, since key management is not observable.</p>
+  </div>
+</section>
+
+<section class="kp" id="t3">
+  <p class="eyebrow"><b>Section</b> · §2.4–2.5 · Fig. 1</p>
+  <h2>Decoder choice and the fidelity proxy</h2>
+  <div class="prose">
+    <p><strong>Decoders</strong> (§2.4) were chosen as the weakest compatible model with a usable transcription path:</p>
+    <ul>
+      <li><strong>Claude Haiku 4.5:</strong> the weakest Claude model supporting assistant-turn prefilling.</li>
+      <li><strong>GPT-5.6 Luna:</strong> the least capable GPT model accepting all earlier traces. It needed template variation, best-of-<var>n</var> sampling and workarounds for anti-distillation safeguards.</li>
+      <li><strong>Gemini Robotics 1.6:</strong> compatible with both the 2.5 and 3.x series.</li>
+    </ul>
+    <p>The rationale is attack-surface reduction. Direct extraction from the frontier model must defeat model-level refusals and system-level input and output filters. Routing the ciphertext through a sibling sidesteps both.</p>
+    <p><strong>Corpus</strong> (§2.5): self-generated blocks (Anthropic API, OpenAI API, Google AI Studio) on AIME 2025, Codeforces (the Open-R1 subset) and Humanity's Last Exam. Public logs were processed with the same pipelines for §4.</p>
+    <p><strong>Metric:</strong> the ratio of reconstructed-trace tokens to API-reported thinking tokens. Fig. 1 plots both for 120 Codeforces problems. The text reports that they track closely across all tested models, and the Fig. 7 caption (an example of illegible GPT-5 reasoning, §5.6) notes a 1:1 decoded-to-reported ratio for GPT-5 traces decoded with GPT-5.6 Luna. The paper presents this as a proxy. No string-similarity metric against ground truth is possible, because plaintext ground truth is unavailable to outsiders. Note that a token-count match is necessary but not sufficient for verbatim fidelity: a decoder could in principle paraphrase at matching length. The authors' qualitative evidence includes legible decoded traces and a summary contradicted by its decoded trace (Fig. 8).</p>
+  </div>
+  <details class="check"><summary>Check yourself</summary><dl>
+    <dt>Name one way the token-ratio proxy could overstate fidelity.</dt>
+    <dd>A decoder could produce a paraphrase or confabulation of similar length. The ratio constrains length, not content. Tokenizer differences between source and decoder add further noise.</dd>
+  </dl></details>
+</section>
+
+<section class="kp" id="t4">
+  <p class="eyebrow"><b>Section</b> · §3 · Appendix B</p>
+  <h2>First-party vectors: distillation and refusal bypass</h2>
+  <div class="prose">
+    <p><strong>Distillation</strong> (§3.1). This extends black-box model extraction (Tramèr et al., 2016) and sequence-level distillation (Kim &amp; Rush, 2016) to chain-of-thought. The authors cite Zhang et al. (2026a): approximate trace inversion raised a fine-tuned Qwen2.5-7B-Instruct on MATH500 from 68.4% to 76.0% over answer-only distillation. This paper's contribution is verbatim rather than approximate recovery. The cost estimate is about $720 at Haiku 4.5 rates for 10k traces with 12k-token input and output windows.</p>
+    <p>Appendix B probes open models for prior exposure using three measures: <var>n</var>-gram overlap (following Barbero et al., 2026), style classifiers, and perplexity on decoded spans. After prefilling with decoded Opus reasoning, Kimi-K3 and GLM-5.2 shift toward Opus-like style (and a Sol prefill shifts Kimi-K3 toward Sol), while DeepSeek-V3.1 and Inkling do not. The authors explicitly decline a causal claim.</p>
+    <p><strong>Refusal bypass</strong> (§3.2) is a single qualitative proof of concept (Fig. 4) using a paraphrased HarmBench-style query (Mazeika et al., 2024) on Opus 4.8. The visible answer was benign, and the decoded reasoning contained information absent from it. No attack-success rate is reported.</p>
+  </div>
+</section>
+
+<section class="kp" id="t5">
+  <p class="eyebrow"><b>Section</b> · §4.1 · Figs. 5–6 · Table 4 · Appendix D</p>
+  <h2>Third-party vector: the in-the-wild privacy study</h2>
+  <div class="prose">
+    <p><strong>Data:</strong> 6,708 publicly available agent trajectories from GitHub and Hugging Face, produced by Claude, GPT and Gemini models and still containing signed blocks. Decoding every block yielded 315,320 traces.</p>
+    <p><strong>Labelling:</strong> an LLM-as-a-judge with a two-stage procedure (Appendix D). The main text does not name the judge model or report a human precision audit, so treat counts as automated estimates.</p>
+    <p><strong>Results:</strong></p>
+    <ul>
+      <li>1,028 blocks (0.3%) contain at least one privacy leak.</li>
+      <li>328 of 6,708 sessions (4.9%) leak at least one real sensitive item.</li>
+      <li>In genuine user sessions, per the §4.1 text (the Fig. 6 caption says "all sources"): 62 API keys, 33 passwords, 24 access tokens, 7 private keys, 30 personal emails, 6 non-localhost IPs, 130 names and 36 postal addresses.</li>
+      <li>Including benchmark sources gives 912 distinct artifacts, much of it synthetic persona data. 704 artifacts come from genuine sessions, of which 64 were absent from the visible history (Table 4).</li>
+    </ul>
+    <p>A recurrent trigger is sanitisation requests: the model restates secrets in reasoning while deciding what to redact. Fig. 5 shows a GPT-5.2 Codex trace recalling keys to strip before publishing a repository, and a Sonnet 4.6 trace over a synthetic ClawBench persona.</p>
+    <p><strong>Ethics</strong> (§5.3): processing ran in an isolated environment, secrets were deleted after classification and aggregate counting, and platforms and providers were notified before publication.</p>
+  </div>
+  <aside class="later"><span class="label">Inconsistency to note</span><p>The abstract's "367 PII artifacts and 182 credentials" (549 in total) does not obviously reconcile with §4.1's 912 or 704. The paper does not define the split. Cite the specific figure with its scope.</p></aside>
+</section>
+
+<section class="kp" id="t6">
+  <p class="eyebrow"><b>Section</b> · §4.2</p>
+  <h2>Third-party vector: invisible injection</h2>
+  <div class="prose">
+    <p>Because a replayed block is treated as the model's own prior reasoning, a poisoned block is an instruction channel that bypasses monitors of visible text. Two qualitative demonstrations are reported:</p>
+    <ul>
+      <li>A thought derived from o4-mini, ported into GPT-5.6 Sol, led it to write a script that uploaded a file to an attacker-controlled server.</li>
+      <li>An injection generated by Haiku 4.5 inside a long PostTrainBench trajectory in the Claude Code scaffold led Opus 4.7 to upload a file after every change.</li>
+    </ul>
+    <p>Neither has a reported trial count or success rate. These are existence proofs, relevant to monitorability arguments (Baker et al., 2025; Korbak et al., 2025) that assume the reasoning a monitor sees is the model's own.</p>
+  </div>
+</section>
+
+<section class="kp" id="t7">
+  <p class="eyebrow"><b>Section</b> · §5.5 · Appendix A · Table 2 · Eq. 1</p>
+  <h2>Mitigations: the context-bound envelope</h2>
+  <div class="prose">
+    <p>Table 2 maps six leakage vectors to defences. The core proposal binds the user ID (and session) into the AEAD associated data and chains each block to its predecessor with a hash (Eq. 1). This makes a block valid only in its own lineage. Four properties are targeted:</p>
+    <ul>
+      <li>P1: ordinality</li>
+      <li>P2: full integrity</li>
+      <li>P3: leak monitoring</li>
+      <li>P4: non-replayability</li>
+    </ul>
+    <p>A Merkle-tree structure lets context pruning and compaction keep working, key rotation handles legacy blocks, and a dual-format window eases migration. The other layers:</p>
+    <ul>
+      <li>Server-side reasoning storage with opaque IDs, which removes the asset but costs storage and statefulness.</li>
+      <li>Cross-model isolation enforced at the gateway.</li>
+      <li>Anomaly detection for signatures repeated across sessions, and signature revocation.</li>
+      <li>Model-level refusal of transcription requests.</li>
+    </ul>
+    <p>The structural caveat: any model that must decrypt its own reasoning can be induced to reveal it. So encryption makes traces "semi-hidden" at best (§5.5), and the authors weigh whether traces should be encrypted at all (§5.6). The case for encryption is that models can reason over sensitive content without exposing it. The case against is undetectable injection, privacy leakage and unfaithful summaries (Fig. 8).</p>
+  </div>
+</section>
+
+<section class="kp" id="t8">
+  <p class="eyebrow"><b>Section</b> · §5.1–5.2, Reproducibility</p>
+  <h2>Limitations, disclosure and reproducibility</h2>
+  <div class="prose">
+    <p><strong>Limitations:</strong></p>
+    <ul>
+      <li>Results reflect APIs in early July 2026.</li>
+      <li>Decoders are stochastic, and fidelity is inferred, not measured against ground truth.</li>
+      <li>The public-log scan is targeted, not exhaustive.</li>
+      <li>Several results (distillation evidence, refusal bypass, injection) are qualitative.</li>
+    </ul>
+    <p><strong>Disclosure:</strong> reported to the major providers, Microsoft and Hugging Face. Prior public disclosure of interchangeability came from Green (May 2026), without acknowledged security implications. After this paper's report, "All model providers acknowledged the receipt of our report and subsequently we were unable to launch the same attacks."</p>
+    <p><strong>Reproducibility:</strong> as of August 2026, the Fig. 1 results are "no longer reproducible" due to provider mitigations. Total spend was about $30,000 in API credits.</p>
+  </div>
+</section>
+
+<section class="kp" data-extra id="glossary">
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>AEAD</dt><dd>Authenticated encryption with associated data: encryption plus a tag proving the ciphertext and some unencrypted context (the associated data) were not altered. What is in the associated data decides where a ciphertext counts as valid.</dd>
+    <dt>Reasoning block / signature</dt><dd>The encrypted, signed form of a model's hidden reasoning that the client must send back on later turns.</dd>
+    <dt>Replay</dt><dd>Reusing a valid message in a context it was not created for.</dd>
+    <dt>Decoder</dt><dd>In this paper, a weaker sibling model that accepts a stronger model's block and is induced to transcribe it.</dd>
+    <dt>Distillation</dt><dd>Training one model on another model's outputs; reasoning traces are a richer signal than answers.</dd>
+    <dt>First-party / third-party attacker</dt><dd>Uses blocks they generated themselves / blocks generated by other users.</dd>
+    <dt>LLM-as-a-judge</dt><dd>Using a language model to label or score text automatically.</dd>
+    <dt>Prompt injection</dt><dd>Instructions planted in a model's input by someone other than the user.</dd>
+    <dt>Hash chain</dt><dd>Each item includes a hash of the previous one, so items cannot be reordered or moved to another chain without detection.</dd>
+  </dl>
+</section>
+
+</div>
+</main>
+<section class="next" aria-label="Where to go next">
+  <p class="eyebrow">Follow the idea</p>
+  <p>This is the newest step on its timeline so far.</p>
+</section>
+<footer>
+  <p>Part of <a href="https://lovespark.love/papers/">Papers worth reading</a> (<a href="https://lovespark.love/papers/#reasoning-traces">this paper in the archive</a>). <a href="index.html">All study guides</a>. <a href="make-your-own.html">Make your own guide</a>.</p>
+  <p>Written by Claude (AI) and reviewed by a second AI pass; not yet all read by a human. Section, table and page numbers refer to the paper version named in the guide. Simplified explanations trade some precision for clarity; the In depth tab gives the exact version.</p>
+</footer>
+</div>
+<script>
+/* Shared helpers for every guide. */
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role=tab]'));
+  function show(id, focus){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('sg-tab', id); } catch(e) {}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ show(t.getAttribute('aria-controls')); history.replaceState(null, '', '#' + t.getAttribute('aria-controls')); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; show(n.getAttribute('aria-controls'), true); }
+    });
+  });
+  // Build each tab's contents list from its sections.
+  ['simple','tech'].forEach(function(pid){
+    var panel = document.getElementById(pid), nav = panel.querySelector('nav.toc ol');
+    if (!nav) return; var n = 0;
+    panel.querySelectorAll('section.kp').forEach(function(s){
+      var h = s.querySelector('h2'); if (!h) return;
+      var num = s.hasAttribute('data-extra') ? '·' : String(++n);
+      var eb = s.querySelector('.eyebrow b'); if (eb && !s.hasAttribute('data-extra')) eb.textContent = (pid === 'simple' ? 'Idea ' : 'Section ') + num;
+      var li = document.createElement('li'); var a = document.createElement('a'); a.href = '#' + s.id;
+      a.innerHTML = '<span>' + num + '</span>' + (s.getAttribute('data-toc') || h.innerHTML); li.appendChild(a); nav.appendChild(li);
+    });
+  });
+  var h = location.hash.slice(1), start = 'simple';
+  try { start = localStorage.getItem('sg-tab') || 'simple'; } catch(e) {}
+  if (h === 'simple' || h === 'tech') start = h;
+  else if (h) { var tgt = document.getElementById(h); var p = tgt && tgt.closest('.tabpanel'); if (p) start = p.id; }
+  show(start);
+  if (h && h !== start) { var el = document.getElementById(h); if (el) el.scrollIntoView(); }
+})();
+var NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, parent, text){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function fmt(x, d){ return Number(x).toFixed(d == null ? 2 : d); }
+function bindRange(id, fn){ var r = document.getElementById(id), o = document.getElementById(id + '-o'); function u(){ var v = parseFloat(r.value); if (o) o.textContent = r.dataset.fmt ? fmt(v, +r.dataset.fmt) : r.value; fn(v); } r.addEventListener('input', u); u(); return r; }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+function rng(seed){ var s = seed >>> 0 || 1; return function(){ s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function gauss(r){ var u = r() || 1e-9, v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+</script>
+<script>
+(function(){ // replay diagram
+  var svg=$('#rt'), mode='session', bind=false;
+  var where={session:['Your conversation A','Your conversation B','same model'],user:['Your conversation','Someone else\'s account','same model'],model:['Strong model\'s answer','Cheaper model\'s request','different model']};
+  function draw(){ clear(svg); var w=where[mode], ok=!bind;
+    S('rect',{x:20,y:30,width:200,height:70,'class':'box-wire'},svg); S('text',{x:120,y:58,'class':'t mid'},svg,w[0]); S('text',{x:120,y:80,'class':'t-s mid'},svg,'makes the sealed block');
+    S('rect',{x:380,y:30,width:200,height:70,'class':ok?'box-fire':'box-ok'},svg); S('text',{x:480,y:58,'class':'t mid'},svg,w[1]); S('text',{x:480,y:80,'class':'t-s mid'},svg,'('+w[2]+')');
+    S('rect',{x:262,y:48,width:76,height:34,'class':'box-inh'},svg); S('text',{x:300,y:70,'class':'t-inh mid'},svg,'🔒 block');
+    S('line',{x1:220,y1:65,x2:262,y2:65,'class':'w-ink'},svg); S('line',{x1:338,y1:65,x2:380,y2:65,'class':ok?'w-fire':'w-dash'},svg);
+    S('text',{x:300,y:140,'class':(ok?'t-fire':'t-ok')+' mid'},svg, ok?'Accepted: the seal is genuine, and nothing else is checked':'Rejected: the seal names a different user, conversation or model');
+    if (bind){ S('text',{x:300,y:112,'class':'t-s mid'},svg,'seal now also records: user · conversation · model · previous block'); }
+    if (mode==='model' && ok){ S('text',{x:300,y:175,'class':'t-s mid'},svg,'The cheaper model sees the strong model\'s reasoning as its own past thinking,'); S('text',{x:300,y:193,'class':'t-s mid'},svg,'and can be induced to write it out in plain text (§2.4).'); }
+    if (mode==='user' && ok){ S('text',{x:300,y:175,'class':'t-s mid'},svg,'Blocks in published logs become usable by anyone (§4).'); }
+    if (mode==='session' && ok){ S('text',{x:300,y:175,'class':'t-s mid'},svg,'Blocks can be moved between conversations (§2.3).'); }
+    $('#rt-r').innerHTML = ok ? 'July 2026 behaviour (as reported): the block is <b>accepted</b>.' : 'With the proposed context binding: the block is <b>rejected</b>, so it only works where it was made.'; }
+  $$('[data-rt]').forEach(function(b){ b.onclick=function(){ mode=b.dataset.rt; $$('[data-rt]').forEach(function(x){x.classList.toggle('on',x===b);}); draw(); }; });
+  $('#rt-bind').onclick=function(){ bind=!bind; this.classList.toggle('on',bind); this.setAttribute('aria-pressed',bind); this.textContent='Seal bound to user, session & model: '+(bind?'on':'off'); draw(); };
+  draw();
+})();
+(function(){ // token-ratio proxy
+  var svg=$('#tk'), a=6000, b=5800, r=rng(7), demo=[];
+  for (var i=0;i<24;i++){ var x=800+r()*10500; demo.push([x, x*(0.92+r()*0.14)]); }
+  function draw(){ clear(svg); var M=12000, X=function(v){return 70+v/M*480;}, Y=function(v){return 220-v/M*190;};
+    S('line',{x1:70,y1:220,x2:550,y2:220,'class':'axis'},svg); S('line',{x1:70,y1:30,x2:70,y2:220,'class':'axis'},svg);
+    [0,6000,12000].forEach(function(v){ S('text',{x:X(v),y:236,'class':'t-s mid'},svg,fmt(v,0)); S('text',{x:64,y:Y(v)+4,'class':'t-s end'},svg,fmt(v,0)); });
+    S('line',{x1:X(0),y1:Y(0),x2:X(M),y2:Y(M),'class':'w-dash'},svg); S('text',{x:X(10800),y:Y(11600),'class':'t-s end'},svg,'equal length');
+    demo.forEach(function(d){ S('circle',{cx:X(d[0]),cy:Y(d[1]),r:3.5,'class':'f-muted'},svg); });
+    var ratio=b/a, good=ratio>0.9&&ratio<1.1;
+    S('circle',{cx:X(a),cy:Y(b),r:7,'class':good?'f-ok':'f-fire'},svg);
+    S('text',{x:310,y:254,'class':'t-s mid'},svg,'thinking tokens reported by the API →'); S('text',{x:76,y:22,'class':'t-s'},svg,'tokens in the decoded text');
+    $('#tk-r').innerHTML='Ratio decoded ÷ reported: <b>'+fmt(ratio,2)+'</b>. '+(good?'Close to 1: consistent with a full transcription.':(ratio<1?'Well below 1: the decoder probably skipped or summarised.':'Well above 1: the decoder probably added text of its own.')); }
+  bindRange('tk-a',function(v){ a=v; draw(); }); bindRange('tk-b',function(v){ b=v; draw(); });
+})();
+(function(){ // privacy study
+  var svg=$('#fn'), mode='funnel';
+  var F=[['Public agent logs collected',6708],['Reasoning blocks decoded',315320],['Blocks with a privacy leak',1028],['Logs leaking a real secret',328],['Secrets only in hidden reasoning',64]];
+  var K=[['Names',130],['API keys',62],['Postal addresses',36],['Passwords',33],['Personal emails',30],['Access tokens',24],['Private keys',7],['IP addresses (non-local)',6]];
+  function draw(){ clear(svg); var rows=mode==='funnel'?F:K, n=rows.length, h=Math.min(34,220/n);
+    var max=mode==='funnel'?Math.log10(400000):140, W=function(v){ return mode==='funnel' ? Math.log10(v)/max*300 : v/max*300; };
+    rows.forEach(function(r,i){ var y=14+i*(h+6); S('text',{x:230,y:y+h/2+4,'class':'t-s end'},svg,r[0]); S('rect',{x:240,y:y,width:Math.max(2,W(r[1])),height:h,'class':(mode==='funnel'&&i>1)||mode==='kinds'?'f-fire':'f-wire'},svg); S('text',{x:246+W(r[1]),y:y+h/2+4,'class':'t'},svg,r[1].toLocaleString('en-US')); });
+    svg.setAttribute('viewBox','0 0 600 '+(24+n*(h+6)));
+    $('#fn-r').innerHTML = mode==='funnel' ? 'About <b>0.3%</b> of decoded blocks and <b>4.9%</b> of logs contained private data (§4.1). Bars on a log scale.' : 'Counts as given in §4.1 for genuine user sessions (the Fig. 6 caption says "all sources"). Recovered secrets were deleted after counting (§5.3).'; }
+  $$('[data-fn]').forEach(function(b){ b.onclick=function(){ mode=b.dataset.fn; $$('[data-fn]').forEach(function(x){x.classList.toggle('on',x===b);}); draw(); }; });
+  draw();
+})();
+</script>
+
+</body>
+</html>
